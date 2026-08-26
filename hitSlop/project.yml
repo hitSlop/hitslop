@@ -1,0 +1,147 @@
+name: hitSlop
+options:
+  bundleIdPrefix: com.hitslop
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "11"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    DEVELOPMENT_TEAM: 78UAXU8QG8
+    CODE_SIGN_STYLE: Automatic
+    CLANG_ENABLE_MODULES: YES
+    SWIFT_STRICT_CONCURRENCY: minimal
+packages:
+  SwiftArgumentParser:
+    url: https://github.com/apple/swift-argument-parser.git
+    from: 1.8.2
+targets:
+  hitSlop:
+    type: application
+    platform: macOS
+    sources:
+      - path: hitSlop
+      - path: Shared
+      - path: Templates
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - sdk: WebKit.framework
+      - sdk: libsqlite3.tbd
+      - target: slop
+        embed: false
+      - target: SlopPreview
+        embed: true
+      - target: SlopThumbnail
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app
+        PRODUCT_NAME: hitSlop
+        INFOPLIST_FILE: hitSlop/App-Info.plist
+        CODE_SIGN_ENTITLEMENTS: hitSlop/hitSlop.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        SKIP_INSTALL: NO
+    postBuildScripts:
+      - name: Embed slop CLI
+        basedOnDependencyAnalysis: false
+        script: |
+          set -eu
+          helper_dir="$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Helpers"
+          /bin/mkdir -p "$helper_dir"
+          /bin/cp "$BUILT_PRODUCTS_DIR/slop" "$helper_dir/slop"
+          /bin/chmod 755 "$helper_dir/slop"
+  slop:
+    type: tool
+    platform: macOS
+    sources:
+      - path: CLI
+      - path: Shared
+    dependencies:
+      - package: SwiftArgumentParser
+        product: ArgumentParser
+      - sdk: AppKit.framework
+      - sdk: WebKit.framework
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.cli
+        PRODUCT_NAME: slop
+        SKIP_INSTALL: NO
+  SlopPreview:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Extensions/Preview
+      - path: Extensions/Shared
+    dependencies:
+      - sdk: QuickLookUI.framework
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        ENABLE_DEBUG_DYLIB: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app.preview
+        PRODUCT_NAME: SlopPreview
+        INFOPLIST_FILE: Extensions/Preview/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Extensions/SlopExtension.entitlements
+        SKIP_INSTALL: YES
+  SlopThumbnail:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Extensions/Thumbnail
+      - path: Extensions/Shared
+    dependencies:
+      - sdk: AppKit.framework
+      - sdk: QuickLookThumbnailing.framework
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        ENABLE_DEBUG_DYLIB: NO
+        ENABLE_HARDENED_RUNTIME: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app.thumbnail
+        PRODUCT_NAME: SlopThumbnail
+        INFOPLIST_FILE: Extensions/Thumbnail/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Extensions/SlopExtension.entitlements
+        SKIP_INSTALL: YES
+  hitSlopTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+      - path: Shared
+    dependencies:
+      - sdk: AppKit.framework
+      - sdk: WebKit.framework
+      - sdk: libsqlite3.tbd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  hitSlop:
+    build:
+      targets:
+        hitSlop: all
+        SlopPreview: all
+        SlopThumbnail: all
+        hitSlopTests: [test]
+    run:
+      config: Debug
+      executable: hitSlop
+    test:
+      targets:
+        - hitSlopTests
+    profile:
+      config: Release
+      executable: hitSlop
+  slop:
+    build:
+      targets:
+        slop: all

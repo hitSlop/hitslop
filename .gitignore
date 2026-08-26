@@ -7,10 +7,9 @@ node_modules/
 *.slop-journal
 *.sqlite-wal
 *.sqlite-shm
-host/.build/
-host/HitSlop.app/
-bin/slop-view
-.slop-chrome/
+hitSlop/.build/
+xcuserdata/
+*.xcuserstate
 .cache/
 _docs/
 docs/

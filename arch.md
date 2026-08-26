@@ -23,7 +23,7 @@ JSON-era hitSlop proved the human↔AI loop and then reinvented a database (file
 
 - A general app builder. Myst-scale HyperCard is a trap. If you need a linker, you wanted SELF, not this.
 - Google Docs. Realtime multiplayer on a raw sqlite file over the open internet is how you get the comment from HN: *“I would never, ever, ever allow an internet-facing service binary to be self-writable.”* That warning maps 1:1 onto “anyone’s browser may `slop.exec`.”
-- A replacement for the native 36-template Swift app until the host is a first-class Mac document app (UTI, icons, double-click default). Today `slop open` works; Finder still may hand `.slop` to the old JSON hitSlop.
+- A replacement for every feature of the old 36-template Swift app. The fresh host deliberately starts with the document fundamentals: UTI ownership, icons, double-click, Quick Look, duplication, sharing, and export. More templates and a theme editor can return after the file model proves itself.
 
 **The bet:** documents that *compute* should be files an AI can query. If that is true, the rest of the product is a host and a prompt.
 
@@ -42,16 +42,16 @@ SELF showed the collapse for executables: admit the file is a database and `read
 ## How it works (now)
 
 ```
-examples/climbing/                 authoring (working tree)
+hitSlop/TemplateSources/Habit Tracker/   authoring (working tree)
   meta.json
   schema.sql                       domain tables + seed
   view.html                        the UI
   docs.md                          notes for the next AI
 
-        slop pack
+        template build
             │
             v
-climbing.slop/                     Finder package  (Show Package Contents)
+Habit Tracker.slop/                Finder package  (Show Package Contents)
   document.sqlite                  application_id = 0x534C4F50 ('SLOP')
   document.sqlite-wal              only while open, *inside* the package
   document.sqlite-shm
@@ -67,14 +67,11 @@ climbing.slop/                     Finder package  (Show Package Contents)
 | `slop_assets` | optional blobs |
 | *everything else* | the document’s facts (`routes`, `log`, `stats` VIEW, …) |
 
-Two hosts, one file:
+The implemented host is **hitSlop.app**: AppKit/SwiftUI around WKWebView and system SQLite. It registers `.slop` as a Finder package, loads `slop_view` HTML, injects `slop.query` / `slop.exec` / `slop.transaction` / `slop.onChange`, watches external commits, maintains the cached Quick Look preview, and checkpoints on close. There is no localhost server.
 
-1. **HitSlop.app** — WKWebView + system SQLite. Loads `slop_view` HTML, injects a JS bridge (`slop.query` / `slop.exec` / `slop.onChange`) via `WKScriptMessageHandler`. No localhost. File watcher on the sqlite/wal. Checkpoint on close.
-2. **`slop serve`** — Bun HTTP for tests and browsers. Same bridge over `fetch` + SSE.
+The native Swift Argument Parser CLI (`slop stat`, `slop query`, `slop exec`, `slop duplicate`, `slop export`) and `sqlite3 Habit\ Tracker.slop/document.sqlite` are additional hosts. The CLI is embedded in the application bundle. WAL is how the window, the CLI, and an agent share the file without a custom RPC.
 
-The CLI (`slop query`, `slop exec`, `slop schema`) and `sqlite3 climbing.slop/document.sqlite` are also hosts. WAL is how the window, the CLI, and an agent share the file without a custom RPC.
-
-Authoring vs document: the folder with `view.html` is source. The `.slop` package is what you open, copy, and share. Packing is `CREATE` + `INSERT`. “Show Package Contents” shows the database, not a second copy of the HTML (that would drift).
+Authoring vs document: the folder with `view.html` is source. The `.slop` package is what you open, copy, and share. Packing is `slop pack` (`CREATE` + `INSERT`). “Show Package Contents” shows the database, not a second copy of the HTML (that would drift).
 
 ```
 click in UI  →  UPDATE/INSERT  →  COMMIT  →  the file
@@ -165,7 +162,7 @@ MCP is a later adapter for clients that cannot (or should not) shell out — a h
 slop schema FILE      →  stat
 slop query  FILE sql  →  read
 slop exec   FILE sql  →  write
-slop pack / create    →  create
+slop create / duplicate → create
 sqlite3 FILE/document.sqlite  →  all of the above, no CLI required
 ```
 
@@ -185,16 +182,16 @@ Not 9P-over-TCP. Not a kernel. The slice celld-bots already named: **stable reso
 
 Ranked from “build next” to “write a conference talk.”
 
-### 1. `slop create` as the actual product loop
+### 1. Template creation now; generative creation later
 
-The host is a stage. The show is an LLM that emits a *different looking object* every time.
+The implemented product loop starts from legible starter packages. The picker (or CLI) clones a template with SQLite's backup API, gives it a fresh identity, and lets the user choose its folder.
 
 ```
-slop create "diner guest-check for splitting lunch" lunch.slop
+slop create --template recipe-card --output lunch.slop
 slop open lunch.slop
 ```
 
-The prompt already exists (`src/create-prompt.md`). The missing piece is using it, then forking: `cp lunch.slop mine.slop` and `ALTER` until it is yours. HyperCard copy-paste programming, with Claude as the person who writes HyperTalk.
+The later show is still an LLM that emits a *different looking object* every time. The experimental prompt in `src/create-prompt.md` can become a separate command once generated schemas, documentation, and views can be validated before they are opened. That should augment the template flow, not make creation depend on a model or API key.
 
 ### 2. Publish: local object → URL (celld / S3)
 
@@ -271,11 +268,12 @@ OS/400 “everything is a queryable object” is the serious version of that jok
 
 ## Suggested sequence
 
-1. **`slop create` in anger.** Generate three documents that do not look like Silo Wall. If they all look like SaaS dashboards, fix the prompt, not the host.
-2. **SKILL.md / AGENTS.md over the verbs.** Teach the agent `stat` → `read` → `write` on `document.sqlite`. No MCP until a client cannot run `sqlite3`.
-3. **Double-click.** Win the `.slop` UTI from the old JSON app. Icon. Quick Look that runs two `SELECT`s.
-4. **`slop publish` to a single-writer actor** (celld) with owner writes + public reads + “Download package.” Same namespace, different root.
-5. **Home stack + ATTACH / vtab** over `~/Documents/*.slop`.
-6. **Undo table. Authorizer grants. Untrusted-file Dark Arts.** Before you open a stranger’s card.
+The local proof is now implemented: native document host, template picker, two different starter packages, auto-save, duplication, PNG/PDF export, CLI, UTI, icon, and cached Quick Look.
 
-The host can stay ugly for a while. The file has to stay honest.
+1. **Use the two templates in anger.** Pay attention to which mutations feel document-like and which demand a full app.
+2. **Add undo inside the file and tighten the SQLite authorizer.** Do this before treating arbitrary downloaded cards as trusted.
+3. **Add validated generative creation.** Generate several documents that do not look like the starters; if they converge on SaaS dashboards, fix the authoring prompt rather than the host.
+4. **Prototype `slop publish` with one single-writer celld actor**: owner writes, public reads, event broadcast, S3-backed recovery, and “Download package.”
+5. **Explore a home stack** over a user-selected library, with cross-document queries mediated by the host instead of granting page HTML arbitrary `ATTACH`.
+
+The host should stay small. The file has to stay honest.

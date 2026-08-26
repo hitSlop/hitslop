@@ -1,0 +1,12 @@
+{
+  "title": "Habit Tracker",
+  "summary": "Build a streak board for daily habits and see your consistency over time.",
+  "template_id": "com.hitslop.templates.habit-tracker",
+  "template_version": "2.0.0",
+  "width": 430,
+  "height": 610,
+  "min_width": 390,
+  "min_height": 470,
+  "corner_radius": 24,
+  "always_on_top": 1
+}

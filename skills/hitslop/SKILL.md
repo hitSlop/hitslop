@@ -1,68 +1,100 @@
 ---
 name: hitslop
-description: Inspect and update .slop documents — SQLite packages with HTML views. Use when opening, querying, editing, packing, or creating a .slop file.
+description: Inspect, update, duplicate, create, and export .slop SQLite documents. Use whenever a task involves a .slop file.
 ---
 
 # hitSlop
 
-A `.slop` is a Finder package. The document is `document.sqlite` inside it. HTML is the human view. SQL is the agent view. Same file as the open window (WAL).
+A `.slop` is a Finder package whose durable contents are in `document.sqlite`. HTML is the human view. SQL is the agent view. The open window, the native `slop` CLI, and `sqlite3` are peers using the same file in WAL mode.
 
-```
+```text
 Foo.slop/
-  document.sqlite      # application_id SLOP
+  document.sqlite      # application_id = 0x534C4F50 ('SLOP')
 ```
 
-Do not read `view.html` to find data. Do not invent a per-document tool. Every card speaks the same verbs.
+Never scrape `slop_view.body` to discover document data. Never invent a template-specific tool. Every document uses the same verbs.
 
-## Verbs
+## Workflow
 
-Let `DB="Foo.slop/document.sqlite"` (or `slop query Foo.slop` / `slop exec Foo.slop` — those resolve the package).
+### 1. Stat before writing
 
-| Verb | How |
-|---|---|
-| **walk** | `ls *.slop`; `sqlite3 "$DB" ".tables"` |
-| **stat** | docs + schema (always both, first) |
-| **read** | `SELECT` |
-| **write** | `INSERT` / `UPDATE` / `DELETE` — surgical, not a full dump |
-| **create** | `cp -R` to fork; `ALTER TABLE` / `CREATE TABLE` to grow; `slop pack` / `slop create` for new |
-| **watch** | if HitSlop.app has the file open, your COMMIT shows up. No extra notify API. |
-
-### stat (do this before write)
+Read the document's own instructions and full schema first:
 
 ```bash
-sqlite3 "$DB" "SELECT topic, body FROM slop_docs"
+slop stat Foo.slop
+```
+
+If the CLI is unavailable:
+
+```bash
+DB="Foo.slop/document.sqlite"
+sqlite3 "$DB" "SELECT topic, body FROM slop_docs ORDER BY topic"
 sqlite3 "$DB" ".schema"
-sqlite3 "$DB" "SELECT key, value FROM slop_meta"
+sqlite3 "$DB" "SELECT key, value FROM slop_meta ORDER BY key"
 ```
 
-`slop_docs` is the man page *in the file*. Domain tables are whatever `.schema` says, not a global template list.
+`slop_docs` is the man page inside the document. Domain tables are whatever `sqlite_schema` says; they are not selected from a global template model. If docs are empty, state that and infer only from schema and data.
 
-### read / write
+### 2. Read with SELECT
 
 ```bash
-bun src/cli.ts query Foo.slop "SELECT name, status FROM routes ORDER BY sort"
-bun src/cli.ts exec  Foo.slop "UPDATE routes SET status = 'sent' WHERE name = 'Bolt Tax'"
-
-sqlite3 "$DB" "SELECT * FROM stats"
+slop query Foo.slop "SELECT name, completed FROM habit_week ORDER BY position"
+sqlite3 Foo.slop/document.sqlite "SELECT * FROM habit_week"
 ```
 
-Use `?` parameters via the CLI when values are untrusted. Prefer `UPDATE … WHERE` over rewriting a table.
-
-Do not `ATTACH` other files from document HTML. Agent-side `ATTACH` is for a home-stack query you mean to run.
-
-### create
+### 3. Write surgically
 
 ```bash
-bun src/cli.ts pack examples/climbing              # authoring dir → package
-bun src/cli.ts create "diner guest-check" lunch.slop   # needs XAI_API_KEY
-cp -R climbing.slop mine.slop
-bun src/cli.ts open mine.slop
+slop exec Foo.slop \
+  "UPDATE habits SET name = ? WHERE id = ?" \
+  --params '["Morning walk", 1]'
 ```
 
-Authoring dirs have `view.html` + `schema.sql` + `meta.json`. Packages have `document.sqlite`. Packing is destructive to the package, not to the authoring dir.
+Use `?` parameters for values. Prefer a precise `UPDATE … WHERE`, `INSERT`, or `DELETE` over dumping and rewriting a table. `slop exec` updates `revision` and `modified_at`; an open host observes the commit and re-queries automatically.
 
-## Rules
+Do not `ATTACH` or create virtual tables from document HTML. The native runtime blocks those operations. Agent-side `ATTACH` is acceptable only for an intentional local analysis across trusted documents.
 
-- Unique UI does not mean unique API. No `tick_climb` helper.
-- If `slop_docs` is empty, say so, then infer from `.schema` only.
-- Format spec: `spec/format.md`. Architecture: `arch.md`.
+### 4. Create and duplicate
+
+Create from an installed template:
+
+```bash
+slop templates
+slop pack path/to/TemplateSource --output path/to/Template.slop
+slop create --template habit-tracker --output Morning.slop
+slop create --template recipe-card --output Dinner.slop
+```
+
+Duplicate any document safely with SQLite's backup API:
+
+```bash
+slop duplicate Morning.slop --output Evening.slop
+```
+
+Creation and duplication mint a fresh `document_id`, reset `revision`, and preserve a consistent database snapshot. Do not use a recursive filesystem copy on a live WAL database.
+
+The format is deliberately malleable. Grow a document using normal DDL (`ALTER TABLE`, `CREATE TABLE`, `CREATE VIEW`) and update the relevant `slop_docs` entry so the next agent can understand the change.
+
+### 5. Export, watch, and open
+
+```bash
+slop export Morning.slop --format png --output Morning.png
+slop export Morning.slop --format pdf --output Morning.pdf
+slop watch Morning.slop
+slop open Morning.slop
+```
+
+## Uniform verbs
+
+| Verb | Command |
+|---|---|
+| walk | `slop templates`, list packages, inspect schema names |
+| stat | `slop stat FILE` |
+| read | `slop query FILE SQL` |
+| write | `slop exec FILE SQL` |
+| create | `slop create`, `slop duplicate`, or deliberate DDL |
+| watch | `slop watch FILE` |
+
+Unique interfaces do not imply unique APIs. Do not add helpers such as `tick_habit` or `add_ingredient`; discover the schema, then use SQL.
+
+Format specification: `spec/format.md`. Architecture and multiplayer direction: `arch.md`.
