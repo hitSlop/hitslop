@@ -1,0 +1,16 @@
+node_modules/
+.DS_Store
+.env
+.env.local
+*.slop-wal
+*.slop-shm
+*.slop-journal
+*.sqlite-wal
+*.sqlite-shm
+host/.build/
+host/HitSlop.app/
+bin/slop-view
+.slop-chrome/
+.cache/
+_docs/
+docs/
