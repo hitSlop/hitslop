@@ -9,11 +9,15 @@ let package = Package(
         .executable(name: "slop", targets: ["slop"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2")
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2"),
+        .package(url: "https://github.com/kylehowells/swift-justhtml.git", from: "0.4.6"),
     ],
     targets: [
         .target(
             name: "SlopCore",
+            dependencies: [
+                .product(name: "justhtml", package: "swift-justhtml"),
+            ],
             path: "Shared",
             linkerSettings: [
                 .linkedLibrary("sqlite3"),

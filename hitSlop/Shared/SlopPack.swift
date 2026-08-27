@@ -111,9 +111,16 @@ extension SlopPackage {
         sealed = true
 
         let packed = try SlopDatabase(packageURL: destination)
-        try SlopPreviewIcon.installFromDatabase(packed, into: destination)
-        try packed.checkpoint()
-        packed.close()
+        do {
+            try SlopCheckedRenderer.validateIfNeeded(database: packed)
+            try SlopPreviewIcon.installFromDatabase(packed, into: destination)
+            try packed.checkpoint()
+            packed.close()
+        } catch {
+            packed.close()
+            try? FileManager.default.removeItem(at: destination)
+            throw error
+        }
         return destination
     }
 

@@ -48,9 +48,14 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
 @MainActor
 private final class SlopBridge: NSObject, WKScriptMessageHandlerWithReply {
     let database: SlopDatabase
+    let renderer: SlopCheckedRenderer
+    var usesCheckedRenderer = false
     weak var delegate: SlopBridgeDelegate?
 
-    init(database: SlopDatabase) { self.database = database }
+    init(database: SlopDatabase, renderer: SlopCheckedRenderer) {
+        self.database = database
+        self.renderer = renderer
+    }
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -60,6 +65,9 @@ private final class SlopBridge: NSObject, WKScriptMessageHandlerWithReply {
             return (["error": "Malformed bridge message."], nil)
         }
         do {
+            if usesCheckedRenderer && ["query", "exec", "transaction"].contains(operation) {
+                throw SlopError.invalidArgument("Checked views cannot call slop.\(operation)")
+            }
             switch operation {
             case "query":
                 let sql = body["sql"] as? String ?? ""
@@ -79,6 +87,21 @@ private final class SlopBridge: NSObject, WKScriptMessageHandlerWithReply {
                 let revision = try database.revision()
                 delegate?.bridgeDidWrite(revision: revision)
                 return (["results": results, "revision": revision], nil)
+            case "action":
+                guard usesCheckedRenderer else {
+                    throw SlopError.invalidArgument("Named actions are only available in checked views")
+                }
+                let name = body["name"] as? String ?? ""
+                let rawParams = body["params"] as? [String: Any] ?? [:]
+                var params: [String: String] = [:]
+                for (key, value) in rawParams {
+                    if value is NSNull { params[key] = ""; continue }
+                    params[key] = String(describing: value)
+                }
+                let html = try renderer.performAction(name: name, params: params)
+                let revision = try database.revision()
+                delegate?.bridgeDidWrite(revision: revision)
+                return (["html": html, "revision": revision], nil)
             case "meta":
                 return (try database.metadata().values, nil)
             case "ready":
@@ -222,6 +245,7 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
     var onClose: (() -> Void)?
     var onOpenDocument: ((URL) -> Void)?
 
+    private let renderer: SlopCheckedRenderer
     private let bridge: SlopBridge
     private let schemeHandler: SlopSchemeHandler
     private let navigationDelegate = SlopNavigationDelegate()
@@ -240,17 +264,24 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         self.packageURL = SlopPackage.packageURL(for: packageURL).standardizedFileURL
         securityScoped = self.packageURL.startAccessingSecurityScopedResource()
         database = try SlopDatabase(packageURL: self.packageURL, restricted: true)
+        renderer = SlopCheckedRenderer(database: database)
         let metadata = try database.metadata()
         lastKnownRevision = metadata.revision
         lastKnownDataVersion = try database.dataVersion()
 
         let configuration = WKWebViewConfiguration()
         schemeHandler = SlopSchemeHandler(database: database)
-        bridge = SlopBridge(database: database)
+        bridge = SlopBridge(database: database, renderer: renderer)
         configuration.setURLSchemeHandler(schemeHandler, forURLScheme: "slop")
         configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "slop")
         configuration.userContentController.addUserScript(
             WKUserScript(source: slopRuntimeJavaScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        )
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: slopIdiomorphJavaScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        )
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: slopCheckedRuntimeJavaScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         )
         configuration.userContentController.addUserScript(
             WKUserScript(source: slopHostStyleJavaScript, injectionTime: .atDocumentStart, forMainFrameOnly: true)
@@ -311,7 +342,13 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
 
     private func loadDocument() throws {
         let html = try database.mainHTML()
-        webView.loadHTMLString(html, baseURL: URL(string: "slop://document/")!)
+        let checked = SlopCheckedRenderer.isChecked(html)
+        bridge.usesCheckedRenderer = checked
+        if checked {
+            webView.loadHTMLString(try renderer.render(source: html), baseURL: URL(string: "slop://document/")!)
+        } else {
+            webView.loadHTMLString(html, baseURL: URL(string: "slop://document/")!)
+        }
     }
 
     private func webViewDidFinishLoading() {
@@ -351,7 +388,10 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
 
     func bridgeDidWrite(revision: Int64) {
         lastKnownRevision = revision
-        notifyWebView(revision: revision)
+        lastKnownDataVersion = (try? database.dataVersion()) ?? lastKnownDataVersion
+        if !bridge.usesCheckedRenderer {
+            notifyWebView(revision: revision)
+        }
         schedulePreview()
     }
 
@@ -520,10 +560,52 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
     private func packageDidChangeOnDisk() {
         guard let dataVersion = try? database.dataVersion(), dataVersion != lastKnownDataVersion else { return }
         lastKnownDataVersion = dataVersion
+        if bridge.usesCheckedRenderer || ((try? database.mainHTML()).map(SlopCheckedRenderer.isChecked) == true) {
+            refreshCheckedView()
+            return
+        }
         guard let revision = try? database.revision(), revision != lastKnownRevision else { return }
         lastKnownRevision = revision
         notifyWebView(revision: revision)
         schedulePreview()
+    }
+
+    private func refreshCheckedView() {
+        do {
+            let html = try database.mainHTML()
+            bridge.usesCheckedRenderer = SlopCheckedRenderer.isChecked(html)
+            guard bridge.usesCheckedRenderer else {
+                try loadDocument()
+                return
+            }
+            lastKnownRevision = (try? database.revision()) ?? lastKnownRevision
+            if renderer.cachedSource != html {
+                webView.loadHTMLString(try renderer.render(source: html), baseURL: URL(string: "slop://document/")!)
+            } else {
+                let snapshot = try renderer.render(source: html)
+                Task { @MainActor [weak self] in
+                    await self?.applySnapshot(snapshot)
+                }
+            }
+            loadErrorView?.removeFromSuperview()
+            loadErrorView = nil
+            schedulePreview()
+        } catch {
+            showLoadFailure(error)
+        }
+    }
+
+    private func applySnapshot(_ html: String) async {
+        do {
+            _ = try await webView.callAsyncJavaScript(
+                "window.__slopApplySnapshot(html)",
+                arguments: ["html": html],
+                in: nil,
+                in: .page
+            )
+        } catch {
+            showLoadFailure(error)
+        }
     }
 
     func windowDidMove(_ notification: Notification) { if toolbarPanel?.isVisible == true { showToolbar() } }

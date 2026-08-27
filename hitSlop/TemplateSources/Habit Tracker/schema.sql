@@ -19,14 +19,32 @@ CREATE TABLE habit_checks (
 );
 
 CREATE VIEW habit_week AS
-SELECT h.id, h.name, h.icon, h.position,
+SELECT h.id,
+       h.name,
+       h.icon,
+       h.position,
+       date(s.week_start, '+0 days') AS day_0,
+       date(s.week_start, '+1 days') AS day_1,
+       date(s.week_start, '+2 days') AS day_2,
+       date(s.week_start, '+3 days') AS day_3,
+       date(s.week_start, '+4 days') AS day_4,
+       date(s.week_start, '+5 days') AS day_5,
+       date(s.week_start, '+6 days') AS day_6,
+       max(CASE WHEN c.day = date(s.week_start, '+0 days') THEN c.completed ELSE 0 END) AS done_0,
+       max(CASE WHEN c.day = date(s.week_start, '+1 days') THEN c.completed ELSE 0 END) AS done_1,
+       max(CASE WHEN c.day = date(s.week_start, '+2 days') THEN c.completed ELSE 0 END) AS done_2,
+       max(CASE WHEN c.day = date(s.week_start, '+3 days') THEN c.completed ELSE 0 END) AS done_3,
+       max(CASE WHEN c.day = date(s.week_start, '+4 days') THEN c.completed ELSE 0 END) AS done_4,
+       max(CASE WHEN c.day = date(s.week_start, '+5 days') THEN c.completed ELSE 0 END) AS done_5,
+       max(CASE WHEN c.day = date(s.week_start, '+6 days') THEN c.completed ELSE 0 END) AS done_6,
        sum(CASE WHEN c.completed = 1 THEN 1 ELSE 0 END) AS completed,
        7 AS possible
 FROM habits h
+JOIN habit_settings s ON s.id = 1
 LEFT JOIN habit_checks c ON c.habit_id = h.id
- AND c.day >= (SELECT week_start FROM habit_settings WHERE id = 1)
- AND c.day < date((SELECT week_start FROM habit_settings WHERE id = 1), '+7 days')
-GROUP BY h.id;
+ AND c.day >= s.week_start
+ AND c.day < date(s.week_start, '+7 days')
+GROUP BY h.id, s.week_start;
 
 INSERT INTO habit_settings(id, title, week_start)
 VALUES (1, 'Habit Tracker', date('now', '-' || ((CAST(strftime('%w','now') AS INTEGER) + 6) % 7) || ' days'));

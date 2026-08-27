@@ -12,7 +12,7 @@ Build the first POC inside the existing Swift/AppKit/WKWebView host.
 
 - Keep SQLite, document windows, Quick Look, custom icons, previews, and the hover `NSPanel` exactly where they are.
 - Keep existing `text/html` views working through `slop.query`, `slop.exec`, and `slop:change`.
-- Convert only Recipe Card to checked, scriptless, SQL-backed HTML.
+- Convert Recipe Card and Habit Tracker to checked, scriptless, SQL-backed HTML.
 - Send complete HTML snapshots to the webview and morph `document.body`. Do not design a wire-diff protocol.
 - Defer Deno Desktop, Electrobun, Tauri, JSX, and TypeScript authoring experiments until this rendering model is validated.
 
@@ -44,7 +44,7 @@ SQLPage's strongest idea is that SQL produces a narrow presentation model. Query
 
 Borrow:
 
-- SQL rows as named view data.
+- SQL rows as a narrow, explicitly scoped view model.
 - SQL for presentation decisions such as classes, labels, and counts.
 - One repeated row template per query.
 - Bound form values for mutations.
@@ -69,7 +69,7 @@ SQLPage builds sites from predefined components. hitSlop must preserve the oppos
 |---|---|---|
 | Store | Domain tables in `document.sqlite` | Same |
 | Server view | Per-document JS `render()` | Shared Swift renderer |
-| View model | Objects returned through the JS bridge | Named SQLite result columns |
+| View model | Objects returned through the JS bridge | Qualified SQLite result columns scoped by `slop-row` or `slop-each` |
 | Action | `slop.exec(sql, params)` in authored JS | Named SQL action plus HTML form fields |
 | Change signal | `data_version` then `slop:change` | Host renders and delivers an HTML snapshot |
 | DOM update | Per-document `innerHTML` | Host-injected Idiomorph |
@@ -92,12 +92,29 @@ The marker travels with the view body. Replacing the body through SQLite therefo
 
 ---
 
-## Query regions
+## Explicit result cardinality
 
-A query region contains exactly one read-only SQL statement and one row template:
+`slop-row` binds exactly one result row. It makes singleton document state explicit and checks its invariant at runtime:
 
 ```html
-<slop-query>
+<slop-row as="recipe">
+  <script type="application/sql">
+    SELECT title, subtitle FROM recipe
+  </script>
+
+  <template>
+    <h1>{{recipe.title}}</h1>
+    <p>{{recipe.subtitle}}</p>
+  </template>
+</slop-row>
+```
+
+Zero rows and multiple rows are errors. Singleton tables should enforce at most one row in their schema, for example with `PRIMARY KEY CHECK (id = 1)`; `slop-row` additionally verifies that the required row exists. Do not add an unordered `LIMIT 1` to hide a cardinality error.
+
+`slop-each` is the only loop in checked HTML and binds zero or more rows:
+
+```html
+<slop-each as="ingredient">
   <script type="application/sql">
     SELECT
       id,
@@ -109,34 +126,36 @@ A query region contains exactly one read-only SQL statement and one row template
   </script>
 
   <template>
-    <li class="ingredient {{ready_class}}" id="ingredient-{{id}}">
-      <span>{{name}}</span>
+    <li class="ingredient {{ingredient.ready_class}}" id="ingredient-{{ingredient.id}}">
+      <span>{{ingredient.name}}</span>
     </li>
   </template>
-</slop-query>
+</slop-each>
 ```
 
-The host executes the query and repeats the `<template>` once per row. A singleton query uses the same mechanism and simply returns one row. Zero rows produce no HTML.
+The host executes the query and repeats the `<template>` once per row, binding the row to the required `as` alias. Zero rows produce no HTML. Both directives are removed from the rendered snapshot, leaving ordinary HTML.
 
-The first version supports only scalar placeholders:
+The first version supports only qualified scalar placeholders:
 
 ```html
-{{column_name}}
+{{ingredient.column_name}}
 ```
 
 Rules:
 
-- Query regions cannot be nested.
+- `slop-row` and `slop-each` regions cannot be nested inside either kind.
+- The `as` alias is required, uses a simple identifier, and is scoped to the direct row template.
 - The SQL must be one statement and `sqlite3_stmt_readonly` must report it as read-only.
 - Render queries accept no parameters; their state comes from the document database.
 - Result names and placeholder names use simple identifiers: letters or underscore followed by letters, digits, or underscores.
 - Duplicate result-column names are errors.
-- Every placeholder must exist in the prepared statement's result columns.
+- Every placeholder must use the enclosing alias and exist in the prepared statement's result columns.
+- Placeholders outside a `slop-row` or `slop-each` template are errors.
 - Extra result columns are allowed.
 - Placeholders are allowed only in text nodes and quoted attribute values.
 - Values are assigned through parsed DOM nodes, not string-concatenated into HTML.
 - Text, integers, and floating-point values render as escaped strings. `NULL` renders as an empty string. A referenced blob is an error.
-- There is no raw-HTML placeholder, nested loop, conditional, helper, or expression language in v1.
+- There is no general-purpose `for`, raw-HTML placeholder, nested loop, conditional, helper, or expression language in v1.
 
 SQL remains the expression language:
 
@@ -167,8 +186,8 @@ Ordinary HTML forms invoke it:
 
 ```html
 <form data-slop-action="toggle-ingredient">
-  <input type="hidden" name="id" value="{{id}}">
-  <button type="submit" aria-label="Toggle {{name}}">Toggle</button>
+  <input type="hidden" name="id" value="{{ingredient.id}}">
+  <button type="submit" aria-label="Toggle {{ingredient.name}}">Toggle</button>
 </form>
 ```
 
@@ -218,7 +237,7 @@ TypeScript alone would not make this safe. Type annotations disappear at runtime
 The useful checks come from the actual artifacts:
 
 1. Parse the HTML with a real HTML parser.
-2. Compile the custom query and action regions.
+2. Compile the custom `slop-row`, `slop-each`, and action regions.
 3. Prepare every statement against the document's SQLite schema.
 4. Inspect query result-column names and action parameter names.
 5. Match placeholders and forms against those names.
@@ -237,7 +256,7 @@ The compiled render plan is cached while the raw view body is unchanged. This is
 
 ## Rendering and observation
 
-The renderer creates a complete HTML snapshot inside one read transaction so all query regions observe one consistent SQLite snapshot.
+The renderer creates a complete HTML snapshot inside one read transaction so all `slop-row` and `slop-each` regions observe one consistent SQLite snapshot.
 
 ### Host-owned writes
 
@@ -299,7 +318,7 @@ The generic runtime also suppresses duplicate submissions while a form action is
 - A later valid database or template change clears the overlay and resumes normal rendering.
 - Headless PNG/PDF rendering uses the same compiler and renderer, so it cannot silently disagree with the interactive window.
 
-Errors should name the query region or action, include the underlying SQLite message, and identify the missing placeholder, result column, or form parameter when applicable.
+Errors should name the render region or action, include the underlying SQLite message, and identify cardinality, alias, missing placeholder, result column, or form parameter when applicable.
 
 ---
 
@@ -308,7 +327,7 @@ Errors should name the query region or action, include the underlying SQLite mes
 ### 1. Shared renderer
 
 - Add an HTML parser dependency to the shared Swift core.
-- Parse the opt-in marker, query regions, row templates, action definitions, and forms.
+- Parse `slop-row` and `slop-each` regions, row aliases, templates, action definitions, and forms.
 - Prepare and validate SQL against the live document schema.
 - Render a complete snapshot and cache the compiled plan by raw source body.
 - Expose named action execution with bound string fields.
@@ -331,13 +350,18 @@ Errors should name the query region or action, include the underlying SQLite mes
 
 ### 4. Recipe Card
 
-- Replace its document-owned JavaScript with checked query regions.
+- Replace its document-owned JavaScript with checked `slop-row` and `slop-each` regions.
 - Use SQL aliases and `CASE` for display-ready fields.
 - Use named forms for toggle, add, edit, and delete operations.
 - Replace contenteditable fields with styled inputs and textareas for the first POC.
 - Give repeated rows and editable controls stable IDs.
 
-Habit Tracker remains unchanged as the legacy compatibility fixture.
+### 5. Habit Tracker
+
+- Replace its document-owned JavaScript with checked `slop-row` and `slop-each` regions.
+- Pivot the fixed seven-day week in the `habit_week` SQLite view instead of adding nested loops.
+- Use named actions for toggle, add, edit, and delete operations.
+- Reuse the same SQLite view for the grid, heat map, and weekly summary.
 
 ---
 
@@ -345,11 +369,12 @@ Habit Tracker remains unchanged as the legacy compatibility fixture.
 
 ### Compiler and rendering
 
-- Singleton, list, ordered, and zero-row queries render correctly.
+- `slop-row` accepts exactly one row and rejects zero or multiple rows.
+- Ordered and zero-row `slop-each` regions render correctly.
 - Text, numbers, and `NULL` render predictably.
 - Hostile database text is escaped in both text and attribute contexts.
 - Missing placeholders and duplicate result columns fail validation.
-- Mutating render queries, query parameters, multiple statements, nested regions, raw interpolation, executable scripts, and referenced blobs are rejected.
+- Mutating render queries, query parameters, multiple statements, nested regions, unqualified interpolation, raw interpolation, executable scripts, and referenced blobs are rejected.
 
 ### Actions
 
@@ -371,8 +396,7 @@ Habit Tracker remains unchanged as the legacy compatibility fixture.
 
 ### Compatibility
 
-- Existing Habit Tracker query, mutation, and `slop:change` behavior remains intact.
-- Recipe Card contains no authored JavaScript and performs no browser-side SQL queries.
+- Recipe Card and Habit Tracker contain no authored JavaScript and perform no browser-side SQL queries.
 - Interactive, PNG, PDF, cached preview, and Quick Look output show the same server-rendered facts.
 
 ---
@@ -385,15 +409,15 @@ Habit Tracker remains unchanged as the legacy compatibility fixture.
 - A generic SQLPage-style component library.
 - SSE, local HTTP, or a remote wire protocol.
 - Server-computed HTML diffs or fragment patches.
-- Nested query contexts, template helpers, conditionals, raw HTML, and dynamic tag names.
+- Nested `slop-row`/`slop-each` contexts, template helpers, conditionals, raw HTML, and dynamic tag names.
 - Multi-statement actions and user-authored client JavaScript in checked views.
-- Converting other bundled templates before Recipe Card validates the model.
+- Converting additional bundled templates before these two validate the model.
 
 ---
 
 ## Success criterion
 
-The POC succeeds when Recipe Card has no document-owned rendering program, yet:
+The POC succeeds when Recipe Card and Habit Tracker have no document-owned rendering program, yet:
 
 - SQLite remains the sole source of truth;
 - internal and external commits repaint the open document;

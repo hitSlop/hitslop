@@ -1,5 +1,5 @@
 {
-  "originHash" : "59ba1edda695b389d6c9ac1809891cd779e4024f505b0ce1a9d5202b6762e38a",
+  "originHash" : "f521bcf2518397a3a896bb41f281669c41b0f5bd3fc21a554d0414c7dfb0a496",
   "pins" : [
     {
       "identity" : "swift-argument-parser",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
         "version" : "1.8.2"
+      }
+    },
+    {
+      "identity" : "swift-justhtml",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kylehowells/swift-justhtml.git",
+      "state" : {
+        "revision" : "2f06b50f3c4ca512549966f90552cbb237c1fceb",
+        "version" : "0.4.6"
       }
     }
   ],

@@ -38,15 +38,34 @@ public struct SlopMetadata: Sendable {
     public var revision: Int64 { Int64(values["revision"] ?? "") ?? 0 }
 }
 
+private enum SQLiteAccess {
+    case host
+    case render
+    case action
+}
+
+private final class SQLiteGate {
+    let restricted: Bool
+    var access: SQLiteAccess = .host
+    init(restricted: Bool) { self.restricted = restricted }
+}
+
+public struct SlopPreparedQuery {
+    public let columns: [String]
+    public let readonly: Bool
+}
+
 public final class SlopDatabase: @unchecked Sendable {
     private var handle: OpaquePointer?
     private let lock = NSRecursiveLock()
+    private let gate: SQLiteGate
     public let sqliteURL: URL
     public let readOnly: Bool
 
     public init(packageURL: URL, readOnly: Bool = false, restricted: Bool = false) throws {
         self.sqliteURL = try SlopPackage.sqliteURL(for: packageURL)
         self.readOnly = readOnly
+        self.gate = SQLiteGate(restricted: restricted)
 
         let flags = readOnly
             ? SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX
@@ -64,18 +83,36 @@ public final class SlopDatabase: @unchecked Sendable {
             close()
             throw SlopError.invalidPackage("Not a hitSlop document: application_id is \(applicationID).")
         }
-        if restricted {
-            sqlite3_set_authorizer(handle, { _, action, _, _, _, _ in
+
+        let userdata = Unmanaged.passUnretained(gate).toOpaque()
+        sqlite3_set_authorizer(handle, { userdata, action, arg1, _, _, source in
+            let gate = Unmanaged<SQLiteGate>.fromOpaque(userdata!).takeUnretainedValue()
+            let table = arg1.map { String(cString: $0) } ?? ""
+            let fromTrigger = source != nil
+            let reads: Set<Int32> = [SQLITE_SELECT, SQLITE_READ, SQLITE_FUNCTION, SQLITE_RECURSIVE]
+            switch gate.access {
+            case .host:
+                guard gate.restricted else { return SQLITE_OK }
                 switch action {
                 case SQLITE_ATTACH, SQLITE_DETACH, SQLITE_CREATE_VTABLE, SQLITE_DROP_VTABLE:
                     return SQLITE_DENY
-                case SQLITE_FUNCTION:
-                    return SQLITE_OK
                 default:
                     return SQLITE_OK
                 }
-            }, nil)
-        }
+            case .render:
+                return reads.contains(action) ? SQLITE_OK : SQLITE_DENY
+            case .action:
+                if reads.contains(action) { return SQLITE_OK }
+                if fromTrigger { return SQLITE_DENY }
+                guard action == SQLITE_INSERT || action == SQLITE_UPDATE || action == SQLITE_DELETE else {
+                    return SQLITE_DENY
+                }
+                if table.hasPrefix("sqlite_") || table.hasPrefix("slop_") {
+                    return SQLITE_DENY
+                }
+                return SQLITE_OK
+            }
+        }, userdata)
     }
 
     deinit { close() }
@@ -131,6 +168,79 @@ public final class SlopDatabase: @unchecked Sendable {
 
     public func schema() throws -> [[String: Any]] {
         try query("SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE sql IS NOT NULL ORDER BY type, name")
+    }
+
+    public func prepareRender(_ sql: String) throws -> SlopPreparedQuery {
+        lock.lock()
+        defer { lock.unlock() }
+        return try withAccess(.render) {
+            let statement = try prepare(sql)
+            defer { sqlite3_finalize(statement) }
+            let readonly = sqlite3_stmt_readonly(statement) != 0
+            guard readonly else {
+                throw SlopError.invalidArgument("Render queries must be read-only")
+            }
+            return SlopPreparedQuery(columns: columnNames(statement), readonly: readonly)
+        }
+    }
+
+    public func renderQuery(_ sql: String) throws -> [[String: Any]] {
+        try withAccess(.render) {
+            try query(sql)
+        }
+    }
+
+    public func validateActionSQL(_ sql: String) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        try withAccess(.action) {
+            let statement = try prepare(sql)
+            sqlite3_finalize(statement)
+        }
+    }
+
+    public func executeNamed(_ sql: String, fields: [String: String]) throws -> [String: Any] {
+        guard !readOnly else { throw SlopError.sqlite("document is read-only") }
+        lock.lock()
+        defer { lock.unlock() }
+        try rawExecute("BEGIN IMMEDIATE")
+        do {
+            let result: [String: Any] = try withAccess(.action) {
+                let statement = try prepare(sql)
+                defer { sqlite3_finalize(statement) }
+                try bindNamed(fields, to: statement)
+                let code = sqlite3_step(statement)
+                guard code == SQLITE_DONE || code == SQLITE_ROW else {
+                    throw SlopError.sqlite(errorMessage)
+                }
+                return [
+                    "changes": Int(sqlite3_changes(handle)),
+                    "lastInsertRowid": sqlite3_last_insert_rowid(handle),
+                ]
+            }
+            try bumpDocumentRevision()
+            try rawExecute("COMMIT")
+            var output = result
+            output["revision"] = try revision()
+            return output
+        } catch {
+            try? rawExecute("ROLLBACK")
+            throw error
+        }
+    }
+
+    public func withReadSnapshot<T>(_ body: () throws -> T) throws -> T {
+        lock.lock()
+        defer { lock.unlock() }
+        try rawExecute("BEGIN")
+        do {
+            let value = try body()
+            try rawExecute("COMMIT")
+            return value
+        } catch {
+            try? rawExecute("ROLLBACK")
+            throw error
+        }
     }
 
     public func query(_ sql: String, parameters: [Any] = []) throws -> [[String: Any]] {
@@ -287,6 +397,53 @@ public final class SlopDatabase: @unchecked Sendable {
         let code = sqlite3_step(statement)
         guard code == SQLITE_DONE || code == SQLITE_ROW else { throw SlopError.sqlite(errorMessage) }
         return ["changes": Int(sqlite3_changes(handle)), "lastInsertRowid": sqlite3_last_insert_rowid(handle)]
+    }
+
+    private func withAccess<T>(_ access: SQLiteAccess, _ body: () throws -> T) throws -> T {
+        let previous = gate.access
+        gate.access = access
+        defer { gate.access = previous }
+        return try body()
+    }
+
+    private func prepare(_ sql: String) throws -> OpaquePointer {
+        guard let handle else { throw SlopError.sqlite("database is closed") }
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(handle, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
+            throw SlopError.sqlite(errorMessage)
+        }
+        return statement
+    }
+
+    private func columnNames(_ statement: OpaquePointer?) -> [String] {
+        (0..<sqlite3_column_count(statement)).map { index in
+            String(cString: sqlite3_column_name(statement, index))
+        }
+    }
+
+    private func bindNamed(_ fields: [String: String], to statement: OpaquePointer?) throws {
+        for (name, value) in fields {
+            let index = sqlite3_bind_parameter_index(statement, ":" + name)
+            guard index > 0 else {
+                throw SlopError.invalidArgument("Unexpected action field: \(name)")
+            }
+            guard sqlite3_bind_text(statement, index, value, -1, sqliteTransient) == SQLITE_OK else {
+                throw SlopError.sqlite(errorMessage)
+            }
+        }
+        let count = Int(sqlite3_bind_parameter_count(statement))
+        var missing: [String] = []
+        if count > 0 {
+            for index in 1...count {
+                guard let cName = sqlite3_bind_parameter_name(statement, Int32(index)) else { continue }
+                let raw = String(cString: cName)
+                let name = raw.hasPrefix(":") ? String(raw.dropFirst()) : raw
+                if fields[name] == nil { missing.append(name) }
+            }
+        }
+        if !missing.isEmpty {
+            throw SlopError.invalidArgument("Missing action field: \(missing.sorted().joined(separator: ", "))")
+        }
     }
 
     private func rawExecute(_ sql: String) throws {

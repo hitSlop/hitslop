@@ -1,53 +1,157 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Habit Tracker</title><script src="/slop.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="hitslop-renderer" content="sql-html-v1">
+  <title>Habit Tracker</title>
   <style>
     :root{color-scheme:dark;--bg:#06140d;--surface:#0b2117;--ink:#eafff0;--muted:#52936b;--accent:#39f58a;--line:#173c29}
     *{box-sizing:border-box}html,body{margin:0;min-height:100%;overflow-x:hidden;background:var(--bg);color:var(--ink)}
     body{font-family:ui-monospace,"SFMono-Regular",Menlo,monospace;background:radial-gradient(600px 420px at 10% -10%,#123523 0,transparent 58%),var(--bg)}
-    main{padding:35px 29px 32px;min-height:100vh}h1{font-size:30px;letter-spacing:-.04em;margin:0;color:#91ffb9;outline:none}
+    main{padding:35px 29px 32px;min-height:100vh}h1{font-size:30px;letter-spacing:-.04em;margin:0;color:#91ffb9}
+    .title-form,.name-form,.cell-form,.remove-form{display:contents}.title{width:100%;border:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;padding:0;outline:none}
     .week{margin:14px 0 26px;color:var(--muted);font-weight:650}.grid{display:grid;grid-template-columns:minmax(92px,1fr) repeat(7,24px) 38px;gap:4px;align-items:center}
-    .head{color:var(--muted);font-size:11px;font-weight:700;margin-bottom:10px}.head span:not(:first-child){text-align:center}
-    .habit{display:contents}.name{display:flex;align-items:center;gap:8px;min-width:0;font:600 13px -apple-system,BlinkMacSystemFont,sans-serif;outline:none}.icon{color:var(--accent)}
-    .dot{appearance:none;border:0;width:24px;height:24px;border-radius:50%;background:var(--surface);cursor:pointer;color:#04130b;font-weight:900;display:grid;place-items:center}
-    .dot.on{background:var(--accent)}.dot.on:after{content:'✓'}.dot:hover{box-shadow:0 0 0 2px #39f58a44}.score{text-align:right;color:var(--accent);font-weight:800;font-size:13px}
-    .remove{opacity:0;position:absolute;border:0;background:none;color:#ef7798;cursor:pointer}.name:hover .remove{opacity:1}.rule{height:1px;background:var(--line);margin:27px 0 22px}
+    .head{color:var(--muted);font-size:11px;font-weight:700;margin-bottom:10px}.head:not(:first-child){text-align:center}
+    .habit{display:contents}.name{position:relative;display:flex;align-items:center;gap:8px;min-width:0;font:600 13px -apple-system,BlinkMacSystemFont,sans-serif}.name input{min-width:0;width:100%;border:0;background:transparent;color:inherit;font:inherit;padding:0;outline:none}.icon{color:var(--accent)}
+    .dot{appearance:none;border:0;width:24px;height:24px;border-radius:50%;background:var(--surface);cursor:pointer;color:#04130b;font-weight:900;display:grid;place-items:center}.dot.on{background:var(--accent)}.dot.on:after{content:'✓'}.dot:hover{box-shadow:0 0 0 2px #39f58a44}.score{text-align:right;color:var(--accent);font-weight:800;font-size:13px}
+    .remove{opacity:0;position:absolute;right:-2px;border:0;background:none;color:#ef7798;cursor:pointer}.name:hover .remove{opacity:1}.rule{height:1px;background:var(--line);margin:27px 0 22px}
     h2{font:650 12px -apple-system,BlinkMacSystemFont,sans-serif;color:var(--muted);margin:0 0 12px}.heat{display:grid;gap:6px}.heat-row{display:grid;grid-template-columns:98px repeat(7,1fr);gap:4px;align-items:center;color:#427b59;font-size:10px}.heat-cell{height:15px;border-radius:3px;background:var(--surface)}.heat-cell.on{background:var(--accent)}
     .total{display:flex;justify-content:space-between;align-items:baseline;margin-top:22px;color:var(--muted);font:14px -apple-system,BlinkMacSystemFont,sans-serif}.total b{font:800 22px ui-monospace,monospace;color:var(--accent)}
     progress{appearance:none;width:100%;height:11px;margin-top:10px}progress::-webkit-progress-bar{background:var(--surface);border-radius:9px}progress::-webkit-progress-value{background:var(--accent);border-radius:9px}
-    form{display:flex;gap:9px;margin-top:22px}input{min-width:0;flex:1;background:transparent;color:var(--ink);border:0;border-bottom:1px solid var(--line);padding:8px 1px;font:13px inherit;outline:none}input:focus{border-color:var(--accent)}
-    form button{border:0;border-radius:8px;background:var(--surface);color:var(--accent);font:700 11px inherit;padding:0 12px;cursor:pointer}@media print{form,.remove{display:none}}
+    .add{display:flex;gap:9px;margin-top:22px}.add input{min-width:0;flex:1;background:transparent;color:var(--ink);border:0;border-bottom:1px solid var(--line);padding:8px 1px;font:13px inherit;outline:none}.add input:focus{border-color:var(--accent)}
+    .add button{border:0;border-radius:8px;background:var(--surface);color:var(--accent);font:700 11px inherit;padding:0 12px;cursor:pointer}form[aria-busy="true"]{opacity:.55}@media print{.add,.remove{display:none}}
   </style>
 </head>
-<body><main>
-  <h1 id="title" contenteditable="true" spellcheck="false">Habit Tracker</h1><div class="week" id="week"></div>
-  <section class="grid" id="grid"></section><div class="rule"></div><h2>This week</h2><section class="heat" id="heat"></section>
-  <div class="total"><span>Weekly score</span><b id="total"></b></div><progress id="progress" max="1"></progress>
-  <form id="add"><input name="name" placeholder="Add a habit" required autocomplete="off"><button>Add</button></form>
-</main><script>
-  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let state={habits:[],checks:new Map(),settings:null};
-  const daysFrom=start=>Array.from({length:7},(_,i)=>{const d=new Date(start+'T12:00:00');d.setDate(d.getDate()+i);return d.toISOString().slice(0,10)});
-  async function load(){
-    const [settings,habits,checks]=await Promise.all([
-      slop.query('SELECT title, week_start FROM habit_settings WHERE id=1'),
-      slop.query('SELECT id,name,icon,position FROM habits ORDER BY position,id'),
-      slop.query("SELECT habit_id,day,completed FROM habit_checks WHERE day >= (SELECT week_start FROM habit_settings WHERE id=1) AND day < date((SELECT week_start FROM habit_settings WHERE id=1), '+7 days')")
-    ]);
-    state.settings=settings[0];state.habits=habits;state.checks=new Map(checks.map(c=>[c.habit_id+'|'+c.day,Number(c.completed)]));render();
-  }
-  function render(){const days=daysFrom(state.settings.week_start);document.querySelector('#title').textContent=state.settings.title;
-    const fmt=new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric'});document.querySelector('#week').textContent=fmt.format(new Date(days[0]+'T12:00:00'))+' – '+fmt.format(new Date(days[6]+'T12:00:00'));
-    const labels=['M','T','W','T','F','S','S'];let html='<div class="head">Habit</div>'+labels.map(x=>`<span class="head">${x}</span>`).join('')+'<span class="head">Score</span>';
-    for(const h of state.habits){const score=days.filter(d=>state.checks.get(h.id+'|'+d)).length;html+=`<div class="habit"><div class="name"><span class="icon">${esc(h.icon)}</span><span contenteditable="true" data-name="${h.id}">${esc(h.name)}</span><button class="remove" data-remove="${h.id}">×</button></div>${days.map(d=>`<button class="dot ${state.checks.get(h.id+'|'+d)?'on':''}" data-habit="${h.id}" data-day="${d}"></button>`).join('')}<span class="score">${score}/7</span></div>`}document.querySelector('#grid').innerHTML=html;
-    document.querySelector('#heat').innerHTML=state.habits.map(h=>`<div class="heat-row"><span>${esc(h.name)}</span>${days.map(d=>`<i class="heat-cell ${state.checks.get(h.id+'|'+d)?'on':''}"></i>`).join('')}</div>`).join('');
-    const done=[...state.checks.values()].filter(Boolean).length,total=state.habits.length*7;document.querySelector('#total').textContent=`${done} / ${total}`;const p=document.querySelector('#progress');p.max=Math.max(total,1);p.value=done;
-  }
-  document.querySelector('#grid').addEventListener('click',async e=>{const b=e.target.closest('[data-habit]');if(b){const key=b.dataset.habit+'|'+b.dataset.day;const next=state.checks.get(key)?0:1;await slop.exec("INSERT INTO habit_checks(habit_id,day,completed) VALUES(?,?,?) ON CONFLICT(habit_id,day) DO UPDATE SET completed=excluded.completed",[Number(b.dataset.habit),b.dataset.day,next]);await load();return}const r=e.target.closest('[data-remove]');if(r&&confirm('Remove this habit?')){await slop.exec('DELETE FROM habits WHERE id=?',[Number(r.dataset.remove)]);await load()}});
-  document.querySelector('#grid').addEventListener('focusout',async e=>{if(e.target.dataset.name){await slop.exec('UPDATE habits SET name=? WHERE id=?',[e.target.textContent.trim()||'Untitled',Number(e.target.dataset.name)]);await load()}});
-  document.querySelector('#title').addEventListener('blur',async e=>{await slop.exec('UPDATE habit_settings SET title=? WHERE id=1',[e.target.textContent.trim()||'Habit Tracker']);await load()});
-  document.querySelector('#add').addEventListener('submit',async e=>{e.preventDefault();const input=e.currentTarget.elements.name;await slop.exec("INSERT INTO habits(name,icon,position) VALUES(?,'◇',COALESCE((SELECT max(position)+1 FROM habits),1))",[input.value.trim()]);input.value='';await load()});
-  slop.onChange(()=>load());load().then(()=>slop.ready());
-</script></body></html>
+<body>
+<main>
+  <slop-row as="settings">
+    <script type="application/sql">
+      SELECT
+        title,
+        substr('JanFebMarAprMayJunJulAugSepOctNovDec', (CAST(strftime('%m', week_start) AS INTEGER) - 1) * 3 + 1, 3)
+          || ' ' || CAST(strftime('%d', week_start) AS INTEGER)
+          || ' – ' ||
+        substr('JanFebMarAprMayJunJulAugSepOctNovDec', (CAST(strftime('%m', date(week_start, '+6 days')) AS INTEGER) - 1) * 3 + 1, 3)
+          || ' ' || CAST(strftime('%d', date(week_start, '+6 days')) AS INTEGER) AS week_label
+      FROM habit_settings
+    </script>
+    <template>
+      <h1>
+        <form class="title-form" data-slop-action="update-title" data-slop-trigger="change">
+          <input class="title" id="title" name="title" value="{{settings.title}}" aria-label="Tracker title" autocomplete="off">
+        </form>
+      </h1>
+      <div class="week" id="week">{{settings.week_label}}</div>
+    </template>
+  </slop-row>
+
+  <section class="grid" id="grid">
+    <div class="head">Habit</div><span class="head">M</span><span class="head">T</span><span class="head">W</span><span class="head">T</span><span class="head">F</span><span class="head">S</span><span class="head">S</span><span class="head">Score</span>
+    <slop-each as="habit">
+      <script type="application/sql">
+        SELECT *,
+          CASE done_0 WHEN 1 THEN 'on' ELSE '' END AS class_0,
+          CASE done_1 WHEN 1 THEN 'on' ELSE '' END AS class_1,
+          CASE done_2 WHEN 1 THEN 'on' ELSE '' END AS class_2,
+          CASE done_3 WHEN 1 THEN 'on' ELSE '' END AS class_3,
+          CASE done_4 WHEN 1 THEN 'on' ELSE '' END AS class_4,
+          CASE done_5 WHEN 1 THEN 'on' ELSE '' END AS class_5,
+          CASE done_6 WHEN 1 THEN 'on' ELSE '' END AS class_6
+        FROM habit_week
+        ORDER BY position, id
+      </script>
+      <template>
+        <div class="habit" id="habit-{{habit.id}}">
+          <div class="name">
+            <span class="icon">{{habit.icon}}</span>
+            <form class="name-form" data-slop-action="update-habit" data-slop-trigger="change">
+              <input type="hidden" name="id" value="{{habit.id}}">
+              <input name="name" value="{{habit.name}}" aria-label="Habit name" autocomplete="off">
+            </form>
+            <form class="remove-form" data-slop-action="remove-habit">
+              <input type="hidden" name="id" value="{{habit.id}}">
+              <button class="remove" type="submit" aria-label="Remove {{habit.name}}">×</button>
+            </form>
+          </div>
+          <form class="cell-form" data-slop-action="toggle-check"><input type="hidden" name="habit_id" value="{{habit.id}}"><input type="hidden" name="day" value="{{habit.day_0}}"><button class="dot {{habit.class_0}}" type="submit" aria-label="Toggle {{habit.name}} on {{habit.day_0}}"></button></form>
+          <form class="cell-form" data-slop-action="toggle-check"><input type="hidden" name="habit_id" value="{{habit.id}}"><input type="hidden" name="day" value="{{habit.day_1}}"><button class="dot {{habit.class_1}}" type="submit" aria-label="Toggle {{habit.name}} on {{habit.day_1}}"></button></form>
+          <form class="cell-form" data-slop-action="toggle-check"><input type="hidden" name="habit_id" value="{{habit.id}}"><input type="hidden" name="day" value="{{habit.day_2}}"><button class="dot {{habit.class_2}}" type="submit" aria-label="Toggle {{habit.name}} on {{habit.day_2}}"></button></form>
+          <form class="cell-form" data-slop-action="toggle-check"><input type="hidden" name="habit_id" value="{{habit.id}}"><input type="hidden" name="day" value="{{habit.day_3}}"><button class="dot {{habit.class_3}}" type="submit" aria-label="Toggle {{habit.name}} on {{habit.day_3}}"></button></form>
+          <form class="cell-form" data-slop-action="toggle-check"><input type="hidden" name="habit_id" value="{{habit.id}}"><input type="hidden" name="day" value="{{habit.day_4}}"><button class="dot {{habit.class_4}}" type="submit" aria-label="Toggle {{habit.name}} on {{habit.day_4}}"></button></form>
+          <form class="cell-form" data-slop-action="toggle-check"><input type="hidden" name="habit_id" value="{{habit.id}}"><input type="hidden" name="day" value="{{habit.day_5}}"><button class="dot {{habit.class_5}}" type="submit" aria-label="Toggle {{habit.name}} on {{habit.day_5}}"></button></form>
+          <form class="cell-form" data-slop-action="toggle-check"><input type="hidden" name="habit_id" value="{{habit.id}}"><input type="hidden" name="day" value="{{habit.day_6}}"><button class="dot {{habit.class_6}}" type="submit" aria-label="Toggle {{habit.name}} on {{habit.day_6}}"></button></form>
+          <span class="score">{{habit.completed}}/7</span>
+        </div>
+      </template>
+    </slop-each>
+  </section>
+
+  <div class="rule"></div>
+  <h2>This week</h2>
+  <section class="heat" id="heat">
+    <slop-each as="habit">
+      <script type="application/sql">
+        SELECT name,
+          CASE done_0 WHEN 1 THEN 'on' ELSE '' END AS class_0,
+          CASE done_1 WHEN 1 THEN 'on' ELSE '' END AS class_1,
+          CASE done_2 WHEN 1 THEN 'on' ELSE '' END AS class_2,
+          CASE done_3 WHEN 1 THEN 'on' ELSE '' END AS class_3,
+          CASE done_4 WHEN 1 THEN 'on' ELSE '' END AS class_4,
+          CASE done_5 WHEN 1 THEN 'on' ELSE '' END AS class_5,
+          CASE done_6 WHEN 1 THEN 'on' ELSE '' END AS class_6
+        FROM habit_week
+        ORDER BY position, id
+      </script>
+      <template>
+        <div class="heat-row">
+          <span>{{habit.name}}</span><i class="heat-cell {{habit.class_0}}"></i><i class="heat-cell {{habit.class_1}}"></i><i class="heat-cell {{habit.class_2}}"></i><i class="heat-cell {{habit.class_3}}"></i><i class="heat-cell {{habit.class_4}}"></i><i class="heat-cell {{habit.class_5}}"></i><i class="heat-cell {{habit.class_6}}"></i>
+        </div>
+      </template>
+    </slop-each>
+  </section>
+
+  <slop-row as="summary">
+    <script type="application/sql">
+      SELECT
+        COALESCE(sum(completed), 0) AS completed,
+        COALESCE(sum(possible), 0) AS possible,
+        max(COALESCE(sum(possible), 0), 1) AS progress_max
+      FROM habit_week
+    </script>
+    <template>
+      <div class="total"><span>Weekly score</span><b id="total">{{summary.completed}} / {{summary.possible}}</b></div>
+      <progress id="progress" max="{{summary.progress_max}}" value="{{summary.completed}}"></progress>
+    </template>
+  </slop-row>
+
+  <form class="add" data-slop-action="add-habit">
+    <input name="name" placeholder="Add a habit" required autocomplete="off">
+    <button type="submit">Add</button>
+  </form>
+</main>
+
+<script type="application/sql" data-slop-action="update-title">
+  UPDATE habit_settings
+  SET title = COALESCE(NULLIF(trim(:title), ''), 'Habit Tracker')
+  WHERE id = 1
+</script>
+<script type="application/sql" data-slop-action="update-habit">
+  UPDATE habits
+  SET name = COALESCE(NULLIF(trim(:name), ''), 'Untitled')
+  WHERE id = CAST(:id AS INTEGER)
+</script>
+<script type="application/sql" data-slop-action="toggle-check">
+  INSERT INTO habit_checks(habit_id, day, completed)
+  VALUES (CAST(:habit_id AS INTEGER), :day, 1)
+  ON CONFLICT(habit_id, day) DO UPDATE SET completed = 1 - completed
+</script>
+<script type="application/sql" data-slop-action="remove-habit">
+  DELETE FROM habits WHERE id = CAST(:id AS INTEGER)
+</script>
+<script type="application/sql" data-slop-action="add-habit">
+  INSERT INTO habits(name, icon, position)
+  VALUES (COALESCE(NULLIF(trim(:name), ''), 'Untitled'), '◇', COALESCE((SELECT max(position) + 1 FROM habits), 1))
+</script>
+</body>
+</html>

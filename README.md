@@ -106,7 +106,37 @@ Template source is a folder (`view.html`, `schema.sql`, `docs.md`, `meta.json`, 
 
 ## Runtime for template authors
 
-The native host loads the `/` row from `slop_view`, injects `/slop.js`, and exposes:
+The native host loads the `/` row from `slop_view`. Checked views opt in with:
+
+```html
+<meta name="hitslop-renderer" content="sql-html-v1">
+```
+
+They use explicit SQL result cardinality. A singleton is exactly one row:
+
+```html
+<slop-row as="recipe">
+  <script type="application/sql">SELECT title FROM recipe</script>
+  <template><h1>{{recipe.title}}</h1></template>
+</slop-row>
+```
+
+A collection is zero or more rows:
+
+```html
+<slop-each as="habit">
+  <script type="application/sql">
+    SELECT id, name FROM habits ORDER BY position
+  </script>
+  <template>
+    <div id="habit-{{habit.id}}">{{habit.name}}</div>
+  </template>
+</slop-each>
+```
+
+`slop-row` fails unless its read-only query returns exactly one row. `slop-each` repeats its template once per result row. Placeholders must be qualified as `{{alias.column}}`. Named `data-slop-action` forms perform writes, and checked documents cannot contain authored JavaScript.
+
+Unmarked legacy views still receive `/slop.js` and can use:
 
 ```js
 await slop.query(sql, params)

@@ -18,6 +18,9 @@ packages:
   SwiftArgumentParser:
     url: https://github.com/apple/swift-argument-parser.git
     from: 1.8.2
+  JustHTML:
+    url: https://github.com/kylehowells/swift-justhtml.git
+    from: 0.4.6
 targets:
   hitSlop:
     type: application
@@ -31,6 +34,8 @@ targets:
     dependencies:
       - sdk: WebKit.framework
       - sdk: libsqlite3.tbd
+      - package: JustHTML
+        product: justhtml
       - target: slop
         embed: false
       - target: SlopPreview
@@ -65,6 +70,8 @@ targets:
     dependencies:
       - package: SwiftArgumentParser
         product: ArgumentParser
+      - package: JustHTML
+        product: justhtml
       - sdk: AppKit.framework
       - sdk: WebKit.framework
       - sdk: libsqlite3.tbd
@@ -120,6 +127,8 @@ targets:
       - sdk: AppKit.framework
       - sdk: WebKit.framework
       - sdk: libsqlite3.tbd
+      - package: JustHTML
+        product: justhtml
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.tests

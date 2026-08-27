@@ -43,7 +43,7 @@ enum SlopHeadlessRenderer {
 
         let navigation = RenderNavigationDelegate()
         view.navigationDelegate = navigation
-        let html = try database.mainHTML()
+        let html = try SlopCheckedRenderer.displayHTML(from: database)
         try await navigation.load(html: html, in: view)
         try await Task.sleep(for: .milliseconds(350))
 
