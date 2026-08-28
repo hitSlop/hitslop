@@ -1,42 +1,41 @@
 {
-  "artifact" : {
-    "artifactHash" : "sha256:95d42fb6a5a16476eb4734a3132f8ddd22b4b3934e7fde955c8bc6a01fef99e0",
-    "entry" : "build/app.wasm",
-    "sourceHash" : "sha256:127b918dfcd5a3de8777acb3fa78f5b678f30a69d8bc625dcb862d3f5c7b370c"
+  "artifact": {
+    "artifactHash": "sha256:c05e946e1d1c2cdb65e72c06c9529e28836ad83370a778a6a00f23d1b17a40d3",
+    "sourceHash": "sha256:8efe7f644343d6b4c3a880289947413123ce66fbc29d7b60c750228d68ffa255"
   },
-  "dependencies" : [
-    "slop-kit-0.2"
-  ],
-  "format" : "slop-wasm/1",
-  "id" : "com.longtaillabs.slop.sqlite-todo-spike",
-  "catalog" : {
-    "summary" : "A searchable field notebook powered by local SQLite.",
-    "categories" : ["Notes", "Database"],
-    "tags" : ["notes", "todo", "sqlite", "local"]
-  },
-  "appearance" : {
-    "stylesheet" : "theme.css",
-    "themeID" : "default"
-  },
-  "runtime" : "elementary-ui-0.7/slop-runtime-1",
-  "source" : {
-    "files" : [
-      "ContentView.swift",
-      "styles.css"
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.sqlite-field-notes",
+  "catalog": {
+    "summary": "A searchable field notebook powered by local SQLite.",
+    "categories": [
+      "Notes",
+      "Database"
     ],
-    "path" : "source"
+    "tags": [
+      "notes",
+      "todo",
+      "sqlite",
+      "local",
+      "svelte"
+    ]
   },
-  "stores" : [
+  "appearance": {
+    "themeID": "default"
+  },
+  "stores": [
     {
-      "id" : "main",
-      "kind" : "sqlite",
-      "path" : "data.sqlite"
+      "id": "main",
+      "kind": "sqlite",
+      "path": "data.sqlite"
     }
   ],
-  "title" : "SQLite Field Notes",
-  "window" : {
-    "height" : 640,
-    "width" : 480,
-    "shape" : { "kind" : "roundedRect", "radius" : 22 }
+  "title": "SQLite Field Notes",
+  "window": {
+    "height": 640,
+    "width": 480,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 22
+    }
   }
 }

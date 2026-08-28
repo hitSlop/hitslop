@@ -9,7 +9,7 @@ struct hitSlopApp: App {
         Settings {
             VStack(spacing: 8) {
                 Text("hitSlop").font(.headline)
-                Text("ElementaryUI apps whose source and data live beside them.")
+                Text("Tiny apps whose source and data live beside them.")
                     .foregroundStyle(.secondary)
             }
             .frame(width: 380)

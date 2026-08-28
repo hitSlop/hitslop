@@ -20,8 +20,7 @@ public enum SlopHostError: LocalizedError, Equatable {
 }
 
 public struct SlopManifest: Codable, Equatable, Sendable {
-    public static let supportedFormat = "slop-wasm/1"
-    public static let hostRuntime = "elementary-ui-0.7/slop-runtime-1"
+    public static let supportedFormat = "slop-web/1"
 
     public struct Window: Codable, Equatable, Sendable {
         public var width: Double
@@ -52,17 +51,10 @@ public struct SlopManifest: Codable, Equatable, Sendable {
     }
 
     public struct Appearance: Codable, Equatable, Sendable {
-        public var stylesheet: String
         public var themeID: String
     }
 
-    public struct Source: Codable, Equatable, Sendable {
-        public var path: String
-        public var files: [String]
-    }
-
     public struct Artifact: Codable, Equatable, Sendable {
-        public var entry: String
         public var sourceHash: String
         public var artifactHash: String
     }
@@ -83,11 +75,8 @@ public struct SlopManifest: Codable, Equatable, Sendable {
     public var id: String
     public var title: String
     public var catalog: Catalog
-    public var runtime: String
-    public var dependencies: [String]
     public var window: Window
     public var appearance: Appearance
-    public var source: Source
     public var artifact: Artifact
     public var stores: [Store]
 }
@@ -97,10 +86,8 @@ public struct SlopPackage: Sendable {
     public let manifestURL: URL
     public let manifest: SlopManifest
     public let entryURL: URL
-    public let webRootURL: URL
     public let sourceRootURL: URL
     public let sourceURLs: [URL]
-    public let styleURL: URL?
     public let themeURL: URL
 
     public init(rootURL: URL) throws {
@@ -128,12 +115,6 @@ public struct SlopPackage: Sendable {
               !manifest.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else {
             throw SlopHostError.invalidPackage("Manifest id and title must not be empty")
-        }
-        guard manifest.runtime == SlopManifest.hostRuntime else {
-            throw SlopHostError.invalidPackage("Unsupported runtime \(manifest.runtime)")
-        }
-        guard Set(manifest.dependencies).isSubset(of: ["slop-kit-0.1", "slop-kit-0.2"]) else {
-            throw SlopHostError.invalidPackage("Manifest requests an unknown dependency")
         }
         guard manifest.window.width >= 320, manifest.window.height >= 320,
               manifest.window.width <= 2_400, manifest.window.height <= 2_400
@@ -166,47 +147,26 @@ public struct SlopPackage: Sendable {
         else {
             throw SlopHostError.invalidPackage("Template catalog metadata must include a summary and categories")
         }
-        guard !manifest.source.files.isEmpty, manifest.source.files.count <= 128 else {
-            throw SlopHostError.invalidPackage("Manifest must declare between 1 and 128 source files")
-        }
         guard Set(manifest.stores.map(\.id)).count == manifest.stores.count,
               manifest.stores.allSatisfy({ !$0.id.isEmpty })
         else {
             throw SlopHostError.invalidPackage("Store identifiers must be non-empty and unique")
         }
 
-        let entry = try Self.resolve(relativePath: manifest.artifact.entry, inside: root)
+        let entry = try Self.resolve(relativePath: "build/index.html", inside: root)
         guard FileManager.default.fileExists(atPath: entry.path) else {
-            throw SlopHostError.invalidPackage("Missing entry file: \(manifest.artifact.entry)")
+            throw SlopHostError.invalidPackage("Missing entry file: build/index.html")
         }
-        if entry.pathExtension.lowercased() != "wasm" {
-            throw SlopHostError.invalidPackage("Host runtime documents must declare a WASM artifact entry")
+        let sourceRoot = try Self.resolve(relativePath: "source", inside: root)
+        let sourceURLs = try Self.sourceFiles(inside: sourceRoot)
+        guard !sourceURLs.isEmpty, sourceURLs.count <= 128 else {
+            throw SlopHostError.invalidPackage("source/ must contain between 1 and 128 regular files")
         }
-        let sourceRoot = try Self.resolve(relativePath: manifest.source.path, inside: root)
-        let sourceURLs = try manifest.source.files.map { file -> URL in
-            guard file.hasSuffix(".swift") || file.hasSuffix(".css") else {
-                throw SlopHostError.invalidPackage("Unsupported source file type: \(file)")
-            }
-            let url = try Self.resolve(relativePath: file, inside: sourceRoot)
-            guard FileManager.default.fileExists(atPath: url.path) else {
-                throw SlopHostError.invalidPackage("Missing source file: \(file)")
-            }
-            return url
-        }
-        for (path, url) in zip(manifest.source.files, sourceURLs) where path.hasSuffix(".swift") {
-            let source = try String(contentsOf: url, encoding: .utf8)
-            guard !source.contains("@main") else {
-                throw SlopHostError.invalidPackage("Document source must not declare @main; the compiler injects the entry point")
-            }
-        }
-        guard manifest.source.files.contains(where: { $0.hasSuffix(".swift") }) else {
-            throw SlopHostError.invalidPackage("At least one Swift source file is required")
-        }
-        let themeURL = try Self.resolve(relativePath: manifest.appearance.stylesheet, inside: root)
+        let themeURL = try Self.resolve(relativePath: "theme.css", inside: root)
         guard themeURL.pathExtension.lowercased() == "css",
               FileManager.default.fileExists(atPath: themeURL.path)
         else {
-            throw SlopHostError.invalidPackage("Missing CSS appearance stylesheet: \(manifest.appearance.stylesheet)")
+            throw SlopHostError.invalidPackage("Missing CSS appearance stylesheet: theme.css")
         }
         let themeData = try Data(contentsOf: themeURL)
         guard themeData.count <= 512 * 1_024,
@@ -228,17 +188,17 @@ public struct SlopPackage: Sendable {
         self.manifestURL = manifestURL
         self.manifest = manifest
         self.entryURL = entry
-        self.webRootURL = entry.deletingLastPathComponent().standardizedFileURL.resolvingSymlinksInPath()
         self.sourceRootURL = sourceRoot
         self.sourceURLs = sourceURLs
-        self.styleURL = zip(manifest.source.files, sourceURLs).first(where: { $0.0 == "styles.css" })?.1
         self.themeURL = themeURL
     }
 
-    public var usesHostRuntime: Bool { manifest.runtime == SlopManifest.hostRuntime }
-
     public var isSourceCurrent: Bool {
         (try? canonicalSourceHash()) == manifest.artifact.sourceHash
+    }
+
+    public var isArtifactCurrent: Bool {
+        (try? canonicalArtifactHash()) == manifest.artifact.artifactHash
     }
 
     public var defaultSQLiteStoreID: String? {
@@ -261,13 +221,6 @@ public struct SlopPackage: Sendable {
         return try Self.resolve(relativePath: descriptor.path, inside: rootURL)
     }
 
-    public func webAssetURL(path: String) throws -> URL {
-        let relative = path == "/" || path.isEmpty
-            ? entryURL.lastPathComponent
-            : String(path.drop(while: { $0 == "/" }))
-        return try Self.resolve(relativePath: relative, inside: webRootURL)
-    }
-
     public func documentAssetURL(path: String) throws -> URL {
         let relative = String(path.drop(while: { $0 == "/" }))
         guard relative.hasPrefix("assets/") else {
@@ -278,15 +231,17 @@ public struct SlopPackage: Sendable {
 
     public func canonicalSourceHash() throws -> String {
         var hasher = SHA256()
-        hasher.update(data: Data(manifest.runtime.utf8))
-        for dependency in manifest.dependencies.sorted() {
-            hasher.update(data: Data(dependency.utf8))
-        }
-        for (path, url) in zip(manifest.source.files, sourceURLs).sorted(by: { $0.0 < $1.0 }) {
+        for url in sourceURLs {
+            let path = String(url.path.dropFirst(sourceRootURL.path.count + 1))
             hasher.update(data: Data(path.utf8))
             hasher.update(data: try Data(contentsOf: url))
         }
         return "sha256:" + hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    public func canonicalArtifactHash() throws -> String {
+        let digest = SHA256.hash(data: try Data(contentsOf: entryURL))
+        return "sha256:" + digest.map { String(format: "%02x", $0) }.joined()
     }
 
     public static func hash(directory: URL) throws -> String {
@@ -307,12 +262,50 @@ public struct SlopPackage: Sendable {
         return "sha256:" + hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
+    private static func sourceFiles(inside sourceRoot: URL) throws -> [URL] {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: sourceRoot.path, isDirectory: &isDirectory),
+              isDirectory.boolValue
+        else {
+            throw SlopHostError.invalidPackage("Missing source directory: source")
+        }
+        guard let enumerator = FileManager.default.enumerator(
+            at: sourceRoot,
+            includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey],
+            options: []
+        ) else {
+            throw SlopHostError.invalidPackage("Could not enumerate source directory")
+        }
+        var files: [URL] = []
+        for case let url as URL in enumerator {
+            let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
+            guard values.isSymbolicLink != true else {
+                throw SlopHostError.invalidPackage("Source symlinks are not supported: \(url.lastPathComponent)")
+            }
+            if values.isDirectory == true,
+               url.lastPathComponent == ".build" || url.lastPathComponent == "node_modules" {
+                throw SlopHostError.invalidPackage("Forbidden source directory: \(url.lastPathComponent)")
+            }
+            guard values.isRegularFile == true else { continue }
+            let resolvedURL = url.standardizedFileURL.resolvingSymlinksInPath()
+            guard resolvedURL.path.hasPrefix(sourceRoot.path + "/") else {
+                throw SlopHostError.invalidPackage("Source path escapes source/: \(url.path)")
+            }
+            let relative = String(resolvedURL.path.dropFirst(sourceRoot.path.count + 1))
+            _ = try resolve(relativePath: relative, inside: sourceRoot)
+            files.append(resolvedURL)
+        }
+        return files.sorted {
+            String($0.path.dropFirst(sourceRoot.path.count + 1)) < String($1.path.dropFirst(sourceRoot.path.count + 1))
+        }
+    }
+
     private static func resolve(relativePath: String, inside root: URL) throws -> URL {
         guard !relativePath.isEmpty,
               !relativePath.hasPrefix("/"),
               !relativePath.contains("\\")
         else {
-            throw SlopHostError.invalidPackage("Package paths must be non-empty relative POSIX paths")
+            throw SlopHostError.invalidPackage("Package paths must be non-empty relative POSIX paths: \(relativePath.debugDescription)")
         }
         let components = relativePath.split(separator: "/", omittingEmptySubsequences: false)
         guard !components.contains(".."), !components.contains(""),
@@ -350,7 +343,6 @@ public enum SlopMIME {
         case "html": "text/html"
         case "js", "mjs": "text/javascript"
         case "css": "text/css"
-        case "wasm": "application/wasm"
         case "json": "application/json"
         case "svg": "image/svg+xml"
         case "png": "image/png"

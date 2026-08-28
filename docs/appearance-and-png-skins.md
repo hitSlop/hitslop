@@ -2,9 +2,9 @@
 
 ## First-release appearance contract
 
-Every `.slop` package declares `appearance.stylesheet` and ships `theme.css`. The host loads its own semantic baseline first, the pinned ElementaryFlow stylesheet second, `source/styles.css` third, and `theme.css` last. Theme changes therefore do not modify the Wasm source hash and can hot-reload without remounting the ElementaryUI app.
+Every `.slop` package ships `theme.css` at its conventional path. The host loads its semantic baseline first, the document's inlined source styles second, and `theme.css` last. Theme changes therefore do not modify the source hash and can hot-reload without remounting the guest.
 
-The public styling API is the `--slop-*` token family plus the semantic classes declared by each document: body/heading/mono fonts; background, surface, text, muted text, accent, border, focus, success, warning, and danger colors; spacing; radii; shadows; and motion durations. Themes may also use arbitrary semantic selectors. ElementaryFlow's `_e*` classes and inline `--e-*` variables are private implementation details and must not become theme dependencies. Remote imports remain blocked by the runtime content-security policy.
+The public styling API is the `--slop-*` token family. Tailwind v4 in the SDK maps those onto utilities (`bg-background`, `text-foreground`, `bg-primary`) via `sdk/theme/tokens.css`, so `theme.css` can restyle a cartridge without a rebuild. Themes should set variables only; do not target `button` or `#status`. Remote imports remain blocked by the runtime content-security policy.
 
 Vector window shapes are host-owned because CSS clipping alone cannot provide native click-through hit testing. The first release supports rounded rectangles, capsules, and circles. The manifest is the source of truth for the initial shape; the Appearance panel writes changes back to it.
 

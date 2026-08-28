@@ -1,0 +1,42 @@
+{
+  "artifact": {
+    "artifactHash": "sha256:01d7f4bb5e61a7bf15017ac489aac3c11646f7887f366ebdf761328196c60c9d",
+    "sourceHash": "sha256:0de7f5a0fb2ff0e8f00277aff68539422b444f7830029eefdf43ab17c854e7d3"
+  },
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.notebook",
+  "catalog": {
+    "summary": "A Bits UI notebook with filters, a compose dialog, and live themes.",
+    "categories": [
+      "Notes",
+      "Productivity"
+    ],
+    "tags": [
+      "notes",
+      "bits-ui",
+      "tailwind",
+      "json",
+      "svelte"
+    ]
+  },
+  "appearance": {
+    "themeID": "default"
+  },
+  "stores": [
+    {
+      "id": "state",
+      "kind": "json",
+      "maxBytes": 1048576,
+      "path": "data.json"
+    }
+  ],
+  "title": "Notebook",
+  "window": {
+    "height": 640,
+    "width": 480,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 22
+    }
+  }
+}

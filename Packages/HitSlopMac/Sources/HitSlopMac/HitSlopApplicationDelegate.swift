@@ -60,7 +60,7 @@ public final class HitSlopApplicationDelegate: NSObject, NSApplicationDelegate, 
         panel.canChooseFiles = true
         panel.treatsFilePackagesAsDirectories = false
         panel.allowedContentTypes = [.slop]
-        panel.message = "Open an ElementaryUI .slop app"
+        panel.message = "Open a .slop app"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         openDocument(at: url)
     }

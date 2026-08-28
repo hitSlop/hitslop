@@ -1,0 +1,41 @@
+{
+  "artifact": {
+    "artifactHash": "sha256:85b42a49bb3c361eda729e5266bf1c1d32e303ba8f9f4c753499c940b15c7ca5",
+    "sourceHash": "sha256:455f75deebcdcd149c6cf0cdc7fec13174f856fb8823eebad9f3bfcd97e2462c"
+  },
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.prototype.ambient-mixer",
+  "catalog": {
+    "summary": "An authored-skin control surface for blending ambient sound layers.",
+    "categories": [
+      "Prototypes",
+      "Audio"
+    ],
+    "tags": [
+      "ambient",
+      "mixer",
+      "bits-ui",
+      "prototype"
+    ]
+  },
+  "appearance": {
+    "themeID": "default"
+  },
+  "stores": [
+    {
+      "id": "state",
+      "kind": "json",
+      "maxBytes": 1048576,
+      "path": "data.json"
+    }
+  ],
+  "title": "Ambient Mixer",
+  "window": {
+    "height": 560,
+    "width": 480,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 32
+    }
+  }
+}

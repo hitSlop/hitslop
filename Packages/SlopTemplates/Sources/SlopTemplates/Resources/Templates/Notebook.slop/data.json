@@ -1,0 +1,10 @@
+{
+  "nextID": 4,
+  "subtitle": "Local notes with a live theme overlay.",
+  "title": "Notebook",
+  "todos": [
+    { "done": true, "id": 1, "position": 0, "title": "Try Studio Noir in Appearance" },
+    { "done": false, "id": 2, "position": 1, "title": "Add a note from the dialog" },
+    { "done": false, "id": 3, "position": 2, "title": "Filter to open items" }
+  ]
+}

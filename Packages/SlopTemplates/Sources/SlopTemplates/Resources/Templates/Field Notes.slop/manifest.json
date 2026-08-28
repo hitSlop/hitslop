@@ -1,0 +1,42 @@
+{
+  "artifact": {
+    "artifactHash": "sha256:d050d3d453cd1a11eb8c55db53280c878eac22761f2450cefd83141a5d06b5f7",
+    "sourceHash": "sha256:32dd0b4b13bab669e0f19da8d1b9b28f01fc301360722b06213fea368e664ab5"
+  },
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.field-notes",
+  "catalog": {
+    "summary": "A compact local notebook backed by atomic JSON.",
+    "categories": [
+      "Notes",
+      "Productivity"
+    ],
+    "tags": [
+      "notes",
+      "todo",
+      "json",
+      "local",
+      "svelte"
+    ]
+  },
+  "appearance": {
+    "themeID": "default"
+  },
+  "stores": [
+    {
+      "id": "state",
+      "kind": "json",
+      "maxBytes": 1048576,
+      "path": "data.json"
+    }
+  ],
+  "title": "Field Notes",
+  "window": {
+    "height": 640,
+    "width": 480,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 22
+    }
+  }
+}

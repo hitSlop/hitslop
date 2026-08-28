@@ -1,5 +1,6 @@
 import Foundation
 import SlopCore
+import SlopTemplates
 
 struct SlopThemeManifest: Codable, Sendable {
     static let format = "slop-theme/1"
@@ -43,7 +44,7 @@ struct SlopThemeDescriptor: Identifiable, Sendable {
 enum SlopThemeCatalog {
     static func all() -> [SlopThemeDescriptor] {
         var result = [SlopThemeDescriptor.default]
-        if let root = Bundle.module.resourceURL?.appendingPathComponent("Themes") {
+        if let root = SlopTemplateLibrary.bundledThemesDirectory {
             result.append(contentsOf: load(from: root))
         }
         result.append(contentsOf: load(from: userDirectory))
@@ -51,14 +52,11 @@ enum SlopThemeCatalog {
         return result.filter { seen.insert($0.id).inserted }
     }
 
-    static var userDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return base.appendingPathComponent("hitSlop/Themes", isDirectory: true)
-    }
+    static var userDirectory: URL { SlopTemplateLibrary.userThemesDirectory }
 
     static func apply(_ theme: SlopThemeDescriptor, to packageURL: URL) throws {
         var manifest = try SlopManifestIO.read(from: packageURL)
-        let stylesheetURL = packageURL.appendingPathComponent(manifest.appearance.stylesheet)
+        let stylesheetURL = packageURL.appendingPathComponent("theme.css")
         try theme.css.write(to: stylesheetURL, options: .atomic)
         manifest.appearance.themeID = theme.id
         try SlopManifestIO.write(manifest, to: packageURL)

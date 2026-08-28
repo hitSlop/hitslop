@@ -3,22 +3,8 @@ import SlopCore
 import WebKit
 
 enum SlopRuntime {
-    static let identifier = "elementary-ui-0.7/slop-runtime-1"
-
-    static func shell() throws -> (data: Data, url: URL) {
-        try resource(named: "slop-runtime-1", extension: "html")
-    }
-
-    static func loader() throws -> (data: Data, url: URL) {
-        try resource(named: "slop-runtime-1", extension: "js")
-    }
-
     static func baseStyles() throws -> (data: Data, url: URL) {
         try resource(named: "slop-base", extension: "css")
-    }
-
-    static func elementaryFlowStyles() throws -> (data: Data, url: URL) {
-        try resource(named: "elementary-flow", extension: "css")
     }
 
     private static func resource(named name: String, extension fileExtension: String) throws -> (Data, URL) {
@@ -32,7 +18,8 @@ enum SlopRuntime {
     (() => {
       const native = window.webkit.messageHandlers.slop;
       let pending = 0;
-      let wasmLoaded = false;
+      let guestReady = false;
+      const markGuestReady = () => { guestReady = true; scheduleReady(); };
       let readySent = false;
       let mutationVersion = 0;
       const call = (op, payload = {}) => {
@@ -43,7 +30,7 @@ enum SlopRuntime {
         });
       };
       const scheduleReady = () => {
-        if (!wasmLoaded || readySent || pending !== 0) return;
+        if (!guestReady || readySent || pending !== 0) return;
         const version = mutationVersion;
         requestAnimationFrame(() => requestAnimationFrame(() => {
           if (readySent || pending !== 0 || version !== mutationVersion) return scheduleReady();
@@ -54,11 +41,6 @@ enum SlopRuntime {
       };
       new MutationObserver(() => { mutationVersion += 1; scheduleReady(); })
         .observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
-      Object.defineProperty(window, "__slopMarkWasmLoaded", {
-        value: () => { wasmLoaded = true; scheduleReady(); },
-        writable: false
-      });
-      window.addEventListener("slop:wasm-loaded", () => { wasmLoaded = true; scheduleReady(); }, { once: true });
       const handledInlineEditors = new WeakSet();
       document.addEventListener("keydown", event => {
         if ((event.key === "Enter" || event.key === "Escape") && event.target?.dataset?.slopInlineEditor === "true") {
@@ -100,17 +82,7 @@ enum SlopRuntime {
         write: (store, value, expectedRevision) => call("jsonWrite", { store, value, expectedRevision }),
         onChange: (store, callback) => subscribe("json", store, callback)
       });
-      Object.defineProperty(window, "slop", { value: Object.freeze({ db, json }), writable: false });
-      window.__slopQuery = (store, sql, parameters, callback) => db.query(store, sql, parameters).then(
-        rows => setTimeout(() => callback(null, rows), 0),
-        e => setTimeout(() => callback(String(e), null), 0)
-      );
-      window.__slopExecute = (store, sql, parameters, callback) => db.execute(store, sql, parameters).then(changes => callback(null, changes), e => callback(String(e), null));
-      window.__slopTransaction = (store, statements, callback) => db.transaction(store, statements).then(changes => callback(null, changes), e => callback(String(e), null));
-      window.__slopSQLiteOnChange = (store, callback) => db.onChange(store, callback);
-      window.__slopJSONRead = (store, callback) => json.read(store).then(r => callback(null, r.value, r.revision), e => callback(String(e), null, null));
-      window.__slopJSONWrite = (store, value, revision, callback) => json.write(store, value, revision).then(r => callback(null, r.revision), e => callback(String(e), null));
-      window.__slopJSONOnChange = (store, callback) => json.onChange(store, callback);
+      Object.defineProperty(window, "slop", { value: Object.freeze({ db, json, ready: markGuestReady }), writable: false });
     })();
     """#
 

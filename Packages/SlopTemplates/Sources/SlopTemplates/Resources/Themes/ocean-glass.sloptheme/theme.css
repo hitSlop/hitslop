@@ -1,0 +1,15 @@
+:root {
+  color-scheme: light;
+  --slop-bg: #dff4f5;
+  --slop-surface: rgb(255 255 255 / 54%);
+  --slop-surface-raised: rgb(255 255 255 / 76%);
+  --slop-surface-muted: #cfe9eb;
+  --slop-text: #12343b;
+  --slop-text-muted: #4e7379;
+  --slop-accent: #087f8c;
+  --slop-accent-contrast: #ffffff;
+  --slop-secondary: #1b6b75;
+  --slop-secondary-contrast: #ffffff;
+  --slop-border: #8ccdd2;
+  --slop-shadow-md: 0 18px 50px rgb(8 78 89 / 18%);
+}

@@ -8,23 +8,95 @@ import SlopMacSupport
 struct SlopCLI: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "slop",
-        abstract: "Inspect, duplicate, open, and export ElementaryUI .slop apps.",
+        abstract: "Inspect, duplicate, open, and export .slop apps.",
         version: "1.0.0",
-        subcommands: [Validate.self, Duplicate.self, Open.self, Export.self]
+        subcommands: [Validate.self, Build.self, Duplicate.self, Open.self, Export.self]
     )
 }
 
 struct Validate: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Validate a slop-wasm/1 document.")
+    static let configuration = CommandConfiguration(abstract: "Validate a slop-web/1 document.")
     @Argument(transform: URL.init(fileURLWithPath:)) var document: URL
 
     func run() throws {
         let package = try SlopPackage(rootURL: document)
         print("valid\t\(package.manifest.format)")
         print("title\t\(package.manifest.title)")
-        print("runtime\t\(package.manifest.runtime)")
         print("source\t\(package.isSourceCurrent ? "current" : "needs-rebuild")")
+        print("cartridge\t\(package.isArtifactCurrent ? "current" : "modified")")
         print("artifact\t\(package.entryURL.path)")
+    }
+}
+
+struct Build: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Rebuild the HTML cartridge with the local Vite toolchain.")
+    @Argument(transform: URL.init(fileURLWithPath:)) var document: URL
+
+    func run() throws {
+        let package = try SlopPackage(rootURL: document)
+        try Self.validateNode()
+        let bin = try Self.sdkScript()
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["node", bin.path, "build", package.rootURL.path]
+        process.standardOutput = FileHandle.standardOutput
+        process.standardError = FileHandle.standardError
+        try process.run()
+        process.waitUntilExit()
+        if process.terminationStatus != 0 {
+            throw ExitCode(process.terminationStatus)
+        }
+    }
+
+    private static func sdkScript() throws -> URL {
+        if let override = ProcessInfo.processInfo.environment["SLOP_SDK"] {
+            let url = URL(fileURLWithPath: override).appendingPathComponent("bin/slop.mjs")
+            if FileManager.default.fileExists(atPath: url.path) { return url }
+        }
+        if let executable = Bundle.main.executableURL?.resolvingSymlinksInPath() {
+            let installed = executable
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("libexec/hitslop/sdk/bin/slop.mjs")
+            if FileManager.default.fileExists(atPath: installed.path) { return installed }
+        }
+        var directory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        while true {
+            let candidate = directory.appendingPathComponent("sdk/bin/slop.mjs")
+            if FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+            let parent = directory.deletingLastPathComponent()
+            if parent.path == directory.path { break }
+            directory = parent
+        }
+        throw ValidationError("Could not find the hitSlop web SDK. Reinstall the CLI or set SLOP_SDK to an SDK directory.")
+    }
+
+    private static func validateNode() throws {
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["node", "--version"]
+        process.standardOutput = output
+        process.standardError = output
+        do {
+            try process.run()
+        } catch {
+            throw ValidationError("Node 20.19 or newer is required to build .slop packages.")
+        }
+        process.waitUntilExit()
+        let version = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+        let parts = version.split(separator: ".").compactMap { Int($0) }
+        guard process.terminationStatus == 0,
+              let major = parts.first,
+              major > 20 || (major == 20 && parts.count > 1 && parts[1] >= 19)
+        else {
+            let found = process.terminationStatus == 0 && !version.isEmpty
+                ? version
+                : "no usable Node installation"
+            throw ValidationError("Node 20.19 or newer is required; found \(found).")
+        }
     }
 }
 

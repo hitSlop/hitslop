@@ -1,0 +1,40 @@
+{
+  "artifact": {
+    "artifactHash": "sha256:71b43dcee6070e8e2556c095cd293e3cba0bfd6f40a48a8837f13bdd8847679b",
+    "sourceHash": "sha256:c164ca08b33233b24812fe13798c684d461725ef33c070066bd9e028c573152e"
+  },
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.focus-timer",
+  "catalog": {
+    "summary": "A circular focus/rest timer with local session history.",
+    "categories": [
+      "Focus",
+      "Productivity"
+    ],
+    "tags": [
+      "timer",
+      "pomodoro",
+      "json",
+      "circle"
+    ]
+  },
+  "appearance": {
+    "themeID": "default"
+  },
+  "stores": [
+    {
+      "id": "state",
+      "kind": "json",
+      "maxBytes": 1048576,
+      "path": "data.json"
+    }
+  ],
+  "title": "Focus Timer",
+  "window": {
+    "height": 420,
+    "width": 420,
+    "shape": {
+      "kind": "circle"
+    }
+  }
+}

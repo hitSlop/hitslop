@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/Packages/SlopCLI",
+      "name": "Debug slop (Packages/SlopCLI)",
+      "target": "slop",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug slop (Packages/SlopCLI)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/Packages/SlopCLI",
+      "name": "Release slop (Packages/SlopCLI)",
+      "target": "slop",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release slop (Packages/SlopCLI)"
+    }
+  ]
+}

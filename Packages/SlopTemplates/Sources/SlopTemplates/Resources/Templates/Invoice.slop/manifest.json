@@ -1,0 +1,41 @@
+{
+  "artifact": {
+    "artifactHash": "sha256:d05d251f027c68d9b05f9523f55578bc4dd0f1899ac50e26381c458493d27d2d",
+    "sourceHash": "sha256:f13cbe486219674221906a2d9132995bf3d8253e0ebe346784734fae2fe87616"
+  },
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.invoice",
+  "catalog": {
+    "summary": "Line items, tax, and status for a local invoice.",
+    "categories": [
+      "Documents",
+      "Finance"
+    ],
+    "tags": [
+      "invoice",
+      "billing",
+      "json",
+      "bits-ui"
+    ]
+  },
+  "appearance": {
+    "themeID": "default"
+  },
+  "stores": [
+    {
+      "id": "state",
+      "kind": "json",
+      "maxBytes": 1048576,
+      "path": "data.json"
+    }
+  ],
+  "title": "Invoice",
+  "window": {
+    "height": 900,
+    "width": 720,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 22
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "channels" : {
+    "cafe" : 29,
+    "rain" : 47,
+    "vinyl" : 24
+  },
+  "master" : 14,
+  "playing" : true,
+  "texture" : "pulse"
+}

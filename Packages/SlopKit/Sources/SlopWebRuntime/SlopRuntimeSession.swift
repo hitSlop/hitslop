@@ -32,7 +32,6 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
 
     private let bridge: SlopBridge
     private let schemeHandler: SlopSchemeHandler
-    private let shellHTML: String
     private var sqliteVersions: [String: Int64]
     private var jsonRevisions: [String: String]
     private var changeSequence = 0
@@ -48,11 +47,6 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
     public init(packageURL: URL) throws {
         let package = try SlopPackage(rootURL: packageURL)
         self.package = package
-        let shell = try SlopRuntime.shell().data
-        guard let shellHTML = String(data: shell, encoding: .utf8) else {
-            throw SlopHostError.invalidPackage("Host runtime shell is not UTF-8")
-        }
-        self.shellHTML = shellHTML
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let schemeHandler = SlopSchemeHandler(package: package)
@@ -82,7 +76,7 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
 
     public func load() {
         isReady = false
-        webView.loadHTMLString(shellHTML, baseURL: URL(string: "slop://app/")!)
+        webView.load(URLRequest(url: URL(string: "slop://app/")!))
     }
 
     public func reload() {
@@ -196,17 +190,6 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
     ) {
         let scheme = navigationAction.request.url?.scheme
         decisionHandler(scheme == "slop" || scheme == "about" ? .allow : .cancel)
-    }
-
-    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        // The injected bridge normally reports readiness after the WASM mount,
-        // outstanding storage calls, and two stable animation frames. WebKit
-        // can coalesce that custom event during module startup, so the page
-        // load event provides a conservative last-resort readiness signal.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
-            guard let self, !self.isReady else { return }
-            self.slopBridgeDidBecomeReady()
-        }
     }
 
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {

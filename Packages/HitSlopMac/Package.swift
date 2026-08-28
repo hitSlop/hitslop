@@ -8,7 +8,10 @@ let package = Package(
         .library(name: "SlopMacSupport", targets: ["SlopMacSupport"]),
         .library(name: "HitSlopMac", targets: ["HitSlopMac"]),
     ],
-    dependencies: [.package(path: "../SlopKit")],
+    dependencies: [
+        .package(path: "../SlopKit"),
+        .package(path: "../SlopTemplates"),
+    ],
     targets: [
         .target(
             name: "SlopMacSupport",
@@ -27,10 +30,7 @@ let package = Package(
                 "SlopMacSupport",
                 .product(name: "SlopCore", package: "SlopKit"),
                 .product(name: "SlopWebRuntime", package: "SlopKit"),
-            ],
-            resources: [
-                .copy("Resources/Templates"),
-                .copy("Resources/Themes"),
+                .product(name: "SlopTemplates", package: "SlopTemplates"),
             ],
             linkerSettings: [
                 .linkedFramework("AppKit"),
@@ -39,7 +39,11 @@ let package = Package(
         ),
         .testTarget(
             name: "SlopMacSupportTests",
-            dependencies: ["SlopMacSupport", .product(name: "SlopCore", package: "SlopKit")]
+            dependencies: [
+                "SlopMacSupport",
+                .product(name: "SlopCore", package: "SlopKit"),
+                .product(name: "SlopWebRuntime", package: "SlopKit"),
+            ]
         ),
     ],
     swiftLanguageModes: [.v5]

@@ -1,43 +1,42 @@
 {
-  "artifact" : {
-    "artifactHash" : "sha256:6880d650c62bacb65d2a3a80ca1f6ab60f05bcf08b2a50ec8d57396fc18c010c",
-    "entry" : "build/app.wasm",
-    "sourceHash" : "sha256:7a3d38d32656acf337d24de3a37ef6e23c6421744aa3b751cb05fd95b0c6650b"
+  "artifact": {
+    "artifactHash": "sha256:8cad7ae61ab665ece70219bc8153bac2517fd1ac4e41a35a328d408c1f8e7675",
+    "sourceHash": "sha256:addc59397670de213cf8c73d133e09261f39892f23147883a330eecaa0ce3272"
   },
-  "dependencies" : [
-    "slop-kit-0.2"
-  ],
-  "format" : "slop-wasm/1",
-  "id" : "com.longtaillabs.slop.todo-spike",
-  "catalog" : {
-    "summary" : "A compact local notebook backed by atomic JSON.",
-    "categories" : ["Notes", "Productivity"],
-    "tags" : ["notes", "todo", "json", "local"]
-  },
-  "appearance" : {
-    "stylesheet" : "theme.css",
-    "themeID" : "default"
-  },
-  "runtime" : "elementary-ui-0.7/slop-runtime-1",
-  "source" : {
-    "files" : [
-      "ContentView.swift",
-      "styles.css"
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.field-notes",
+  "catalog": {
+    "summary": "A compact local notebook backed by atomic JSON.",
+    "categories": [
+      "Notes",
+      "Productivity"
     ],
-    "path" : "source"
+    "tags": [
+      "notes",
+      "todo",
+      "json",
+      "local",
+      "svelte"
+    ]
   },
-  "stores" : [
+  "appearance": {
+    "themeID": "default"
+  },
+  "stores": [
     {
-      "id" : "state",
-      "kind" : "json",
-      "maxBytes" : 1048576,
-      "path" : "data.json"
+      "id": "state",
+      "kind": "json",
+      "maxBytes": 1048576,
+      "path": "data.json"
     }
   ],
-  "title" : "Field Notes",
-  "window" : {
-    "height" : 640,
-    "width" : 480,
-    "shape" : { "kind" : "roundedRect", "radius" : 22 }
+  "title": "Field Notes",
+  "window": {
+    "height": 640,
+    "width": 480,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 22
+    }
   }
 }

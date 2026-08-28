@@ -8,10 +8,14 @@
   --slop-surface-raised: color-mix(in srgb, Canvas 88%, CanvasText 12%);
   --slop-text: CanvasText;
   --slop-text-muted: color-mix(in srgb, CanvasText 62%, transparent);
-  --slop-accent: AccentColor;
-  --slop-accent-contrast: white;
+  --slop-accent: CanvasText;
+  --slop-accent-contrast: Canvas;
+  --slop-secondary: color-mix(in srgb, CanvasText 72%, Canvas 28%);
+  --slop-secondary-contrast: Canvas;
+  --slop-info: #1971c2;
+  --slop-surface-muted: color-mix(in srgb, Canvas 90%, CanvasText 10%);
   --slop-border: color-mix(in srgb, CanvasText 18%, transparent);
-  --slop-focus: color-mix(in srgb, AccentColor 58%, transparent);
+  --slop-focus: color-mix(in srgb, CanvasText 42%, transparent);
   --slop-success: #2f9e44;
   --slop-warning: #f08c00;
   --slop-danger: #e03131;
@@ -32,12 +36,18 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+/* Document windows keep scrolling behavior but never expose browser chrome. */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }
 html, body { min-height: 100%; margin: 0; }
 body { color: var(--slop-text); background: var(--slop-bg); font-family: var(--slop-font-body); line-height: 1.5; }
 h1, h2, h3, h4, h5, h6 { font-family: var(--slop-font-heading); }
-button, input, select, textarea { font: inherit; border-radius: var(--slop-radius-sm); }
+button, input, select, textarea { font: inherit; border-radius: var(--slop-radius-sm); accent-color: var(--slop-accent); }
 a { color: var(--slop-accent); }
+[data-slop-selection="none"] { cursor: default; -webkit-user-select: none; user-select: none; }
+[data-slop-selection="none"] :is(input, textarea, [contenteditable]:not([contenteditable="false"]), [data-slop-selectable]) { cursor: text; -webkit-user-select: text; user-select: text; }
 :focus-visible { outline: 2px solid var(--slop-focus); outline-offset: 2px; }
+::selection { color: var(--slop-accent-contrast); background: var(--slop-accent); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }

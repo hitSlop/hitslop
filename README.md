@@ -1,39 +1,46 @@
 # hitSlop
 
-hitSlop is a native macOS host for small ElementaryUI apps compiled to Embedded Swift WebAssembly. Each `.slop` package keeps editable Swift/CSS, compact WASM, assets, and local JSON or SQLite data together.
+hitSlop is a native macOS host for small local apps. The host owns JSON/SQLite persistence, themed windows, and the WebKit bridge. Guests use the framework-neutral `slop-web/1` cartridge format; the bundled authoring SDK is Svelte 5.
+
+Rebuild locally with Vite (`sdk/`, ~200ms). See `sdk/README.md`.
 
 ```text
 My App.slop/
 ├── manifest.json
-├── source/ContentView.swift
+├── source/App.svelte
+├── source/main.ts
 ├── source/styles.css
 ├── theme.css
-├── build/app.wasm
+├── build/index.html
 ├── data.json or data.sqlite
 ├── assets/
 └── QuickLook/
 ```
 
-`theme.css` is the live, document-local appearance override and does not require a Wasm rebuild. Every first-release package also carries `AGENTS.md`, `CLAUDE.md`, and local hitSlop skills under `.agents/skills/` and `.claude/skills/`.
+`theme.css` is the live, document-local appearance override and does not require a rebuild. Duplicating a package installs `AGENTS.md`, `CLAUDE.md`, and local hitSlop skills from one canonical guide.
 
-The application owns the HTML shell, Elementary browser runtime, WASI/JavaScriptKit glue, WebKit bridge, export renderer, and Quick Look integration. A document does not include a toolchain, dependency checkout, `node_modules`, or `.build` directory.
+A document does not include a toolchain, `node_modules`, or `.build` directory.
 
 ## Packages
 
-- `Packages/SlopKit` — cross-platform document, JSON/SQLite, and WebKit runtime foundation.
-- `Packages/SlopGuest` — the lightweight WASM-side `SlopKit` API, including `@SlopModel`, safe `#sql` bindings, typed SQLite rows, and reactive JSON documents.
+- `Packages/SlopKit` — document, JSON/SQLite, and WebKit runtime foundation.
+- `Packages/SlopTemplates` — bundled `.slop` templates and `.sloptheme` palettes.
 - `Packages/HitSlopMac` — macOS windows, template picker, duplication, export, and preview support.
-- `Packages/SlopCLI` — `validate`, `duplicate`, `open`, and full-content PNG/PDF export.
+- `Packages/SlopCLI` — `validate`, `build`, `duplicate`, `open`, and full-content PNG/PDF export.
+- `sdk/` — Svelte 5 + Vite guest toolchain (`source/` → `build/index.html`), including Bits UI and Tailwind.
 
 Build and test without opening Xcode:
 
 ```sh
 swift test --package-path Packages/SlopKit
-swift test --package-path Packages/SlopGuest
+swift test --package-path Packages/SlopTemplates
 swift test --package-path Packages/HitSlopMac
 swift build --package-path Packages/SlopCLI
 ```
 
-Regenerate the thin Xcode project with `xcodegen generate --spec hitSlop/project.yml`.
+```sh
+scripts/install-cli.sh --prefix /usr/local
+slop build path/to/Notes.slop
+```
 
-The compiler service is intentionally not part of this repository yet. `Packages/SlopGuest` is the source of truth it should consume; source changes run the last-known-good WASM and show a **Needs rebuild** badge until a compiler is connected.
+Regenerate the thin Xcode project with `xcodegen generate --spec hitSlop/project.yml`.

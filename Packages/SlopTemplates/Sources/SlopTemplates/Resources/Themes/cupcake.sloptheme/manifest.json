@@ -1,0 +1,8 @@
+{
+  "displayName": "Cupcake",
+  "format": "slop-theme/1",
+  "id": "cupcake",
+  "preview": { "colors": ["#faf7f5", "#291334", "#65c3c8", "#ef9fbc"] },
+  "summary": "Pastel light with bakery-case accents.",
+  "version": "1.0.0"
+}

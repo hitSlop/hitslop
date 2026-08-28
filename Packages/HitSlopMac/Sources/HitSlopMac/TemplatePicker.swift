@@ -1,6 +1,7 @@
 import AppKit
 import SlopCore
 import SlopMacSupport
+import SlopTemplates
 import SwiftUI
 
 struct SlopTemplateDescriptor: Identifiable {
@@ -10,6 +11,7 @@ struct SlopTemplateDescriptor: Identifiable {
     let summary: String
     let categories: [String]
     let tags: [String]
+    let installed: Bool
     let preview: NSImage?
 
     var suggestedFilename: String { title.replacingOccurrences(of: "/", with: "-") + ".slop" }
@@ -25,22 +27,19 @@ struct SlopTemplateDescriptor: Identifiable {
             .contains(cleaned)
     }
 
-    static func bundled() -> [SlopTemplateDescriptor] {
-        guard let root = Bundle.module.resourceURL?.appendingPathComponent("Templates"),
-              let urls = try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
-        else { return [] }
-        return urls.filter { $0.pathExtension.lowercased() == "slop" }.compactMap { url in
-            guard let package = try? SlopPackage(rootURL: url) else { return nil }
-            return SlopTemplateDescriptor(
-                id: package.manifest.id,
-                url: url,
-                title: package.manifest.title,
-                summary: package.manifest.catalog.summary,
-                categories: package.manifest.catalog.categories,
-                tags: package.manifest.catalog.tags,
-                preview: SlopPreviewAssets.previewURL(in: url).flatMap(NSImage.init(contentsOf:))
+    static func catalog() -> [SlopTemplateDescriptor] {
+        SlopTemplateLibrary.allTemplates().map { item in
+            SlopTemplateDescriptor(
+                id: item.id,
+                url: item.url,
+                title: item.title,
+                summary: item.summary,
+                categories: item.categories,
+                tags: item.tags,
+                installed: item.installed,
+                preview: SlopPreviewAssets.previewURL(in: item.url).flatMap(NSImage.init(contentsOf:))
             )
-        }.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        }
     }
 }
 
@@ -75,7 +74,7 @@ final class TemplatePickerWindowController: NSWindowController {
         clearRecents: @escaping () -> Void
     ) {
         let content = TemplatePickerView(
-            templates: SlopTemplateDescriptor.bundled(),
+            templates: SlopTemplateDescriptor.catalog(),
             recents: RecentSlopDescriptor.load(from: recents),
             create: create,
             openRecent: openRecent,
@@ -226,10 +225,6 @@ private struct TemplatePickerView: View {
                 )
             }
             Spacer()
-            Text("More templates soon")
-                .font(.system(size: 11))
-                .foregroundStyle(palette.faint)
-                .padding(14)
         }
         .frame(width: 178)
         .background(palette.sidebar)
@@ -443,6 +438,10 @@ private struct TemplatePickerView: View {
         case "database": "cylinder"
         case "notes": "note.text"
         case "productivity": "checkmark.circle"
+        case "documents": "doc.text"
+        case "finance": "dollarsign.circle"
+        case "kitchen": "fork.knife"
+        case "focus": "timer"
         default: "square.stack.3d.up"
         }
     }
@@ -538,6 +537,11 @@ private struct TemplateIndexRow: View {
                         .foregroundStyle(palette.muted)
                         .lineLimit(2)
                         .lineSpacing(2)
+                    if template.installed {
+                        Text("Installed")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(palette.faint)
+                    }
                 }
                 Spacer(minLength: 0)
             }

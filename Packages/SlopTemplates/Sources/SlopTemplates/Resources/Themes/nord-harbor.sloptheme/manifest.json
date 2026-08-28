@@ -1,0 +1,8 @@
+{
+  "displayName": "Nord Harbor",
+  "format": "slop-theme/1",
+  "id": "nord-harbor",
+  "preview": { "colors": ["#2e3440", "#eceff4", "#88c0d0", "#4c566a"] },
+  "summary": "Cool polar dark with icy signal color.",
+  "version": "1.0.0"
+}

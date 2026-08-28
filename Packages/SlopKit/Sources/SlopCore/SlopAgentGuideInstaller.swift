@@ -26,14 +26,14 @@ public enum SlopAgentGuideInstaller {
 
         Read `manifest.json` first. Follow `.agents/skills/hitslop/SKILL.md` for this package.
 
-        - Edit only declared source files and stores.
-        - Use `theme.css` for styling that hot-reloads without rebuilding Wasm.
-        - Never add `.build`, `node_modules`, package checkouts, or compiler output other than `build/app.wasm`.
+        - Edit source only under `source/`, and edit only declared stores.
+        - Use `theme.css` for styling that hot-reloads without rebuilding.
+        - Rebuild source with `slop build`. Never add `.build`, `node_modules`, or compiler output other than `build/index.html`.
         """ + "\n"
         let claudeGuide = """
         # \(package.manifest.title)
 
-        Load `.claude/skills/hitslop/SKILL.md` before editing this package. Read `manifest.json` first and obey its declared source and store boundaries.
+        Load `.claude/skills/hitslop/SKILL.md` before editing this package. Read `manifest.json` first, keep source under `source/`, and obey its declared store boundaries.
         """ + "\n"
 
         try write(agentGuide, to: packageURL.appendingPathComponent("AGENTS.md"))

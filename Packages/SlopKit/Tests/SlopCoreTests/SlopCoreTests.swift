@@ -10,21 +10,19 @@ final class SlopCoreTests: XCTestCase {
         temporaryURLs.removeAll()
     }
 
-    func testManifestUsesCompactHostRuntimeAndGeneratedEntryContract() throws {
+    func testManifestUsesWebCartridgeContract() throws {
         let package = try copiedFixture(named: "Todo")
         XCTAssertEqual(package.manifest.format, SlopManifest.supportedFormat)
-        XCTAssertEqual(package.manifest.runtime, SlopManifest.hostRuntime)
-        XCTAssertEqual(package.manifest.dependencies, ["slop-kit-0.2"])
         XCTAssertTrue(package.isSourceCurrent)
-        XCTAssertEqual(package.entryURL.lastPathComponent, "app.wasm")
-        XCTAssertFalse(package.manifest.source.files.contains("App.swift"))
-        XCTAssertFalse(FileManager.default.fileExists(atPath: package.sourceRootURL.appendingPathComponent("App.swift").path))
+        XCTAssertTrue(package.isArtifactCurrent)
+        XCTAssertEqual(Array(package.entryURL.pathComponents.suffix(2)), ["build", "index.html"])
+        XCTAssertEqual(package.sourceURLs.map(\.lastPathComponent), ["main.ts"])
         XCTAssertThrowsError(try package.documentAssetURL(path: "../manifest.json"))
-        XCTAssertEqual(package.manifest.appearance.stylesheet, "theme.css")
+        XCTAssertEqual(package.themeURL.lastPathComponent, "theme.css")
         XCTAssertEqual(package.manifest.window.shape.kind, .roundedRect)
     }
 
-    func testThemeChangesDoNotInvalidateWasmSource() throws {
+    func testThemeChangesDoNotInvalidateSourceHash() throws {
         let package = try copiedFixture(named: "Todo")
         let sourceHash = try package.canonicalSourceHash()
         try Data(":root { --slop-accent: hotpink; }\n".utf8).write(to: package.themeURL, options: .atomic)
@@ -32,66 +30,19 @@ final class SlopCoreTests: XCTestCase {
         XCTAssertEqual(try reopened.canonicalSourceHash(), sourceHash)
         XCTAssertTrue(reopened.isSourceCurrent)
 
-        let sourceCSS = try XCTUnwrap(reopened.styleURL)
-        try Data("body { color: red; }\n".utf8).write(to: sourceCSS, options: .atomic)
+        let source = reopened.sourceRootURL.appendingPathComponent("main.ts")
+        try Data("document.body.textContent = 'changed';\n".utf8).write(to: source, options: .atomic)
         XCTAssertFalse(try SlopPackage(rootURL: package.rootURL).isSourceCurrent)
     }
 
-    func testFieldNotesFlowCanaryKeepsSemanticThemeSurface() throws {
+    func testSourceHashIncludesNestedFiles() throws {
         let package = try copiedFixture(named: "Todo")
-        let swift = try String(
-            contentsOf: package.sourceRootURL.appendingPathComponent("ContentView.swift"),
-            encoding: .utf8
-        )
-        let css = try String(
-            contentsOf: package.sourceRootURL.appendingPathComponent("styles.css"),
-            encoding: .utf8
-        )
-        let data = try JSONSerialization.jsonObject(
-            with: Data(contentsOf: package.storeURL(id: "state", kind: .json))
-        ) as? [String: Any]
-
-        XCTAssertTrue(swift.contains("import ElementaryFlow"))
-        XCTAssertTrue(swift.contains("@SlopModel"))
-        XCTAssertFalse(swift.contains("init?(json:"))
-        XCTAssertFalse(swift.contains("viewVersion"))
-        XCTAssertTrue(swift.contains(".class(\"note-title\")"))
-        XCTAssertTrue(swift.contains("var(--slop-accent)"))
-        XCTAssertFalse(swift.contains("InlineBlurEvent"))
-        XCTAssertFalse(swift.contains(".focused("))
-        XCTAssertTrue(swift.contains(".custom(name: \"autofocus\", value: \"\")"))
-        XCTAssertTrue(swift.contains(".data(\"slop-inline-editor\", value: \"true\")"))
-        XCTAssertTrue(swift.contains("event.key == \"Escape\" { cancelHeaderEditing() }"))
-        XCTAssertFalse(swift.contains(".class(\"header-save\")"))
-        XCTAssertFalse(swift.contains(".class(\"header-cancel\")"))
-        XCTAssertFalse(swift.contains(".class(\"save-note\")"))
-        XCTAssertTrue(css.contains(".note-title"))
-        XCTAssertTrue(css.contains("--slop-accent"))
-        XCTAssertTrue(css.contains(".note-row[data-editing=\"true\"] { grid-template-columns: 26px 1fr; }"))
-        XCTAssertFalse(css.contains(".header-editor-actions"))
-        XCTAssertFalse(css.contains(".save-note"))
-        XCTAssertFalse(css.contains("._e"))
-        XCTAssertEqual(data?["title"] as? String, "Field notes")
-        XCTAssertEqual(data?["subtitle"] as? String, "A tiny Swift app whose memory lives beside it.")
-        XCTAssertTrue(package.isSourceCurrent)
-    }
-
-    func testSQLiteTemplateUsesTypedPersistenceWithoutRestrictingElementaryUI() throws {
-        let package = try copiedFixture(named: "SQLiteTodo")
-        let swift = try String(
-            contentsOf: package.sourceRootURL.appendingPathComponent("ContentView.swift"),
-            encoding: .utf8
-        )
-
-        XCTAssertTrue(swift.contains("import ElementaryUI"))
-        XCTAssertTrue(swift.contains("@SlopModel"))
-        XCTAssertTrue(swift.contains("@Reactive"))
-        XCTAssertTrue(swift.contains("#sql("))
-        XCTAssertTrue(swift.contains("as: Todo.self"))
-        XCTAssertFalse(swift.contains("row["))
-        XCTAssertFalse(swift.contains("viewVersion"))
-        XCTAssertEqual(package.manifest.dependencies, ["slop-kit-0.2"])
-        XCTAssertTrue(package.isSourceCurrent)
+        let nested = package.sourceRootURL.appendingPathComponent("models/state.json")
+        try FileManager.default.createDirectory(at: nested.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("{}\n".utf8).write(to: nested)
+        let reopened = try SlopPackage(rootURL: package.rootURL)
+        XCTAssertEqual(reopened.sourceURLs.map(\.lastPathComponent), ["main.ts", "state.json"])
+        XCTAssertFalse(reopened.isSourceCurrent)
     }
 
     func testFirstReleaseManifestRejectsMissingCatalogAndInvalidCircle() throws {
@@ -105,6 +56,20 @@ final class SlopCoreTests: XCTestCase {
         var manifest = package.manifest
         manifest.window.shape = .init(kind: .circle)
         try SlopManifestIO.write(manifest, to: package.rootURL)
+        XCTAssertThrowsError(try SlopPackage(rootURL: package.rootURL))
+    }
+
+    func testRejectsWASMFormatAndSourceSymlinks() throws {
+        let package = try copiedFixture(named: "Todo")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: package.manifestURL)) as? [String: Any])
+        object["format"] = "slop-wasm/1"
+        try JSONSerialization.data(withJSONObject: object).write(to: package.manifestURL, options: .atomic)
+        XCTAssertThrowsError(try SlopPackage(rootURL: package.rootURL))
+
+        object["format"] = SlopManifest.supportedFormat
+        try JSONSerialization.data(withJSONObject: object).write(to: package.manifestURL, options: .atomic)
+        let link = package.sourceRootURL.appendingPathComponent("linked.ts")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: package.sourceRootURL.appendingPathComponent("main.ts"))
         XCTAssertThrowsError(try SlopPackage(rootURL: package.rootURL))
     }
 
@@ -149,6 +114,7 @@ final class SlopCoreTests: XCTestCase {
         XCTAssertEqual(duplicate.manifest.title, "Duplicate")
         XCTAssertEqual(try Data(contentsOf: duplicate.entryURL), try Data(contentsOf: source.entryURL))
         XCTAssertTrue(duplicate.isSourceCurrent)
+        XCTAssertTrue(duplicate.isArtifactCurrent)
         XCTAssertFalse(FileManager.default.fileExists(atPath: duplicateURL.appendingPathComponent("data.sqlite-wal").path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: duplicateURL.appendingPathComponent("data.sqlite-shm").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: duplicateURL.appendingPathComponent("AGENTS.md").path))

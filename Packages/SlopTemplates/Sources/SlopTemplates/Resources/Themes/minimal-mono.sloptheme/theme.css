@@ -1,0 +1,19 @@
+:root {
+  color-scheme: light;
+  --slop-bg: #fafafa;
+  --slop-surface: #f1f1f1;
+  --slop-surface-raised: #ffffff;
+  --slop-surface-muted: #ececec;
+  --slop-text: #151515;
+  --slop-text-muted: #626262;
+  --slop-accent: #151515;
+  --slop-accent-contrast: #fafafa;
+  --slop-secondary: #626262;
+  --slop-secondary-contrast: #fafafa;
+  --slop-border: #d8d8d8;
+  --slop-radius-sm: 0;
+  --slop-radius-md: 0;
+  --slop-radius-lg: 0;
+  --slop-font-body: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --slop-font-heading: var(--slop-font-body);
+}

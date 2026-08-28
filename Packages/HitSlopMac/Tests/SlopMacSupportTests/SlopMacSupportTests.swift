@@ -1,6 +1,8 @@
 import AppKit
 import Foundation
+import SlopCore
 @testable import SlopMacSupport
+@testable import SlopWebRuntime
 import XCTest
 
 final class SlopMacSupportTests: XCTestCase {
@@ -70,5 +72,54 @@ final class SlopMacSupportTests: XCTestCase {
         let result = try XCTUnwrap(NSBitmapImageRep(data: masked))
         XCTAssertEqual(try XCTUnwrap(result.colorAt(x: 0, y: 0)).alphaComponent, 0, accuracy: 0.01)
         XCTAssertGreaterThan(result.colorAt(x: 50, y: 50)?.alphaComponent ?? 0, 0.9)
+    }
+
+    func testHostEnforcesStylesheetOrder() throws {
+        let html = """
+        <html><head>
+        <link id="slop-theme-styles" href="wrong-theme.css">
+        <style id="guest-styles">body { color: red; }</style>
+        <link id="slop-base-styles" href="wrong-base.css">
+        </head><body></body></html>
+        """
+        let injected = try SlopSchemeHandler.injectingHostStyles(into: html)
+        let base = try XCTUnwrap(injected.range(of: "id=\"slop-base-styles\""))
+        let guest = try XCTUnwrap(injected.range(of: "id=\"guest-styles\""))
+        let theme = try XCTUnwrap(injected.range(of: "id=\"slop-theme-styles\""))
+        XCTAssertLessThan(base.lowerBound, guest.lowerBound)
+        XCTAssertLessThan(guest.lowerBound, theme.lowerBound)
+        XCTAssertFalse(injected.contains("wrong-theme.css"))
+        XCTAssertFalse(injected.contains("wrong-base.css"))
+    }
+
+    func testHostHidesScrollbarChromeWithoutDisablingScrolling() throws {
+        let resource = try SlopRuntime.baseStyles()
+        let css = try XCTUnwrap(String(data: resource.data, encoding: .utf8))
+
+        XCTAssertTrue(css.contains("scrollbar-width: none"))
+        XCTAssertTrue(css.contains("*::-webkit-scrollbar"))
+        XCTAssertTrue(css.contains("display: none"))
+        XCTAssertFalse(css.contains("overflow: hidden"))
+    }
+
+    func testHostDoesNotLeakSystemBlueIntoGuestControls() throws {
+        let resource = try SlopRuntime.baseStyles()
+        let css = try XCTUnwrap(String(data: resource.data, encoding: .utf8))
+
+        XCTAssertFalse(css.contains("AccentColor"))
+        XCTAssertTrue(css.contains("--slop-accent: CanvasText"))
+        XCTAssertTrue(css.contains("accent-color: var(--slop-accent)"))
+        XCTAssertTrue(css.contains("--slop-focus: color-mix(in srgb, CanvasText"))
+    }
+
+    func testHostSupportsOptInNonSelectableAppChrome() throws {
+        let resource = try SlopRuntime.baseStyles()
+        let css = try XCTUnwrap(String(data: resource.data, encoding: .utf8))
+
+        XCTAssertTrue(css.contains("[data-slop-selection=\"none\"]"))
+        XCTAssertTrue(css.contains("[data-slop-selectable]"))
+        XCTAssertTrue(css.contains("[contenteditable]:not([contenteditable=\"false\"])"))
+        XCTAssertTrue(css.contains("-webkit-user-select: text"))
+        XCTAssertFalse(css.contains("body { user-select: none"))
     }
 }

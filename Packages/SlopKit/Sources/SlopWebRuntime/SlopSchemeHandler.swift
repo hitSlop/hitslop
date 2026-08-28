@@ -25,6 +25,7 @@ final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
                     "Content-Length": String(resource.data.count),
                     "Cache-Control": "no-store",
                     "Cross-Origin-Resource-Policy": "same-origin",
+                    "Content-Security-Policy": "default-src 'none'; script-src slop: 'unsafe-inline'; style-src slop: 'unsafe-inline'; img-src slop: data:; font-src slop: data:; connect-src slop:;",
                 ]
             ) else {
                 throw SlopHostError.invalidPackage("Could not create a response for \(url.path)")
@@ -40,33 +41,14 @@ final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     func webView(_ webView: WKWebView, stop urlSchemeTask: any WKURLSchemeTask) {}
 
     private func resource(for url: URL) throws -> (data: Data, mime: String) {
-        guard package.usesHostRuntime else {
-            let assetURL = try package.webAssetURL(path: url.path)
-            guard FileManager.default.fileExists(atPath: assetURL.path) else {
-                throw SlopHostError.invalidPackage("Missing web asset: \(url.path)")
-            }
-            return (try Data(contentsOf: assetURL, options: .mappedIfSafe), SlopMIME.type(for: assetURL))
-        }
-
         switch url.path {
-        case "", "/":
-            let resource = try SlopRuntime.shell()
-            return (resource.data, SlopMIME.type(for: resource.url))
-        case "/slop-runtime-1.js":
-            let resource = try SlopRuntime.loader()
-            return (resource.data, SlopMIME.type(for: resource.url))
-        case "/app.wasm":
-            return (try Data(contentsOf: package.entryURL, options: .mappedIfSafe), "application/wasm")
-        case "/app.css":
-            guard let styleURL = package.styleURL else {
-                return (Data(), "text/css")
-            }
-            return (try Data(contentsOf: styleURL, options: .mappedIfSafe), "text/css")
+        case "", "/", "/index.html":
+            return (
+                try entryHTML(),
+                "text/html; charset=utf-8"
+            )
         case "/slop-base.css":
             let resource = try SlopRuntime.baseStyles()
-            return (resource.data, SlopMIME.type(for: resource.url))
-        case "/elementary-flow.css":
-            let resource = try SlopRuntime.elementaryFlowStyles()
             return (resource.data, SlopMIME.type(for: resource.url))
         case "/theme.css":
             return (try Data(contentsOf: package.themeURL, options: .mappedIfSafe), "text/css")
@@ -77,5 +59,30 @@ final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
             }
             return (try Data(contentsOf: assetURL, options: .mappedIfSafe), SlopMIME.type(for: assetURL))
         }
+    }
+
+    private func entryHTML() throws -> Data {
+        guard let html = String(data: try Data(contentsOf: package.entryURL), encoding: .utf8) else {
+            throw SlopHostError.invalidPackage("build/index.html must be UTF-8 HTML")
+        }
+        return Data(try Self.injectingHostStyles(into: html).utf8)
+    }
+
+    static func injectingHostStyles(into input: String) throws -> String {
+        var html = input
+        html = html.replacingOccurrences(
+            of: #"<link\b[^>]*\bid=["']slop-(?:base|theme)-styles["'][^>]*>"#,
+            with: "",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        guard let head = html.range(of: #"<head(?:\s[^>]*)?>"#, options: [.regularExpression, .caseInsensitive]) else {
+            throw SlopHostError.invalidPackage("build/index.html is missing <head>")
+        }
+        html.insert(contentsOf: "\n    <link id=\"slop-base-styles\" rel=\"stylesheet\" href=\"./slop-base.css\">", at: head.upperBound)
+        guard let closingHead = html.range(of: "</head>", options: .caseInsensitive) else {
+            throw SlopHostError.invalidPackage("build/index.html is missing </head>")
+        }
+        html.insert(contentsOf: "    <link id=\"slop-theme-styles\" rel=\"stylesheet\" href=\"./theme.css\">\n  ", at: closingHead.lowerBound)
+        return html
     }
 }
