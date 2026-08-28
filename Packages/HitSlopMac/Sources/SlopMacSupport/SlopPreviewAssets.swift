@@ -3,6 +3,9 @@ import Foundation
 import SlopCore
 
 public enum SlopPreviewAssets {
+    static let iconPointSize: CGFloat = 512
+    static let iconPixelSize = 1024
+
     public static func install(_ png: Data, into packageURL: URL, cornerRadius: CGFloat = 22) throws {
         let folder = packageURL.appendingPathComponent("QuickLook", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -29,12 +32,12 @@ public enum SlopPreviewAssets {
             .first { FileManager.default.fileExists(atPath: $0.path) }
     }
 
-    private static func icon(from png: Data, cornerRadius: CGFloat) -> NSImage? {
+    static func icon(from png: Data, cornerRadius: CGFloat) -> NSImage? {
         guard let source = NSImage(data: png), source.size.width >= 16, source.size.height >= 16,
               let rep = NSBitmapImageRep(
                 bitmapDataPlanes: nil,
-                pixelsWide: 1024,
-                pixelsHigh: 1024,
+                pixelsWide: iconPixelSize,
+                pixelsHigh: iconPixelSize,
                 bitsPerSample: 8,
                 samplesPerPixel: 4,
                 hasAlpha: true,
@@ -43,21 +46,26 @@ public enum SlopPreviewAssets {
                 bytesPerRow: 0,
                 bitsPerPixel: 0
               ) else { return nil }
-        rep.size = NSSize(width: 1024, height: 1024)
+        rep.size = NSSize(width: iconPointSize, height: iconPointSize)
         NSGraphicsContext.saveGraphicsState()
         defer { NSGraphicsContext.restoreGraphicsState() }
         guard let context = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
         NSGraphicsContext.current = context
         context.imageInterpolation = .high
-        let maxCard: CGFloat = 860
+        let maxCard: CGFloat = 430
         let scale = min(maxCard / source.size.width, maxCard / source.size.height)
         let size = NSSize(width: source.size.width * scale, height: source.size.height * scale)
-        let rect = NSRect(x: (1024 - size.width) / 2, y: (1024 - size.height) / 2, width: size.width, height: size.height)
+        let rect = NSRect(
+            x: (iconPointSize - size.width) / 2,
+            y: (iconPointSize - size.height) / 2,
+            width: size.width,
+            height: size.height
+        )
         let radius = min(max(size.width, size.height) * cornerRadius / 480, min(size.width, size.height) / 3)
         let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
         let shadow = NSShadow()
-        shadow.shadowBlurRadius = 28
-        shadow.shadowOffset = NSSize(width: 0, height: -12)
+        shadow.shadowBlurRadius = 14
+        shadow.shadowOffset = NSSize(width: 0, height: -6)
         shadow.shadowColor = NSColor.black.withAlphaComponent(0.28)
         shadow.set()
         NSColor.white.withAlphaComponent(0.001).setFill()
@@ -68,7 +76,7 @@ public enum SlopPreviewAssets {
         shadow.set()
         source.draw(in: rect)
         context.restoreGraphicsState()
-        let image = NSImage(size: NSSize(width: 1024, height: 1024))
+        let image = NSImage(size: NSSize(width: iconPointSize, height: iconPointSize))
         image.addRepresentation(rep)
         return image
     }

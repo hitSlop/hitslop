@@ -43,7 +43,6 @@ final class SlopBridge: NSObject, WKScriptMessageHandlerWithReply {
             guard let body = message.body as? [String: Any], let operation = body["op"] as? String else {
                 throw SlopHostError.invalidBridgeValue("Malformed storage request")
             }
-            if operation != "log" { print("[slop bridge] \(operation)") }
             switch operation {
             case "log":
                 print("[slop guest] \(body["message"] as? String ?? "Unknown guest diagnostic")")

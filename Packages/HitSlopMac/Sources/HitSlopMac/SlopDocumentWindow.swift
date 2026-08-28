@@ -69,6 +69,7 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
     private var hideWork: DispatchWorkItem?
     private var menuTracking = false
     private var previewWork: DispatchWorkItem?
+    private var previewTask: Task<Void, Never>?
     private var securityScoped = false
 
     init(packageURL: URL) throws {
@@ -266,12 +267,17 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
 
     private func schedulePreview(delay: TimeInterval = 0.5) {
         previewWork?.cancel()
+        previewTask?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            Task { @MainActor in
+            self.previewTask = Task { @MainActor [weak self] in
+                guard let self else { return }
                 do {
-                    let png = try await SlopDocumentRenderer.preview(packageURL: self.packageURL)
+                    let png = try await SlopDocumentRenderer.preview(webView: self.session.webView)
+                    try Task.checkCancellation()
                     try SlopPreviewAssets.install(png, into: self.packageURL)
+                } catch is CancellationError {
+                    // A newer document change superseded this derived preview.
                 } catch {
                     // Quick Look images are derived and never block document writes.
                 }
@@ -287,6 +293,7 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
     func windowWillClose(_ notification: Notification) {
         NotificationCenter.default.removeObserver(self)
         previewWork?.cancel()
+        previewTask?.cancel()
         session.close()
         if securityScoped { packageURL.stopAccessingSecurityScopedResource() }
         toolbar?.orderOut(nil)
@@ -324,8 +331,8 @@ private struct ToolbarView: View {
             divider
             button("doc.on.doc", "Duplicate", duplicate)
             Menu {
-                Button("Export full-content PNG", action: exportPNG)
-                Button("Export full-content PDF", action: exportPDF)
+                Button("Export PNG", action: exportPNG)
+                Button("Export PDF", action: exportPDF)
             } label: {
                 Image(systemName: "arrow.down.doc").frame(width: 25, height: 25)
             }

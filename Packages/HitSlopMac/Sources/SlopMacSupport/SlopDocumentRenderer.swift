@@ -21,20 +21,24 @@ public enum SlopDocumentRenderer {
             }
             return data
         case .pdf:
-            let configuration = WKPDFConfiguration()
+            let configuration = WKSnapshotConfiguration()
             configuration.rect = context.session.webView.bounds
-            return try await context.session.webView.pdf(configuration: configuration)
+            let image = try await context.session.webView.takeSnapshot(configuration: configuration)
+            let imageView = NSImageView(frame: context.session.webView.bounds)
+            imageView.image = image
+            imageView.imageAlignment = .alignCenter
+            imageView.imageScaling = .scaleAxesIndependently
+            return imageView.dataWithPDF(inside: imageView.bounds)
         }
     }
 
-    public static func preview(packageURL: URL) async throws -> Data {
-        let context = try RenderContext(packageURL: packageURL)
-        defer { context.close() }
-        try await context.prepare(fullContent: false)
+    public static func preview(webView: WKWebView) async throws -> Data {
+        try Task.checkCancellation()
         let configuration = WKSnapshotConfiguration()
-        configuration.rect = context.session.webView.bounds
+        configuration.rect = webView.bounds
         configuration.snapshotWidth = 430
-        let image = try await context.session.webView.takeSnapshot(configuration: configuration)
+        let image = try await webView.takeSnapshot(configuration: configuration)
+        try Task.checkCancellation()
         guard let data = image.pngData else {
             throw SlopHostError.invalidPackage("Could not encode the document preview")
         }
