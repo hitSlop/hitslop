@@ -1,0 +1,32 @@
+{
+  "artifact" : {
+    "artifactHash" : "sha256:508cc8c13e2a4d6e18983398a929a75872f732f24f46a52f7175fd465e2cf8ac",
+    "entry" : "build/app.wasm",
+    "sourceHash" : "sha256:33606da16bd27c567f30912ca828544ad2e15fe2dcab8a8b5aae941aee134742"
+  },
+  "dependencies" : [
+    "slop-kit-0.1"
+  ],
+  "format" : "slop-wasm/1",
+  "id" : "com.longtaillabs.slop.sqlite-todo-spike",
+  "runtime" : "elementary-ui-0.7/slop-runtime-1",
+  "source" : {
+    "files" : [
+      "ContentView.swift",
+      "styles.css"
+    ],
+    "path" : "source"
+  },
+  "stores" : [
+    {
+      "id" : "main",
+      "kind" : "sqlite",
+      "path" : "data.sqlite"
+    }
+  ],
+  "title" : "SQLite Field Notes",
+  "window" : {
+    "height" : 640,
+    "width" : 480
+  }
+}

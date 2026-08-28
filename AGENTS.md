@@ -1,14 +1,11 @@
 # hitSlop
 
-`.slop` packages are SQLite documents. Inspect and edit them with SQL, not by scraping their HTML.
+`.slop` packages are editable ElementaryUI WebAssembly apps. Read `manifest.json` first, edit files declared under `source`, and edit only stores declared in `stores`.
 
-Full agent instructions: [skills/hitslop/SKILL.md](skills/hitslop/SKILL.md).
+- Swift/CSS changes require a compiler rebuild of `build/app.wasm`.
+- JSON stores are ordinary UTF-8 JSON files and should be replaced atomically.
+- SQLite stores can be inspected with `sqlite3`; copy documents through `SlopDuplicator` so its read-only online snapshot includes committed WAL data without mutating bundled templates.
+- Never add `.build`, `node_modules`, package checkouts, or compiler output other than `build/app.wasm` to a document.
+- Documents do not supply `@main`; the compiler injects `GeneratedApp.swift` and mounts `ContentView`.
 
-```bash
-slop stat path/to/Foo.slop
-slop query path/to/Foo.slop "SELECT * FROM sqlite_schema"
-slop exec path/to/Foo.slop "UPDATE …" --params '[…]'
-
-sqlite3 path/to/Foo.slop/document.sqlite "SELECT topic, body FROM slop_docs"
-sqlite3 path/to/Foo.slop/document.sqlite ".schema"
-```
+Reusable code lives in `Packages/*/Package.swift`. The Xcode project is only a thin macOS app and Quick Look bundle layer.

@@ -1,21 +1,19 @@
-//
-//  hitSlopApp.swift
-//  hitSlop
-//
-//  Created by Jordan Howlett on 8/26/26.
-//
-
+import HitSlopMac
 import SwiftUI
 
 @main
 struct hitSlopApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @NSApplicationDelegateAdaptor(HitSlopApplicationDelegate.self) private var appDelegate
 
     var body: some Scene {
         Settings {
-            Text("hitSlop documents save every change directly to SQLite.")
-                .frame(width: 360)
-                .padding(24)
+            VStack(spacing: 8) {
+                Text("hitSlop").font(.headline)
+                Text("ElementaryUI apps whose source and data live beside them.")
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: 380)
+            .padding(28)
         }
     }
 }

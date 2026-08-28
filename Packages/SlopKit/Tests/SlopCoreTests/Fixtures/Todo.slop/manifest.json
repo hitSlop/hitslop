@@ -1,0 +1,33 @@
+{
+  "artifact" : {
+    "artifactHash" : "sha256:0e7869a4f0f3c3714051c7151dc165c876674b67be25c54fe47c76b09e6ac42f",
+    "entry" : "build/app.wasm",
+    "sourceHash" : "sha256:d08357b3ce0192dc9abb697c91688110a8cea4ce21b150247e1d2e4ab18ab47d"
+  },
+  "dependencies" : [
+    "slop-kit-0.1"
+  ],
+  "format" : "slop-wasm/1",
+  "id" : "com.longtaillabs.slop.todo-spike",
+  "runtime" : "elementary-ui-0.7/slop-runtime-1",
+  "source" : {
+    "files" : [
+      "ContentView.swift",
+      "styles.css"
+    ],
+    "path" : "source"
+  },
+  "stores" : [
+    {
+      "id" : "state",
+      "kind" : "json",
+      "maxBytes" : 1048576,
+      "path" : "data.json"
+    }
+  ],
+  "title" : "Field Notes",
+  "window" : {
+    "height" : 640,
+    "width" : 480
+  }
+}

@@ -49,20 +49,6 @@
                ReferencedContainer = "container:hitSlop.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "F604AFC3C5D9F2405B397301"
-               BuildableName = "hitSlopTests.xctest"
-               BlueprintName = "hitSlopTests"
-               ReferencedContainer = "container:hitSlop.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -81,19 +67,7 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "F604AFC3C5D9F2405B397301"
-               BuildableName = "hitSlopTests.xctest"
-               BlueprintName = "hitSlopTests"
-               ReferencedContainer = "container:hitSlop.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"

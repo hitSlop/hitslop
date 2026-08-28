@@ -1,39 +1,32 @@
-import AppKit
 import QuickLookUI
+import SlopCore
+import SlopMacSupport
 import UniformTypeIdentifiers
 
 final class PreviewProvider: QLPreviewProvider {
-    enum PreviewError: Error { case invalidDocument }
-
     func providePreview(for request: QLFilePreviewRequest) async throws -> QLPreviewReply {
-        let securityScoped = request.fileURL.startAccessingSecurityScopedResource()
-        defer {
-            if securityScoped { request.fileURL.stopAccessingSecurityScopedResource() }
-        }
-
-        let candidates = [
-            request.fileURL.appendingPathComponent("preview.png"),
-            request.fileURL.appendingPathComponent("QuickLook/Preview.png"),
-            request.fileURL.appendingPathComponent("QuickLook/Thumbnail.png"),
-        ]
-        if let url = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) {
-            let reply = QLPreviewReply(fileURL: url)
-            reply.title = request.fileURL.deletingPathExtension().lastPathComponent
+        let scoped = request.fileURL.startAccessingSecurityScopedResource()
+        defer { if scoped { request.fileURL.stopAccessingSecurityScopedResource() } }
+        if let preview = SlopPreviewAssets.previewURL(in: request.fileURL) {
+            let reply = QLPreviewReply(fileURL: preview)
+            if let title = try? SlopPackage(rootURL: request.fileURL).manifest.title {
+                reply.title = title
+            }
             return reply
         }
-
-        let title = Self.escape(request.fileURL.deletingPathExtension().lastPathComponent)
+        let package = try SlopPackage(rootURL: request.fileURL)
+        let title = Self.escape(package.manifest.title)
         let html = """
         <!doctype html><meta charset="utf-8"><style>
-        html,body{height:100%;margin:0}body{display:grid;place-items:center;background:#111318;color:#f5f6f8;font:16px -apple-system,system-ui}
-        main{text-align:center;padding:48px}h1{font-size:32px;margin:0 0 10px}p{color:#9ea4af;margin:0}
-        </style><main><h1>\(title)</h1><p>Open in hitSlop to generate a live preview.</p></main>
+        html,body{height:100%;margin:0}body{display:grid;place-items:center;background:#f4f0e5;color:#292720;font:16px -apple-system,system-ui}
+        main{text-align:center;padding:48px}h1{font-size:32px;margin:0 0 10px}p{color:#777168;margin:0}
+        </style><main><h1>\(title)</h1><p>Open in hitSlop to refresh this preview.</p></main>
         """
         let reply = QLPreviewReply(
             dataOfContentType: .html,
-            contentSize: CGSize(width: 430, height: 620)
+            contentSize: CGSize(width: package.manifest.window.width, height: package.manifest.window.height)
         ) { _ in Data(html.utf8) }
-        reply.title = title
+        reply.title = package.manifest.title
         return reply
     }
 
