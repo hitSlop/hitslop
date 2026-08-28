@@ -1,0 +1,8 @@
+{
+  "displayName": "Ocean Glass",
+  "format": "slop-theme/1",
+  "id": "ocean-glass",
+  "preview": { "colors": ["#dff4f5", "#12343b", "#087f8c", "#8ccdd2"] },
+  "summary": "Cool translucent surfaces and ocean-blue accents.",
+  "version": "1.0.0"
+}

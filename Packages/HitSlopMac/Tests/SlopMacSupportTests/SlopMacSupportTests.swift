@@ -42,4 +42,33 @@ final class SlopMacSupportTests: XCTestCase {
         XCTAssertEqual(bitmap.pixelsWide, 1024)
         XCTAssertEqual(bitmap.pixelsHigh, 1024)
     }
+
+    func testCirclePreviewClearsTransparentCorners() throws {
+        let rep = try XCTUnwrap(NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: 100,
+            pixelsHigh: 100,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ))
+        rep.size = NSSize(width: 100, height: 100)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        NSColor.red.setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: 0, width: 100, height: 100)).fill()
+        NSGraphicsContext.restoreGraphicsState()
+        let source = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+        let masked = try XCTUnwrap(SlopPreviewAssets.maskedPreview(
+            from: source,
+            shape: .init(kind: .circle)
+        ))
+        let result = try XCTUnwrap(NSBitmapImageRep(data: masked))
+        XCTAssertEqual(try XCTUnwrap(result.colorAt(x: 0, y: 0)).alphaComponent, 0, accuracy: 0.01)
+        XCTAssertGreaterThan(result.colorAt(x: 50, y: 50)?.alphaComponent ?? 0, 0.9)
+    }
 }

@@ -1,0 +1,12 @@
+:root {
+  --slop-bg: #f4efe7; --slop-surface: #ebe2d4; --slop-surface-raised: #fffaf2;
+  --slop-text: #271f18; --slop-text-muted: #74655b; --slop-accent: #bf6c3d;
+  --slop-border: #d7cab8; --slop-font-body: Charter, Georgia, serif;
+  --slop-font-heading: "Iowan Old Style", Georgia, serif;
+}
+body { color: var(--slop-text) !important; background: var(--slop-bg) !important; font-family: var(--slop-font-body) !important; }
+h1,h2,h3 { color: var(--slop-text) !important; font-family: var(--slop-font-heading) !important; }
+header p, footer, #status { color: var(--slop-text-muted) !important; }
+button { border-color: var(--slop-text) !important; background: var(--slop-text) !important; color: var(--slop-bg) !important; }
+input { color: var(--slop-text) !important; border-color: var(--slop-border) !important; }
+li, ul { border-color: var(--slop-border) !important; }

@@ -1,0 +1,11 @@
+:root {
+  color-scheme: light; --slop-bg: #dff4f5; --slop-surface: rgb(255 255 255 / 54%); --slop-surface-raised: rgb(255 255 255 / 76%);
+  --slop-text: #12343b; --slop-text-muted: #4e7379; --slop-accent: #087f8c; --slop-border: #8ccdd2;
+  --slop-shadow-md: 0 18px 50px rgb(8 78 89 / 18%);
+}
+body { color: var(--slop-text) !important; background: linear-gradient(145deg,#edfafa,#ccebed) !important; font-family: var(--slop-font-body) !important; }
+h1,h2,h3 { color: var(--slop-text) !important; }
+header p, footer, #status { color: var(--slop-text-muted) !important; }
+button { border-color: var(--slop-accent) !important; background: var(--slop-accent) !important; color: white !important; box-shadow: var(--slop-shadow-sm); }
+input { color: var(--slop-text) !important; border-color: var(--slop-border) !important; }
+li, ul { border-color: var(--slop-border) !important; }

@@ -11,6 +11,7 @@ let package = Package(
     targets: [
         .target(
             name: "SlopCore",
+            resources: [.copy("Resources/AgentSkill")],
             linkerSettings: [.linkedLibrary("sqlite3")]
         ),
         .target(

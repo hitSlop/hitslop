@@ -13,6 +13,14 @@ enum SlopRuntime {
         try resource(named: "slop-runtime-1", extension: "js")
     }
 
+    static func baseStyles() throws -> (data: Data, url: URL) {
+        try resource(named: "slop-base", extension: "css")
+    }
+
+    static func elementaryFlowStyles() throws -> (data: Data, url: URL) {
+        try resource(named: "elementary-flow", extension: "css")
+    }
+
     private static func resource(named name: String, extension fileExtension: String) throws -> (Data, URL) {
         guard let url = Bundle.module.url(forResource: name, withExtension: fileExtension) else {
             throw SlopHostError.invalidPackage("Host runtime resource is missing: \(name).\(fileExtension)")
@@ -51,6 +59,27 @@ enum SlopRuntime {
         writable: false
       });
       window.addEventListener("slop:wasm-loaded", () => { wasmLoaded = true; scheduleReady(); }, { once: true });
+      const handledInlineEditors = new WeakSet();
+      document.addEventListener("keydown", event => {
+        if ((event.key === "Enter" || event.key === "Escape") && event.target?.dataset?.slopInlineEditor === "true") {
+          event.preventDefault();
+          handledInlineEditors.add(event.target);
+        }
+      }, true);
+      document.addEventListener("blur", event => {
+        const editor = event.target;
+        if (editor?.dataset?.slopInlineEditor !== "true") return;
+        if (handledInlineEditors.delete(editor)) return;
+        setTimeout(() => {
+          if (!editor.isConnected) return;
+          editor.dispatchEvent(new KeyboardEvent("keydown", {
+            key: "Enter",
+            code: "Enter",
+            bubbles: true,
+            cancelable: true
+          }));
+        }, 0);
+      }, true);
       window.addEventListener("error", event => call("log", { message: `JavaScript error: ${event.message}` }));
       window.addEventListener("unhandledrejection", event => call("log", { message: `Unhandled rejection: ${String(event.reason)}` }));
       const subscribe = (kind, store, callback) => {

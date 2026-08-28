@@ -26,6 +26,34 @@ public struct SlopManifest: Codable, Equatable, Sendable {
     public struct Window: Codable, Equatable, Sendable {
         public var width: Double
         public var height: Double
+        public var shape: WindowShape
+    }
+
+    public struct WindowShape: Codable, Equatable, Sendable {
+        public enum Kind: String, Codable, Equatable, Sendable {
+            case roundedRect
+            case capsule
+            case circle
+        }
+
+        public var kind: Kind
+        public var radius: Double?
+
+        public init(kind: Kind, radius: Double? = nil) {
+            self.kind = kind
+            self.radius = radius
+        }
+    }
+
+    public struct Catalog: Codable, Equatable, Sendable {
+        public var summary: String
+        public var categories: [String]
+        public var tags: [String]
+    }
+
+    public struct Appearance: Codable, Equatable, Sendable {
+        public var stylesheet: String
+        public var themeID: String
     }
 
     public struct Source: Codable, Equatable, Sendable {
@@ -54,9 +82,11 @@ public struct SlopManifest: Codable, Equatable, Sendable {
     public var format: String
     public var id: String
     public var title: String
+    public var catalog: Catalog
     public var runtime: String
     public var dependencies: [String]
     public var window: Window
+    public var appearance: Appearance
     public var source: Source
     public var artifact: Artifact
     public var stores: [Store]
@@ -71,6 +101,7 @@ public struct SlopPackage: Sendable {
     public let sourceRootURL: URL
     public let sourceURLs: [URL]
     public let styleURL: URL?
+    public let themeURL: URL
 
     public init(rootURL: URL) throws {
         let root = rootURL.standardizedFileURL.resolvingSymlinksInPath()
@@ -109,6 +140,32 @@ public struct SlopPackage: Sendable {
         else {
             throw SlopHostError.invalidPackage("Manifest window dimensions are outside the supported range")
         }
+        switch manifest.window.shape.kind {
+        case .roundedRect:
+            guard let radius = manifest.window.shape.radius,
+                  radius >= 0,
+                  radius <= min(manifest.window.width, manifest.window.height) / 2
+            else {
+                throw SlopHostError.invalidPackage("Rounded rectangle windows require a valid radius")
+            }
+        case .capsule:
+            guard manifest.window.shape.radius == nil else {
+                throw SlopHostError.invalidPackage("Capsule windows do not accept a radius")
+            }
+        case .circle:
+            guard manifest.window.shape.radius == nil,
+                  manifest.window.width == manifest.window.height
+            else {
+                throw SlopHostError.invalidPackage("Circle windows must be square and do not accept a radius")
+            }
+        }
+        guard !manifest.catalog.summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !manifest.catalog.categories.isEmpty,
+              manifest.catalog.categories.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }),
+              manifest.catalog.tags.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+        else {
+            throw SlopHostError.invalidPackage("Template catalog metadata must include a summary and categories")
+        }
         guard !manifest.source.files.isEmpty, manifest.source.files.count <= 128 else {
             throw SlopHostError.invalidPackage("Manifest must declare between 1 and 128 source files")
         }
@@ -145,6 +202,21 @@ public struct SlopPackage: Sendable {
         guard manifest.source.files.contains(where: { $0.hasSuffix(".swift") }) else {
             throw SlopHostError.invalidPackage("At least one Swift source file is required")
         }
+        let themeURL = try Self.resolve(relativePath: manifest.appearance.stylesheet, inside: root)
+        guard themeURL.pathExtension.lowercased() == "css",
+              FileManager.default.fileExists(atPath: themeURL.path)
+        else {
+            throw SlopHostError.invalidPackage("Missing CSS appearance stylesheet: \(manifest.appearance.stylesheet)")
+        }
+        let themeData = try Data(contentsOf: themeURL)
+        guard themeData.count <= 512 * 1_024,
+              String(data: themeData, encoding: .utf8) != nil
+        else {
+            throw SlopHostError.invalidPackage("Appearance stylesheet must be UTF-8 CSS no larger than 512 KiB")
+        }
+        guard !manifest.appearance.themeID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw SlopHostError.invalidPackage("Appearance themeID must not be empty")
+        }
         for store in manifest.stores {
             let url = try Self.resolve(relativePath: store.path, inside: root)
             guard FileManager.default.fileExists(atPath: url.path) else {
@@ -160,6 +232,7 @@ public struct SlopPackage: Sendable {
         self.sourceRootURL = sourceRoot
         self.sourceURLs = sourceURLs
         self.styleURL = zip(manifest.source.files, sourceURLs).first(where: { $0.0 == "styles.css" })?.1
+        self.themeURL = themeURL
     }
 
     public var usesHostRuntime: Bool { manifest.runtime == SlopManifest.hostRuntime }
@@ -253,6 +326,21 @@ public struct SlopPackage: Sendable {
             throw SlopHostError.invalidPackage("Package path escapes its allowed root: \(relativePath)")
         }
         return candidate
+    }
+}
+
+public enum SlopManifestIO {
+    public static func read(from packageURL: URL) throws -> SlopManifest {
+        let url = packageURL.appendingPathComponent("manifest.json")
+        return try JSONDecoder().decode(SlopManifest.self, from: Data(contentsOf: url))
+    }
+
+    public static func write(_ manifest: SlopManifest, to packageURL: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        var data = try encoder.encode(manifest)
+        data.append(0x0A)
+        try data.write(to: packageURL.appendingPathComponent("manifest.json"), options: .atomic)
     }
 }
 

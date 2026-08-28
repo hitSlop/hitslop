@@ -1,0 +1,12 @@
+:root {
+  color-scheme: light; --slop-bg: #fafafa; --slop-surface: #f1f1f1; --slop-surface-raised: #ffffff;
+  --slop-text: #151515; --slop-text-muted: #626262; --slop-accent: #151515; --slop-border: #d8d8d8;
+  --slop-font-body: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --slop-font-heading: var(--slop-font-body); --slop-radius-sm: 0; --slop-radius-md: 0; --slop-radius-lg: 0;
+}
+body { color: var(--slop-text) !important; background: var(--slop-bg) !important; font-family: var(--slop-font-body) !important; }
+h1,h2,h3 { color: var(--slop-text) !important; font-family: var(--slop-font-heading) !important; letter-spacing: -.04em !important; }
+header p, footer, #status { color: var(--slop-text-muted) !important; font-style: normal !important; }
+button { border-radius: 0 !important; border-color: var(--slop-text) !important; background: var(--slop-text) !important; color: var(--slop-bg) !important; }
+input { color: var(--slop-text) !important; border-color: var(--slop-text) !important; }
+li, ul { border-color: var(--slop-border) !important; }

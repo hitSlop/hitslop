@@ -1,0 +1,8 @@
+{
+  "displayName": "Studio Noir",
+  "format": "slop-theme/1",
+  "id": "studio-noir",
+  "preview": { "colors": ["#111214", "#f4f2ed", "#ff6b57", "#33363b"] },
+  "summary": "A dark editorial studio with a warm signal color.",
+  "version": "1.0.0"
+}

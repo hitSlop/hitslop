@@ -1,6 +1,9 @@
 import Foundation
 import SlopCore
 import WebKit
+#if canImport(Darwin)
+import Darwin
+#endif
 #if os(macOS)
 import AppKit
 #endif
@@ -8,12 +11,14 @@ import AppKit
 @MainActor
 public protocol SlopRuntimeSessionDelegate: AnyObject {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
+    func runtimeSessionDidReloadAppearance(_ session: SlopRuntimeSession)
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopManifest.StoreKind, storeID: String)
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
 }
 
 public extension SlopRuntimeSessionDelegate {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {}
+    func runtimeSessionDidReloadAppearance(_ session: SlopRuntimeSession) {}
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopManifest.StoreKind, storeID: String) {}
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
 }
@@ -32,6 +37,10 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
     private var jsonRevisions: [String: String]
     private var changeSequence = 0
     private var pollTimer: Timer?
+    private var appearanceFingerprint: Int?
+#if canImport(Darwin)
+    private var appearanceWatcher: DispatchSourceFileSystemObject?
+#endif
     private var readyContinuations: [CheckedContinuation<Void, Error>] = []
     private var readyTimeouts: [UUID: DispatchWorkItem] = [:]
     private var closed = false
@@ -62,11 +71,13 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
         self.webView = WKWebView(frame: frame, configuration: configuration)
 #endif
         super.init()
+        appearanceFingerprint = Self.appearanceFingerprint(for: package)
         bridge.delegate = self
         webView.navigationDelegate = self
         pollTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.pollForExternalChanges() }
         }
+        startAppearanceWatcher()
     }
 
     public func load() {
@@ -103,6 +114,10 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
         closed = true
         pollTimer?.invalidate()
         pollTimer = nil
+#if canImport(Darwin)
+        appearanceWatcher?.cancel()
+        appearanceWatcher = nil
+#endif
         readyTimeouts.values.forEach { $0.cancel() }
         readyTimeouts.removeAll()
         let continuations = readyContinuations
@@ -110,6 +125,50 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
         continuations.forEach { $0.resume(throwing: SlopHostError.invalidPackage("Runtime session closed before becoming ready")) }
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "slop", contentWorld: .page)
         bridge.close()
+    }
+
+    public func reloadAppearance(force: Bool = false) {
+        guard isReady,
+              let data = try? Data(contentsOf: package.themeURL),
+              data.count <= 512 * 1_024,
+              String(data: data, encoding: .utf8) != nil,
+              let fingerprint = Self.appearanceFingerprint(for: package, themeData: data),
+              force || fingerprint != appearanceFingerprint
+        else { return }
+        appearanceFingerprint = fingerprint
+        let stamp = Int(Date().timeIntervalSince1970 * 1_000)
+        webView.evaluateJavaScript(
+            "document.getElementById('slop-theme-styles')?.setAttribute('href','./theme.css?v=\(stamp)')"
+        ) { [weak self] _, _ in
+            guard let self else { return }
+            self.delegate?.runtimeSessionDidReloadAppearance(self)
+        }
+    }
+
+    private static func appearanceFingerprint(for package: SlopPackage, themeData: Data? = nil) -> Int? {
+        guard let themeData = themeData ?? (try? Data(contentsOf: package.themeURL)),
+              let manifestData = try? Data(contentsOf: package.manifestURL)
+        else { return nil }
+        var hasher = Hasher()
+        hasher.combine(themeData)
+        hasher.combine(manifestData)
+        return hasher.finalize()
+    }
+
+    private func startAppearanceWatcher() {
+#if canImport(Darwin)
+        let descriptor = Darwin.open(package.rootURL.path, O_EVTONLY)
+        guard descriptor >= 0 else { return }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor,
+            eventMask: [.write, .rename, .delete],
+            queue: .main
+        )
+        source.setEventHandler { [weak self] in self?.reloadAppearance() }
+        source.setCancelHandler { Darwin.close(descriptor) }
+        appearanceWatcher = source
+        source.resume()
+#endif
     }
 
     public func slopBridgeDidCommit(kind: SlopManifest.StoreKind, storeID: String, revision: String?) {

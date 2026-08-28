@@ -10,7 +10,27 @@ final class FramelessDocumentWindow: NSWindow {
     override var canBecomeMain: Bool { true }
 }
 
-private final class HoverTrackingView: NSView {
+private extension NSBezierPath {
+    var cgPath: CGPath {
+        let result = CGMutablePath()
+        var points = [NSPoint](repeating: .zero, count: 3)
+        for index in 0..<elementCount {
+            switch element(at: index, associatedPoints: &points) {
+            case .moveTo: result.move(to: points[0])
+            case .lineTo: result.addLine(to: points[0])
+            case .curveTo, .cubicCurveTo:
+                result.addCurve(to: points[2], control1: points[0], control2: points[1])
+            case .quadraticCurveTo:
+                result.addQuadCurve(to: points[1], control: points[0])
+            case .closePath: result.closeSubpath()
+            @unknown default: break
+            }
+        }
+        return result
+    }
+}
+
+private class HoverTrackingView: NSView {
     var hoverChanged: ((Bool) -> Void)?
     private var tracking: NSTrackingArea?
 
@@ -26,7 +46,47 @@ private final class HoverTrackingView: NSView {
     override func mouseExited(with event: NSEvent) { hoverChanged?(false) }
 }
 
+private final class ShapedContentView: HoverTrackingView {
+    var shape: SlopManifest.WindowShape { didSet { needsLayout = true } }
+    private let shapeMask = CAShapeLayer()
+
+    init(frame: NSRect, shape: SlopManifest.WindowShape) {
+        self.shape = shape
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.mask = shapeMask
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func layout() {
+        super.layout()
+        shapeMask.frame = bounds
+        shapeMask.path = path(in: bounds).cgPath
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard path(in: bounds).contains(point) else { return nil }
+        return super.hitTest(point)
+    }
+
+    private func path(in rect: NSRect) -> NSBezierPath {
+        switch shape.kind {
+        case .roundedRect:
+            let radius = min(CGFloat(shape.radius ?? 0), min(rect.width, rect.height) / 2)
+            return NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+        case .capsule:
+            let radius = min(rect.width, rect.height) / 2
+            return NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+        case .circle:
+            return NSBezierPath(ovalIn: rect)
+        }
+    }
+}
+
 private final class DragHandleView: NSView {
+    static let height: CGFloat = 16
+
     override var mouseDownCanMoveWindow: Bool { true }
 
     override init(frame frameRect: NSRect) {
@@ -37,13 +97,6 @@ private final class DragHandleView: NSView {
     }
 
     required init?(coder: NSCoder) { nil }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        let grip = NSRect(x: bounds.midX - 20, y: bounds.midY - 2, width: 40, height: 4)
-        NSColor.labelColor.withAlphaComponent(0.24).setFill()
-        NSBezierPath(roundedRect: grip, xRadius: 2, yRadius: 2).fill()
-    }
 
     override func resetCursorRects() {
         super.resetCursorRects()
@@ -71,6 +124,7 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
     private var previewWork: DispatchWorkItem?
     private var previewTask: Task<Void, Never>?
     private var securityScoped = false
+    private var appearancePanel: AppearancePanelController?
 
     init(packageURL: URL) throws {
         self.packageURL = packageURL.standardizedFileURL
@@ -94,19 +148,31 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         window.acceptsMouseMovedEvents = true
         window.center()
 
-        let container = HoverTrackingView(frame: NSRect(origin: .zero, size: size))
-        container.wantsLayer = true
-        container.layer?.cornerRadius = 22
-        container.layer?.cornerCurve = .continuous
-        container.layer?.masksToBounds = true
-        session.webView.frame = container.bounds
+        let container = ShapedContentView(
+            frame: NSRect(origin: .zero, size: size),
+            shape: session.package.manifest.window.shape
+        )
+        session.webView.frame = NSRect(
+            x: 0,
+            y: 0,
+            width: size.width,
+            height: size.height
+        )
         session.webView.autoresizingMask = [.width, .height]
         session.webView.setValue(false, forKey: "drawsBackground")
         container.addSubview(session.webView)
-        let drag = DragHandleView(frame: NSRect(x: size.width / 2 - 36, y: size.height - 22, width: 72, height: 22))
-        drag.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin]
+        let drag = DragHandleView(frame: NSRect(
+            x: 0,
+            y: size.height - DragHandleView.height,
+            width: size.width,
+            height: DragHandleView.height
+        ))
+        drag.autoresizingMask = [.width, .minYMargin]
         container.addSubview(drag)
         window.contentView = container
+        if session.package.manifest.window.shape.kind == .circle {
+            window.contentAspectRatio = NSSize(width: 1, height: 1)
+        }
 
         super.init(window: window)
         window.delegate = self
@@ -122,6 +188,11 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         schedulePreview(delay: 0.25)
     }
 
+    func runtimeSessionDidReloadAppearance(_ session: SlopRuntimeSession) {
+        reloadManifestAppearance()
+        schedulePreview(delay: 0.15)
+    }
+
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopManifest.StoreKind, storeID: String) {
         schedulePreview()
     }
@@ -134,7 +205,7 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
 
     private func setupToolbar() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: session.package.isSourceCurrent ? 244 : 352, height: 42),
+            contentRect: NSRect(x: 0, y: 0, width: session.package.isSourceCurrent ? 340 : 440, height: 42),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -186,7 +257,10 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
             duplicate: { [weak self] in self?.duplicateDocument() },
             exportPNG: { [weak self] in self?.chooseExport(.png) },
             exportPDF: { [weak self] in self?.chooseExport(.pdf) },
-            share: { [weak self] in self?.shareDocument() }
+            share: { [weak self] in self?.shareDocument() },
+            appearance: { [weak self] in self?.showAppearance() },
+            reveal: { [weak self] in self?.revealPackage() },
+            copyPath: { [weak self] in self?.copyPackagePath() }
         )
     }
 
@@ -237,12 +311,112 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         toolbarHost?.rootView = toolbarView()
     }
 
-    private func duplicateDocument() {
+    func showAppearance() {
+        if let appearancePanel {
+            appearancePanel.show(relativeTo: window)
+            return
+        }
+        let panel = AppearancePanelController(
+            packageURL: packageURL,
+            applyTheme: { [weak self] theme in self?.applyTheme(theme) },
+            applyShape: { [weak self] shape in self?.applyShapeSelection(shape) },
+            saveTheme: { [weak self] in self?.saveCurrentTheme() }
+        )
+        appearancePanel = panel
+        panel.show(relativeTo: window)
+    }
+
+    private func applyTheme(_ theme: SlopThemeDescriptor) {
         do {
-            let destination = SlopDuplicator.nextDuplicateURL(for: packageURL)
-            let url = try SlopDuplicator.duplicate(from: packageURL, to: destination)
-            onOpenDocument?(url)
-        } catch { showError("Could not duplicate document", error) }
+            try SlopThemeCatalog.apply(theme, to: packageURL)
+            session.reloadAppearance(force: true)
+            appearancePanel?.refresh()
+        } catch { showError("Could not apply theme", error) }
+    }
+
+    private func saveCurrentTheme() {
+        let alert = NSAlert()
+        alert.messageText = "Save Theme"
+        alert.informativeText = "Give this reusable theme a name."
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(string: "My Theme")
+        field.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
+        alert.accessoryView = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        do {
+            _ = try SlopThemeCatalog.saveCurrentTheme(from: packageURL, displayName: field.stringValue)
+            appearancePanel?.refresh()
+        } catch { showError("Could not save theme", error) }
+    }
+
+    private func applyShapeSelection(_ requested: SlopManifest.WindowShape) {
+        do {
+            var manifest = try SlopManifestIO.read(from: packageURL)
+            if requested.kind == .circle {
+                let side = max(manifest.window.width, manifest.window.height)
+                manifest.window.width = side
+                manifest.window.height = side
+            }
+            manifest.window.shape = requested
+            try SlopManifestIO.write(manifest, to: packageURL)
+            applyWindowShape(manifest.window.shape, size: manifest.window)
+            appearancePanel?.refresh()
+        } catch { showError("Could not change window shape", error) }
+    }
+
+    private func reloadManifestAppearance() {
+        guard let manifest = try? SlopPackage(rootURL: packageURL).manifest else { return }
+        applyWindowShape(manifest.window.shape, size: manifest.window)
+        appearancePanel?.refresh()
+    }
+
+    private func applyWindowShape(_ shape: SlopManifest.WindowShape, size: SlopManifest.Window) {
+        guard let window, let container = window.contentView as? ShapedContentView else { return }
+        container.shape = shape
+        window.contentAspectRatio = shape.kind == .circle
+            ? NSSize(width: 1, height: 1)
+            : NSSize(width: 0, height: 0)
+        let nextSize = NSSize(width: size.width, height: size.height)
+        if window.contentRect(forFrameRect: window.frame).size != nextSize {
+            window.setContentSize(nextSize)
+        }
+        container.needsLayout = true
+        if toolbar?.isVisible == true { showToolbar() }
+    }
+
+    private func duplicateDocument() {
+        guard let window else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.slop]
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.prompt = "Duplicate"
+        panel.message = "Choose where to save the copy."
+        panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + " copy.slop"
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard response == .OK, let self, let requestedURL = panel.url else { return }
+            do {
+                let title = requestedURL.deletingPathExtension().lastPathComponent
+                let url = try SlopDuplicator.duplicate(from: self.packageURL, to: requestedURL, title: title)
+                self.onOpenDocument?(url)
+            } catch {
+                self.showError("Could not duplicate document", error)
+            }
+        }
+    }
+
+    func duplicateFromMenu() { duplicateDocument() }
+    func exportPNGFromMenu() { chooseExport(.png) }
+    func exportPDFFromMenu() { chooseExport(.pdf) }
+    func shareFromMenu() { shareDocument() }
+    func togglePinFromMenu() { togglePin() }
+    func reloadThemeFromMenu() { session.reloadAppearance(force: true) }
+    var isPinned: Bool { window?.level == .floating }
+
+    func owns(_ candidate: NSWindow?) -> Bool {
+        guard let candidate else { return false }
+        return candidate === window || candidate === toolbar || candidate === appearancePanel?.window
     }
 
     private enum ExportKind { case png, pdf }
@@ -265,6 +439,15 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         NSSharingServicePicker(items: [packageURL]).show(relativeTo: view.bounds, of: view, preferredEdge: .minY)
     }
 
+    private func revealPackage() {
+        NSWorkspace.shared.activateFileViewerSelecting([packageURL])
+    }
+
+    private func copyPackagePath() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(packageURL.path, forType: .string)
+    }
+
     private func schedulePreview(delay: TimeInterval = 0.5) {
         previewWork?.cancel()
         previewTask?.cancel()
@@ -275,7 +458,9 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
                 do {
                     let png = try await SlopDocumentRenderer.preview(webView: self.session.webView)
                     try Task.checkCancellation()
-                    try SlopPreviewAssets.install(png, into: self.packageURL)
+                    let shape = (try? SlopManifestIO.read(from: self.packageURL).window.shape)
+                        ?? self.session.package.manifest.window.shape
+                    try SlopPreviewAssets.install(png, into: self.packageURL, shape: shape)
                 } catch is CancellationError {
                     // A newer document change superseded this derived preview.
                 } catch {
@@ -300,6 +485,8 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         if let toolbar { window?.removeChildWindow(toolbar) }
         toolbar?.close()
         toolbar = nil
+        appearancePanel?.close()
+        appearancePanel = nil
         onClose?()
     }
 
@@ -319,6 +506,9 @@ private struct ToolbarView: View {
     let exportPNG: () -> Void
     let exportPDF: () -> Void
     let share: () -> Void
+    let appearance: () -> Void
+    let reveal: () -> Void
+    let copyPath: () -> Void
 
     var body: some View {
         HStack(spacing: 4) {
@@ -328,6 +518,7 @@ private struct ToolbarView: View {
             }
             button("xmark", "Close", close)
             button(pinned ? "pin.fill" : "pin", pinned ? "Unpin" : "Always on Top", togglePin)
+            button("paintpalette", "Appearance", appearance)
             divider
             button("doc.on.doc", "Duplicate", duplicate)
             Menu {
@@ -339,6 +530,14 @@ private struct ToolbarView: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
             button("square.and.arrow.up", "Share", share)
+            Menu {
+                Button("Reveal in Finder", action: reveal)
+                Button("Copy Package Path", action: copyPath)
+            } label: {
+                Image(systemName: "ellipsis").frame(width: 25, height: 25)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
         }
         .padding(.horizontal, 8).padding(.vertical, 6)
         .background(.ultraThinMaterial, in: Capsule())

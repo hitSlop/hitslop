@@ -28,7 +28,10 @@ let package = Package(
                 .product(name: "SlopCore", package: "SlopKit"),
                 .product(name: "SlopWebRuntime", package: "SlopKit"),
             ],
-            resources: [.copy("Resources/Templates")],
+            resources: [
+                .copy("Resources/Templates"),
+                .copy("Resources/Themes"),
+            ],
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("WebKit"),

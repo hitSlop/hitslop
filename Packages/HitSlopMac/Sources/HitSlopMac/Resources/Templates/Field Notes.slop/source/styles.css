@@ -1,28 +1,229 @@
-:root { color:#292720; background:#e8e3d6; font-family:ui-serif,Georgia,Cambria,"Times New Roman",serif; font-synthesis:none }
-* { box-sizing:border-box }
-html,body { min-height:100%; margin:0 }
-body { background:linear-gradient(90deg,transparent 46px,rgba(182,75,57,.24) 47px,transparent 48px),repeating-linear-gradient(0deg,transparent 0 30px,rgba(68,91,99,.10) 30px 31px),#f4f0e5 }
-button,input { font:inherit }
-main { min-height:100vh; padding:54px 34px 34px 68px }
-header { position:relative; margin-bottom:28px }
-header::before { content:"LOCAL / LIVE"; position:absolute; right:0; top:4px; font:600 10px/1 -apple-system,BlinkMacSystemFont,sans-serif; letter-spacing:.15em; color:#8b493b }
-h1 { margin:0; font-size:clamp(34px,9vw,52px); line-height:.95; font-weight:500; letter-spacing:-.045em }
-header p { margin:12px 0 0; color:#706b5f; font-size:14px; font-style:italic }
-#composer { display:flex; align-items:end; gap:10px; margin-bottom:24px }
-#composer input { min-width:0; flex:1; border:0; border-bottom:1px solid #8d887b; border-radius:0; padding:8px 2px 7px; color:#292720; background:transparent; outline:none; font-size:17px }
-#composer input:focus { border-color:#a74332; box-shadow:0 2px 0 -1px #a74332 }
-#composer button { border:1px solid #39372f; border-radius:999px; padding:7px 14px; background:#39372f; color:#f7f3e9; cursor:pointer; font:650 12px/1 -apple-system,BlinkMacSystemFont,sans-serif }
-ul { list-style:none; margin:0; padding:0; border-top:1px solid rgba(74,70,60,.25) }
-li { display:grid; grid-template-columns:26px 1fr 28px; gap:8px; align-items:center; min-height:48px; border-bottom:1px solid rgba(74,70,60,.18) }
-li>button:first-child { width:20px; height:20px; padding:0; border:1px solid #777164; border-radius:50%; background:transparent; color:transparent; cursor:pointer }
-li[data-done="true"]>button:first-child { color:#f4f0e5; border-color:#a74332; background:#a74332 }
-li[data-done="true"]>span { color:#898477; text-decoration:line-through }
-li>span { overflow-wrap:anywhere; font-size:17px; cursor:text }
-li>input { width:100%; min-width:0; border:0; border-bottom:1px solid #a74332; padding:5px 1px 3px; background:rgba(255,255,255,.22); outline:none; font-size:17px }
-li>button:last-child { opacity:0; border:0; background:transparent; color:#8b493b; font-size:22px; cursor:pointer }
-li:hover>button:last-child,li>button:last-child:focus,li[data-editing="true"]>button:last-child { opacity:1 }
-#status { min-height:22px; margin:14px 0 0; color:#7b7568; font-size:12px; font-style:italic }
-#error { color:#9f382c }
-footer { margin-top:40px; color:#8a8477; font:500 10px/1.5 -apple-system,BlinkMacSystemFont,sans-serif; letter-spacing:.08em; text-transform:uppercase }
-button:focus-visible,input:focus-visible { outline:2px solid #a74332; outline-offset:3px }
-@media(max-width:430px){main{padding-left:56px;padding-right:22px}}
+:root {
+  --slop-bg: #f4f0e5;
+  --slop-surface: #ebe5d8;
+  --slop-surface-raised: #faf6ec;
+  --slop-text: #292720;
+  --slop-text-muted: #706b5f;
+  --slop-accent: #a74332;
+  --slop-accent-contrast: #fff8eb;
+  --slop-border: #bcb4a3;
+  --slop-focus: color-mix(in srgb, var(--slop-accent) 64%, transparent);
+  --slop-font-body: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --slop-font-heading: "Iowan Old Style", Georgia, serif;
+  --note-rule: color-mix(in srgb, var(--slop-text) 17%, transparent);
+  --note-rule-strong: color-mix(in srgb, var(--slop-text) 28%, transparent);
+  --note-margin-line: color-mix(in srgb, var(--slop-accent) 28%, transparent);
+  --note-title-size: clamp(2.15rem, 9vw, 3.25rem);
+  --note-section-gap: 1.75rem;
+  --note-page-top: 1.65rem;
+  --note-page-right: 2.125rem;
+  --note-page-bottom: 2.125rem;
+  --note-page-left: 4.25rem;
+  color: var(--slop-text);
+  background: var(--slop-bg);
+  font-family: var(--slop-font-body);
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body {
+  color: var(--slop-text);
+  background:
+    linear-gradient(90deg, transparent 46px, var(--note-margin-line) 47px, transparent 48px),
+    repeating-linear-gradient(0deg, transparent 0 30px, var(--note-rule) 30px 31px),
+    var(--slop-bg);
+}
+button, input { font: inherit; }
+
+.notes-shell {
+  min-height: 100vh;
+  padding: var(--note-page-top) var(--note-page-right) var(--note-page-bottom) var(--note-page-left);
+}
+
+.notes-header {
+  position: relative;
+  margin-bottom: var(--note-section-gap);
+  min-height: 5.25rem;
+}
+.notes-header::before {
+  content: "LOCAL / LIVE";
+  position: absolute;
+  right: 0;
+  top: 4px;
+  color: var(--slop-accent);
+  font: 650 0.625rem/1 -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: .15em;
+}
+
+.note-title {
+  display: table;
+  max-width: calc(100% - 6.5rem);
+  margin: 0;
+  border-radius: 2px;
+  color: var(--slop-text);
+  font-family: var(--slop-font-heading);
+  font-size: var(--note-title-size);
+  font-weight: 500;
+  letter-spacing: -.045em;
+  line-height: .95;
+  outline-offset: 4px;
+  cursor: text;
+}
+.note-title:hover, .note-title:focus-visible { color: var(--slop-accent); }
+
+.note-subtitle {
+  display: table;
+  max-width: calc(100% - 1rem);
+  margin: .75rem 0 0;
+  border-radius: 2px;
+  color: var(--slop-text-muted);
+  font-size: .875rem;
+  font-style: italic;
+  line-height: 1.45;
+  outline-offset: 4px;
+  cursor: text;
+}
+.note-subtitle:hover, .note-subtitle:focus-visible { color: var(--slop-accent); }
+
+.title-editor, .subtitle-editor {
+  display: block;
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid var(--slop-accent);
+  border-radius: 0;
+  color: var(--slop-text);
+  background: transparent;
+}
+.title-editor {
+  width: calc(100% - 6.5rem);
+  margin: 0;
+  padding: 0 0 .15rem;
+  font-family: var(--slop-font-heading);
+  font-size: var(--note-title-size);
+  font-weight: 500;
+  letter-spacing: -.045em;
+  line-height: .95;
+}
+.subtitle-editor {
+  width: calc(100% - 1rem);
+  margin: .75rem 0 0;
+  padding: 0 0 .2rem;
+  font-size: .875rem;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.composer {
+  display: flex;
+  align-items: end;
+  gap: var(--slop-space-3);
+  margin-bottom: var(--slop-space-5);
+}
+.composer-input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  border-bottom: 1px solid var(--slop-border);
+  border-radius: 0;
+  padding: .5rem .125rem .4375rem;
+  color: var(--slop-text);
+  background: transparent;
+  outline: none;
+  font-size: 1.0625rem;
+}
+.composer-input::placeholder { color: color-mix(in srgb, var(--slop-text-muted) 78%, transparent); }
+.composer-input:focus { border-color: var(--slop-accent); box-shadow: 0 2px 0 -1px var(--slop-accent); }
+.primary-action {
+  min-height: 2rem;
+  border: 1px solid var(--slop-accent);
+  border-radius: var(--slop-radius-pill);
+  padding: .4375rem .875rem;
+  color: var(--slop-accent-contrast);
+  background: var(--slop-accent);
+  cursor: pointer;
+  font: 650 .75rem/1 -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: filter var(--slop-duration-fast) ease-out, transform var(--slop-duration-fast) ease-out;
+}
+.primary-action:hover { filter: brightness(.92); }
+.primary-action:active { transform: translateY(1px); }
+
+.notes-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--note-rule-strong); }
+.note-row {
+  display: grid;
+  grid-template-columns: 26px 1fr 32px;
+  gap: .5rem;
+  align-items: center;
+  min-height: 3rem;
+  border-bottom: 1px solid var(--note-rule);
+}
+.note-row[data-editing="true"] { grid-template-columns: 26px 1fr; }
+.complete-action {
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid var(--slop-text-muted);
+  border-radius: 50%;
+  color: transparent;
+  background: transparent;
+  cursor: pointer;
+}
+.note-row[data-done="true"] .complete-action {
+  color: var(--slop-accent-contrast);
+  border-color: var(--slop-accent);
+  background: var(--slop-accent);
+}
+.note-row[data-done="true"] .note-copy { color: var(--slop-text-muted); text-decoration: line-through; }
+.note-copy { overflow-wrap: anywhere; font-size: 1.0625rem; cursor: text; }
+.note-editor {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-bottom: 1px solid var(--slop-accent);
+  border-radius: 0;
+  padding: .3125rem .0625rem .1875rem;
+  color: var(--slop-text);
+  background: color-mix(in srgb, var(--slop-surface-raised) 48%, transparent);
+  outline: none;
+  font-size: 1.0625rem;
+}
+.delete-note {
+  min-width: 2rem;
+  min-height: 2rem;
+  border: 0;
+  padding: 0;
+  color: var(--slop-accent);
+  background: transparent;
+  cursor: pointer;
+}
+.delete-note { opacity: 0; font-size: 1.375rem; }
+.note-row:hover .delete-note, .delete-note:focus, .note-row[data-editing="true"] .delete-note { opacity: 1; }
+
+.document-status, .document-error { min-height: 1.375rem; margin: .875rem 0 0; font-size: .75rem; font-style: italic; }
+.document-status { color: var(--slop-text-muted); }
+.document-error { color: var(--slop-danger); }
+.document-footer {
+  margin-top: 2.5rem;
+  color: var(--slop-text-muted);
+  font: 550 .625rem/1.5 -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+button:focus-visible, input:focus-visible, [role="button"]:focus-visible {
+  outline: 2px solid var(--slop-focus);
+  outline-offset: 3px;
+}
+
+@media (max-width: 430px) {
+  :root {
+    --note-page-right: 1.375rem;
+    --note-page-left: 3.5rem;
+  }
+  .notes-header::before { display: none; }
+  .note-title, .title-editor, .subtitle-editor { width: 100%; max-width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-action { transition: none; }
+}

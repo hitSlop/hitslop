@@ -1,0 +1,8 @@
+{
+  "displayName": "Paper Ledger",
+  "format": "slop-theme/1",
+  "id": "paper-ledger",
+  "preview": { "colors": ["#f4efe7", "#271f18", "#bf6c3d", "#d7cab8"] },
+  "summary": "Warm paper, serif type, and restrained ink.",
+  "version": "1.0.0"
+}

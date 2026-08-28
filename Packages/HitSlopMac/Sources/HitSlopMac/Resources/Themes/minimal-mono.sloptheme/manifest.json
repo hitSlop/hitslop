@@ -1,0 +1,8 @@
+{
+  "displayName": "Minimal Mono",
+  "format": "slop-theme/1",
+  "id": "minimal-mono",
+  "preview": { "colors": ["#fafafa", "#151515", "#151515", "#d8d8d8"] },
+  "summary": "Crisp monochrome with technical typography.",
+  "version": "1.0.0"
+}

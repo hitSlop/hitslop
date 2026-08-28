@@ -62,6 +62,14 @@ final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
                 return (Data(), "text/css")
             }
             return (try Data(contentsOf: styleURL, options: .mappedIfSafe), "text/css")
+        case "/slop-base.css":
+            let resource = try SlopRuntime.baseStyles()
+            return (resource.data, SlopMIME.type(for: resource.url))
+        case "/elementary-flow.css":
+            let resource = try SlopRuntime.elementaryFlowStyles()
+            return (resource.data, SlopMIME.type(for: resource.url))
+        case "/theme.css":
+            return (try Data(contentsOf: package.themeURL, options: .mappedIfSafe), "text/css")
         default:
             let assetURL = try package.documentAssetURL(path: url.path)
             guard FileManager.default.fileExists(atPath: assetURL.path) else {

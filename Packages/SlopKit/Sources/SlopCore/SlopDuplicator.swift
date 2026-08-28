@@ -58,6 +58,7 @@ public enum SlopDuplicator {
         var data = try encoder.encode(manifest)
         data.append(0x0A)
         try data.write(to: manifestURL, options: .atomic)
+        try SlopAgentGuideInstaller.install(into: destination)
         completed = true
         return destination
     }

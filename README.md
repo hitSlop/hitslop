@@ -7,11 +7,14 @@ My App.slop/
 ├── manifest.json
 ├── source/ContentView.swift
 ├── source/styles.css
+├── theme.css
 ├── build/app.wasm
 ├── data.json or data.sqlite
 ├── assets/
 └── QuickLook/
 ```
+
+`theme.css` is the live, document-local appearance override and does not require a Wasm rebuild. Every first-release package also carries `AGENTS.md`, `CLAUDE.md`, and local hitSlop skills under `.agents/skills/` and `.claude/skills/`.
 
 The application owns the HTML shell, Elementary browser runtime, WASI/JavaScriptKit glue, WebKit bridge, export renderer, and Quick Look integration. A document does not include a toolchain, dependency checkout, `node_modules`, or `.build` directory.
 

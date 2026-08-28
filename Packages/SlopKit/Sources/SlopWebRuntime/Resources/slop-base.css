@@ -1,0 +1,43 @@
+:root {
+  color-scheme: light dark;
+  --slop-font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --slop-font-heading: var(--slop-font-body);
+  --slop-font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --slop-bg: Canvas;
+  --slop-surface: color-mix(in srgb, Canvas 94%, CanvasText 6%);
+  --slop-surface-raised: color-mix(in srgb, Canvas 88%, CanvasText 12%);
+  --slop-text: CanvasText;
+  --slop-text-muted: color-mix(in srgb, CanvasText 62%, transparent);
+  --slop-accent: AccentColor;
+  --slop-accent-contrast: white;
+  --slop-border: color-mix(in srgb, CanvasText 18%, transparent);
+  --slop-focus: color-mix(in srgb, AccentColor 58%, transparent);
+  --slop-success: #2f9e44;
+  --slop-warning: #f08c00;
+  --slop-danger: #e03131;
+  --slop-space-1: .25rem;
+  --slop-space-2: .5rem;
+  --slop-space-3: .75rem;
+  --slop-space-4: 1rem;
+  --slop-space-5: 1.5rem;
+  --slop-space-6: 2rem;
+  --slop-radius-sm: .375rem;
+  --slop-radius-md: .75rem;
+  --slop-radius-lg: 1.25rem;
+  --slop-radius-pill: 999px;
+  --slop-shadow-sm: 0 1px 2px rgb(0 0 0 / 12%);
+  --slop-shadow-md: 0 8px 24px rgb(0 0 0 / 16%);
+  --slop-duration-fast: 120ms;
+  --slop-duration-normal: 220ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body { color: var(--slop-text); background: var(--slop-bg); font-family: var(--slop-font-body); line-height: 1.5; }
+h1, h2, h3, h4, h5, h6 { font-family: var(--slop-font-heading); }
+button, input, select, textarea { font: inherit; border-radius: var(--slop-radius-sm); }
+a { color: var(--slop-accent); }
+:focus-visible { outline: 2px solid var(--slop-focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

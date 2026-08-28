@@ -6,18 +6,64 @@ public enum SlopPreviewAssets {
     static let iconPointSize: CGFloat = 512
     static let iconPixelSize = 1024
 
-    public static func install(_ png: Data, into packageURL: URL, cornerRadius: CGFloat = 22) throws {
+    public static func install(
+        _ png: Data,
+        into packageURL: URL,
+        shape: SlopManifest.WindowShape,
+        cornerRadius: CGFloat = 22
+    ) throws {
         let folder = packageURL.appendingPathComponent("QuickLook", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        try png.write(to: folder.appendingPathComponent("Preview.png"), options: .atomic)
-        if let icon = icon(from: png, cornerRadius: cornerRadius), let iconPNG = icon.pngData {
+        let displayedPNG = maskedPreview(from: png, shape: shape) ?? png
+        try displayedPNG.write(to: folder.appendingPathComponent("Preview.png"), options: .atomic)
+        if let icon = icon(from: displayedPNG, cornerRadius: cornerRadius), let iconPNG = icon.pngData {
             try iconPNG.write(to: folder.appendingPathComponent("Thumbnail.png"), options: .atomic)
             NSWorkspace.shared.setIcon(icon, forFile: packageURL.path)
         } else {
-            try png.write(to: folder.appendingPathComponent("Thumbnail.png"), options: .atomic)
+            try displayedPNG.write(to: folder.appendingPathComponent("Thumbnail.png"), options: .atomic)
         }
         try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: packageURL.path)
         NSWorkspace.shared.noteFileSystemChanged(packageURL.path)
+    }
+
+    static func maskedPreview(from png: Data, shape: SlopManifest.WindowShape) -> Data? {
+        guard let source = NSImage(data: png),
+              let sourceRep = source.representations.compactMap({ $0 as? NSBitmapImageRep }).first,
+              let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil,
+                pixelsWide: sourceRep.pixelsWide,
+                pixelsHigh: sourceRep.pixelsHigh,
+                bitsPerSample: 8,
+                samplesPerPixel: 4,
+                hasAlpha: true,
+                isPlanar: false,
+                colorSpaceName: .deviceRGB,
+                bytesPerRow: 0,
+                bitsPerPixel: 0
+              ),
+              let context = NSGraphicsContext(bitmapImageRep: rep)
+        else { return nil }
+        let size = source.size
+        rep.size = size
+        let rect = NSRect(origin: .zero, size: size)
+        let path: NSBezierPath
+        switch shape.kind {
+        case .roundedRect:
+            let radius = min(CGFloat(shape.radius ?? 0), min(size.width, size.height) / 2)
+            path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+        case .capsule:
+            let radius = min(size.width, size.height) / 2
+            path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
+        case .circle:
+            path = NSBezierPath(ovalIn: rect)
+        }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.cgContext.clear(rect)
+        path.addClip()
+        source.draw(in: rect)
+        NSGraphicsContext.restoreGraphicsState()
+        return rep.representation(using: .png, properties: [:])
     }
 
     public static func previewURL(in packageURL: URL) -> URL? {

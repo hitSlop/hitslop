@@ -1,14 +1,23 @@
 {
   "artifact" : {
-    "artifactHash" : "sha256:0e7869a4f0f3c3714051c7151dc165c876674b67be25c54fe47c76b09e6ac42f",
+    "artifactHash" : "sha256:53f1e0bfc5f7e5c1466e3c596a8549437b46066c810c9e69622dba79b3d17608",
     "entry" : "build/app.wasm",
-    "sourceHash" : "sha256:d08357b3ce0192dc9abb697c91688110a8cea4ce21b150247e1d2e4ab18ab47d"
+    "sourceHash" : "sha256:baa8f13be2d077b2ca3ab317dd901f158d06758b2ec319837940110e25220678"
   },
   "dependencies" : [
     "slop-kit-0.1"
   ],
   "format" : "slop-wasm/1",
   "id" : "com.longtaillabs.slop.todo-spike",
+  "catalog" : {
+    "summary" : "A compact local notebook backed by atomic JSON.",
+    "categories" : ["Notes", "Productivity"],
+    "tags" : ["notes", "todo", "json", "local"]
+  },
+  "appearance" : {
+    "stylesheet" : "theme.css",
+    "themeID" : "default"
+  },
   "runtime" : "elementary-ui-0.7/slop-runtime-1",
   "source" : {
     "files" : [
@@ -28,6 +37,7 @@
   "title" : "Field Notes",
   "window" : {
     "height" : 640,
-    "width" : 480
+    "width" : 480,
+    "shape" : { "kind" : "roundedRect", "radius" : 22 }
   }
 }

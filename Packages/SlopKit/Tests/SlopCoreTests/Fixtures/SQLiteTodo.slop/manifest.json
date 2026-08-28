@@ -9,6 +9,15 @@
   ],
   "format" : "slop-wasm/1",
   "id" : "com.longtaillabs.slop.sqlite-todo-spike",
+  "catalog" : {
+    "summary" : "A searchable field notebook powered by local SQLite.",
+    "categories" : ["Notes", "Database"],
+    "tags" : ["notes", "todo", "sqlite", "local"]
+  },
+  "appearance" : {
+    "stylesheet" : "theme.css",
+    "themeID" : "default"
+  },
   "runtime" : "elementary-ui-0.7/slop-runtime-1",
   "source" : {
     "files" : [
@@ -27,6 +36,7 @@
   "title" : "SQLite Field Notes",
   "window" : {
     "height" : 640,
-    "width" : 480
+    "width" : 480,
+    "shape" : { "kind" : "roundedRect", "radius" : 22 }
   }
 }
