@@ -14,6 +14,7 @@ final class SlopCoreTests: XCTestCase {
         let package = try copiedFixture(named: "Todo")
         XCTAssertEqual(package.manifest.format, SlopManifest.supportedFormat)
         XCTAssertEqual(package.manifest.runtime, SlopManifest.hostRuntime)
+        XCTAssertEqual(package.manifest.dependencies, ["slop-kit-0.2"])
         XCTAssertTrue(package.isSourceCurrent)
         XCTAssertEqual(package.entryURL.lastPathComponent, "app.wasm")
         XCTAssertFalse(package.manifest.source.files.contains("App.swift"))
@@ -51,6 +52,9 @@ final class SlopCoreTests: XCTestCase {
         ) as? [String: Any]
 
         XCTAssertTrue(swift.contains("import ElementaryFlow"))
+        XCTAssertTrue(swift.contains("@SlopModel"))
+        XCTAssertFalse(swift.contains("init?(json:"))
+        XCTAssertFalse(swift.contains("viewVersion"))
         XCTAssertTrue(swift.contains(".class(\"note-title\")"))
         XCTAssertTrue(swift.contains("var(--slop-accent)"))
         XCTAssertFalse(swift.contains("InlineBlurEvent"))
@@ -69,6 +73,24 @@ final class SlopCoreTests: XCTestCase {
         XCTAssertFalse(css.contains("._e"))
         XCTAssertEqual(data?["title"] as? String, "Field notes")
         XCTAssertEqual(data?["subtitle"] as? String, "A tiny Swift app whose memory lives beside it.")
+        XCTAssertTrue(package.isSourceCurrent)
+    }
+
+    func testSQLiteTemplateUsesTypedPersistenceWithoutRestrictingElementaryUI() throws {
+        let package = try copiedFixture(named: "SQLiteTodo")
+        let swift = try String(
+            contentsOf: package.sourceRootURL.appendingPathComponent("ContentView.swift"),
+            encoding: .utf8
+        )
+
+        XCTAssertTrue(swift.contains("import ElementaryUI"))
+        XCTAssertTrue(swift.contains("@SlopModel"))
+        XCTAssertTrue(swift.contains("@Reactive"))
+        XCTAssertTrue(swift.contains("#sql("))
+        XCTAssertTrue(swift.contains("as: Todo.self"))
+        XCTAssertFalse(swift.contains("row["))
+        XCTAssertFalse(swift.contains("viewVersion"))
+        XCTAssertEqual(package.manifest.dependencies, ["slop-kit-0.2"])
         XCTAssertTrue(package.isSourceCurrent)
     }
 

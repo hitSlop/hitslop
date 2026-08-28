@@ -132,7 +132,7 @@ public struct SlopPackage: Sendable {
         guard manifest.runtime == SlopManifest.hostRuntime else {
             throw SlopHostError.invalidPackage("Unsupported runtime \(manifest.runtime)")
         }
-        guard Set(manifest.dependencies).isSubset(of: ["slop-kit-0.1"]) else {
+        guard Set(manifest.dependencies).isSubset(of: ["slop-kit-0.1", "slop-kit-0.2"]) else {
             throw SlopHostError.invalidPackage("Manifest requests an unknown dependency")
         }
         guard manifest.window.width >= 320, manifest.window.height >= 320,

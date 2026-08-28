@@ -21,6 +21,7 @@ The application owns the HTML shell, Elementary browser runtime, WASI/JavaScript
 ## Packages
 
 - `Packages/SlopKit` — cross-platform document, JSON/SQLite, and WebKit runtime foundation.
+- `Packages/SlopGuest` — the lightweight WASM-side `SlopKit` API, including `@SlopModel`, safe `#sql` bindings, typed SQLite rows, and reactive JSON documents.
 - `Packages/HitSlopMac` — macOS windows, template picker, duplication, export, and preview support.
 - `Packages/SlopCLI` — `validate`, `duplicate`, `open`, and full-content PNG/PDF export.
 
@@ -28,10 +29,11 @@ Build and test without opening Xcode:
 
 ```sh
 swift test --package-path Packages/SlopKit
+swift test --package-path Packages/SlopGuest
 swift test --package-path Packages/HitSlopMac
 swift build --package-path Packages/SlopCLI
 ```
 
 Regenerate the thin Xcode project with `xcodegen generate --spec hitSlop/project.yml`.
 
-The compiler service is intentionally not part of this repository yet. Source changes run the last-known-good WASM and show a **Needs rebuild** badge until a compiler is connected.
+The compiler service is intentionally not part of this repository yet. `Packages/SlopGuest` is the source of truth it should consume; source changes run the last-known-good WASM and show a **Needs rebuild** badge until a compiler is connected.

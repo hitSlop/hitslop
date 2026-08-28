@@ -1,11 +1,11 @@
 {
   "artifact" : {
-    "artifactHash" : "sha256:53f1e0bfc5f7e5c1466e3c596a8549437b46066c810c9e69622dba79b3d17608",
+    "artifactHash" : "sha256:6880d650c62bacb65d2a3a80ca1f6ab60f05bcf08b2a50ec8d57396fc18c010c",
     "entry" : "build/app.wasm",
-    "sourceHash" : "sha256:baa8f13be2d077b2ca3ab317dd901f158d06758b2ec319837940110e25220678"
+    "sourceHash" : "sha256:7a3d38d32656acf337d24de3a37ef6e23c6421744aa3b751cb05fd95b0c6650b"
   },
   "dependencies" : [
-    "slop-kit-0.1"
+    "slop-kit-0.2"
   ],
   "format" : "slop-wasm/1",
   "id" : "com.longtaillabs.slop.todo-spike",

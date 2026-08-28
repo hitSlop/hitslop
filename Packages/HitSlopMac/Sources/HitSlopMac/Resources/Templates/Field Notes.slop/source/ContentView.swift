@@ -2,6 +2,7 @@ import ElementaryFlow
 import ElementaryUI
 import SlopKit
 
+@SlopModel
 struct Todo: Equatable {
     var id: Int
     var title: String
@@ -9,55 +10,13 @@ struct Todo: Equatable {
     var position: Int
 }
 
-struct TodoData: SlopJSONCodable, Equatable {
+@SlopModel
+struct TodoData: Equatable {
     var title: String
     var subtitle: String
     var todos: [Todo]
     var nextID: Int
 
-    init(title: String, subtitle: String, todos: [Todo], nextID: Int) {
-        self.title = title
-        self.subtitle = subtitle
-        self.todos = todos
-        self.nextID = nextID
-    }
-
-    init?(json: SlopJSONValue) {
-        guard let object = json.objectValue,
-              let title = object.required("title")?.stringValue,
-              let subtitle = object.required("subtitle")?.stringValue,
-              let nextID = object.required("nextID")?.intValue,
-              let values = object.required("todos")?.arrayValue else { return nil }
-        let todos = values.compactMap { value -> Todo? in
-            guard let item = value.objectValue,
-                  let id = item.required("id")?.intValue,
-                  let title = item.required("title")?.stringValue,
-                  let done = item.required("done")?.boolValue,
-                  let position = item.required("position")?.intValue else { return nil }
-            return Todo(id: id, title: title, done: done, position: position)
-        }
-        guard todos.count == values.count else { return nil }
-        self.title = title
-        self.subtitle = subtitle
-        self.nextID = nextID
-        self.todos = todos
-    }
-
-    var json: SlopJSONValue {
-        .object([
-            "title": .string(title),
-            "subtitle": .string(subtitle),
-            "nextID": .number(Double(nextID)),
-            "todos": .array(todos.map { todo in
-                .object([
-                    "id": .number(Double(todo.id)),
-                    "title": .string(todo.title),
-                    "done": .bool(todo.done),
-                    "position": .number(Double(todo.position)),
-                ])
-            }),
-        ])
-    }
 }
 
 @View
@@ -78,14 +37,13 @@ struct ContentView {
     @State var editingHeaderSubtitle = false
     @State var headerTitleDraft = ""
     @State var headerSubtitleDraft = ""
-    @State var viewVersion = 0
     @FocusState var editingFocused: Bool
     @FocusState var headerFocused: Bool
 
     var completedCount: Int { store.value.todos.filter { todo in todo.done }.count }
 
     var body: some View {
-        main(.class("notes-shell"), .data("revision", value: "\(viewVersion)")) {
+        main(.class("notes-shell")) {
             header(.class("notes-header")) {
                 if editingHeaderTitle {
                     input(
@@ -244,7 +202,6 @@ struct ContentView {
             )
         )
         .onAppear {
-            store.onValueChange = { (_: TodoData, _: String) in viewVersion += 1 }
             store.start()
         }
     }
