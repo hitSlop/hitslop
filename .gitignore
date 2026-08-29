@@ -1,6 +1,9 @@
 .DS_Store
 .env
 .env.local
+.env.*.local
+.dev.vars
+.wrangler/
 _docs/
 **/.build/
 **/.swiftpm/
@@ -11,6 +14,10 @@ xcuserdata/
 *.sqlite-shm
 *.sqlite-journal
 node_modules/
+dist/
+**/dist/
 **/.vite/
-sdk/**/dist/
-.slop-dev/
+**/.svelte-check/
+.hitslop/
+*.slop
+*.slop.zip

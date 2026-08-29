@@ -1,0 +1,44 @@
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+const withCurrentArtifact = async (ctx: any, item: any) => {
+  const release = item.currentReleaseId ? await ctx.db.get(item.currentReleaseId) : null;
+  return { ...item, currentArtifactKey: release?.artifactKey, currentArtifactSha256: release?.artifactSha256 };
+};
+
+export const popular = query({ args: { limit: v.optional(v.number()) }, returns: v.array(v.any()), handler: async (ctx, args) => Promise.all((await ctx.db.query("templates").withIndex("by_popularityScore").order("desc").take(Math.min(args.limit ?? 12, 50))).map((item) => withCurrentArtifact(ctx, item))) });
+export const newest = query({ args: { limit: v.optional(v.number()) }, returns: v.array(v.any()), handler: async (ctx, args) => Promise.all((await ctx.db.query("templates").withIndex("by_updatedAt").order("desc").take(Math.min(args.limit ?? 12, 50))).map((item) => withCurrentArtifact(ctx, item))) });
+export const list = query({ args: { category: v.optional(v.string()), sort: v.optional(v.union(v.literal("popular"), v.literal("newest"))), limit: v.optional(v.number()) }, returns: v.array(v.any()), handler: async (ctx, args) => {
+  const limit = Math.min(args.limit ?? 24, 50); const query = args.sort === "newest"
+    ? ctx.db.query("templates").withIndex("by_updatedAt").order("desc")
+    : ctx.db.query("templates").withIndex("by_popularityScore").order("desc");
+  const items = args.category ? (await query.take(200)).filter((item) => item.categories.includes(args.category!)).slice(0, limit) : await query.take(limit);
+  return Promise.all(items.map((item) => withCurrentArtifact(ctx, item)));
+} });
+export const search = query({ args: { term: v.string(), limit: v.optional(v.number()) }, returns: v.array(v.any()), handler: async (ctx, args) => {
+  const term = args.term.trim(); const items = !term
+    ? await ctx.db.query("templates").withIndex("by_popularityScore").order("desc").take(Math.min(args.limit ?? 24, 50))
+    : await ctx.db.query("templates").withSearchIndex("search_searchText", (q) => q.search("searchText", term)).take(Math.min(args.limit ?? 24, 50));
+  return Promise.all(items.map((item) => withCurrentArtifact(ctx, item)));
+} });
+export const release = query({ args: { releaseId: v.id("releases") }, returns: v.union(v.any(), v.null()), handler: (ctx, args) => ctx.db.get(args.releaseId) });
+export const template = query({ args: { publisherKeyId: v.string(), slug: v.string() }, returns: v.union(v.any(), v.null()), handler: async (ctx, args) => {
+  const publisher = await ctx.db.query("publishers").withIndex("by_keyId", (q) => q.eq("keyId", args.publisherKeyId)).unique(); if (!publisher) return null;
+  const item = await ctx.db.query("templates").withIndex("by_publisherId_and_slug", (q) => q.eq("publisherId", publisher._id).eq("slug", args.slug)).unique(); if (!item) return null;
+  const currentRelease = item.currentReleaseId ? await ctx.db.get(item.currentReleaseId) : null; return { ...item, publisher, currentRelease };
+} });
+export const recordDownload = mutation({ args: { installationId: v.string(), templateId: v.id("templates"), releaseId: v.id("releases") }, returns: v.null(), handler: async (ctx, args) => {
+  const existing = await ctx.db.query("downloads").withIndex("by_installationId_and_releaseId", (q) => q.eq("installationId", args.installationId).eq("releaseId", args.releaseId)).unique();
+  if (existing) return null; const item = await ctx.db.get(args.templateId); if (!item) return null;
+  await ctx.db.insert("downloads", { ...args, createdAt: Date.now() }); await ctx.db.patch(args.templateId, { downloads: item.downloads + 1 }); return null;
+} });
+export const recordInstall = mutation({ args: { installationId: v.string(), templateId: v.id("templates"), releaseId: v.id("releases") }, returns: v.null(), handler: async (ctx, args) => {
+  const existing = await ctx.db.query("installations").withIndex("by_installationId_and_templateId", (q) => q.eq("installationId", args.installationId).eq("templateId", args.templateId)).unique(); const now = Date.now();
+  if (existing) await ctx.db.patch(existing._id, { releaseId: args.releaseId, lastSeenAt: now }); else { await ctx.db.insert("installations", { ...args, installedAt: now, lastSeenAt: now }); const item = await ctx.db.get(args.templateId); if (item) await ctx.db.patch(args.templateId, { installs: item.installs + 1, popularityScore: item.popularityScore + 1 }); }
+  return null;
+} });
+export const toggleFavorite = mutation({ args: { installationId: v.string(), templateId: v.id("templates") }, returns: v.boolean(), handler: async (ctx, args) => {
+  const existing = await ctx.db.query("favorites").withIndex("by_installationId_and_templateId", (q) => q.eq("installationId", args.installationId).eq("templateId", args.templateId)).unique(); const item = await ctx.db.get(args.templateId); if (!item) return false;
+  if (existing) { await ctx.db.delete(existing._id); await ctx.db.patch(item._id, { favorites: Math.max(0, item.favorites - 1), popularityScore: Math.max(0, item.popularityScore - 3) }); return false; }
+  await ctx.db.insert("favorites", { ...args, createdAt: Date.now() }); await ctx.db.patch(item._id, { favorites: item.favorites + 1, popularityScore: item.popularityScore + 3 }); return true;
+} });

@@ -1,0 +1,30 @@
+{
+  "name": "@hitslop/templates",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:focus-timer": "slop dev focus-timer",
+    "dev:invoice": "slop dev invoice",
+    "dev:kanban": "slop dev kanban-board",
+    "dev:random-picker": "slop dev random-picker",
+    "validate": "slop validate focus-timer && slop validate invoice && slop validate kanban-board && slop validate random-picker",
+    "build": "slop build focus-timer && slop build invoice && slop build kanban-board && slop build random-picker",
+    "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
+    "test": "true"
+  },
+  "dependencies": {
+    "@hitslop/runtime": "workspace:*",
+    "@hitslop/svelte": "workspace:*",
+    "@lucide/svelte": "^1.37.0",
+    "bits-ui": "^2.19.0",
+    "svelte": "^5.57.0"
+  },
+  "devDependencies": {
+    "@hitslop/cli": "workspace:*",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2"
+  }
+}

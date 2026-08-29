@@ -1,0 +1,27 @@
+{
+  "name": "hitslop",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "workspaces": [
+    "apps/catalog",
+    "apps/registry",
+    "packages/*",
+    "examples/slops"
+  ],
+  "scripts": {
+    "build": "bun run schema:generate && bun run --filter '@hitslop/*' build",
+    "check": "bun run schema:check && bun run --filter '@hitslop/*' check",
+    "test": "bun run --filter '@hitslop/*' test",
+    "schema:generate": "bun run --cwd packages/schema generate",
+    "schema:check": "bun run --cwd packages/schema check:generated",
+    "slop": "bun packages/cli/src/cli.ts",
+    "catalog:dev": "bun run --cwd apps/catalog dev",
+    "convex:dev": "bun run --cwd apps/registry dev",
+    "swift:build": "swift build --package-path apps/macos/packages/HitSlopNativeCLI"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^7.0.2"
+  }
+}

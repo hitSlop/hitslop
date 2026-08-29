@@ -1,0 +1,240 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "$ref": "#/definitions/__schema0"
+    },
+    "format": {
+      "$ref": "#/definitions/__schema1"
+    },
+    "runtime": {
+      "$ref": "#/definitions/__schema2"
+    },
+    "slug": {
+      "$ref": "#/definitions/__schema3"
+    },
+    "title": {
+      "$ref": "#/definitions/__schema4"
+    },
+    "description": {
+      "$ref": "#/definitions/__schema5"
+    },
+    "author": {
+      "$ref": "#/definitions/__schema6"
+    },
+    "categories": {
+      "$ref": "#/definitions/__schema7"
+    },
+    "tags": {
+      "$ref": "#/definitions/__schema9"
+    },
+    "stores": {
+      "$ref": "#/definitions/__schema11"
+    },
+    "window": {
+      "$ref": "#/definitions/__schema13"
+    }
+  },
+  "required": [
+    "format",
+    "runtime",
+    "slug",
+    "title",
+    "description",
+    "author",
+    "categories",
+    "stores",
+    "window"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "__schema0": {
+      "type": "string"
+    },
+    "__schema1": {
+      "type": "string",
+      "const": "hitslop/1"
+    },
+    "__schema2": {
+      "type": "string",
+      "const": "web"
+    },
+    "__schema3": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "__schema4": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "__schema5": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "__schema6": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "__schema7": {
+      "minItems": 1,
+      "maxItems": 2,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema8"
+      }
+    },
+    "__schema8": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "__schema9": {
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema10"
+      }
+    },
+    "__schema10": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "__schema11": {
+      "maxItems": 16,
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/__schema12"
+      }
+    },
+    "__schema12": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,31}$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "json",
+            "sqlite"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240,
+          "pattern": "^[A-Za-z0-9._/-]+$"
+        },
+        "maxBytes": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 1073741824
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "__schema13": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 240,
+          "maximum": 4096
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 180,
+          "maximum": 4096
+        },
+        "resizable": {
+          "default": true,
+          "type": "boolean"
+        },
+        "shape": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "capsule"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "circle"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "roundedRect"
+                },
+                "radius": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 256
+                }
+              },
+              "required": [
+                "kind",
+                "radius"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "resizable"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$id": "https://hitslop.app/schemas/manifest.schema.json",
+  "title": "hitSlop manifest",
+  "description": "The framework-neutral manifest for hitslop/1 web documents."
+}

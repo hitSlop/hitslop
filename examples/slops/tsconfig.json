@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowImportingTsExtensions": true,
+    "checkJs": true,
+    "isolatedModules": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "types": ["vite/client"],
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "@hitslop/runtime": ["../../packages/runtime/src/index.ts"],
+      "@hitslop/svelte": ["../../packages/svelte/src/index.ts"]
+    }
+  },
+  "include": ["**/*.svelte", "**/*.ts", "**/*.js"]
+}

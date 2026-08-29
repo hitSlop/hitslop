@@ -1,0 +1,397 @@
+:root {
+	--picker-shell: #2e43c7;
+	--picker-shell-deep: #2436a7;
+	--picker-paper: #f2ece0;
+	--picker-ink: #242428;
+	--picker-muted: #777169;
+	--picker-coral: #f26055;
+	--picker-butter: #efe489;
+	--picker-rule: rgb(36 36 40 / 15%);
+	--picker-focus: #f26055;
+	--picker-body: "Avenir Next",Avenir,sans-serif;
+	--picker-display: "SF Pro Rounded","Avenir Next",sans-serif;
+	color-scheme: light;
+	font-synthesis: none;
+}
+* {
+	box-sizing: border-box;
+}
+html,
+body,
+#app {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+}
+body {
+	background: transparent;
+	font-family: var(--picker-body);
+}
+button,
+input {
+	font: inherit;
+}
+.picker-shell {
+	position: relative;
+	display: grid;
+	grid-template-columns: 128px 1fr;
+	grid-template-rows: 1fr 56px;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	padding: 22px;
+	color: var(--picker-paper);
+	background: linear-gradient(90deg,transparent calc(100% - 74px),rgb(255 255
+		255 / 7%) 0),var(--picker-shell);
+	font-variant-numeric: tabular-nums;
+}
+.picker-shell > header {
+	grid-row: 1/3;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	border-right: 1px solid rgb(255 255 255 / 14%);
+	padding: 18px 18px 18px 10px;
+}
+.picker-shell header span {
+	color: var(--picker-butter);
+	font-size: 7px;
+	font-weight: 800;
+	letter-spacing: .14em;
+	writing-mode: vertical-rl;
+	transform: rotate(180deg);
+}
+.picker-title {
+	display: block;
+	width: 98px;
+	max-width: 100%;
+	margin: 14px 0 0;
+	border: 0;
+	border-bottom: 1px solid transparent;
+	padding: 0;
+	color: var(--picker-paper);
+	background: transparent;
+	font-family: var(--picker-display);
+	font-size: 1.25rem;
+	font-weight: 620;
+	line-height: .82;
+	letter-spacing: -.06em;
+}
+.settings {
+	display: grid;
+	place-items: center;
+	width: 38px;
+	height: 38px;
+	border: 1px solid rgb(255 255 255 / 14%);
+	border-radius: 50%;
+	color: var(--picker-paper);
+	background: transparent;
+	cursor: pointer;
+}
+.settings svg {
+	width: 15px;
+}
+.picker-stage {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 14px;
+	align-items: center;
+	min-width: 0;
+	margin-left: 16px;
+	border-radius: 70px 70px 10px 70px;
+	padding: 18px 18px 18px 28px;
+	color: var(--picker-ink);
+	background: var(--picker-paper);
+	box-shadow: inset 0 1px rgb(255 255 255 / 38%);
+}
+.winner {
+	display: grid;
+	min-width: 0;
+}
+.winner span {
+	color: var(--picker-coral);
+	font-size: 7px;
+	font-weight: 800;
+	letter-spacing: .13em;
+	text-transform: uppercase;
+}
+.winner strong {
+	display: -webkit-box;
+	overflow: hidden;
+	margin-top: 8px;
+	font-family: var(--picker-display);
+	font-size: clamp(1.8rem,5.8cqw,2.55rem);
+	font-weight: 620;
+	line-height: .86;
+	letter-spacing: -.06em;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+.winner small {
+	margin-top: 9px;
+	color: var(--picker-muted);
+	font-size: 7px;
+	font-weight: 750;
+	text-transform: uppercase;
+}
+.pick-button {
+	display: grid;
+	place-items: center;
+	align-content: center;
+	gap: 6px;
+	width: 80px;
+	height: 80px;
+	border: 0;
+	border-radius: 50%;
+	color: var(--picker-paper);
+	background: var(--picker-coral);
+	cursor: pointer;
+	font-size: 8px;
+	font-weight: 800;
+	text-transform: uppercase;
+	box-shadow: 0 7px 16px rgb(36 36 40 / 17%);
+	transition: transform 130ms ease-out;
+}
+.pick-button:hover {
+	transform: rotate(-4deg) scale(1.03);
+}
+.pick-button:active {
+	transform: scale(.94);
+}
+.pick-button:disabled {
+	cursor: default;
+	opacity: .48;
+}
+.pick-button svg {
+	width: 22px;
+}
+.picker-shell[data-spinning="true"] .pick-button svg {
+	animation: dice-spin 420ms linear infinite;
+}
+.picker-shell > footer {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 14px;
+	min-width: 0;
+	margin-left: 22px;
+	padding: 0 34px 10px 8px;
+}
+.option-strip {
+	display: flex;
+	gap: 4px;
+	min-width: 0;
+}
+.option-strip span {
+	max-width: 64px;
+	overflow: hidden;
+	border-radius: 999px;
+	padding: 5px 8px;
+	color: rgb(242 236 224 / 62%);
+	background: rgb(255 255 255 / 9%);
+	font-size: 7px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.history {
+	display: grid;
+	justify-items: end;
+}
+.history span {
+	color: var(--picker-butter);
+	font-size: 6px;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+.history strong {
+	max-width: 75px;
+	overflow: hidden;
+	margin-top: 3px;
+	font-size: 8px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.picker-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	background: rgb(24 27 60 / 62%);
+}
+.picker-dialog {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	z-index: 51;
+	width: min(370px,calc(100% - 32px));
+	max-height: 270px;
+	overflow: auto;
+	border: 1px solid var(--picker-ink);
+	border-radius: 22px;
+	padding: 20px;
+	color: var(--picker-ink);
+	background: var(--picker-butter);
+	box-shadow: 0 22px 60px rgb(24 27 60 / 35%);
+	outline: none;
+	transform: translate(-50%,-50%);
+}
+.picker-dialog > p {
+	margin: 0;
+	color: var(--picker-coral);
+	font-size: 7px;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+.picker-dialog h2 {
+	margin: 7px 0 0;
+	font-family: var(--picker-display);
+	font-size: 1.8rem;
+	letter-spacing: -.05em;
+}
+.picker-dialog [data-dialog-description] {
+	margin: 4px 0 13px;
+	color: var(--picker-muted);
+	font-size: .72rem;
+}
+.option-add {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 8px;
+}
+.option-add input {
+	height: 37px;
+	border: 0;
+	border-bottom: 1px solid var(--picker-ink);
+	border-radius: 0;
+	padding: 0;
+	color: var(--picker-ink);
+	background: transparent;
+	outline: none;
+}
+.option-add button,
+.picker-done {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	height: 37px;
+	border: 0;
+	border-radius: 999px;
+	padding: 0 13px;
+	color: var(--picker-paper);
+	background: var(--picker-ink);
+	font-size: 8px;
+	font-weight: 750;
+}
+.option-add svg {
+	width: 12px;
+}
+.picker-dialog ol {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 5px;
+	margin: 12px 0;
+	padding: 0;
+	list-style: none;
+}
+.picker-dialog li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-width: 0;
+	border-radius: 9px;
+	padding: 6px 8px;
+	background: rgb(36 36 40 / 7%);
+	font-size: 8px;
+}
+.picker-dialog li input {
+	width: calc(100% - 28px);
+	border: 0;
+	border-bottom: 1px solid transparent;
+	padding: 2px 0;
+	color: var(--picker-ink);
+	background: transparent;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.picker-dialog li button {
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	border: 0;
+	color: var(--picker-muted);
+	background: transparent;
+}
+.picker-dialog li svg {
+	width: 11px;
+}
+.picker-done {
+	margin-left: auto;
+}
+.picker-close {
+	position: absolute;
+	right: 9px;
+	top: 9px;
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 0;
+	border-radius: 50%;
+	color: var(--picker-muted);
+	background: transparent;
+}
+.picker-close svg {
+	width: 13px;
+}
+.picker-error {
+	position: absolute;
+	right: 105px;
+	bottom: 9px;
+	margin: 0;
+	color: #ffd0ca;
+	font-size: 7px;
+}
+@keyframes dice-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+button:focus-visible {
+	outline: 0;
+	box-shadow: 0 0 0 1px var(--picker-focus);
+}
+input:focus-visible {
+	outline: 0;
+	border-bottom-color: var(--picker-focus);
+	box-shadow: inset 0 -2px 0 var(--picker-focus);
+}
+@media (prefers-color-scheme:dark) {
+	:root {
+		--picker-shell: #293bb4;
+		--picker-paper: #e9e2d6;
+		--picker-coral: #fa6b5f;
+		--picker-butter: #e7dc81;
+	}
+}
+.picker-shell header span,
+.winner span,
+.winner small,
+.option-strip span,
+.history span,
+.picker-dialog > p,
+.picker-error {
+	font-size: 10px;
+}
+.pick-button,
+.history strong,
+.picker-done,
+.picker-dialog li {
+	font-size: 11px;
+}
+@media (prefers-reduced-motion:reduce) {
+	* {
+		animation-duration: .01ms!important;
+		transition-duration: .01ms!important;
+	}
+}

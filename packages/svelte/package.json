@@ -1,0 +1,29 @@
+{
+  "name": "@hitslop/svelte",
+  "version": "0.1.0",
+  "description": "Svelte 5 state adapters for the hitSlop runtime.",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@hitslop/runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "svelte": "^5.57.0",
+    "svelte-check": "^4.7.6",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "typescript": "^6.0.3"
+  }
+}
