@@ -1,10 +1,25 @@
 {
-  "nextID" : 4,
-  "subtitle" : "A tiny web app whose memory lives beside it.",
-  "title" : "Field notes",
-  "todos" : [
-    { "done" : true, "id" : 1, "position" : 0, "title" : "Label the specimen envelopes" },
-    { "done" : false, "id" : 2, "position" : 1, "title" : "Press the fern clipping" },
-    { "done" : false, "id" : 3, "position" : 2, "title" : "Ask the creek its real name" }
-  ]
+	"nextID": 4,
+	"subtitle": "Small observations, kept close at hand.",
+	"title": "Field notes",
+	"todos": [
+		{
+			"done": true,
+			"id": 1,
+			"position": 0,
+			"title": "Label the specimen envelopes"
+		},
+		{
+			"done": false,
+			"id": 2,
+			"position": 1,
+			"title": "Press the fern clipping"
+		},
+		{
+			"done": false,
+			"id": 3,
+			"position": 2,
+			"title": "Ask the creek its real name"
+		}
+	]
 }

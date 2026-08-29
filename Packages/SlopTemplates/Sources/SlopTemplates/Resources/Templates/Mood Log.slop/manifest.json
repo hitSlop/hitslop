@@ -1,0 +1,35 @@
+{
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.mood-log",
+  "title": "Mood Log",
+  "catalog": {
+    "summary": "A gentle color journal for mood, energy, and short notes.",
+    "categories": [
+      "Wellness",
+      "Journal"
+    ],
+    "tags": [
+      "mood",
+      "journal",
+      "wellness",
+      "json",
+      "slider"
+    ]
+  },
+  "stores": [
+    {
+      "id": "state",
+      "kind": "json",
+      "path": "data.json",
+      "maxBytes": 1048576
+    }
+  ],
+  "window": {
+    "width": 480,
+    "height": 620,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 38
+    }
+  }
+}

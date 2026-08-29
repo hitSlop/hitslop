@@ -28,11 +28,10 @@ public enum SlopPreviewAssets {
 
     static func maskedPreview(from png: Data, shape: SlopManifest.WindowShape) -> Data? {
         guard let source = NSImage(data: png),
-              let sourceRep = source.representations.compactMap({ $0 as? NSBitmapImageRep }).first,
               let rep = NSBitmapImageRep(
                 bitmapDataPlanes: nil,
-                pixelsWide: sourceRep.pixelsWide,
-                pixelsHigh: sourceRep.pixelsHigh,
+                pixelsWide: max(1, Int(source.size.width.rounded())),
+                pixelsHigh: max(1, Int(source.size.height.rounded())),
                 bitsPerSample: 8,
                 samplesPerPixel: 4,
                 hasAlpha: true,

@@ -78,7 +78,7 @@
   }
 </script>
 
-<main class="invoice-page">
+<main class="invoice-page" data-slop-selection="none">
   <header class="invoice-masthead">
     <div class="invoice-identity">
       <p class="invoice-kicker">Studio account</p>
@@ -86,8 +86,11 @@
         <span aria-hidden="true">№</span>
         <input
           class="invoice-number"
-          bind:value={invoice.current.number}
-          onchange={() => setField((data) => { data.number = invoice.current.number; })}
+          value={invoice.current.number}
+          onchange={(event) => {
+            const number = event.currentTarget.value;
+            setField((data) => { data.number = number; });
+          }}
           aria-label="Invoice number"
         />
       </div>
@@ -135,23 +138,41 @@
   <section class="invoice-dates" aria-label="Invoice dates">
     <p>For services rendered</p>
     <label>Issued
-      <input type="date" bind:value={invoice.current.issued} onchange={() => setField((data) => { data.issued = invoice.current.issued; })} />
+      <input type="date" value={invoice.current.issued} onchange={(event) => {
+        const issued = event.currentTarget.value;
+        setField((data) => { data.issued = issued; });
+      }} />
     </label>
     <label>Due
-      <input type="date" bind:value={invoice.current.due} onchange={() => setField((data) => { data.due = invoice.current.due; })} />
+      <input type="date" value={invoice.current.due} onchange={(event) => {
+        const due = event.currentTarget.value;
+        setField((data) => { data.due = due; });
+      }} />
     </label>
   </section>
 
   <section class="invoice-parties" aria-label="Invoice parties">
     <div class="party-block">
       <p class="section-label">From</p>
-      <input class="party-name" bind:value={invoice.current.from.name} onchange={() => setField((data) => { data.from.name = invoice.current.from.name; })} aria-label="From name" />
-      <textarea class="party-detail" bind:value={invoice.current.from.detail} onchange={() => setField((data) => { data.from.detail = invoice.current.from.detail; })} aria-label="From address"></textarea>
+      <input class="party-name" value={invoice.current.from.name} onchange={(event) => {
+        const name = event.currentTarget.value;
+        setField((data) => { data.from.name = name; });
+      }} aria-label="From name" />
+      <textarea class="party-detail" value={invoice.current.from.detail} onchange={(event) => {
+        const detail = event.currentTarget.value;
+        setField((data) => { data.from.detail = detail; });
+      }} aria-label="From address"></textarea>
     </div>
     <div class="party-block party-client">
       <p class="section-label">Prepared for</p>
-      <input class="party-name" bind:value={invoice.current.to.name} onchange={() => setField((data) => { data.to.name = invoice.current.to.name; })} aria-label="Client name" />
-      <textarea class="party-detail" bind:value={invoice.current.to.detail} onchange={() => setField((data) => { data.to.detail = invoice.current.to.detail; })} aria-label="Client address"></textarea>
+      <input class="party-name" value={invoice.current.to.name} onchange={(event) => {
+        const name = event.currentTarget.value;
+        setField((data) => { data.to.name = name; });
+      }} aria-label="Client name" />
+      <textarea class="party-detail" value={invoice.current.to.detail} onchange={(event) => {
+        const detail = event.currentTarget.value;
+        setField((data) => { data.to.detail = detail; });
+      }} aria-label="Client address"></textarea>
     </div>
   </section>
 
@@ -168,24 +189,36 @@
         <div class="line-row" role="row">
           <label class="line-description">
             <span class="mobile-caption">Item</span>
-            <input aria-label="Item description" bind:value={item.description} onchange={() => setField((data) => {
-                const row = data.items.find((entry) => entry.id === item.id);
-                if (row) row.description = item.description;
-              })} />
+            <input aria-label="Item description" value={item.description} onchange={(event) => {
+              const id = item.id;
+              const description = event.currentTarget.value;
+              setField((data) => {
+                const row = data.items.find((entry) => entry.id === id);
+                if (row) row.description = description;
+              });
+            }} />
           </label>
           <label class="line-number">
             <span class="mobile-caption">Qty</span>
-            <input aria-label="Quantity for {item.description}" type="number" min="0" step="1" bind:value={item.qty} onchange={() => setField((data) => {
-                const row = data.items.find((entry) => entry.id === item.id);
-                if (row) row.qty = Number(item.qty) || 0;
-              })} />
+            <input aria-label="Quantity for {item.description}" type="number" min="0" step="1" value={item.qty} onchange={(event) => {
+              const id = item.id;
+              const qty = Number(event.currentTarget.value) || 0;
+              setField((data) => {
+                const row = data.items.find((entry) => entry.id === id);
+                if (row) row.qty = qty;
+              });
+            }} />
           </label>
           <label class="line-number">
             <span class="mobile-caption">Rate</span>
-            <input aria-label="Rate for {item.description}" type="number" min="0" step="0.01" bind:value={item.rate} onchange={() => setField((data) => {
-                const row = data.items.find((entry) => entry.id === item.id);
-                if (row) row.rate = Number(item.rate) || 0;
-              })} />
+            <input aria-label="Rate for {item.description}" type="number" min="0" step="0.01" value={item.rate} onchange={(event) => {
+              const id = item.id;
+              const rate = Number(event.currentTarget.value) || 0;
+              setField((data) => {
+                const row = data.items.find((entry) => entry.id === id);
+                if (row) row.rate = rate;
+              });
+            }} />
           </label>
           <div class="line-amount" role="cell">
             <span class="mobile-caption">Amount</span>
@@ -235,7 +268,10 @@
 
   <div class="invoice-closing">
     <label class="notes-label"><span>Notes & terms</span>
-      <textarea bind:value={invoice.current.notes} onchange={() => setField((data) => { data.notes = invoice.current.notes; })}></textarea>
+      <textarea value={invoice.current.notes} onchange={(event) => {
+        const notes = event.currentTarget.value;
+        setField((data) => { data.notes = notes; });
+      }}></textarea>
     </label>
 
     <dl class="invoice-totals">
@@ -243,7 +279,10 @@
     <div>
       <dt>Tax</dt>
       <dd class="tax-value">
-        <label><span class="sr-only">Tax rate</span><input type="number" min="0" step="0.01" bind:value={invoice.current.taxRate} onchange={() => setField((data) => { data.taxRate = Number(invoice.current.taxRate) || 0; })} aria-label="Tax rate" /></label>
+        <label><span class="sr-only">Tax rate</span><input type="number" min="0" step="0.01" value={invoice.current.taxRate} onchange={(event) => {
+          const taxRate = Number(event.currentTarget.value) || 0;
+          setField((data) => { data.taxRate = taxRate; });
+        }} aria-label="Tax rate" /></label>
         <span>{money.format(tax)}</span>
       </dd>
     </div>

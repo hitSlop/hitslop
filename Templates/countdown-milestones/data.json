@@ -1,0 +1,27 @@
+{
+	"title": "Winter launch",
+	"createdAt": "2026-08-01",
+	"targetDate": "2026-12-12",
+	"nextID": 5,
+	"milestones": [
+		{
+			"id": 1,
+			"title": "Choose the venue",
+			"date": "2026-09-05",
+			"done": true
+		},
+		{
+			"id": 2,
+			"title": "Send invitations",
+			"date": "2026-10-03",
+			"done": false
+		},
+		{
+			"id": 3,
+			"title": "Confirm the menu",
+			"date": "2026-11-07",
+			"done": false
+		},
+		{ "id": 4, "title": "Opening night", "date": "2026-12-12", "done": false }
+	]
+}

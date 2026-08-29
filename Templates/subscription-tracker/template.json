@@ -1,0 +1,16 @@
+{
+	"format": "slop-web/1",
+	"id": "com.longtaillabs.slop.subscription-tracker",
+	"title": "Subscription Tracker",
+	"catalog": {
+		"summary": "A calm recurring-cost tracker with renewal dates and monthly totals.",
+		"categories": ["Finance", "Personal"],
+		"tags": ["subscriptions", "renewals", "sqlite", "bits-ui", "budget"]
+	},
+	"stores": [{ "id": "main", "kind": "sqlite", "path": "data.sqlite" }],
+	"window": {
+		"width": 560,
+		"height": 650,
+		"shape": { "kind": "roundedRect", "radius": 26 }
+	}
+}

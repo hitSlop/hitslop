@@ -1,0 +1,16 @@
+{
+	"format": "slop-web/1",
+	"id": "com.longtaillabs.slop.kanban-board",
+	"title": "Kanban Board",
+	"catalog": {
+		"summary": "A compact relational board for moving work from idea to done.",
+		"categories": ["Projects", "Productivity"],
+		"tags": ["kanban", "sqlite", "drag-drop", "bits-ui", "svelte"]
+	},
+	"stores": [{ "id": "main", "kind": "sqlite", "path": "data.sqlite" }],
+	"window": {
+		"width": 760,
+		"height": 560,
+		"shape": { "kind": "roundedRect", "radius": 28 }
+	}
+}

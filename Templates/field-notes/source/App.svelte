@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Toolbar } from "bits-ui";
   import { jsonStore } from "@slop/svelte";
 
   type Todo = {
@@ -15,9 +16,11 @@
     nextID: number;
   };
 
+  type Filter = "all" | "open" | "done";
+
   const notes = jsonStore<TodoData>("state", {
     title: "Field notes",
-    subtitle: "A tiny web app whose memory lives beside it.",
+    subtitle: "Small observations, kept close at hand.",
     todos: [],
     nextID: 1,
   });
@@ -29,8 +32,14 @@
   let editingHeaderSubtitle = $state(false);
   let headerTitleDraft = $state("");
   let headerSubtitleDraft = $state("");
+  let filter = $state<Filter>("all");
 
   const completedCount = $derived(notes.current.todos.filter((todo) => todo.done).length);
+  const visibleTodos = $derived(notes.current.todos.filter((todo) => {
+    if (filter === "open") return !todo.done;
+    if (filter === "done") return todo.done;
+    return true;
+  }));
 
   function focusOnMount(node: HTMLInputElement): { destroy: () => void } {
     const frame = requestAnimationFrame(() => node.focus());
@@ -148,7 +157,7 @@
   }
 </script>
 
-<main class="notes-shell">
+<main class="notes-shell" data-slop-selection="none">
   <header class="notes-header">
     {#if editingHeaderTitle}
       <input
@@ -217,8 +226,21 @@
     <button class="primary-action" onclick={addNote}>Add note</button>
   </div>
 
+  <div class="notes-nav">
+    <span>Field log</span>
+    <Toolbar.Root aria-label="Filter observations">
+      <Toolbar.Group type="single" value={filter} onValueChange={(value) => {
+        if (value === "all" || value === "open" || value === "done") filter = value;
+      }} class="filter-group">
+        <Toolbar.GroupItem value="all" class="filter-button">All</Toolbar.GroupItem>
+        <Toolbar.GroupItem value="open" class="filter-button">Open</Toolbar.GroupItem>
+        <Toolbar.GroupItem value="done" class="filter-button">Filed</Toolbar.GroupItem>
+      </Toolbar.Group>
+    </Toolbar.Root>
+  </div>
+
   <ul class="notes-list">
-    {#each notes.current.todos as todo (todo.id)}
+    {#each visibleTodos as todo (todo.id)}
       <li
         class="note-row"
         data-done={todo.done ? "true" : "false"}
@@ -272,10 +294,10 @@
     {/each}
   </ul>
 
-  {#if notes.current.todos.length === 0 && !notes.isLoading}
+  {#if visibleTodos.length === 0 && !notes.isLoading}
     <div class="notes-empty">
-      <strong>The page is open.</strong>
-      <span>Record the first small thing worth noticing.</span>
+      <strong>{notes.current.todos.length === 0 ? "The page is open." : "Nothing in this tray."}</strong>
+      <span>{notes.current.todos.length === 0 ? "Record the first small thing worth noticing." : "Change the filter or file another observation."}</span>
     </div>
   {/if}
 
@@ -284,11 +306,11 @@
   {:else}
     <p id="status" class="document-status">
       {#if notes.isLoading}
-        Reading the package…
+        Opening your notes…
       {:else}
-        {notes.current.todos.length} notes · {completedCount} finished · last change: {notes.lastChangeSource}
+        {notes.current.todos.length} notes · {completedCount} finished
       {/if}
     </p>
   {/if}
-  <footer class="document-footer"><span>Field folio № 08</span><span>data.json · local & editable</span></footer>
+  <footer class="document-footer"><span>Field folio № 08</span><span>Tap a note to edit</span></footer>
 </main>

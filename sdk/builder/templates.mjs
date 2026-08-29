@@ -1,6 +1,8 @@
+import { execFile } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { existsSync, watch } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
+import { promisify } from "node:util";
 import { buildSlop } from "./index.mjs";
 import { sdkRoot } from "./config.mjs";
 
@@ -10,6 +12,9 @@ export const bundledTemplatesRoot = join(
   repoRoot,
   "Packages/SlopTemplates/Sources/SlopTemplates/Resources/Templates",
 );
+const runFile = promisify(execFile);
+const sqliteApplicationID = "1397510231";
+const sqliteSchemaVersion = 1;
 
 export async function authoredTemplateDirectories(root = authoredTemplatesRoot) {
   const entries = await readdir(root, { withFileTypes: true });
@@ -37,6 +42,35 @@ async function copyIfPresent(source, destination) {
   await cp(source, destination, { recursive: true });
 }
 
+async function validateSQLiteStore(path) {
+  let stdout;
+  try {
+    ({ stdout } = await runFile("sqlite3", [
+      path,
+      "PRAGMA application_id; PRAGMA user_version; PRAGMA journal_mode;",
+    ]));
+  } catch (error) {
+    throw new Error(`Could not inspect SQLite template store ${path}: ${error.message}`);
+  }
+
+  const [applicationID, schemaVersion, journalMode] = stdout.trim().split(/\r?\n/);
+  if (applicationID !== sqliteApplicationID) {
+    throw new Error(
+      `SQLite template store ${path} has application_id ${applicationID || "unset"}; expected ${sqliteApplicationID}.`,
+    );
+  }
+  if (!Number.isInteger(Number(schemaVersion)) || Number(schemaVersion) > sqliteSchemaVersion) {
+    throw new Error(
+      `SQLite template store ${path} has unsupported user_version ${schemaVersion || "unset"}; maximum is ${sqliteSchemaVersion}.`,
+    );
+  }
+  if (journalMode?.toLowerCase() !== "wal") {
+    throw new Error(
+      `SQLite template store ${path} uses journal_mode ${journalMode || "unset"}; expected WAL.`,
+    );
+  }
+}
+
 async function stageTemplate(templateRoot, stage, previewSource, storeSource = templateRoot) {
   const manifest = await readTemplate(templateRoot);
   await mkdir(join(stage, "build"), { recursive: true });
@@ -47,6 +81,7 @@ async function stageTemplate(templateRoot, stage, previewSource, storeSource = t
   for (const store of manifest.stores) {
     const preserved = join(storeSource, store.path);
     const source = existsSync(preserved) ? preserved : join(templateRoot, store.path);
+    if (store.kind === "sqlite") await validateSQLiteStore(source);
     const destination = join(stage, store.path);
     await mkdir(dirname(destination), { recursive: true });
     await cp(source, destination);
@@ -99,7 +134,6 @@ async function comparableFiles(root, directory = root) {
   if (!existsSync(root)) return [];
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (entry.name === "QuickLook") continue;
     const path = join(directory, entry.name);
     if (entry.isDirectory()) files.push(...(await comparableFiles(root, path)));
     else if (entry.isFile()) files.push(path.slice(root.length + 1));

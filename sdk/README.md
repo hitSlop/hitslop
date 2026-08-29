@@ -29,3 +29,16 @@ Import Lucide icons directly so each document compiles only the symbols it uses:
 ```
 
 Install the CLI and this SDK together with `scripts/install-cli.sh --prefix <directory>`. `SLOP_SDK` remains an override for development and diagnostics.
+
+## Svelte persistence resources
+
+`jsonStore` and `sqliteQuery` are Svelte 5 rune-backed resources, not implementations of the legacy `svelte/store` contract. Read their reactive `current`, `isLoading`, `error`, and change metadata directly.
+
+Change JSON only through `jsonStore.update`. Its synchronous mutation recipe can be replayed after the initial load or a revision conflict, so it must be deterministic and free of side effects. Capture timestamps, generated IDs, random values, and DOM input values before calling `update`:
+
+```ts
+const createdAt = new Date().toISOString();
+notes.update((data) => {
+  data.items.push({ id: data.nextID++, createdAt, title });
+});
+```

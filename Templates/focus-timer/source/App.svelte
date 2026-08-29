@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { Switch, Tabs } from "bits-ui";
   import { jsonStore } from "@slop/svelte";
+  import Pause from "@lucide/svelte/icons/pause";
+  import Play from "@lucide/svelte/icons/play";
 
   type Kind = "focus" | "rest";
   type Session = { startedAt: string; kind: Kind; seconds: number };
@@ -51,10 +54,11 @@
       remaining -= 1;
       if (remaining > 0) return;
       const elapsed = duration;
+      const startedAt = new Date().toISOString();
       stopTick();
       timer.update((data) => {
         data.history.unshift({
-          startedAt: new Date().toISOString(),
+          startedAt,
           kind,
           seconds: elapsed,
         });
@@ -75,6 +79,11 @@
     stopTick();
     kind = next;
     syncRemaining();
+  }
+
+  function setPreset(focusMinutes: number, restMinutes: number): void {
+    stopTick();
+    timer.update((data) => { data.focusMinutes = focusMinutes; data.restMinutes = restMinutes; });
   }
 
   $effect(() => {
@@ -99,22 +108,14 @@
     <span class="timer-state"><i aria-hidden="true"></i>{running ? "Running" : "Ready"}</span>
   </header>
 
-  <div class="mode-switch" aria-label="Timer mode">
-    <button
-      class:active={kind === "focus"}
-      onclick={() => setKind("focus")}
-      aria-pressed={kind === "focus"}
-    >
-      01 / Focus
-    </button>
-    <button
-      class:active={kind === "rest"}
-      onclick={() => setKind("rest")}
-      aria-pressed={kind === "rest"}
-    >
-      02 / Rest
-    </button>
-  </div>
+  <Tabs.Root value={kind} onValueChange={(value) => {
+    if (value === "focus" || value === "rest") setKind(value);
+  }} class="mode-switch">
+    <Tabs.List aria-label="Timer mode">
+      <Tabs.Trigger value="focus">01 / Focus</Tabs.Trigger>
+      <Tabs.Trigger value="rest">02 / Rest</Tabs.Trigger>
+    </Tabs.List>
+  </Tabs.Root>
 
   <section class="timer-stage" aria-label={`${kind} timer: ${label} remaining`}>
     <div class="dial-wrap">
@@ -140,21 +141,33 @@
       </div>
     </div>
 
-    <button class="run-button" onclick={toggleRun}>
-      <span aria-hidden="true">{running ? "Ⅱ" : "▶"}</span>
-      {running ? "Pause timer" : "Start timer"}
-    </button>
+    <div class="run-control">
+      <span>{running ? "Live interval" : "Ready when you are"}</span>
+      <Switch.Root checked={running} onCheckedChange={() => toggleRun()} class="run-switch" aria-label={running ? "Pause timer" : "Start timer"}>
+        <Switch.Thumb class="run-thumb">
+          {#if running}<Pause fill="currentColor" />{:else}<Play fill="currentColor" />{/if}
+        </Switch.Thumb>
+      </Switch.Root>
+    </div>
   </section>
 
   <footer class="timer-footer">
+    <div class="timer-presets" aria-label="Timer presets">
+      <span>Programs</span>
+      <button onclick={() => setPreset(25, 5)}>25 / 05</button>
+      <button onclick={() => setPreset(50, 10)}>50 / 10</button>
+    </div>
     <div class="duration-settings">
       <label><span>Focus</span>
       <input
         type="number"
         min="1"
         max="90"
-        bind:value={timer.current.focusMinutes}
-        onchange={() => timer.update((data) => { data.focusMinutes = Number(timer.current.focusMinutes) || 25; })}
+        value={timer.current.focusMinutes}
+        onchange={(event) => {
+          const focusMinutes = Number(event.currentTarget.value) || 25;
+          timer.update((data) => { data.focusMinutes = focusMinutes; });
+        }}
       />
       </label>
       <label><span>Rest</span>
@@ -162,8 +175,11 @@
         type="number"
         min="1"
         max="30"
-        bind:value={timer.current.restMinutes}
-        onchange={() => timer.update((data) => { data.restMinutes = Number(timer.current.restMinutes) || 5; })}
+        value={timer.current.restMinutes}
+        onchange={(event) => {
+          const restMinutes = Number(event.currentTarget.value) || 5;
+          timer.update((data) => { data.restMinutes = restMinutes; });
+        }}
       />
       </label>
     </div>

@@ -1,34 +1,34 @@
 {
-  "format": "slop-web/1",
-  "id": "com.longtaillabs.slop.sqlite-field-notes",
-  "catalog": {
-    "summary": "A searchable field notebook powered by local SQLite.",
-    "categories": [
-      "Notes",
-      "Database"
-    ],
-    "tags": [
-      "notes",
-      "todo",
-      "sqlite",
-      "local",
-      "svelte"
-    ]
-  },
-  "stores": [
-    {
-      "id": "main",
-      "kind": "sqlite",
-      "path": "data.sqlite"
-    }
-  ],
-  "title": "SQLite Field Notes",
-  "window": {
-    "height": 640,
-    "width": 480,
-    "shape": {
-      "kind": "roundedRect",
-      "radius": 22
-    }
-  }
+	"format": "slop-web/1",
+	"id": "com.longtaillabs.slop.sqlite-field-notes",
+	"catalog": {
+		"summary": "A searchable field notebook powered by local SQLite.",
+		"categories": [
+			"Notes",
+			"Database"
+		],
+		"tags": [
+			"notes",
+			"todo",
+			"sqlite",
+			"local",
+			"svelte"
+		]
+	},
+	"stores": [
+		{
+			"id": "main",
+			"kind": "sqlite",
+			"path": "data.sqlite"
+		}
+	],
+	"title": "SQLite Field Notes",
+	"window": {
+		"height": 640,
+		"width": 480,
+		"shape": {
+			"kind": "roundedRect",
+			"radius": 22
+		}
+	}
 }

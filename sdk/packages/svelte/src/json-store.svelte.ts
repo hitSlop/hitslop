@@ -33,6 +33,11 @@ export class JsonStore<T> {
     this.#start();
   }
 
+  /**
+   * Optimistically applies a synchronous mutation recipe and persists it.
+   * Recipes may be replayed after loading or a revision conflict, so capture
+   * timestamps, IDs, and other nondeterministic values before calling update.
+   */
   update(mutate: (value: T) => void): void {
     this.#queue.enqueue(mutate);
   }

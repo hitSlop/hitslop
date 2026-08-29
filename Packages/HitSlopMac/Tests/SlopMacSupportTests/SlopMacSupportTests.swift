@@ -74,6 +74,31 @@ final class SlopMacSupportTests: XCTestCase {
         XCTAssertGreaterThan(result.colorAt(x: 50, y: 50)?.alphaComponent ?? 0, 0.9)
     }
 
+    func testMaskedPreviewNormalizesRetinaSnapshotsToLogicalSize() throws {
+        let rep = try XCTUnwrap(NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: 200,
+            pixelsHigh: 160,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ))
+        rep.size = NSSize(width: 100, height: 80)
+        let source = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+        let masked = try XCTUnwrap(SlopPreviewAssets.maskedPreview(
+            from: source,
+            shape: .init(kind: .roundedRect, radius: 12)
+        ))
+        let result = try XCTUnwrap(NSBitmapImageRep(data: masked))
+
+        XCTAssertEqual(result.pixelsWide, 100)
+        XCTAssertEqual(result.pixelsHigh, 80)
+    }
+
     func testHostEnforcesStylesheetOrder() throws {
         let html = """
         <html><head>

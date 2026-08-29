@@ -1,0 +1,23 @@
+{
+	"title": "Pick one",
+	"nextID": 6,
+	"options": [
+		{ "id": 1, "label": "Ship the prototype" },
+		{ "id": 2, "label": "Polish one more pass" },
+		{ "id": 3, "label": "Call a friend" },
+		{ "id": 4, "label": "Take the long walk" },
+		{ "id": 5, "label": "Make coffee" }
+	],
+	"history": [
+		{
+			"id": 4,
+			"label": "Take the long walk",
+			"pickedAt": "2026-08-28T17:20:00.000Z"
+		},
+		{
+			"id": 1,
+			"label": "Ship the prototype",
+			"pickedAt": "2026-08-28T16:45:00.000Z"
+		}
+	]
+}

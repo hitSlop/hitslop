@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Tabs } from "bits-ui";
   import { sql, sqliteQuery } from "@slop/svelte";
 
   type Todo = {
@@ -16,8 +17,17 @@
   let draft = $state("");
   let editingID = $state<number | null>(null);
   let editingTitle = $state("");
+  let query = $state("");
+  let filter = $state<"all" | "open" | "filed">("all");
 
   const completedCount = $derived(notes.current.filter((todo) => isDone(todo)).length);
+  const visibleNotes = $derived(notes.current.filter((todo) => {
+    const matchesQuery = todo.title.toLowerCase().includes(query.trim().toLowerCase());
+    if (!matchesQuery) return false;
+    if (filter === "open") return !isDone(todo);
+    if (filter === "filed") return isDone(todo);
+    return true;
+  }));
 
   function focusOnMount(node: HTMLInputElement): { destroy: () => void } {
     const frame = requestAnimationFrame(() => node.focus());
@@ -71,12 +81,12 @@
   }
 </script>
 
-<main class="archive-shell">
+<main class="archive-shell" data-slop-selection="none">
   <header class="archive-header">
     <div>
-      <p class="archive-kicker">Relational field archive</p>
+      <p class="archive-kicker">Field note archive</p>
       <h1>Observations</h1>
-      <p class="archive-deck">A working index whose records live in SQLite.</p>
+      <p class="archive-deck">A quiet index for observations worth keeping.</p>
     </div>
     <div class="archive-count" aria-label={`${notes.current.length} records`}>
       <strong>{String(notes.current.length).padStart(2, "0")}</strong>
@@ -85,9 +95,9 @@
   </header>
 
   <div id="composer" class="archive-composer">
-    <label for="sqlite-note-draft">New record</label>
+    <label for="note-draft">New record</label>
     <input
-      id="sqlite-note-draft"
+      id="note-draft"
       type="text"
       aria-label="New note"
       placeholder="Describe the observation…"
@@ -99,9 +109,23 @@
     <button onclick={() => void addNote()}>File record</button>
   </div>
 
+  <div class="archive-controls">
+    <label class="archive-search">
+      <span>Search index</span>
+      <input type="search" bind:value={query} placeholder="Find a record…" />
+    </label>
+    <Tabs.Root bind:value={filter}>
+      <Tabs.List class="archive-tabs" aria-label="Filter records">
+        <Tabs.Trigger value="all">All</Tabs.Trigger>
+        <Tabs.Trigger value="open">Open</Tabs.Trigger>
+        <Tabs.Trigger value="filed">Filed</Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
+  </div>
+
   <div class="archive-columns" aria-hidden="true"><span>Accession</span><span>Record</span><span>State</span></div>
   <ol class="archive-list">
-    {#each notes.current as todo (todo.id)}
+    {#each visibleNotes as todo (todo.id)}
       <li
         data-done={isDone(todo) ? "true" : "false"}
         data-editing={editingID === todo.id ? "true" : "false"}
@@ -150,8 +174,8 @@
     {/each}
   </ol>
 
-  {#if notes.current.length === 0 && !notes.isLoading}
-    <div class="archive-empty"><strong>No records yet.</strong><span>File the first observation to begin the archive.</span></div>
+  {#if visibleNotes.length === 0 && !notes.isLoading}
+    <div class="archive-empty"><strong>{notes.current.length === 0 ? "No records yet." : "No matching records."}</strong><span>{notes.current.length === 0 ? "File the first observation to begin the archive." : "Try another search or state filter."}</span></div>
   {/if}
 
   {#if notes.error}
@@ -161,9 +185,9 @@
       {#if notes.isLoading}
         Reading the archive…
       {:else}
-        <span>{completedCount} filed</span><span>{notes.current.length - completedCount} open</span><span>Source: {notes.lastChangeSource}</span>
+        <span>{completedCount} filed</span><span>{notes.current.length - completedCount} open</span>
       {/if}
     </p>
   {/if}
-  <footer class="archive-footer"><span>Main table / todos</span><span>data.sqlite · local & transactional</span></footer>
+  <footer class="archive-footer"><span>{notes.current.length} field notes</span><span>Everything stays editable</span></footer>
 </main>

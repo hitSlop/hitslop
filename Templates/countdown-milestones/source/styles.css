@@ -1,0 +1,389 @@
+@import "tailwindcss";
+:root {
+	--count-shell: #f0eadf;
+	--count-ink: #252326;
+	--count-muted: #7c756d;
+	--count-red: #ef584a;
+	--count-butter: #eee48a;
+	--count-blue: #b5d8e6;
+	--count-rule: rgb(37 35 38 / 15%);
+	--count-focus: #ef584a;
+	--count-body: "Avenir Next",Avenir,sans-serif;
+	--count-display: "SF Pro Rounded","Avenir Next",sans-serif;
+	color-scheme: light;
+	font-synthesis: none;
+}
+* {
+	box-sizing: border-box;
+}
+html,
+body,
+#app {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+}
+body {
+	background: transparent;
+	font-family: var(--count-body);
+}
+button,
+input {
+	font: inherit;
+}
+.count-shell {
+	position: relative;
+	display: grid;
+	grid-template-rows: 32px 188px 1fr;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	padding: 44px 42px 48px;
+	color: var(--count-ink);
+	background: linear-gradient(90deg,transparent 49.8%,var(--count-rule) 49.8%
+		50.2%,transparent 50.2%),var(--count-shell);
+	font-variant-numeric: tabular-nums;
+}
+.count-shell > header {
+	display: flex;
+	align-items: start;
+	justify-content: space-between;
+	padding-inline: 34px;
+}
+.count-shell > header span {
+	color: var(--count-red);
+	font-size: 7px;
+	font-weight: 800;
+	letter-spacing: .17em;
+}
+.count-shell > header button {
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	border: 1px solid var(--count-rule);
+	border-radius: 50%;
+	color: var(--count-ink);
+	background: transparent;
+	cursor: pointer;
+}
+.count-shell > header svg {
+	width: 13px;
+}
+.count-stage {
+	position: relative;
+	border-block: 1px solid var(--count-ink);
+	padding: 12px 8px;
+}
+.count-stage > p {
+	margin: 0;
+	color: var(--count-red);
+	font-size: 7px;
+	font-weight: 800;
+	letter-spacing: .15em;
+	text-transform: uppercase;
+}
+.count-stage h1 {
+	max-width: 230px;
+	margin: 8px 0 0;
+	font-family: var(--count-display);
+	font-size: 1.65rem;
+	font-weight: 620;
+	line-height: .9;
+	letter-spacing: -.055em;
+}
+.day-readout {
+	display: flex;
+	align-items: end;
+	gap: 8px;
+	margin-top: 11px;
+}
+.day-readout strong {
+	font-family: var(--count-display);
+	font-size: 4.5rem;
+	font-weight: 560;
+	line-height: .72;
+	letter-spacing: -.09em;
+}
+.day-readout span {
+	margin-bottom: 2px;
+	color: var(--count-muted);
+	font-size: 7px;
+	font-weight: 800;
+	line-height: 1.25;
+	text-transform: uppercase;
+}
+.progress-track {
+	display: block;
+	height: 7px;
+	margin-top: 14px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: color-mix(in srgb,var(--count-ink) 9%,transparent);
+}
+.progress-track i {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--count-red);
+	transition: transform 420ms cubic-bezier(.22,1,.36,1);
+}
+.progress-label {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 7px;
+	color: var(--count-muted);
+	font-size: 7px;
+	font-weight: 750;
+	text-transform: uppercase;
+}
+.progress-label b {
+	color: var(--count-ink);
+}
+.milestones {
+	padding: 10px 38px 0;
+}
+.milestone-head {
+	display: flex;
+	justify-content: space-between;
+	color: var(--count-muted);
+	font-size: 7px;
+	font-weight: 800;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+.milestones ol {
+	margin: 6px 0 0;
+	padding: 0;
+	list-style: none;
+}
+.milestones li {
+	display: grid;
+	grid-template-columns: 18px 21px 1fr;
+	gap: 7px;
+	align-items: center;
+	min-height: 32px;
+	border-bottom: 1px solid var(--count-rule);
+}
+.milestones li > span {
+	color: var(--count-muted);
+	font-size: 7px;
+	font-weight: 800;
+}
+.milestone-check {
+	display: grid;
+	place-items: center;
+	width: 19px;
+	height: 19px;
+	border: 1px solid var(--count-muted);
+	border-radius: 50%;
+	padding: 0;
+	color: var(--count-shell);
+	background: transparent;
+	cursor: pointer;
+}
+.milestone-check svg {
+	width: 11px;
+}
+.milestones li.done .milestone-check {
+	border-color: var(--count-red);
+	background: var(--count-red);
+}
+.milestones li > div {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+.milestones li strong {
+	font-family: var(--count-display);
+	font-size: .78rem;
+	font-weight: 600;
+}
+.milestones li.done strong {
+	color: var(--count-muted);
+	text-decoration: line-through;
+}
+.milestones li small {
+	color: var(--count-muted);
+	font-size: 7px;
+	font-weight: 750;
+	text-transform: uppercase;
+}
+.milestone-empty {
+	margin: 16px 0;
+	color: var(--count-muted);
+	font-size: .72rem;
+	line-height: 1.4;
+}
+.quick-add {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 6px;
+	border: 0;
+	padding: 0;
+	color: var(--count-red);
+	background: transparent;
+	cursor: pointer;
+	font-size: 7px;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+.quick-add svg {
+	width: 12px;
+}
+.count-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	background: rgb(37 35 38 / 58%);
+}
+.count-dialog {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	z-index: 51;
+	width: min(320px,calc(100% - 34px));
+	max-height: 440px;
+	overflow: auto;
+	border: 1px solid var(--count-ink);
+	border-radius: 28px;
+	padding: 22px;
+	color: var(--count-ink);
+	background: var(--count-butter);
+	box-shadow: 0 24px 60px rgb(37 35 38 / 30%);
+	outline: none;
+	transform: translate(-50%,-50%);
+}
+.count-dialog > p {
+	margin: 0;
+	color: var(--count-red);
+	font-size: 7px;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+.count-dialog h2 {
+	margin: 7px 0 14px;
+	font-family: var(--count-display);
+	font-size: 1.8rem;
+	letter-spacing: -.05em;
+}
+.count-dialog label {
+	display: grid;
+	gap: 4px;
+	margin-top: 9px;
+	color: var(--count-muted);
+	font-size: 7px;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+.count-dialog input {
+	height: 34px;
+	border: 0;
+	border-bottom: 1px solid var(--count-ink);
+	border-radius: 0;
+	padding: 0;
+	color: var(--count-ink);
+	background: transparent;
+	outline: none;
+	text-transform: none;
+}
+.dialog-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 7px;
+	margin-top: 15px;
+}
+.dialog-actions button,
+.add-milestone {
+	height: 35px;
+	border: 0;
+	border-radius: 999px;
+	padding: 0 12px;
+	color: var(--count-muted);
+	background: transparent;
+	font-size: 8px;
+	font-weight: 750;
+}
+.dialog-actions button:last-child,
+.add-milestone {
+	color: var(--count-shell);
+	background: var(--count-ink);
+}
+.count-dialog hr {
+	height: 1px;
+	margin: 18px 0;
+	border: 0;
+	background: var(--count-rule);
+}
+.add-milestone {
+	width: 100%;
+	margin-top: 12px;
+}
+.count-close {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 0;
+	border-radius: 50%;
+	color: var(--count-muted);
+	background: transparent;
+}
+.count-close svg {
+	width: 13px;
+}
+.count-error {
+	position: absolute;
+	right: 40px;
+	bottom: 20px;
+	left: 40px;
+	margin: 0;
+	color: #a7352e;
+	font-size: 7px;
+	text-align: center;
+}
+button:focus-visible {
+	outline: 0;
+	box-shadow: 0 0 0 1px var(--count-focus);
+}
+input:focus-visible {
+	outline: 0;
+	border-bottom-color: var(--count-focus);
+	box-shadow: inset 0 -2px 0 var(--count-focus);
+}
+@media (prefers-color-scheme:dark) {
+	:root {
+		--count-shell: #e4ddd1;
+		--count-red: #f46153;
+		--count-butter: #e6dc80;
+	}
+}
+.count-shell > header span,
+.count-stage > p,
+.day-readout span,
+.milestone-head,
+.quick-add,
+.count-dialog > p,
+.count-dialog label,
+.count-error {
+	font-size: 10px;
+}
+.progress-label,
+.milestones li > span,
+.milestones li small {
+	font-size: 9px;
+}
+.add-milestone {
+	font-size: 11px;
+}
+@media (prefers-reduced-motion:reduce) {
+	* {
+		transition-duration: .01ms!important;
+	}
+}

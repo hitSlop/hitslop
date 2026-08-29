@@ -1,0 +1,35 @@
+{
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.meeting-notes",
+  "title": "Meeting Notes",
+  "catalog": {
+    "summary": "A composed meeting memo for agenda, decisions, and owners.",
+    "categories": [
+      "Business",
+      "Productivity"
+    ],
+    "tags": [
+      "meeting",
+      "notes",
+      "agenda",
+      "actions",
+      "json"
+    ]
+  },
+  "stores": [
+    {
+      "id": "state",
+      "kind": "json",
+      "path": "data.json",
+      "maxBytes": 1048576
+    }
+  ],
+  "window": {
+    "width": 620,
+    "height": 720,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 20
+    }
+  }
+}

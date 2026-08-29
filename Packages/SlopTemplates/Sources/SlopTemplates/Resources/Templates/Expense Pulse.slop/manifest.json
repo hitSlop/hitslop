@@ -1,0 +1,34 @@
+{
+  "format": "slop-web/1",
+  "id": "com.longtaillabs.slop.expense-pulse",
+  "title": "Expense Pulse",
+  "catalog": {
+    "summary": "A tactile local expense log with category totals and a receipt-like rhythm.",
+    "categories": [
+      "Finance",
+      "Personal"
+    ],
+    "tags": [
+      "expenses",
+      "sqlite",
+      "aggregation",
+      "bits-ui",
+      "charts"
+    ]
+  },
+  "stores": [
+    {
+      "id": "main",
+      "kind": "sqlite",
+      "path": "data.sqlite"
+    }
+  ],
+  "window": {
+    "width": 520,
+    "height": 680,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 30
+    }
+  }
+}
