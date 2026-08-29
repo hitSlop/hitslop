@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PublishEnvelopeSchema, SlopManifestSchema, canonicalPublishEnvelope } from "@hitslop/schema";
+import { unzipSync } from "fflate";
 import { workerEnv } from "../server-env";
 
 const hex = (bytes: ArrayBuffer): string => [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -16,6 +17,14 @@ export const Route = createFileRoute("/api/publish")({ server: { handlers: { POS
     const artifactBytes = await artifact.arrayBuffer(); const manifestBytes = await manifestFile.arrayBuffer(); const artifactHash = await digest(artifactBytes); const manifestHash = await digest(manifestBytes);
     if (artifactBytes.byteLength !== envelope.artifactBytes || artifactHash.hex !== envelope.artifactSha256 || manifestHash.hex !== envelope.manifestSha256) return Response.json({ error: "Artifact integrity check failed" }, { status: 400 });
     const manifest = SlopManifestSchema.parse(JSON.parse(new TextDecoder().decode(manifestBytes))); if (manifest.slug !== envelope.slug) return Response.json({ error: "Manifest slug mismatch" }, { status: 400 });
+    const unpacked = unzipSync(new Uint8Array(artifactBytes));
+    for (const name of Object.keys(unpacked)) {
+      if (name.startsWith("/") || name.split("/").includes("..") || name.includes("\\")) return Response.json({ error: `Unsafe archive entry: ${name}` }, { status: 400 });
+    }
+    const zippedManifest = unpacked["manifest.json"];
+    if (!zippedManifest) return Response.json({ error: "Artifact is missing manifest.json" }, { status: 400 });
+    if ((await digest(ownedBuffer(zippedManifest))).hex !== envelope.manifestSha256) return Response.json({ error: "Artifact manifest does not match signed manifest" }, { status: 400 });
+    SlopManifestSchema.parse(JSON.parse(new TextDecoder().decode(zippedManifest)));
     const publicKey = decode(envelope.publicKey); if ((await digest(publicKey.buffer as ArrayBuffer)).hex.slice(0, 32) !== envelope.publisherKeyId) return Response.json({ error: "Publisher key id mismatch" }, { status: 400 });
     const imported = await crypto.subtle.importKey("raw", ownedBuffer(publicKey), { name: "Ed25519" }, false, ["verify"]); if (!await crypto.subtle.verify("Ed25519", imported, ownedBuffer(decode(signature)), ownedBuffer(canonicalPublishEnvelope(envelope)))) return Response.json({ error: "Invalid publisher signature" }, { status: 401 });
     const artifactKey = `artifacts/sha256/${artifactHash.hex}.slop.zip`; await env.ARTIFACTS.put(artifactKey, artifactBytes, { sha256: artifactHash.raw, httpMetadata: { contentType: "application/zip", cacheControl: "public, max-age=31536000, immutable" } });

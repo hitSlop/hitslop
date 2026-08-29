@@ -9,6 +9,7 @@
 	"vars": {
 		"ENVIRONMENT": "development",
 		"CONVEX_URL": "https://giddy-opossum-593.convex.cloud",
+		"VITE_CONVEX_URL": "https://giddy-opossum-593.convex.cloud",
 		"CONVEX_SITE_URL": "https://giddy-opossum-593.convex.site"
 	},
 	"secrets": {
@@ -26,6 +27,7 @@
 			"vars": {
 				"ENVIRONMENT": "production",
 				"CONVEX_URL": "https://fastidious-malamute-777.convex.cloud",
+				"VITE_CONVEX_URL": "https://fastidious-malamute-777.convex.cloud",
 				"CONVEX_SITE_URL": "https://fastidious-malamute-777.convex.site"
 			},
 			"secrets": {

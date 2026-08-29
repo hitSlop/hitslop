@@ -7,6 +7,7 @@ public struct RegistryTemplate: Decodable, Identifiable {
     public let tags: [String]; public let currentReleaseId: String?
     @ConvexInt public var currentReleaseNumber: Int
     public let currentArtifactKey: String?; public let currentArtifactSha256: String?
+    public let currentScreenshotKey: String?; public let currentScreenshotContentType: String?
     @ConvexInt public var downloads: Int
     @ConvexInt public var installs: Int
     @ConvexInt public var favorites: Int

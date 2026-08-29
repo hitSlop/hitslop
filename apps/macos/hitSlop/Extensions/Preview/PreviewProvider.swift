@@ -1,14 +1,12 @@
+import HitSlopHost
 import QuickLookUI
-import HitSlopCore
 import UniformTypeIdentifiers
 
 final class PreviewProvider: QLPreviewProvider {
     func providePreview(for request: QLFilePreviewRequest) async throws -> QLPreviewReply {
         let scoped = request.fileURL.startAccessingSecurityScopedResource()
         defer { if scoped { request.fileURL.stopAccessingSecurityScopedResource() } }
-        let package = try SlopPackage(rootURL: request.fileURL)
-        let reply = QLPreviewReply(fileURL: package.entryURL)
-        reply.title = package.metadata.title
-        return reply
+        let png = try await SlopRenderer.pngData(packageURL: request.fileURL)
+        return QLPreviewReply(dataOfContentType: .png, contentSize: CGSize(width: 800, height: 600)) { _ in png }
     }
 }

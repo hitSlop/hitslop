@@ -1,70 +1,102 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "object",
-  "properties": {
-    "$schema": {
-      "$ref": "#/definitions/__schema0"
-    },
-    "format": {
-      "$ref": "#/definitions/__schema1"
-    },
-    "runtime": {
-      "$ref": "#/definitions/__schema2"
-    },
-    "slug": {
-      "$ref": "#/definitions/__schema3"
-    },
-    "title": {
-      "$ref": "#/definitions/__schema4"
-    },
-    "description": {
-      "$ref": "#/definitions/__schema5"
-    },
-    "author": {
-      "$ref": "#/definitions/__schema6"
-    },
-    "categories": {
-      "$ref": "#/definitions/__schema7"
-    },
-    "tags": {
-      "$ref": "#/definitions/__schema9"
-    },
-    "stores": {
-      "$ref": "#/definitions/__schema11"
-    },
-    "window": {
-      "$ref": "#/definitions/__schema13"
-    }
-  },
-  "required": [
-    "format",
-    "runtime",
-    "slug",
-    "title",
-    "description",
-    "author",
-    "categories",
-    "stores",
-    "window"
-  ],
-  "additionalProperties": false,
+  "$ref": "#/definitions/SlopManifest",
   "definitions": {
+    "SlopManifest": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "$ref": "#/definitions/__schema0"
+        },
+        "format": {
+          "$ref": "#/definitions/SlopFormat"
+        },
+        "runtime": {
+          "$ref": "#/definitions/SlopRuntime"
+        },
+        "slug": {
+          "$ref": "#/definitions/__schema1"
+        },
+        "title": {
+          "$ref": "#/definitions/__schema2"
+        },
+        "description": {
+          "$ref": "#/definitions/__schema3"
+        },
+        "author": {
+          "$ref": "#/definitions/SlopAuthor"
+        },
+        "categories": {
+          "$ref": "#/definitions/SlopCategories"
+        },
+        "tags": {
+          "$ref": "#/definitions/SlopTags"
+        },
+        "stores": {
+          "$ref": "#/definitions/__schema9"
+        },
+        "window": {
+          "$ref": "#/definitions/SlopWindow"
+        }
+      },
+      "required": [
+        "format",
+        "runtime",
+        "slug",
+        "title",
+        "description",
+        "author",
+        "categories",
+        "stores",
+        "window"
+      ],
+      "additionalProperties": false,
+      "title": "SlopManifest"
+    },
     "__schema0": {
       "type": "string"
     },
+    "SlopFormat": {
+      "type": "string",
+      "const": "hitslop/1",
+      "title": "SlopFormat"
+    },
+    "SlopRuntime": {
+      "type": "string",
+      "const": "web",
+      "title": "SlopRuntime"
+    },
     "__schema1": {
-      "type": "string",
-      "const": "hitslop/1"
-    },
-    "__schema2": {
-      "type": "string",
-      "const": "web"
-    },
-    "__schema3": {
       "type": "string",
       "minLength": 2,
       "maxLength": 64,
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "__schema2": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "__schema3": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "SlopAuthor": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/definitions/__schema4"
+        },
+        "url": {
+          "$ref": "#/definitions/__schema5"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "title": "SlopAuthor"
     },
     "__schema4": {
       "type": "string",
@@ -73,83 +105,63 @@
     },
     "__schema5": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 240
+      "format": "uri"
     },
-    "__schema6": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 80
-        },
-        "url": {
-          "type": "string",
-          "format": "uri"
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "additionalProperties": false
-    },
-    "__schema7": {
+    "SlopCategories": {
       "minItems": 1,
       "maxItems": 2,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema8"
-      }
+        "$ref": "#/definitions/__schema6"
+      },
+      "uniqueItems": true
     },
-    "__schema8": {
+    "__schema6": {
       "type": "string",
       "minLength": 1,
       "maxLength": 40
     },
-    "__schema9": {
+    "SlopTags": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema7"
+        }
+      ]
+    },
+    "__schema7": {
       "maxItems": 8,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema10"
-      }
+        "$ref": "#/definitions/__schema8"
+      },
+      "uniqueItems": true
     },
-    "__schema10": {
+    "__schema8": {
       "type": "string",
       "minLength": 1,
       "maxLength": 32
     },
-    "__schema11": {
+    "__schema9": {
       "maxItems": 16,
       "type": "array",
       "items": {
-        "$ref": "#/definitions/__schema12"
+        "$ref": "#/definitions/SlopStore"
       }
     },
-    "__schema12": {
+    "SlopStore": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9-]{0,31}$"
+          "$ref": "#/definitions/__schema10"
         },
         "kind": {
-          "type": "string",
-          "enum": [
-            "json",
-            "sqlite"
-          ]
+          "$ref": "#/definitions/SlopStoreKind"
         },
         "path": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 240,
-          "pattern": "^[A-Za-z0-9._/-]+$"
+          "$ref": "#/definitions/__schema11"
         },
         "maxBytes": {
-          "type": "integer",
-          "exclusiveMinimum": 0,
-          "maximum": 1073741824
+          "$ref": "#/definitions/__schema12"
         }
       },
       "required": [
@@ -157,84 +169,151 @@
         "kind",
         "path"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "title": "SlopStore"
     },
-    "__schema13": {
+    "__schema10": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    },
+    "SlopStoreKind": {
+      "type": "string",
+      "enum": [
+        "json",
+        "sqlite"
+      ],
+      "title": "SlopStoreKind"
+    },
+    "__schema11": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?!\\/)(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[A-Za-z0-9._-]+(?:\\/[A-Za-z0-9._-]+)*$"
+    },
+    "__schema12": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 1073741824
+    },
+    "SlopWindow": {
       "type": "object",
       "properties": {
         "width": {
-          "type": "integer",
-          "minimum": 240,
-          "maximum": 4096
+          "$ref": "#/definitions/__schema13"
         },
         "height": {
-          "type": "integer",
-          "minimum": 180,
-          "maximum": 4096
+          "$ref": "#/definitions/__schema14"
         },
         "resizable": {
-          "default": true,
-          "type": "boolean"
+          "$ref": "#/definitions/__schema15"
         },
         "shape": {
-          "oneOf": [
-            {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "type": "string",
-                  "const": "capsule"
-                }
-              },
-              "required": [
-                "kind"
-              ],
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "type": "string",
-                  "const": "circle"
-                }
-              },
-              "required": [
-                "kind"
-              ],
-              "additionalProperties": false
-            },
-            {
-              "type": "object",
-              "properties": {
-                "kind": {
-                  "type": "string",
-                  "const": "roundedRect"
-                },
-                "radius": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 256
-                }
-              },
-              "required": [
-                "kind",
-                "radius"
-              ],
-              "additionalProperties": false
-            }
-          ]
+          "$ref": "#/definitions/__schema16"
         }
       },
       "required": [
         "width",
-        "height",
-        "resizable"
+        "height"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "title": "SlopWindow"
+    },
+    "__schema13": {
+      "type": "integer",
+      "minimum": 240,
+      "maximum": 4096
+    },
+    "__schema14": {
+      "type": "integer",
+      "minimum": 180,
+      "maximum": 4096
+    },
+    "__schema15": {
+      "type": "boolean"
+    },
+    "__schema16": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SlopWindowShape"
+        }
+      ]
+    },
+    "SlopWindowShape": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/SlopWindowShapeCapsule"
+        },
+        {
+          "$ref": "#/definitions/SlopWindowShapeCircle"
+        },
+        {
+          "$ref": "#/definitions/SlopWindowShapeRoundedRect"
+        }
+      ],
+      "title": "SlopWindowShape"
+    },
+    "SlopWindowShapeCapsule": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/__schema17"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "title": "SlopWindowShapeCapsule"
+    },
+    "__schema17": {
+      "type": "string",
+      "const": "capsule"
+    },
+    "SlopWindowShapeCircle": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/__schema18"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "title": "SlopWindowShapeCircle"
+    },
+    "__schema18": {
+      "type": "string",
+      "const": "circle"
+    },
+    "SlopWindowShapeRoundedRect": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/__schema19"
+        },
+        "radius": {
+          "$ref": "#/definitions/__schema20"
+        }
+      },
+      "required": [
+        "kind",
+        "radius"
+      ],
+      "additionalProperties": false,
+      "title": "SlopWindowShapeRoundedRect"
+    },
+    "__schema19": {
+      "type": "string",
+      "const": "roundedRect"
+    },
+    "__schema20": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 256
     }
   },
   "$id": "https://hitslop.app/schemas/manifest.schema.json",
-  "title": "hitSlop manifest",
+  "title": "SlopManifest",
   "description": "The framework-neutral manifest for hitslop/1 web documents."
 }

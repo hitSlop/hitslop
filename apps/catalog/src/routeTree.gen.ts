@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiArtifactRouteImport } from './routes/api.artifact'
-import { Route as ApiCatalogRouteImport } from './routes/api.catalog'
 import { Route as ApiPublishRouteImport } from './routes/api.publish'
 import { Route as ApiDownloadReleaseIdRouteImport } from './routes/api.download.$releaseId'
 
@@ -23,11 +22,6 @@ const IndexRoute = IndexRouteImport.update({
 const ApiArtifactRoute = ApiArtifactRouteImport.update({
   id: '/api/artifact',
   path: '/api/artifact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCatalogRoute = ApiCatalogRouteImport.update({
-  id: '/api/catalog',
-  path: '/api/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublishRoute = ApiPublishRouteImport.update({
@@ -44,14 +38,12 @@ const ApiDownloadReleaseIdRoute = ApiDownloadReleaseIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/artifact': typeof ApiArtifactRoute
-  '/api/catalog': typeof ApiCatalogRoute
   '/api/publish': typeof ApiPublishRoute
   '/api/download/$releaseId': typeof ApiDownloadReleaseIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/artifact': typeof ApiArtifactRoute
-  '/api/catalog': typeof ApiCatalogRoute
   '/api/publish': typeof ApiPublishRoute
   '/api/download/$releaseId': typeof ApiDownloadReleaseIdRoute
 }
@@ -59,30 +51,18 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/artifact': typeof ApiArtifactRoute
-  '/api/catalog': typeof ApiCatalogRoute
   '/api/publish': typeof ApiPublishRoute
   '/api/download/$releaseId': typeof ApiDownloadReleaseIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/api/artifact'
-    | '/api/catalog'
-    | '/api/publish'
-    | '/api/download/$releaseId'
+  fullPaths: '/' | '/api/artifact' | '/api/publish' | '/api/download/$releaseId'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/api/artifact'
-    | '/api/catalog'
-    | '/api/publish'
-    | '/api/download/$releaseId'
+  to: '/' | '/api/artifact' | '/api/publish' | '/api/download/$releaseId'
   id:
     | '__root__'
     | '/'
     | '/api/artifact'
-    | '/api/catalog'
     | '/api/publish'
     | '/api/download/$releaseId'
   fileRoutesById: FileRoutesById
@@ -90,7 +70,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiArtifactRoute: typeof ApiArtifactRoute
-  ApiCatalogRoute: typeof ApiCatalogRoute
   ApiPublishRoute: typeof ApiPublishRoute
   ApiDownloadReleaseIdRoute: typeof ApiDownloadReleaseIdRoute
 }
@@ -109,13 +88,6 @@ declare module '@tanstack/react-router' {
       path: '/api/artifact'
       fullPath: '/api/artifact'
       preLoaderRoute: typeof ApiArtifactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/catalog': {
-      id: '/api/catalog'
-      path: '/api/catalog'
-      fullPath: '/api/catalog'
-      preLoaderRoute: typeof ApiCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/publish': {
@@ -138,7 +110,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiArtifactRoute: ApiArtifactRoute,
-  ApiCatalogRoute: ApiCatalogRoute,
   ApiPublishRoute: ApiPublishRoute,
   ApiDownloadReleaseIdRoute: ApiDownloadReleaseIdRoute,
 }

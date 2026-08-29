@@ -5,6 +5,7 @@ import SwiftUI
 public struct CatalogView: View {
     @StateObject private var model: RegistryModel
     @State private var query = ""; @State private var category = "All"; @State private var selected: RegistryTemplate?
+    @Environment(\.openWindow) private var openWindow
 
     public init(deploymentURL: String, catalogURL: URL) { _model = StateObject(wrappedValue: RegistryModel(deploymentURL: deploymentURL, catalogURL: catalogURL)) }
     private var categories: [String] { ["All"] + Set(model.templates.flatMap(\.categories)).sorted() }
@@ -28,7 +29,7 @@ public struct CatalogView: View {
                             Text("RECENTLY OPENED").font(.caption.weight(.semibold)).tracking(2)
                             HStack(spacing: 12) {
                                 ForEach(recentDocuments, id: \.self) { url in
-                                    Button { NSWorkspace.shared.open(url) } label: {
+                                    Button { openWindow(id: "slop-document", value: url) } label: {
                                         VStack(alignment: .leading, spacing: 5) {
                                             Image(systemName: "doc.text").font(.title2)
                                             Text(url.deletingPathExtension().lastPathComponent).font(.headline).lineLimit(1)
@@ -45,7 +46,7 @@ public struct CatalogView: View {
                         ForEach(Array(visible.enumerated()), id: \.element.id) { index, template in
                             HStack(spacing: 24) {
                                 Text(String(format: "%02d", index + 1)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-                                RoundedRectangle(cornerRadius: 2).fill([Color.orange, .blue, .brown, .pink][index % 4].gradient).frame(width: 88, height: 66).overlay(Text(template.title.prefix(1)).font(.largeTitle.bold()).foregroundStyle(.white))
+                                CatalogSpecimen(template: template, catalogURL: model.catalogURL, index: index)
                                 VStack(alignment: .leading, spacing: 3) { Text(template.categories.joined(separator: " · ")).font(.caption2).tracking(1).foregroundStyle(.secondary); Text(template.title).font(.title2.weight(.semibold)); Text(template.description).foregroundStyle(.secondary).lineLimit(1) }
                                 Spacer()
                                 Button { Task { await model.toggleFavorite(template: template) } } label: { Label("\(template.favorites)", systemImage: model.isFavorite(template) ? "star.fill" : "star").labelStyle(.titleAndIcon) }.buttonStyle(.plain).foregroundStyle(model.isFavorite(template) ? .orange : .secondary).help("Favorite")
@@ -58,12 +59,37 @@ public struct CatalogView: View {
             }
         }
         .onChange(of: query) { _, value in model.search(value) }
-        .sheet(item: $selected) { template in CreateTemplateView(template: template, model: model) }
+        .onOpenURL { url in if url.pathExtension == "slop" { openWindow(id: "slop-document", value: url) } }
+        .sheet(item: $selected) { template in CreateTemplateView(template: template, model: model, openWindow: openWindow) }
+    }
+}
+
+private struct CatalogSpecimen: View {
+    let template: RegistryTemplate; let catalogURL: URL; let index: Int
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 2).fill([Color.orange, .blue, .brown, .pink][index % 4].gradient)
+            if let url = screenshotURL {
+                AsyncImage(url: url) { image in image.resizable().scaledToFill() } placeholder: { Text(template.title.prefix(1)).font(.largeTitle.bold()).foregroundStyle(.white) }
+                    .clipped()
+            } else {
+                Text(template.title.prefix(1)).font(.largeTitle.bold()).foregroundStyle(.white)
+            }
+        }
+        .frame(width: 88, height: 66)
+        .clipped()
+    }
+    private var screenshotURL: URL? {
+        guard let key = template.currentScreenshotKey else { return nil }
+        var components = URLComponents(url: catalogURL.appendingPathComponent("api/artifact"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "key", value: key)]
+        return components?.url
     }
 }
 
 private struct CreateTemplateView: View {
-    let template: RegistryTemplate; let model: RegistryModel; @Environment(\.dismiss) private var dismiss; @State private var isCreating = false; @State private var error: String?
+    let template: RegistryTemplate; let model: RegistryModel; let openWindow: OpenWindowAction
+    @Environment(\.dismiss) private var dismiss; @State private var isCreating = false; @State private var error: String?
     var body: some View { VStack(alignment: .leading, spacing: 18) { Text(template.title).font(.largeTitle.weight(.semibold)); Text(template.description).foregroundStyle(.secondary); if let error { Text(error).foregroundStyle(.red) }; HStack { Button("Cancel") { dismiss() }; Spacer(); Button(isCreating ? "Creating…" : "Choose Location") { choose() }.buttonStyle(.borderedProminent).disabled(isCreating) } }.padding(28).frame(width: 480) }
-    private func choose() { let panel = NSSavePanel(); panel.allowedContentTypes = [.init(filenameExtension: "slop")!]; panel.nameFieldStringValue = "\(template.slug).slop"; guard panel.runModal() == .OK, let url = panel.url else { return }; isCreating = true; Task { do { let downloaded = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template, at: url); if downloaded { await model.recordDownload(template: template) }; await model.recordInstall(template: template); NSDocumentController.shared.noteNewRecentDocumentURL(url); NSWorkspace.shared.open(url); dismiss() } catch { self.error = error.localizedDescription; isCreating = false } } }
+    private func choose() { let panel = NSSavePanel(); panel.allowedContentTypes = [.init(filenameExtension: "slop")!]; panel.nameFieldStringValue = "\(template.slug).slop"; guard panel.runModal() == .OK, let url = panel.url else { return }; isCreating = true; Task { do { let downloaded = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template, at: url); if downloaded { await model.recordDownload(template: template) }; await model.recordInstall(template: template); NSDocumentController.shared.noteNewRecentDocumentURL(url); openWindow(id: "slop-document", value: url); dismiss() } catch { self.error = error.localizedDescription; isCreating = false } } }
 }

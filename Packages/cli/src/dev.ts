@@ -22,23 +22,75 @@ async function seedStores(root: string, manifest: SlopManifest, reset: boolean):
   return dataRoot;
 }
 
+const forbiddenSQL = /\b(attach|detach|load_extension)\b/i;
+
 function mockHostPlugin(manifest: SlopManifest, dataRoot: string): Plugin {
   const stores = new Map(manifest.stores.map((store) => [store.id, store]));
-  const resolveStore = (id: unknown, kind: "json" | "sqlite"): string => { if (typeof id !== "string") throw new Error("store is required"); const store = stores.get(id); if (!store || store.kind !== kind) throw new Error(`Unknown ${kind} store: ${id}`); return join(dataRoot, store.path); };
+  const databases = new Map<string, Database>();
+  const resolveStore = (id: unknown, kind: "json" | "sqlite") => {
+    if (typeof id !== "string") throw new Error("store is required");
+    const store = stores.get(id);
+    if (!store || store.kind !== kind) throw new Error(`Unknown ${kind} store: ${id}`);
+    return { store, path: join(dataRoot, store.path) };
+  };
+  const sqlite = (id: unknown): { store: SlopManifest["stores"][number]; path: string; database: Database } => {
+    const resolved = resolveStore(id, "sqlite");
+    let database = databases.get(resolved.path);
+    if (!database) {
+      database = new Database(resolved.path, { create: false });
+      database.exec("PRAGMA journal_mode=WAL");
+      database.exec("PRAGMA busy_timeout=5000");
+      database.exec("PRAGMA trusted_schema=OFF");
+      databases.set(resolved.path, database);
+    }
+    return { ...resolved, database };
+  };
+  const enforceMaxBytes = (path: string, maxBytes?: number) => {
+    if (!maxBytes) return;
+    const size = Bun.file(path).size + (Bun.file(`${path}-wal`).size || 0);
+    if (size > maxBytes) throw new Error("store exceeds maxBytes");
+  };
+  const assertSQL = (sql: string) => { if (forbiddenSQL.test(sql)) throw new Error("SQLite statement is not allowed"); };
   return { name: "hitslop-mock-host", transformIndexHtml: { order: "pre", handler: (html) => bridge + html }, configureServer(server) {
     server.middlewares.use("/__hitslop", async (nodeRequest, response) => {
       response.setHeader("content-type", "application/json");
       try {
         const body = await readNodeBody(nodeRequest); const route = new URL(`http://localhost${nodeRequest.url}`).pathname.replace("/__hitslop/", "");
-        if (route === "json/read") { const path = resolveStore(body.store, "json"); const bytes = new Uint8Array(await Bun.file(path).arrayBuffer()); response.end(JSON.stringify({ value: JSON.parse(new TextDecoder().decode(bytes)), revision: revision(bytes) })); return; }
-        if (route === "json/write") { const path = resolveStore(body.store, "json"); const current = new Uint8Array(await Bun.file(path).arrayBuffer()); if (body.expectedRevision && body.expectedRevision !== revision(current)) throw new Error("revision_conflict"); const bytes = new TextEncoder().encode(JSON.stringify(body.value, null, 2) + "\n"); const temporary = `${path}.${randomUUID()}.tmp`; await writeFile(temporary, bytes); await rename(temporary, path); response.end(JSON.stringify({ revision: revision(bytes) })); return; }
-        if (route === "json/revision" || route === "sqlite/revision") { const path = resolveStore(body.store, route.startsWith("json") ? "json" : "sqlite"); const bytes = new Uint8Array(await Bun.file(path).arrayBuffer()); response.end(JSON.stringify({ revision: revision(bytes) })); return; }
-        const path = resolveStore(body.store, "sqlite"); const database = new Database(path, { create: false });
-        try {
-          if (route === "sqlite/query") { const statement = database.query(String(body.sql)); response.end(JSON.stringify(statement.all(...((body.parameters ?? []) as Parameters<typeof statement.all>)))); return; }
-          if (route === "sqlite/execute") { const statement = database.query(String(body.sql)); const result = statement.run(...((body.parameters ?? []) as Parameters<typeof statement.run>)); response.end(JSON.stringify(Number(result.changes))); return; }
-          if (route === "sqlite/transaction") { const statements = body.statements as Array<{ sql: string; parameters?: unknown[] }>; let changes = 0; database.transaction(() => { for (const item of statements) { const statement = database.query(item.sql); changes += Number(statement.run(...((item.parameters ?? []) as Parameters<typeof statement.run>)).changes); } })(); response.end(JSON.stringify(changes)); return; }
-        } finally { database.close(); }
+        if (route === "json/read") { const { path } = resolveStore(body.store, "json"); const bytes = new Uint8Array(await Bun.file(path).arrayBuffer()); response.end(JSON.stringify({ value: JSON.parse(new TextDecoder().decode(bytes)), revision: revision(bytes) })); return; }
+        if (route === "json/write") {
+          const { store, path } = resolveStore(body.store, "json");
+          const current = new Uint8Array(await Bun.file(path).arrayBuffer());
+          if (body.expectedRevision && body.expectedRevision !== revision(current)) throw new Error("revision_conflict");
+          const bytes = new TextEncoder().encode(JSON.stringify(body.value, null, 2) + "\n");
+          if (store.maxBytes && bytes.byteLength > store.maxBytes) throw new Error("store exceeds maxBytes");
+          const temporary = `${path}.${randomUUID()}.tmp`;
+          await writeFile(temporary, bytes); await rename(temporary, path);
+          response.end(JSON.stringify({ revision: revision(bytes) })); return;
+        }
+        if (route === "json/revision" || route === "sqlite/revision") { const { path } = resolveStore(body.store, route.startsWith("json") ? "json" : "sqlite"); const bytes = new Uint8Array(await Bun.file(path).arrayBuffer()); response.end(JSON.stringify({ revision: revision(bytes) })); return; }
+        const { store, path, database } = sqlite(body.store);
+        if (route === "sqlite/query") { assertSQL(String(body.sql)); const statement = database.query(String(body.sql)); response.end(JSON.stringify(statement.all(...((body.parameters ?? []) as Parameters<typeof statement.all>)))); return; }
+        if (route === "sqlite/execute") {
+          assertSQL(String(body.sql));
+          const statement = database.query(String(body.sql));
+          const result = database.transaction(() => {
+            const run = statement.run(...((body.parameters ?? []) as Parameters<typeof statement.run>));
+            enforceMaxBytes(path, store.maxBytes);
+            return Number(run.changes);
+          })();
+          response.end(JSON.stringify(result)); return;
+        }
+        if (route === "sqlite/transaction") {
+          const statements = body.statements as Array<{ sql: string; parameters?: unknown[] }>;
+          for (const item of statements) assertSQL(item.sql);
+          const changes = database.transaction(() => {
+            let total = 0;
+            for (const item of statements) { const statement = database.query(item.sql); total += Number(statement.run(...((item.parameters ?? []) as Parameters<typeof statement.run>)).changes); }
+            enforceMaxBytes(path, store.maxBytes);
+            return total;
+          })();
+          response.end(JSON.stringify(changes)); return;
+        }
         response.statusCode = 404; response.end(JSON.stringify({ error: "Not found" }));
       } catch (error) { response.statusCode = 400; response.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) })); }
     });

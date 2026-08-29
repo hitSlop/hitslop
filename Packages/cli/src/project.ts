@@ -1,11 +1,13 @@
-import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { createHash } from "node:crypto";
 import { userInfo } from "node:os";
-import { zipSync, strToU8, type Zippable } from "fflate";
+import { Database } from "bun:sqlite";
+import { zipSync, type Zippable } from "fflate";
 import { build as viteBuild } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { parseManifest, type SlopManifest } from "@hitslop/schema";
+import cliPackage from "../package.json" with { type: "json" };
 
 export const manifestPath = (root: string): string => join(root, "manifest.json");
 export async function loadManifest(root: string): Promise<SlopManifest> {
@@ -32,8 +34,8 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
   await mkdir(join(destination, "src"), { recursive: true });
   await writeFile(join(destination, "package.json"), JSON.stringify({
     name: slug, private: true, type: "module", scripts: { dev: "slop dev", build: "slop build", publish: "slop publish" },
-    dependencies: { "@hitslop/runtime": "latest", "@hitslop/svelte": "latest", "svelte": "^5.0.0" },
-    devDependencies: { "@hitslop/cli": "latest", "@sveltejs/vite-plugin-svelte": "latest", "vite": "latest" },
+    dependencies: { "@hitslop/runtime": `^${cliPackage.version}`, "@hitslop/svelte": `^${cliPackage.version}`, "svelte": "^5.0.0" },
+    devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.0.0", "vite": "^8.0.0" },
   }, null, 2) + "\n");
   await writeFile(join(destination, "manifest.json"), JSON.stringify({
     $schema: "https://hitslop.app/schemas/manifest.schema.json", format: "hitslop/1", runtime: "web", slug,
@@ -59,8 +61,18 @@ export async function buildSlop(root: string): Promise<{ directory: string; mani
   const html = join(viteOut, "index.html"); if (!await exists(html)) throw new Error("Vite did not produce index.html");
   await cp(html, join(output, "build/index.html"));
   await cp(manifestPath(root), join(output, "manifest.json"));
-  for (const store of manifest.stores) { const source = join(root, store.path); if (!await exists(source)) throw new Error(`Missing declared store: ${store.path}`); await mkdir(dirname(join(output, store.path)), { recursive: true }); await cp(source, join(output, store.path)); }
-  for (const name of ["style.css", "assets"]) { const source = join(root, name); if (await exists(source)) await cp(source, join(output, name), { recursive: true }); }
+  for (const store of manifest.stores) {
+    const source = join(root, store.path);
+    if (!await exists(source)) throw new Error(`Missing declared store: ${store.path}`);
+    if ((await lstat(source)).isSymbolicLink()) throw new Error(`Symlinks are not allowed in artifacts: ${store.path}`);
+    if (store.kind === "sqlite") { const database = new Database(source); try { database.exec("PRAGMA wal_checkpoint(TRUNCATE)"); } finally { database.close(); } }
+    await mkdir(dirname(join(output, store.path)), { recursive: true });
+    await cp(source, join(output, store.path));
+  }
+  for (const name of ["style.css", "assets"]) {
+    const source = join(root, name);
+    if (await exists(source)) await copyRuntimeTree(source, join(output, name));
+  }
   await writeFile(join(output, "AGENTS.md"), `# ${manifest.title}\n\nThis is a runtime hitSlop document. Read \`manifest.json\` first. Edit only \`style.css\`, files under \`assets/\`, or stores declared in \`stores\`. JSON stores must be replaced atomically. Do not add source, package manifests, dependencies, or build caches. \`build/index.html\` is generated.\n`);
   await rm(viteOut, { recursive: true, force: true }); return { directory: output, manifest };
 }
@@ -81,6 +93,24 @@ export async function packSlop(directory: string): Promise<{ bytes: Uint8Array; 
   const bytes = zipSync(files, { level: 9 }); return { bytes, sha256: sha256(bytes) };
 }
 
-export async function writePackedSlop(directory: string): Promise<string> {
-  const packed = await packSlop(directory); const output = `${directory}.zip`; await Bun.write(output, packed.bytes); return output;
+export async function writePackedSlop(path: string): Promise<string> {
+  const root = resolve(path);
+  const runtime = await exists(join(root, "build/index.html")) && await exists(join(root, "manifest.json"));
+  const directory = runtime ? root : (await buildSlop(root)).directory;
+  const packed = await packSlop(directory);
+  const output = `${directory}.zip`;
+  await Bun.write(output, packed.bytes);
+  return output;
+}
+
+async function copyRuntimeTree(source: string, destination: string): Promise<void> {
+  if ((await lstat(source)).isSymbolicLink()) throw new Error(`Symlinks are not allowed in artifacts: ${source}`);
+  const info = await stat(source);
+  if (info.isDirectory()) {
+    await mkdir(destination, { recursive: true });
+    for (const entry of await readdir(source)) await copyRuntimeTree(join(source, entry), join(destination, entry));
+    return;
+  }
+  await mkdir(dirname(destination), { recursive: true });
+  await cp(source, destination);
 }

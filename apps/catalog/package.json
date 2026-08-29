@@ -9,15 +9,19 @@
     "check": "tsc -p tsconfig.json",
     "test": "true",
     "preview": "vite preview",
-    "build:production": "CLOUDFLARE_ENV=production vite build && bun scripts/clean-build-secrets.ts",
+    "build:production": "CLOUDFLARE_ENV=production VITE_CONVEX_URL=https://fastidious-malamute-777.convex.cloud vite build && bun scripts/clean-build-secrets.ts",
     "deploy": "bun run build:production && wrangler deploy",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "@convex-dev/react-query": "^0.1.0",
     "@hitslop/schema": "workspace:*",
+    "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-router-ssr-query": "^1.167.2",
     "@tanstack/react-start": "^1.168.49",
     "convex": "^1.45.0",
+    "fflate": "^0.8.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

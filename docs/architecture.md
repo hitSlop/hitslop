@@ -19,12 +19,19 @@ Zod 4 schemas in `packages/schema/src` are the source of truth:
 ```text
 Zod schema ── z.infer ──> TypeScript types + runtime validation
      └────── z.toJSONSchema ──> committed JSON Schema
-                                  └── quicktype 26 ──> Swift Codable models
+                                  └── quicktype ──> Swift Codable models
 ```
 
-Shared values stay JSON-shaped. CI regenerates the JSON Schema and Swift file
-and fails on drift. Manifest metadata includes author, title, description, one
-or two categories, tags, stores, and the preferred window.
+Named Zod `.meta({ id, title })` values become JSON Schema `$defs` and Swift
+type names (`SlopManifest`, `SlopStore`, `SlopWindowShape`). Shared values stay
+JSON-shaped. CI regenerates both artifacts and fails on drift. The host decodes
+the generated models; uniqueness, reserved paths, and traversal are enforced at
+`slop validate` / `slop publish` and again when Convex finalizes a release. The
+native host still refuses to open a store path outside the `.slop` bundle.
+
+Manifest metadata includes author, title, description, one or two unique
+categories, tags, stores, and the preferred window size and vector shape. PNG
+window skins remain a future `.slopskin` package.
 
 ## CLI boundary
 
@@ -44,9 +51,11 @@ release rows, current release pointers, and anonymous download/install/favorite
 counts. It never receives user document data.
 
 The TanStack Start app is both the public landing page and the Cloudflare Worker
-gateway. It verifies signed publish envelopes, writes content-addressed
-artifacts/screenshots into private R2, then atomically asks Convex to assign the
-next integer release number. Authors never manage versions.
+gateway. The landing page queries Convex live through React Query
+(`convexQuery` + `useSuspenseQuery`). The Worker verifies signed publish
+envelopes, writes content-addressed artifacts/screenshots into private R2, then
+atomically asks Convex to assign the next integer release number. Authors never
+manage versions.
 
 Swift queries Convex only for search/list/detail and anonymous telemetry. Each
 catalog result includes the current immutable R2 artifact key and SHA-256. The
