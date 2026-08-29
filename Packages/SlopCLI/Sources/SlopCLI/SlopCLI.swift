@@ -10,7 +10,7 @@ struct SlopCLI: AsyncParsableCommand {
         commandName: "slop",
         abstract: "Inspect, duplicate, open, and export .slop apps.",
         version: "1.0.0",
-        subcommands: [Validate.self, Build.self, Duplicate.self, Open.self, Export.self]
+        subcommands: [Validate.self, Dev.self, PackageTemplates.self, Duplicate.self, Open.self, Export.self]
     )
 }
 
@@ -22,23 +22,38 @@ struct Validate: ParsableCommand {
         let package = try SlopPackage(rootURL: document)
         print("valid\t\(package.manifest.format)")
         print("title\t\(package.manifest.title)")
-        print("source\t\(package.isSourceCurrent ? "current" : "needs-rebuild")")
-        print("cartridge\t\(package.isArtifactCurrent ? "current" : "modified")")
-        print("artifact\t\(package.entryURL.path)")
+        print("cartridge\t\(package.entryURL.path)")
+        print("style\t\(package.styleURL.path)")
     }
 }
 
-struct Build: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Rebuild the HTML cartridge with the local Vite toolchain.")
-    @Argument(transform: URL.init(fileURLWithPath:)) var document: URL
+struct Dev: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Build and open an authored template as a disposable runtime cartridge.")
+    @Argument(transform: URL.init(fileURLWithPath:)) var template: URL
 
     func run() throws {
-        let package = try SlopPackage(rootURL: document)
-        try Self.validateNode()
-        let bin = try Self.sdkScript()
+        try WebSDK.run(["dev", template.path])
+    }
+}
+
+struct PackageTemplates: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Build the authored template workspace into Swift package resources.")
+    @Flag(help: "Check whether committed cartridges are current without replacing them.") var check = false
+
+    func run() throws {
+        var arguments = ["package-templates"]
+        if check { arguments.append("--check") }
+        try WebSDK.run(arguments)
+    }
+}
+
+private enum WebSDK {
+    static func run(_ arguments: [String]) throws {
+        try validateNode()
+        let bin = try sdkScript()
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["node", bin.path, "build", package.rootURL.path]
+        process.arguments = ["node", bin.path] + arguments
         process.standardOutput = FileHandle.standardOutput
         process.standardError = FileHandle.standardError
         try process.run()

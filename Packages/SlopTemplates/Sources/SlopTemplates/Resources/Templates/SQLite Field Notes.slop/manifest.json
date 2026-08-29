@@ -1,8 +1,4 @@
 {
-  "artifact": {
-    "artifactHash": "sha256:7afb553c88637c2be98a6b73a06fbbfb55e40123765645fcfcbfa65e47ebfb64",
-    "sourceHash": "sha256:d333c88d23fd5f62f8d0553e2e4b190f91ae6ed977116984e36b9a9d0b02d243"
-  },
   "format": "slop-web/1",
   "id": "com.longtaillabs.slop.sqlite-field-notes",
   "catalog": {
@@ -18,9 +14,6 @@
       "local",
       "svelte"
     ]
-  },
-  "appearance": {
-    "themeID": "default"
   },
   "stores": [
     {

@@ -4,7 +4,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import { svelte, vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 import { viteSingleFile } from "vite-plugin-singlefile";
-import { stampManifest } from "./hash.mjs";
 
 export const sdkRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -19,15 +18,6 @@ export function guestEntry(slopRoot) {
     if (existsSync(file)) return file.replaceAll("\\", "/");
   }
   throw new Error(`No guest entry in ${sourceRoot} (expected main.ts or main.js)`);
-}
-
-function stampPlugin(slopRoot) {
-  return {
-    name: "slop-manifest",
-    writeBundle() {
-      stampManifest(slopRoot, readManifest(slopRoot));
-    },
-  };
 }
 
 function sdkResolvePlugin() {
@@ -81,13 +71,11 @@ export function slopViteConfig({ slopRoot, workspace }) {
       tailwindcss(),
       svelte({ configFile: false, preprocess: vitePreprocess() }),
       viteSingleFile({ removeViteModuleLoader: true }),
-      stampPlugin(slopRoot),
     ],
     resolve: {
       alias: [
         { find: "@slop/runtime", replacement: resolve(sdkRoot, "packages/runtime/src/index.ts") },
         { find: "@slop/svelte", replacement: resolve(sdkRoot, "packages/svelte/src/index.ts") },
-        { find: "@slop/theme", replacement: resolve(sdkRoot, "theme/tokens.css") },
       ],
     },
     server: {

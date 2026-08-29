@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowImportingTsExtensions": true,
+    "checkJs": true,
+    "isolatedModules": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "target": "ES2022",
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "@slop/runtime": ["../sdk/packages/runtime/src/index.ts"],
+      "@slop/svelte": ["../sdk/packages/svelte/src/index.ts"],
+      "bits-ui": ["../sdk/node_modules/bits-ui/dist/index.d.ts"],
+      "@lucide/svelte/icons/*": ["../sdk/node_modules/@lucide/svelte/dist/icons/*.svelte.d.ts"],
+      "svelte": ["../sdk/node_modules/svelte/types/index.d.ts"],
+      "svelte/*": ["../sdk/node_modules/svelte/*"]
+    }
+  },
+  "include": ["**/*.svelte", "**/*.ts", "**/*.js"]
+}

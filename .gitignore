@@ -13,3 +13,4 @@ xcuserdata/
 node_modules/
 **/.vite/
 sdk/**/dist/
+.slop-dev/

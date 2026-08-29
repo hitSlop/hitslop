@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 public enum SlopHostError: LocalizedError, Equatable {
@@ -6,7 +5,6 @@ public enum SlopHostError: LocalizedError, Equatable {
     case sqlite(String)
     case invalidBridgeValue(String)
     case json(String)
-    case build(String)
 
     public var errorDescription: String? {
         switch self {
@@ -14,7 +12,6 @@ public enum SlopHostError: LocalizedError, Equatable {
         case .sqlite(let message): "SQLite: \(message)"
         case .invalidBridgeValue(let message): message
         case .json(let message): "JSON: \(message)"
-        case .build(let message): "Build: \(message)"
         }
     }
 }
@@ -50,15 +47,6 @@ public struct SlopManifest: Codable, Equatable, Sendable {
         public var tags: [String]
     }
 
-    public struct Appearance: Codable, Equatable, Sendable {
-        public var themeID: String
-    }
-
-    public struct Artifact: Codable, Equatable, Sendable {
-        public var sourceHash: String
-        public var artifactHash: String
-    }
-
     public enum StoreKind: String, Codable, Equatable, Sendable {
         case json
         case sqlite
@@ -76,8 +64,6 @@ public struct SlopManifest: Codable, Equatable, Sendable {
     public var title: String
     public var catalog: Catalog
     public var window: Window
-    public var appearance: Appearance
-    public var artifact: Artifact
     public var stores: [Store]
 }
 
@@ -86,9 +72,7 @@ public struct SlopPackage: Sendable {
     public let manifestURL: URL
     public let manifest: SlopManifest
     public let entryURL: URL
-    public let sourceRootURL: URL
-    public let sourceURLs: [URL]
-    public let themeURL: URL
+    public let styleURL: URL
 
     public init(rootURL: URL) throws {
         let root = rootURL.standardizedFileURL.resolvingSymlinksInPath()
@@ -157,25 +141,22 @@ public struct SlopPackage: Sendable {
         guard FileManager.default.fileExists(atPath: entry.path) else {
             throw SlopHostError.invalidPackage("Missing entry file: build/index.html")
         }
-        let sourceRoot = try Self.resolve(relativePath: "source", inside: root)
-        let sourceURLs = try Self.sourceFiles(inside: sourceRoot)
-        guard !sourceURLs.isEmpty, sourceURLs.count <= 128 else {
-            throw SlopHostError.invalidPackage("source/ must contain between 1 and 128 regular files")
+        for forbidden in ["source", "package.json", "package-lock.json", "node_modules", "vite.config.js", "vite.config.ts"] {
+            guard !FileManager.default.fileExists(atPath: root.appendingPathComponent(forbidden).path) else {
+                throw SlopHostError.invalidPackage("Runtime packages must not contain authoring files: \(forbidden)")
+            }
         }
-        let themeURL = try Self.resolve(relativePath: "theme.css", inside: root)
-        guard themeURL.pathExtension.lowercased() == "css",
-              FileManager.default.fileExists(atPath: themeURL.path)
+        let styleURL = try Self.resolve(relativePath: "style.css", inside: root)
+        guard styleURL.pathExtension.lowercased() == "css",
+              FileManager.default.fileExists(atPath: styleURL.path)
         else {
-            throw SlopHostError.invalidPackage("Missing CSS appearance stylesheet: theme.css")
+            throw SlopHostError.invalidPackage("Missing document stylesheet: style.css")
         }
-        let themeData = try Data(contentsOf: themeURL)
-        guard themeData.count <= 512 * 1_024,
-              String(data: themeData, encoding: .utf8) != nil
+        let styleData = try Data(contentsOf: styleURL)
+        guard styleData.count <= 512 * 1_024,
+              String(data: styleData, encoding: .utf8) != nil
         else {
-            throw SlopHostError.invalidPackage("Appearance stylesheet must be UTF-8 CSS no larger than 512 KiB")
-        }
-        guard !manifest.appearance.themeID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw SlopHostError.invalidPackage("Appearance themeID must not be empty")
+            throw SlopHostError.invalidPackage("style.css must be UTF-8 CSS no larger than 512 KiB")
         }
         for store in manifest.stores {
             let url = try Self.resolve(relativePath: store.path, inside: root)
@@ -188,17 +169,7 @@ public struct SlopPackage: Sendable {
         self.manifestURL = manifestURL
         self.manifest = manifest
         self.entryURL = entry
-        self.sourceRootURL = sourceRoot
-        self.sourceURLs = sourceURLs
-        self.themeURL = themeURL
-    }
-
-    public var isSourceCurrent: Bool {
-        (try? canonicalSourceHash()) == manifest.artifact.sourceHash
-    }
-
-    public var isArtifactCurrent: Bool {
-        (try? canonicalArtifactHash()) == manifest.artifact.artifactHash
+        self.styleURL = styleURL
     }
 
     public var defaultSQLiteStoreID: String? {
@@ -227,77 +198,6 @@ public struct SlopPackage: Sendable {
             throw SlopHostError.invalidPackage("Unknown host-runtime resource: \(path)")
         }
         return try Self.resolve(relativePath: relative, inside: rootURL)
-    }
-
-    public func canonicalSourceHash() throws -> String {
-        var hasher = SHA256()
-        for url in sourceURLs {
-            let path = String(url.path.dropFirst(sourceRootURL.path.count + 1))
-            hasher.update(data: Data(path.utf8))
-            hasher.update(data: try Data(contentsOf: url))
-        }
-        return "sha256:" + hasher.finalize().map { String(format: "%02x", $0) }.joined()
-    }
-
-    public func canonicalArtifactHash() throws -> String {
-        let digest = SHA256.hash(data: try Data(contentsOf: entryURL))
-        return "sha256:" + digest.map { String(format: "%02x", $0) }.joined()
-    }
-
-    public static func hash(directory: URL) throws -> String {
-        let files = try FileManager.default.subpathsOfDirectory(atPath: directory.path)
-            .sorted()
-            .filter { path in
-                var isDirectory: ObjCBool = false
-                return FileManager.default.fileExists(
-                    atPath: directory.appendingPathComponent(path).path,
-                    isDirectory: &isDirectory
-                ) && !isDirectory.boolValue
-            }
-        var hasher = SHA256()
-        for path in files {
-            hasher.update(data: Data(path.utf8))
-            hasher.update(data: try Data(contentsOf: directory.appendingPathComponent(path)))
-        }
-        return "sha256:" + hasher.finalize().map { String(format: "%02x", $0) }.joined()
-    }
-
-    private static func sourceFiles(inside sourceRoot: URL) throws -> [URL] {
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: sourceRoot.path, isDirectory: &isDirectory),
-              isDirectory.boolValue
-        else {
-            throw SlopHostError.invalidPackage("Missing source directory: source")
-        }
-        guard let enumerator = FileManager.default.enumerator(
-            at: sourceRoot,
-            includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey],
-            options: []
-        ) else {
-            throw SlopHostError.invalidPackage("Could not enumerate source directory")
-        }
-        var files: [URL] = []
-        for case let url as URL in enumerator {
-            let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
-            guard values.isSymbolicLink != true else {
-                throw SlopHostError.invalidPackage("Source symlinks are not supported: \(url.lastPathComponent)")
-            }
-            if values.isDirectory == true,
-               url.lastPathComponent == ".build" || url.lastPathComponent == "node_modules" {
-                throw SlopHostError.invalidPackage("Forbidden source directory: \(url.lastPathComponent)")
-            }
-            guard values.isRegularFile == true else { continue }
-            let resolvedURL = url.standardizedFileURL.resolvingSymlinksInPath()
-            guard resolvedURL.path.hasPrefix(sourceRoot.path + "/") else {
-                throw SlopHostError.invalidPackage("Source path escapes source/: \(url.path)")
-            }
-            let relative = String(resolvedURL.path.dropFirst(sourceRoot.path.count + 1))
-            _ = try resolve(relativePath: relative, inside: sourceRoot)
-            files.append(resolvedURL)
-        }
-        return files.sorted {
-            String($0.path.dropFirst(sourceRoot.path.count + 1)) < String($1.path.dropFirst(sourceRoot.path.count + 1))
-        }
     }
 
     private static func resolve(relativePath: String, inside root: URL) throws -> URL {

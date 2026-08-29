@@ -50,8 +50,8 @@ final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         case "/slop-base.css":
             let resource = try SlopRuntime.baseStyles()
             return (resource.data, SlopMIME.type(for: resource.url))
-        case "/theme.css":
-            return (try Data(contentsOf: package.themeURL, options: .mappedIfSafe), "text/css")
+        case "/style.css":
+            return (try Data(contentsOf: package.styleURL, options: .mappedIfSafe), "text/css")
         default:
             let assetURL = try package.documentAssetURL(path: url.path)
             guard FileManager.default.fileExists(atPath: assetURL.path) else {
@@ -71,7 +71,7 @@ final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     static func injectingHostStyles(into input: String) throws -> String {
         var html = input
         html = html.replacingOccurrences(
-            of: #"<link\b[^>]*\bid=["']slop-(?:base|theme)-styles["'][^>]*>"#,
+            of: #"<link\b[^>]*\bid=["']slop-(?:base|document)-styles["'][^>]*>"#,
             with: "",
             options: [.regularExpression, .caseInsensitive]
         )
@@ -82,7 +82,7 @@ final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         guard let closingHead = html.range(of: "</head>", options: .caseInsensitive) else {
             throw SlopHostError.invalidPackage("build/index.html is missing </head>")
         }
-        html.insert(contentsOf: "    <link id=\"slop-theme-styles\" rel=\"stylesheet\" href=\"./theme.css\">\n  ", at: closingHead.lowerBound)
+        html.insert(contentsOf: "    <link id=\"slop-document-styles\" rel=\"stylesheet\" href=\"./style.css\">\n  ", at: closingHead.lowerBound)
         return html
     }
 }

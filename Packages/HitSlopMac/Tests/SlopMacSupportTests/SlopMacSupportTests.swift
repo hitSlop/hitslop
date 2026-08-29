@@ -77,7 +77,7 @@ final class SlopMacSupportTests: XCTestCase {
     func testHostEnforcesStylesheetOrder() throws {
         let html = """
         <html><head>
-        <link id="slop-theme-styles" href="wrong-theme.css">
+        <link id="slop-document-styles" href="wrong-style.css">
         <style id="guest-styles">body { color: red; }</style>
         <link id="slop-base-styles" href="wrong-base.css">
         </head><body></body></html>
@@ -85,10 +85,10 @@ final class SlopMacSupportTests: XCTestCase {
         let injected = try SlopSchemeHandler.injectingHostStyles(into: html)
         let base = try XCTUnwrap(injected.range(of: "id=\"slop-base-styles\""))
         let guest = try XCTUnwrap(injected.range(of: "id=\"guest-styles\""))
-        let theme = try XCTUnwrap(injected.range(of: "id=\"slop-theme-styles\""))
+        let style = try XCTUnwrap(injected.range(of: "id=\"slop-document-styles\""))
         XCTAssertLessThan(base.lowerBound, guest.lowerBound)
-        XCTAssertLessThan(guest.lowerBound, theme.lowerBound)
-        XCTAssertFalse(injected.contains("wrong-theme.css"))
+        XCTAssertLessThan(guest.lowerBound, style.lowerBound)
+        XCTAssertFalse(injected.contains("wrong-style.css"))
         XCTAssertFalse(injected.contains("wrong-base.css"))
     }
 
@@ -102,14 +102,14 @@ final class SlopMacSupportTests: XCTestCase {
         XCTAssertFalse(css.contains("overflow: hidden"))
     }
 
-    func testHostDoesNotLeakSystemBlueIntoGuestControls() throws {
+    func testHostUsesCurrentColorInsteadOfSystemBlue() throws {
         let resource = try SlopRuntime.baseStyles()
         let css = try XCTUnwrap(String(data: resource.data, encoding: .utf8))
 
         XCTAssertFalse(css.contains("AccentColor"))
-        XCTAssertTrue(css.contains("--slop-accent: CanvasText"))
-        XCTAssertTrue(css.contains("accent-color: var(--slop-accent)"))
-        XCTAssertTrue(css.contains("--slop-focus: color-mix(in srgb, CanvasText"))
+        XCTAssertTrue(css.contains("accent-color: currentColor"))
+        XCTAssertTrue(css.contains(":focus-visible { outline: 1px solid currentColor"))
+        XCTAssertFalse(css.contains("--slop-accent"))
     }
 
     func testHostSupportsOptInNonSelectableAppChrome() throws {

@@ -1,10 +1,11 @@
 # hitSlop
 
-`.slop` packages are editable web apps with host-owned JSON or SQLite. Read `manifest.json` first, keep authored files under `source/`, and edit only stores declared in `stores`.
+`.slop` packages are runtime web apps with host-owned JSON or SQLite. Read `manifest.json` first and edit only `style.css`, assets, or stores declared in `stores`.
 
-- Svelte/TS/CSS changes rebuild with `slop build <doc.slop>` or `node sdk/bin/slop.mjs build <doc.slop>` (writes `build/index.html`).
+- Authored Svelte templates live under `Templates/`, never inside runtime `.slop` packages.
+- Preview source with `slop dev Templates/<id>` and release all templates with `slop package-templates`.
 - JSON stores are ordinary UTF-8 JSON files and should be replaced atomically.
 - SQLite stores can be inspected with `sqlite3`; copy documents through `SlopDuplicator` so its read-only online snapshot includes committed WAL data without mutating bundled templates.
-- Never add `.build`, `node_modules`, package checkouts, or compiler output other than `build/index.html` to a document.
+- Never add `source/`, package manifests, `.build`, `node_modules`, or package checkouts to a runtime document. Treat `build/index.html` as generated.
 
 Reusable code lives in `Packages/*/Package.swift` and `sdk/`. The Xcode project is only a thin macOS app and Quick Look bundle layer.

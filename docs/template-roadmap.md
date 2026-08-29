@@ -1,8 +1,8 @@
 # Template Roadmap
 
-Catalog templates and themes live in `Packages/SlopTemplates`. The picker loads that package on launch.
+Authored templates live in `Templates/`. `slop package-templates` generates the runtime cartridges loaded by the picker from `Packages/SlopTemplates`.
 
-Shipped now: Field Notes, SQLite Field Notes, Notebook (Bits UI + Tailwind), Invoice, Focus Timer. Themes: Default plus studio-noir, ocean-glass, paper-ledger, minimal-mono, nord-harbor, cupcake.
+Shipped now: Field Notes, SQLite Field Notes, Notebook (Bits UI + Tailwind), Invoice, and Focus Timer.
 
 The next templates should be small, interactive Svelte apps that benefit from local persistence, live CSS, and focused native windows—not static forms copied from the archived catalog.
 
@@ -41,4 +41,4 @@ The next templates should be small, interactive Svelte apps that benefit from lo
 
 ## Quality gate
 
-A template should ship only when it has meaningful defaults, keyboard access, empty/error states, useful Quick Look imagery, a token-driven `source/styles.css`, a blank `theme.css`, JSON or SQLite fixtures, generated agent guides after duplication, and tests for its persistence boundary.
+A template should ship only when it has meaningful defaults, keyboard access, empty/error states, useful Quick Look imagery, an intentional template-owned visual system, clean JSON or SQLite seed data, a source-free packaged cartridge, and tests for its persistence boundary.

@@ -115,7 +115,6 @@ public final class HitSlopApplicationDelegate: NSObject, NSApplicationDelegate, 
     @objc private func exportActivePNG() { activeDocument?.exportPNGFromMenu() }
     @objc private func exportActivePDF() { activeDocument?.exportPDFFromMenu() }
     @objc private func shareActiveDocument() { activeDocument?.shareFromMenu() }
-    @objc private func showActiveAppearance() { activeDocument?.showAppearance() }
     @objc private func toggleActivePin() { activeDocument?.togglePinFromMenu() }
 
     private var activeDocument: SlopDocumentWindowController? {
@@ -215,14 +214,6 @@ public final class HitSlopApplicationDelegate: NSObject, NSApplicationDelegate, 
         editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
 
-        let viewItem = NSMenuItem()
-        main.addItem(viewItem)
-        let viewMenu = NSMenu(title: "View")
-        viewItem.submenu = viewMenu
-        let appearance = targetedItem(viewMenu, "Appearance…", #selector(showActiveAppearance), "a")
-        appearance.keyEquivalentModifierMask = [.command, .shift]
-        targetedItem(viewMenu, "Reload Theme", #selector(reloadActiveTheme), "r")
-
         let windowItem = NSMenuItem()
         main.addItem(windowItem)
         let windowMenu = NSMenu(title: "Window")
@@ -237,8 +228,6 @@ public final class HitSlopApplicationDelegate: NSObject, NSApplicationDelegate, 
         NSApp.mainMenu = main
     }
 
-    @objc private func reloadActiveTheme() { activeDocument?.reloadThemeFromMenu() }
-
     @discardableResult
     private func targetedItem(_ menu: NSMenu, _ title: String, _ action: Selector, _ key: String) -> NSMenuItem {
         let item = menu.addItem(withTitle: title, action: action, keyEquivalent: key)
@@ -249,8 +238,7 @@ public final class HitSlopApplicationDelegate: NSObject, NSApplicationDelegate, 
     public func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
         case #selector(duplicateActiveDocument), #selector(exportActivePNG), #selector(exportActivePDF),
-             #selector(shareActiveDocument), #selector(showActiveAppearance), #selector(reloadActiveTheme),
-             #selector(toggleActivePin):
+             #selector(shareActiveDocument), #selector(toggleActivePin):
             if menuItem.action == #selector(toggleActivePin) {
                 menuItem.state = activeDocument?.isPinned == true ? .on : .off
             }

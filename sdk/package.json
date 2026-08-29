@@ -13,12 +13,11 @@
     "packages/svelte"
   ],
   "scripts": {
+    "postinstall": "node builder/link-template-workspace.mjs",
     "test": "node --test tests/*.test.mjs",
-    "build:field-notes": "node bin/slop.mjs build \"../Packages/SlopTemplates/Sources/SlopTemplates/Resources/Templates/Field Notes.slop\"",
-    "build:sqlite-field-notes": "node bin/slop.mjs build \"../Packages/SlopTemplates/Sources/SlopTemplates/Resources/Templates/SQLite Field Notes.slop\"",
-    "build:notebook": "node bin/slop.mjs build \"../Packages/SlopTemplates/Sources/SlopTemplates/Resources/Templates/Notebook.slop\"",
-    "build:invoice": "node bin/slop.mjs build \"../Packages/SlopTemplates/Sources/SlopTemplates/Resources/Templates/Invoice.slop\"",
-    "build:focus-timer": "node bin/slop.mjs build \"../Packages/SlopTemplates/Sources/SlopTemplates/Resources/Templates/Focus Timer.slop\""
+    "dev:invoice": "node bin/slop.mjs dev ../Templates/invoice",
+    "package:templates": "node bin/slop.mjs package-templates",
+    "check:templates": "node bin/slop.mjs package-templates --check"
   },
   "dependencies": {
     "@lucide/svelte": "^1.35.0",

@@ -1,0 +1,8 @@
+{
+  "focusMinutes": 25,
+  "history": [
+    { "kind": "focus", "seconds": 1500, "startedAt": "2026-04-02T15:04:00.000Z" },
+    { "kind": "rest", "seconds": 300, "startedAt": "2026-04-02T15:30:00.000Z" }
+  ],
+  "restMinutes": 5
+}

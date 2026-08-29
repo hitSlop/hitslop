@@ -13,36 +13,28 @@ final class SlopCoreTests: XCTestCase {
     func testManifestUsesWebCartridgeContract() throws {
         let package = try copiedFixture(named: "Todo")
         XCTAssertEqual(package.manifest.format, SlopManifest.supportedFormat)
-        XCTAssertTrue(package.isSourceCurrent)
-        XCTAssertTrue(package.isArtifactCurrent)
         XCTAssertEqual(Array(package.entryURL.pathComponents.suffix(2)), ["build", "index.html"])
-        XCTAssertEqual(package.sourceURLs.map(\.lastPathComponent), ["main.ts"])
         XCTAssertThrowsError(try package.documentAssetURL(path: "../manifest.json"))
-        XCTAssertEqual(package.themeURL.lastPathComponent, "theme.css")
+        XCTAssertEqual(package.styleURL.lastPathComponent, "style.css")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: package.rootURL.appendingPathComponent("source").path))
         XCTAssertEqual(package.manifest.window.shape.kind, .roundedRect)
     }
 
-    func testThemeChangesDoNotInvalidateSourceHash() throws {
+    func testDocumentStyleCanChangeWithoutManifestMetadata() throws {
         let package = try copiedFixture(named: "Todo")
-        let sourceHash = try package.canonicalSourceHash()
-        try Data(":root { --slop-accent: hotpink; }\n".utf8).write(to: package.themeURL, options: .atomic)
+        let manifest = try Data(contentsOf: package.manifestURL)
+        try Data("body { letter-spacing: .01em; }\n".utf8).write(to: package.styleURL, options: .atomic)
         let reopened = try SlopPackage(rootURL: package.rootURL)
-        XCTAssertEqual(try reopened.canonicalSourceHash(), sourceHash)
-        XCTAssertTrue(reopened.isSourceCurrent)
-
-        let source = reopened.sourceRootURL.appendingPathComponent("main.ts")
-        try Data("document.body.textContent = 'changed';\n".utf8).write(to: source, options: .atomic)
-        XCTAssertFalse(try SlopPackage(rootURL: package.rootURL).isSourceCurrent)
+        XCTAssertEqual(try Data(contentsOf: reopened.manifestURL), manifest)
+        XCTAssertTrue(try String(contentsOf: reopened.styleURL, encoding: .utf8).contains("letter-spacing"))
     }
 
-    func testSourceHashIncludesNestedFiles() throws {
+    func testRuntimePackageRejectsAuthoringSource() throws {
         let package = try copiedFixture(named: "Todo")
-        let nested = package.sourceRootURL.appendingPathComponent("models/state.json")
-        try FileManager.default.createDirectory(at: nested.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try Data("{}\n".utf8).write(to: nested)
-        let reopened = try SlopPackage(rootURL: package.rootURL)
-        XCTAssertEqual(reopened.sourceURLs.map(\.lastPathComponent), ["main.ts", "state.json"])
-        XCTAssertFalse(reopened.isSourceCurrent)
+        let source = package.rootURL.appendingPathComponent("source")
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try Data("export {};\n".utf8).write(to: source.appendingPathComponent("main.ts"))
+        XCTAssertThrowsError(try SlopPackage(rootURL: package.rootURL))
     }
 
     func testFirstReleaseManifestRejectsMissingCatalogAndInvalidCircle() throws {
@@ -59,7 +51,7 @@ final class SlopCoreTests: XCTestCase {
         XCTAssertThrowsError(try SlopPackage(rootURL: package.rootURL))
     }
 
-    func testRejectsWASMFormatAndSourceSymlinks() throws {
+    func testRejectsWASMFormatAndPackageTooling() throws {
         let package = try copiedFixture(named: "Todo")
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: package.manifestURL)) as? [String: Any])
         object["format"] = "slop-wasm/1"
@@ -68,8 +60,7 @@ final class SlopCoreTests: XCTestCase {
 
         object["format"] = SlopManifest.supportedFormat
         try JSONSerialization.data(withJSONObject: object).write(to: package.manifestURL, options: .atomic)
-        let link = package.sourceRootURL.appendingPathComponent("linked.ts")
-        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: package.sourceRootURL.appendingPathComponent("main.ts"))
+        try Data("{}\n".utf8).write(to: package.rootURL.appendingPathComponent("package.json"))
         XCTAssertThrowsError(try SlopPackage(rootURL: package.rootURL))
     }
 
@@ -105,7 +96,7 @@ final class SlopCoreTests: XCTestCase {
         database.checkpoint()
     }
 
-    func testDuplicatePreservesDataAndArtifactButGetsNewIdentity() throws {
+    func testDuplicatePreservesDataAndCartridgeButGetsNewIdentity() throws {
         let source = try copiedFixture(named: "SQLiteTodo")
         let destination = source.rootURL.deletingLastPathComponent().appendingPathComponent("Duplicate.slop")
         let duplicateURL = try SlopDuplicator.duplicate(from: source.rootURL, to: destination, title: "Duplicate")
@@ -113,8 +104,6 @@ final class SlopCoreTests: XCTestCase {
         XCTAssertNotEqual(duplicate.manifest.id, source.manifest.id)
         XCTAssertEqual(duplicate.manifest.title, "Duplicate")
         XCTAssertEqual(try Data(contentsOf: duplicate.entryURL), try Data(contentsOf: source.entryURL))
-        XCTAssertTrue(duplicate.isSourceCurrent)
-        XCTAssertTrue(duplicate.isArtifactCurrent)
         XCTAssertFalse(FileManager.default.fileExists(atPath: duplicateURL.appendingPathComponent("data.sqlite-wal").path))
         XCTAssertFalse(FileManager.default.fileExists(atPath: duplicateURL.appendingPathComponent("data.sqlite-shm").path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: duplicateURL.appendingPathComponent("AGENTS.md").path))

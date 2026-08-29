@@ -2,8 +2,8 @@ import type { SlopHost, SlopStatement, WindowSlop } from "./types.ts";
 
 export function nativeHostFromWindow(bridge: WindowSlop): SlopHost {
   return {
-    query: (store, sql, params = []) =>
-      bridge.db.query(store, sql, params) as Promise<Record<string, unknown>[]>,
+    query: <T = Record<string, unknown>>(store: string, sql: string, params: unknown[] = []) =>
+      bridge.db.query(store, sql, params) as Promise<T[]>,
     execute: (store, sql, params = []) => bridge.db.execute(store, sql, params),
     transaction: (store, statements: SlopStatement[]) =>
       bridge.db.transaction(

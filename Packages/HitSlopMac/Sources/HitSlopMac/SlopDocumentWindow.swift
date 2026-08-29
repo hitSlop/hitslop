@@ -124,7 +124,6 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
     private var previewWork: DispatchWorkItem?
     private var previewTask: Task<Void, Never>?
     private var securityScoped = false
-    private var appearancePanel: AppearancePanelController?
 
     init(packageURL: URL) throws {
         self.packageURL = packageURL.standardizedFileURL
@@ -188,8 +187,7 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         schedulePreview(delay: 0.25)
     }
 
-    func runtimeSessionDidReloadAppearance(_ session: SlopRuntimeSession) {
-        reloadManifestAppearance()
+    func runtimeSessionDidReloadStyle(_ session: SlopRuntimeSession) {
         schedulePreview(delay: 0.15)
     }
 
@@ -205,7 +203,7 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
 
     private func setupToolbar() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: session.package.isSourceCurrent ? 340 : 440, height: 42),
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 42),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -251,14 +249,12 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
     private func toolbarView() -> ToolbarView {
         ToolbarView(
             pinned: window?.level == .floating,
-            needsBuild: !session.package.isSourceCurrent,
             close: { [weak self] in self?.close() },
             togglePin: { [weak self] in self?.togglePin() },
             duplicate: { [weak self] in self?.duplicateDocument() },
             exportPNG: { [weak self] in self?.chooseExport(.png) },
             exportPDF: { [weak self] in self?.chooseExport(.pdf) },
             share: { [weak self] in self?.shareDocument() },
-            appearance: { [weak self] in self?.showAppearance() },
             reveal: { [weak self] in self?.revealPackage() },
             copyPath: { [weak self] in self?.copyPackagePath() }
         )
@@ -311,80 +307,6 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         toolbarHost?.rootView = toolbarView()
     }
 
-    func showAppearance() {
-        if let appearancePanel {
-            appearancePanel.show(relativeTo: window)
-            return
-        }
-        let panel = AppearancePanelController(
-            packageURL: packageURL,
-            applyTheme: { [weak self] theme in self?.applyTheme(theme) },
-            applyShape: { [weak self] shape in self?.applyShapeSelection(shape) },
-            saveTheme: { [weak self] in self?.saveCurrentTheme() }
-        )
-        appearancePanel = panel
-        panel.show(relativeTo: window)
-    }
-
-    private func applyTheme(_ theme: SlopThemeDescriptor) {
-        do {
-            try SlopThemeCatalog.apply(theme, to: packageURL)
-            session.reloadAppearance(force: true)
-            appearancePanel?.refresh()
-        } catch { showError("Could not apply theme", error) }
-    }
-
-    private func saveCurrentTheme() {
-        let alert = NSAlert()
-        alert.messageText = "Save Theme"
-        alert.informativeText = "Give this reusable theme a name."
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Cancel")
-        let field = NSTextField(string: "My Theme")
-        field.frame = NSRect(x: 0, y: 0, width: 280, height: 24)
-        alert.accessoryView = field
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        do {
-            _ = try SlopThemeCatalog.saveCurrentTheme(from: packageURL, displayName: field.stringValue)
-            appearancePanel?.refresh()
-        } catch { showError("Could not save theme", error) }
-    }
-
-    private func applyShapeSelection(_ requested: SlopManifest.WindowShape) {
-        do {
-            var manifest = try SlopManifestIO.read(from: packageURL)
-            if requested.kind == .circle {
-                let side = max(manifest.window.width, manifest.window.height)
-                manifest.window.width = side
-                manifest.window.height = side
-            }
-            manifest.window.shape = requested
-            try SlopManifestIO.write(manifest, to: packageURL)
-            applyWindowShape(manifest.window.shape, size: manifest.window)
-            appearancePanel?.refresh()
-        } catch { showError("Could not change window shape", error) }
-    }
-
-    private func reloadManifestAppearance() {
-        guard let manifest = try? SlopPackage(rootURL: packageURL).manifest else { return }
-        applyWindowShape(manifest.window.shape, size: manifest.window)
-        appearancePanel?.refresh()
-    }
-
-    private func applyWindowShape(_ shape: SlopManifest.WindowShape, size: SlopManifest.Window) {
-        guard let window, let container = window.contentView as? ShapedContentView else { return }
-        container.shape = shape
-        window.contentAspectRatio = shape.kind == .circle
-            ? NSSize(width: 1, height: 1)
-            : NSSize(width: 0, height: 0)
-        let nextSize = NSSize(width: size.width, height: size.height)
-        if window.contentRect(forFrameRect: window.frame).size != nextSize {
-            window.setContentSize(nextSize)
-        }
-        container.needsLayout = true
-        if toolbar?.isVisible == true { showToolbar() }
-    }
-
     private func duplicateDocument() {
         guard let window else { return }
         let panel = NSSavePanel()
@@ -411,12 +333,11 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
     func exportPDFFromMenu() { chooseExport(.pdf) }
     func shareFromMenu() { shareDocument() }
     func togglePinFromMenu() { togglePin() }
-    func reloadThemeFromMenu() { session.reloadAppearance(force: true) }
     var isPinned: Bool { window?.level == .floating }
 
     func owns(_ candidate: NSWindow?) -> Bool {
         guard let candidate else { return false }
-        return candidate === window || candidate === toolbar || candidate === appearancePanel?.window
+        return candidate === window || candidate === toolbar
     }
 
     private enum ExportKind { case png, pdf }
@@ -485,8 +406,6 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
         if let toolbar { window?.removeChildWindow(toolbar) }
         toolbar?.close()
         toolbar = nil
-        appearancePanel?.close()
-        appearancePanel = nil
         onClose?()
     }
 
@@ -499,26 +418,19 @@ final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, 
 
 private struct ToolbarView: View {
     let pinned: Bool
-    let needsBuild: Bool
     let close: () -> Void
     let togglePin: () -> Void
     let duplicate: () -> Void
     let exportPNG: () -> Void
     let exportPDF: () -> Void
     let share: () -> Void
-    let appearance: () -> Void
     let reveal: () -> Void
     let copyPath: () -> Void
 
     var body: some View {
         HStack(spacing: 4) {
-            if needsBuild {
-                Label("Needs rebuild", systemImage: "hammer").font(.caption2).foregroundStyle(.orange)
-                divider
-            }
             button("xmark", "Close", close)
             button(pinned ? "pin.fill" : "pin", pinned ? "Unpin" : "Always on Top", togglePin)
-            button("paintpalette", "Appearance", appearance)
             divider
             button("doc.on.doc", "Duplicate", duplicate)
             Menu {

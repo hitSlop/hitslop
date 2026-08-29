@@ -16,24 +16,12 @@ public enum SlopTemplateLibrary {
         Bundle.module.resourceURL?.appendingPathComponent("Templates", isDirectory: true)
     }
 
-    public static var bundledThemesDirectory: URL? {
-        Bundle.module.resourceURL?.appendingPathComponent("Themes", isDirectory: true)
-    }
-
     public static var userTemplatesDirectory: URL {
         applicationSupport.appendingPathComponent("Templates", isDirectory: true)
     }
 
-    public static var userThemesDirectory: URL {
-        applicationSupport.appendingPathComponent("Themes", isDirectory: true)
-    }
-
     public static func bundledTemplateURLs() -> [URL] {
         packageURLs(in: bundledTemplatesDirectory, ext: "slop")
-    }
-
-    public static func bundledThemeURLs() -> [URL] {
-        packageURLs(in: bundledThemesDirectory, ext: "sloptheme")
     }
 
     public static func allTemplates() -> [SlopCatalogItem] {

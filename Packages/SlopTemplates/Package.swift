@@ -16,7 +16,6 @@ let package = Package(
             ],
             resources: [
                 .copy("Resources/Templates"),
-                .copy("Resources/Themes"),
             ]
         ),
         .testTarget(

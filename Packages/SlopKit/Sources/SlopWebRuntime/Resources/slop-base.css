@@ -1,38 +1,5 @@
 :root {
   color-scheme: light dark;
-  --slop-font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --slop-font-heading: var(--slop-font-body);
-  --slop-font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --slop-bg: Canvas;
-  --slop-surface: color-mix(in srgb, Canvas 94%, CanvasText 6%);
-  --slop-surface-raised: color-mix(in srgb, Canvas 88%, CanvasText 12%);
-  --slop-text: CanvasText;
-  --slop-text-muted: color-mix(in srgb, CanvasText 62%, transparent);
-  --slop-accent: CanvasText;
-  --slop-accent-contrast: Canvas;
-  --slop-secondary: color-mix(in srgb, CanvasText 72%, Canvas 28%);
-  --slop-secondary-contrast: Canvas;
-  --slop-info: #1971c2;
-  --slop-surface-muted: color-mix(in srgb, Canvas 90%, CanvasText 10%);
-  --slop-border: color-mix(in srgb, CanvasText 18%, transparent);
-  --slop-focus: color-mix(in srgb, CanvasText 42%, transparent);
-  --slop-success: #2f9e44;
-  --slop-warning: #f08c00;
-  --slop-danger: #e03131;
-  --slop-space-1: .25rem;
-  --slop-space-2: .5rem;
-  --slop-space-3: .75rem;
-  --slop-space-4: 1rem;
-  --slop-space-5: 1.5rem;
-  --slop-space-6: 2rem;
-  --slop-radius-sm: .375rem;
-  --slop-radius-md: .75rem;
-  --slop-radius-lg: 1.25rem;
-  --slop-radius-pill: 999px;
-  --slop-shadow-sm: 0 1px 2px rgb(0 0 0 / 12%);
-  --slop-shadow-md: 0 8px 24px rgb(0 0 0 / 16%);
-  --slop-duration-fast: 120ms;
-  --slop-duration-normal: 220ms;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -40,14 +7,12 @@
 * { scrollbar-width: none; -ms-overflow-style: none; }
 *::-webkit-scrollbar { display: none; width: 0; height: 0; }
 html, body { min-height: 100%; margin: 0; }
-body { color: var(--slop-text); background: var(--slop-bg); font-family: var(--slop-font-body); line-height: 1.5; }
-h1, h2, h3, h4, h5, h6 { font-family: var(--slop-font-heading); }
-button, input, select, textarea { font: inherit; border-radius: var(--slop-radius-sm); accent-color: var(--slop-accent); }
-a { color: var(--slop-accent); }
+body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; }
+button, input, select, textarea { font: inherit; accent-color: currentColor; }
 [data-slop-selection="none"] { cursor: default; -webkit-user-select: none; user-select: none; }
 [data-slop-selection="none"] :is(input, textarea, [contenteditable]:not([contenteditable="false"]), [data-slop-selectable]) { cursor: text; -webkit-user-select: text; user-select: text; }
-:focus-visible { outline: 2px solid var(--slop-focus); outline-offset: 2px; }
-::selection { color: var(--slop-accent-contrast); background: var(--slop-accent); }
+:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
+::selection { color: inherit; background: color-mix(in srgb, currentColor 18%, transparent); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }

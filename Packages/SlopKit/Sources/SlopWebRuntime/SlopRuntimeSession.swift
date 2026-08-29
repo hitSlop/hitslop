@@ -11,14 +11,14 @@ import AppKit
 @MainActor
 public protocol SlopRuntimeSessionDelegate: AnyObject {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
-    func runtimeSessionDidReloadAppearance(_ session: SlopRuntimeSession)
+    func runtimeSessionDidReloadStyle(_ session: SlopRuntimeSession)
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopManifest.StoreKind, storeID: String)
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
 }
 
 public extension SlopRuntimeSessionDelegate {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {}
-    func runtimeSessionDidReloadAppearance(_ session: SlopRuntimeSession) {}
+    func runtimeSessionDidReloadStyle(_ session: SlopRuntimeSession) {}
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopManifest.StoreKind, storeID: String) {}
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
 }
@@ -36,9 +36,10 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
     private var jsonRevisions: [String: String]
     private var changeSequence = 0
     private var pollTimer: Timer?
-    private var appearanceFingerprint: Int?
+    private var styleFingerprint: Int?
+    private var cartridgeFingerprint: Int?
 #if canImport(Darwin)
-    private var appearanceWatcher: DispatchSourceFileSystemObject?
+    private var styleWatcher: DispatchSourceFileSystemObject?
 #endif
     private var readyContinuations: [CheckedContinuation<Void, Error>] = []
     private var readyTimeouts: [UUID: DispatchWorkItem] = [:]
@@ -65,13 +66,14 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
         self.webView = WKWebView(frame: frame, configuration: configuration)
 #endif
         super.init()
-        appearanceFingerprint = Self.appearanceFingerprint(for: package)
+        styleFingerprint = Self.styleFingerprint(for: package)
+        cartridgeFingerprint = Self.fileFingerprint(at: package.entryURL)
         bridge.delegate = self
         webView.navigationDelegate = self
         pollTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.pollForExternalChanges() }
         }
-        startAppearanceWatcher()
+        startStyleWatcher()
     }
 
     public func load() {
@@ -109,8 +111,8 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
         pollTimer?.invalidate()
         pollTimer = nil
 #if canImport(Darwin)
-        appearanceWatcher?.cancel()
-        appearanceWatcher = nil
+        styleWatcher?.cancel()
+        styleWatcher = nil
 #endif
         readyTimeouts.values.forEach { $0.cancel() }
         readyTimeouts.removeAll()
@@ -121,35 +123,52 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
         bridge.close()
     }
 
-    public func reloadAppearance(force: Bool = false) {
+    public func reloadStyle(force: Bool = false) {
         guard isReady,
-              let data = try? Data(contentsOf: package.themeURL),
+              let data = try? Data(contentsOf: package.styleURL),
               data.count <= 512 * 1_024,
               String(data: data, encoding: .utf8) != nil,
-              let fingerprint = Self.appearanceFingerprint(for: package, themeData: data),
-              force || fingerprint != appearanceFingerprint
+              let fingerprint = Self.styleFingerprint(for: package, styleData: data),
+              force || fingerprint != styleFingerprint
         else { return }
-        appearanceFingerprint = fingerprint
+        styleFingerprint = fingerprint
         let stamp = Int(Date().timeIntervalSince1970 * 1_000)
         webView.evaluateJavaScript(
-            "document.getElementById('slop-theme-styles')?.setAttribute('href','./theme.css?v=\(stamp)')"
+            "document.getElementById('slop-document-styles')?.setAttribute('href','./style.css?v=\(stamp)')"
         ) { [weak self] _, _ in
             guard let self else { return }
-            self.delegate?.runtimeSessionDidReloadAppearance(self)
+            self.delegate?.runtimeSessionDidReloadStyle(self)
         }
     }
 
-    private static func appearanceFingerprint(for package: SlopPackage, themeData: Data? = nil) -> Int? {
-        guard let themeData = themeData ?? (try? Data(contentsOf: package.themeURL)),
-              let manifestData = try? Data(contentsOf: package.manifestURL)
-        else { return nil }
+    private static func styleFingerprint(for package: SlopPackage, styleData: Data? = nil) -> Int? {
+        guard let styleData = styleData ?? (try? Data(contentsOf: package.styleURL)) else { return nil }
+        return dataFingerprint(styleData)
+    }
+
+    private static func fileFingerprint(at url: URL) -> Int? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return dataFingerprint(data)
+    }
+
+    private static func dataFingerprint(_ data: Data) -> Int {
         var hasher = Hasher()
-        hasher.combine(themeData)
-        hasher.combine(manifestData)
+        hasher.combine(data)
         return hasher.finalize()
     }
 
-    private func startAppearanceWatcher() {
+    private func reloadExternalFiles() {
+        guard !closed else { return }
+        if let next = Self.fileFingerprint(at: package.entryURL), next != cartridgeFingerprint {
+            cartridgeFingerprint = next
+            styleFingerprint = Self.styleFingerprint(for: package)
+            reload()
+            return
+        }
+        reloadStyle()
+    }
+
+    private func startStyleWatcher() {
 #if canImport(Darwin)
         let descriptor = Darwin.open(package.rootURL.path, O_EVTONLY)
         guard descriptor >= 0 else { return }
@@ -158,9 +177,22 @@ public final class SlopRuntimeSession: NSObject, WKNavigationDelegate, SlopBridg
             eventMask: [.write, .rename, .delete],
             queue: .main
         )
-        source.setEventHandler { [weak self] in self?.reloadAppearance() }
+        source.setEventHandler { [weak self, weak source] in
+            guard let self else { return }
+            let events = source?.data
+            let mustRearm = events?.contains(.rename) == true || events?.contains(.delete) == true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
+                guard let self else { return }
+                self.reloadExternalFiles()
+                if mustRearm {
+                    self.styleWatcher?.cancel()
+                    self.styleWatcher = nil
+                    self.startStyleWatcher()
+                }
+            }
+        }
         source.setCancelHandler { Darwin.close(descriptor) }
-        appearanceWatcher = source
+        styleWatcher = source
         source.resume()
 #endif
     }
