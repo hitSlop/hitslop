@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "HitSlopCore",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v14), .iOS(.v17)],
     products: [.library(name: "HitSlopCore", targets: ["HitSlopCore"])],
     dependencies: [.package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20")],
     targets: [

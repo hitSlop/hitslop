@@ -42,10 +42,10 @@ public struct LocalTemplate: Identifiable, Sendable {
                 guard FileManager.default.fileExists(atPath: marker.path) else { continue }
                 do {
                     let install = try JSONDecoder().decode(LocalTemplateInstall.self, from: Data(contentsOf: marker))
-                    let packageURL = try SlopPackage.containedURL(root: child, relativePath: install.package.rawValue)
-                    let previewURL = try SlopPackage.containedURL(root: child, relativePath: install.preview.rawValue)
-                    guard FileManager.default.fileExists(atPath: previewURL.path) else { throw SlopPackageError.missing(install.preview.rawValue) }
+                    let packageURL = try SlopPackage.containedURL(root: child, relativePath: "template.slop")
                     let package = try SlopPackage(rootURL: packageURL)
+                    let previewURL = package.previewURL
+                    guard FileManager.default.fileExists(atPath: previewURL.path) else { throw SlopPackageError.missing("template.slop/QuickLook/Preview.png") }
                     guard child.lastPathComponent == package.manifest.slug else { throw SlopPackageError.invalid("install directory must match manifest slug") }
                     next.append(LocalTemplate(rootURL: child, packageURL: packageURL, previewURL: previewURL, install: install, manifest: package.manifest))
                 } catch {

@@ -5,37 +5,15 @@ import Foundation
 // MARK: - LocalTemplateInstall
 public struct LocalTemplateInstall: Codable, Sendable {
     public let artifactSha256: String
-    public let format: LocalTemplateInstallFormat
     public let installedAt: String
-    public let package: LocalTemplatePackageName
-    public let preview: LocalTemplatePreviewName
 
     public enum CodingKeys: String, CodingKey {
         case artifactSha256 = "artifactSha256"
-        case format = "format"
         case installedAt = "installedAt"
-        case package = "package"
-        case preview = "preview"
     }
 
-    public init(artifactSha256: String, format: LocalTemplateInstallFormat, installedAt: String, package: LocalTemplatePackageName, preview: LocalTemplatePreviewName) {
+    public init(artifactSha256: String, installedAt: String) {
         self.artifactSha256 = artifactSha256
-        self.format = format
         self.installedAt = installedAt
-        self.package = package
-        self.preview = preview
     }
-}
-
-
-public enum LocalTemplateInstallFormat: String, Codable, Sendable {
-    case hitslopTemplateInstall1 = "hitslop-template-install/1"
-}
-
-public enum LocalTemplatePackageName: String, Codable, Sendable {
-    case templateSlop = "template.slop"
-}
-
-public enum LocalTemplatePreviewName: String, Codable, Sendable {
-    case coverPNG = "cover.png"
 }

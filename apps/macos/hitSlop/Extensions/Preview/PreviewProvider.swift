@@ -1,8 +1,8 @@
-import AppKit
-import QuickLookUI
+import Cocoa
+import Quartz
 import UniformTypeIdentifiers
 
-final class PreviewProvider: QLPreviewProvider {
+final class PreviewProvider: QLPreviewProvider, QLPreviewingController {
     func providePreview(for request: QLFilePreviewRequest) async throws -> QLPreviewReply {
         let scoped = request.fileURL.startAccessingSecurityScopedResource()
         defer { if scoped { request.fileURL.stopAccessingSecurityScopedResource() } }

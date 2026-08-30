@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import HitSlopHost
+@testable import HitSlopRuntime
 
 @Test func jsonStoreUsesOptimisticRevisionsAndAtomicWrites() throws {
     let directory = temporaryDirectory()

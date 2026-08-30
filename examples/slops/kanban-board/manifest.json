@@ -1,13 +1,11 @@
 {
   "$schema": "https://hitslop.app/schemas/manifest.schema.json",
-  "format": "hitslop/1",
-  "runtime": "web",
   "slug": "kanban-board",
   "title": "Kanban Board",
   "description": "A compact relational board for moving work from idea to done.",
   "author": { "name": "Longtail Labs" },
   "categories": ["Projects", "Productivity"],
   "tags": ["kanban", "sqlite", "drag-drop", "bits-ui", "svelte"],
-  "stores": [{ "id": "main", "kind": "sqlite", "path": "data.sqlite" }],
+  "stores": { "main": { "kind": "sqlite" } },
   "window": { "width": 760, "height": 560, "shape": { "kind": "roundedRect", "radius": 28 } }
 }

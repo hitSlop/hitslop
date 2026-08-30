@@ -16,7 +16,7 @@ await generate({
   swiftName: "SlopManifest.generated.swift",
   id: "https://hitslop.app/schemas/manifest.schema.json",
   title: "SlopManifest",
-  description: "The framework-neutral manifest for hitslop/1 web documents.",
+  description: "The framework-neutral manifest for hitSlop web documents.",
   transformSwift: renameGeneratedTypes,
   transformSchema: stampUniqueItems,
 });
@@ -28,7 +28,7 @@ await generate({
   id: "https://hitslop.app/schemas/local-template-install.schema.json",
   title: "LocalTemplateInstall",
   description: "Local catalog metadata for an explicitly installed hitSlop template.",
-  transformSwift: renameInstallTypes,
+  transformSwift: addSendable,
 });
 
 async function generate(options: {
@@ -80,19 +80,20 @@ function resolveRef(property: Record<string, unknown>, root: Record<string, unkn
 function renameGeneratedTypes(source: string): string {
   const shapeKind = source.match(/public enum (Schema\d*): String, Codable \{\n    case capsule/)?.[1];
   const shape = source.match(/\/\/ MARK: - (Schema\d+)\npublic struct Schema\d+: Codable \{\n    public let kind:/)?.[1];
+  const document = source.match(/\/\/ MARK: - (Schema\d+)\npublic struct Schema\d+: Codable \{\n    public let id: String\n    public let template:/)?.[1];
+  const lineage = source.match(/\/\/ MARK: - (Schema\d+)\npublic struct Schema\d+: Codable \{\n    public let artifactSha256:/)?.[1];
   let next = source;
   if (shape) next = next.replaceAll(shape, "SlopWindowShape");
   if (shapeKind) next = next.replaceAll(shapeKind, "SlopWindowShapeKind");
+  if (document) next = next.replaceAll(document, "SlopDocument");
+  if (lineage) next = next.replaceAll(lineage, "SlopTemplateLineage");
   return next
     .replaceAll(": Codable {", ": Codable, Sendable {")
     .replaceAll(": String, Codable {", ": String, Codable, Sendable {");
 }
 
-function renameInstallTypes(source: string): string {
+function addSendable(source: string): string {
   return source
-    .replaceAll("Schema0", "LocalTemplateInstallFormat")
-    .replaceAll("Schema1", "LocalTemplatePackageName")
-    .replaceAll("Schema2", "LocalTemplatePreviewName")
     .replaceAll(": Codable {", ": Codable, Sendable {")
     .replaceAll(": String, Codable {", ": String, Codable, Sendable {");
 }

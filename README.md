@@ -1,7 +1,7 @@
 # hitSlop
 
 hitSlop is a native macOS home for tiny, local-first web apps. A `.slop` is a
-self-contained `hitslop/1` runtime package with host-owned JSON or SQLite data.
+self-contained runtime package with host-owned JSON or SQLite data.
 Svelte is the first authoring SDK, but the runtime contract is framework-free.
 
 ```text
@@ -14,7 +14,7 @@ packages/
 ├── runtime/        framework-neutral host bridge
 ├── schema/         Zod source, JSON Schema, generated Swift Codable models
 └── svelte/         Svelte 5 JSON/SQLite helpers
-examples/slops/     four maintained, publishable Svelte templates
+examples/slops/     six maintained, publishable Svelte templates
 archive/templates/  paused templates kept for later repair
 ```
 
@@ -44,6 +44,21 @@ discovers these local templates without Convex and duplicates the installed
 seed when you create a document. Existing installs require confirmation or
 `--force`; `--screenshot cover.png` supplies a preview without invoking the
 native screenshot helper.
+
+The runtime contract is intentionally small:
+
+```text
+my-widget.slop/
+├── manifest.json              metadata, stores, window, document identity
+├── app.html                   generated single-file web app
+├── style.css                  optional user-editable overrides
+├── assets/                    optional guest-readable assets
+├── stores/<id>.json|sqlite    host-owned local data
+└── QuickLook/                 host-generated Preview.png + Thumbnail.png
+```
+
+There is no runtime/version field, authored store path, `document.json`, or
+`build/` directory. The host adds document identity to the copied manifest.
 
 The CLI package is `@hitslop/cli`; installing it exposes the `slop` executable.
 The unscoped `slop` npm name is owned by another project, so the one-shot form is
@@ -91,3 +106,32 @@ cd apps/macos/hitSlop
 xcodegen generate
 xcodebuild -scheme hitSlop -configuration Debug build
 ```
+
+## Release the macOS app
+
+Direct Developer ID distribution — there is no Mac App Store listing. Sparkle
+checks `https://github.com/hitSlop/hitslop/releases/latest/download/appcast.xml`.
+
+Versioning lives in `apps/macos/hitSlop/project.yml`:
+
+| Field | Meaning |
+| --- | --- |
+| `MARKETING_VERSION` | User-facing semver (`1.0.0`). Git tag is `v1.0.0`. |
+| `CURRENT_PROJECT_VERSION` | Monotonic integer Sparkle compares. Never reuse. |
+
+```sh
+# Local unsigned-to-Developer-ID install (this Mac only)
+scripts/install-macos-release.sh
+
+# Universal signed, notarized DMG (needs App Store Connect API key)
+scripts/package-macos-release.sh
+```
+
+Pushing a `v*` tag on the default branch runs `.github/workflows/macos-release.yml`,
+which publishes the DMG, zip, and Sparkle appcast to GitHub Releases. Signing
+uses **Mushroom DAO Holdings Corp.** (`78UAXU8QG8`). You do not need an App Store
+Connect app record for this; notarization uses the API key only.
+
+GitHub Actions secrets: `MACOS_CERTIFICATE`, `MACOS_CERTIFICATE_PASSWORD`,
+`KEYCHAIN_PASSWORD`, `ASC_API_KEY_P8`, `ASC_API_KEY_ID`, `ASC_API_ISSUER_ID`,
+`SPARKLE_PRIVATE_KEY`.

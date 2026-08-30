@@ -1,0 +1,26 @@
+{
+  "$schema": "https://hitslop.app/schemas/manifest.schema.json",
+  "slug": "svelte-counter",
+  "title": "Svelte Counter",
+  "description": "A minimal counter for testing the Svelte SDK, JSON persistence, and native host.",
+  "author": {
+    "name": "Longtail Labs"
+  },
+  "categories": [
+    "Widgets"
+  ],
+  "stores": {
+    "state": {
+      "kind": "json"
+    }
+  },
+  "window": {
+    "width": 560,
+    "height": 420,
+    "resizable": true,
+    "shape": {
+      "kind": "roundedRect",
+      "radius": 22
+    }
+  }
+}

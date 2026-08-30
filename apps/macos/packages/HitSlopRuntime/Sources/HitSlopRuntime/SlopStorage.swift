@@ -108,7 +108,13 @@ final class SlopDatabase {
         return sqlite3_column_int64(statement, 0)
     }
 
-    func close() { if let handle { sqlite3_wal_checkpoint_v2(handle, nil, SQLITE_CHECKPOINT_PASSIVE, nil, nil); sqlite3_close_v2(handle); self.handle = nil } }
+    func checkpoint() {
+        guard let handle else { return }
+        if sqlite3_wal_checkpoint_v2(handle, nil, SQLITE_CHECKPOINT_TRUNCATE, nil, nil) != SQLITE_OK {
+            sqlite3_wal_checkpoint_v2(handle, nil, SQLITE_CHECKPOINT_PASSIVE, nil, nil)
+        }
+    }
+    func close() { if let handle { checkpoint(); sqlite3_close_v2(handle); self.handle = nil } }
 
     private func prepareSingle(_ sql: String) throws -> OpaquePointer {
         guard let handle else { throw SlopPackageError.invalid("SQLite store is closed") }

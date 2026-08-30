@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import type { Plugin } from "vite";
 import { createServer } from "vite";
-import type { SlopManifest } from "@hitslop/schema";
+import { storePath, type SlopManifest } from "@hitslop/schema";
 import { loadManifest } from "./project.ts";
 
 const readNodeBody = async (request: AsyncIterable<Uint8Array>): Promise<Record<string, unknown>> => {
@@ -18,20 +18,20 @@ const bridge = `<script>\n(() => {\n const call=async(path,body)=>{const r=await
 
 async function seedStores(root: string, manifest: SlopManifest, reset: boolean): Promise<string> {
   const dataRoot = join(root, ".hitslop", "dev"); if (reset) await rm(dataRoot, { recursive: true, force: true }); await mkdir(dataRoot, { recursive: true });
-  for (const store of manifest.stores) { const target = join(dataRoot, store.path); try { await stat(target); } catch { await mkdir(dirname(target), { recursive: true }); await cp(join(root, store.path), target); } }
+  for (const [id, store] of Object.entries(manifest.stores)) { const path = storePath(id, store.kind); const target = join(dataRoot, path); try { await stat(target); } catch { await mkdir(dirname(target), { recursive: true }); await cp(join(root, path), target); } }
   return dataRoot;
 }
 
 const forbiddenSQL = /\b(attach|detach|load_extension)\b/i;
 
 function mockHostPlugin(manifest: SlopManifest, dataRoot: string): Plugin {
-  const stores = new Map(manifest.stores.map((store) => [store.id, store]));
+  const stores = new Map(Object.entries(manifest.stores));
   const databases = new Map<string, Database>();
   const resolveStore = (id: unknown, kind: "json" | "sqlite") => {
     if (typeof id !== "string") throw new Error("store is required");
     const store = stores.get(id);
     if (!store || store.kind !== kind) throw new Error(`Unknown ${kind} store: ${id}`);
-    return { store, path: join(dataRoot, store.path) };
+    return { store, path: join(dataRoot, storePath(id, store.kind)) };
   };
   const sqlite = (id: unknown): { store: SlopManifest["stores"][number]; path: string; database: Database } => {
     const resolved = resolveStore(id, "sqlite");

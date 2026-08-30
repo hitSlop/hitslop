@@ -1,5 +1,16 @@
 import Foundation
+import HitSlopCore
 import HitSlopRegistry
+import HitSlopRuntime
+
+extension RegistryTemplate {
+    func remoteTemplate() throws -> SlopRemoteTemplate {
+        guard let artifactKey = currentArtifactKey, let sha = currentArtifactSha256 else {
+            throw SlopPackageError.invalid("template has no current artifact")
+        }
+        return SlopRemoteTemplate(publisherKeyID: publisherKeyId, slug: slug, release: currentReleaseNumber, artifactKey: artifactKey, artifactSha256: sha)
+    }
+}
 
 enum CatalogItemSource {
     case hosted(RegistryTemplate)

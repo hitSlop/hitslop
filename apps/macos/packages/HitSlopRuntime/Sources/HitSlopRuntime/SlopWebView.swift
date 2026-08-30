@@ -1,4 +1,8 @@
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import Foundation
 import HitSlopCore
 import WebKit
@@ -78,13 +82,14 @@ public extension SlopRuntimeSessionDelegate {
 
     init(package: SlopPackage) throws {
         self.package = package
-        for store in package.manifest.stores {
-            let url = try package.store(id: store.id, kind: store.kind)
-            if store.kind == .sqlite { databases[store.id] = try SlopDatabase(url: url) }
-            else { jsonStores[store.id] = SlopJSONStore(url: url, maxBytes: store.maxBytes ?? 1_048_576) }
+        for (id, store) in package.manifest.stores {
+            let url = try package.store(id: id, kind: store.kind)
+            if store.kind == .sqlite { databases[id] = try SlopDatabase(url: url) }
+            else { jsonStores[id] = SlopJSONStore(url: url, maxBytes: store.maxBytes ?? 1_048_576) }
         }
     }
     func close() { databases.values.forEach { $0.close() } }
+    func checkpoint() { databases.values.forEach { $0.checkpoint() } }
     func sqliteVersions() -> [String: Int64] { databases.compactMapValues { try? $0.dataVersion() } }
     func jsonRevisions() -> [String: String] { jsonStores.compactMapValues { try? $0.revision() } }
 
@@ -131,7 +136,7 @@ public extension SlopRuntimeSessionDelegate {
         return (sql, body["parameters"] as? [Any] ?? [])
     }
     private func enforceSQLiteLimit(_ id: String) throws {
-        guard let record = package.manifest.stores.first(where: { $0.id == id }), let maxBytes = record.maxBytes else { return }
+        guard let maxBytes = package.manifest.stores[id]?.maxBytes else { return }
         let url = try package.store(id: id, kind: .sqlite)
         let size = [url.path, url.path + "-wal"].reduce(0) { total, path in
             total + (((try? FileManager.default.attributesOfItem(atPath: path)[.size]) as? NSNumber)?.intValue ?? 0)
@@ -171,7 +176,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         }
     }
     private func entryHTML() throws -> Data {
-        guard var html = String(data: try Data(contentsOf: package.entryURL), encoding: .utf8) else { throw SlopPackageError.invalid("build/index.html must be UTF-8") }
+        guard var html = String(data: try Data(contentsOf: package.entryURL), encoding: .utf8) else { throw SlopPackageError.invalid("app.html must be UTF-8") }
         let stylesheet = "<link id=\"hitslop-document-styles\" rel=\"stylesheet\" href=\"/style.css\">"
         if let close = html.range(of: "</head>", options: .caseInsensitive) { html.insert(contentsOf: "\n\(stylesheet)", at: close.lowerBound) }
         else { html = "<head>\(stylesheet)</head>\n" + html }
@@ -186,6 +191,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     public let package: SlopPackage
     public let webView: WKWebView
     public weak var delegate: (any SlopRuntimeSessionDelegate)?
+    public var onStoreCommit: (() -> Void)?
     public private(set) var isReady = false
     private let bridge: SlopBridge
     private let schemeHandler: SlopSchemeHandler
@@ -199,16 +205,27 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         configuration.userContentController.addUserScript(WKUserScript(source: runtimeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
         let bridge = try SlopBridge(package: package); self.bridge = bridge
         configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "hitslop")
-        webView = InteractiveWebView(frame: NSRect(x: 0, y: 0, width: package.manifest.window.width, height: package.manifest.window.height), configuration: configuration)
+        let frame = CGRect(x: 0, y: 0, width: package.manifest.window.width, height: package.manifest.window.height)
+        #if os(macOS)
+        webView = InteractiveWebView(frame: frame, configuration: configuration)
+        webView.setValue(false, forKey: "drawsBackground")
+        #else
+        webView = WKWebView(frame: frame, configuration: configuration)
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        if #available(iOS 16.4, *) { webView.isInspectable = true }
+        #endif
         sqliteVersions = bridge.sqliteVersions(); jsonRevisions = bridge.jsonRevisions()
         super.init()
-        bridge.session = self; webView.navigationDelegate = self; webView.setValue(false, forKey: "drawsBackground")
+        bridge.session = self; webView.navigationDelegate = self
         visualFingerprint = visualFilesFingerprint()
         timer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.poll() } }
     }
 
     public func load() { isReady = false; webView.load(URLRequest(url: URL(string: "slop://app/")!)) }
     public func reload() { isReady = false; webView.reload() }
+    public func checkpoint() { bridge.checkpoint() }
     public func close() {
         guard !closed else { return }; closed = true; timer?.invalidate(); timer = nil; bridge.close()
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "hitslop", contentWorld: .page)
@@ -228,6 +245,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     }
     fileprivate func bridgeDidCommit(kind: SlopStoreKind, storeID: String, revision: String?) {
         sqliteVersions = bridge.sqliteVersions(); jsonRevisions = bridge.jsonRevisions(); emit(kind: kind, store: storeID, revision: revision, source: "app")
+        onStoreCommit?()
         delegate?.runtimeSession(self, didCommit: kind, storeID: storeID)
     }
 
@@ -255,7 +273,16 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     public func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
         let scheme = action.request.url?.scheme?.lowercased()
         if scheme == "slop" || scheme == "about" { decisionHandler(.allow) }
-        else { if action.navigationType == .linkActivated, let url = action.request.url { NSWorkspace.shared.open(url) }; decisionHandler(.cancel) }
+        else {
+            if action.navigationType == .linkActivated, let url = action.request.url {
+                #if os(macOS)
+                NSWorkspace.shared.open(url)
+                #else
+                UIApplication.shared.open(url)
+                #endif
+            }
+            decisionHandler(.cancel)
+        }
     }
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { recover(error) }
     public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { recover(error) }
@@ -263,7 +290,9 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     private func recover(_ error: Error) { lastError = error; if retryCount == 0 { retryCount = 1; load() } else { delegate?.runtimeSession(self, didFail: error) } }
 }
 
+#if os(macOS)
 private final class InteractiveWebView: WKWebView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var mouseDownCanMoveWindow: Bool { false }
 }
+#endif

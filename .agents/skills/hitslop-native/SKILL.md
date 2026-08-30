@@ -8,7 +8,7 @@ description: Work on hitSlop macOS hosting, local document storage, template cac
 - Reusable code belongs in `apps/macos/packages`; keep the Xcode target thin.
 - `HitSlopRegistry` is only catalog search/list/detail and anonymous telemetry.
   It must not create, download, cache, copy, or update local documents.
-- `HitSlopHost.DocumentFactory` downloads the current immutable artifact from
+- `HitSlopRuntime.DocumentFactory` downloads the current immutable artifact from
   the R2 gateway, verifies SHA-256, caches by publisher/slug/release under
   `~/.hitslop/templates`, and copies it to the chosen destination.
 - JSON writes must be atomic. Run every SQLite transaction on one connection.
@@ -17,3 +17,5 @@ description: Work on hitSlop macOS hosting, local document storage, template cac
   operations; authoring commands belong to `@hitslop/cli`.
 - Generated Swift manifest models come from `bun run schema:generate`; do not
   edit the generated file directly.
+- Quick Look extensions only read host-generated PNGs. They never execute
+  `app.html`; Finder thumbnails read `QuickLook/Thumbnail.png`.

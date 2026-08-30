@@ -1,8 +1,8 @@
 import Foundation
 import SQLite3
 
-enum SlopSQLiteSnapshot {
-    static func copy(from sourceURL: URL, to destinationURL: URL) throws {
+public enum SlopSQLiteSnapshot {
+    public static func copy(from sourceURL: URL, to destinationURL: URL) throws {
         var source: OpaquePointer?
         let hasWAL = FileManager.default.fileExists(atPath: sourceURL.path + "-wal")
         let location = hasWAL ? sourceURL.path : sourceURL.absoluteString + "?immutable=1"

@@ -1,156 +1,123 @@
 # hitSlop architecture
 
-## Runtime boundary
+## The document boundary
 
-`hitslop/1` is the first package format and `web` is its first runtime. A built
-document contains `manifest.json`, one bundled `build/index.html`, optional
-`style.css`/assets, and only the JSON or SQLite files declared in `stores`.
-Svelte, React, Tailwind, Bits UI, Vite, Bun, and npm are authoring concerns and
-are never runtime requirements.
+A `.slop` is a package directory and a complete runtime web app. It has one
+source of metadata and identity: `manifest.json`.
 
-The native host injects `window.slop` for JSON reads/atomic writes, SQLite
-queries/executes/transactions, and change notifications. `@hitslop/runtime`
-normalizes that contract and `@hitslop/svelte` adds reactive Svelte 5 helpers.
+```text
+example.slop/
+├── manifest.json
+├── app.html
+├── style.css                  optional editable overrides
+├── assets/                    optional guest-readable assets
+├── stores/
+│   ├── state.json
+│   └── library.sqlite
+├── QuickLook/
+│   ├── Preview.png
+│   └── Thumbnail.png
+└── AGENTS.md                  optional editing guidance
+```
+
+`app.html` is generated. Source, package manifests, dependencies, and build
+caches never enter the runtime package. There is no format/runtime version,
+authored entry path, authored store path, or separate `document.json`.
+
+Manifest stores are a dictionary. The key is the bridge ID and determines the
+path: `state: { kind: "json" }` means `stores/state.json`; SQLite uses
+`stores/<id>.sqlite`. A template manifest has no `document`. The host adds a
+fresh document UUID, plus optional immutable release lineage, to the manifest
+when it creates a user document.
+
+The window block owns initial width, height, optional resizing, and shape.
+Rounded rectangles, circles, and capsules can resize. An image-masked window
+must be fixed-size and references an exact-size alpha PNG under `assets/`.
+
+## Guest and host responsibilities
+
+Guest HTML runs in an ephemeral WebKit data store behind `slop://`. The scheme
+serves only `app.html`, `style.css`, and `assets/`. It never exposes the
+manifest, stores, SQLite sidecars, or Quick Look files.
+
+The injected `window.slop` bridge is the only data boundary. It provides JSON
+reads, atomic writes, SQLite queries/mutations/transactions, and store-scoped
+change events. External JSON replacement or SQLite commits refresh reactive
+data without reloading the page. Changes to HTML, CSS, or assets reload the
+visual runtime.
+
+The host creates `QuickLook/Preview.png` and `Thumbnail.png` after the guest
+reaches its stable `ready()` boundary and after visible data changes. Finder's
+thumbnail extension and Quick Look preview extension only read those PNGs;
+neither extension executes guest code. The macOS host also refreshes the
+package's custom Finder icon for immediate feedback.
 
 ## Schema pipeline
 
-Zod 4 schemas in `packages/schema/src` are the source of truth:
+Zod 4 under `Packages/schema/src` is authoritative:
 
 ```text
-Zod schema ── z.infer ──> TypeScript types + runtime validation
-     └────── z.toJSONSchema ──> committed JSON Schema
-                                  └── quicktype ──> Swift Codable models
+Zod ── z.infer ──> TypeScript types and runtime validation
+  └── z.toJSONSchema ──> committed JSON Schema
+                           └── quicktype ──> Swift Codable models
 ```
 
-Named Zod `.meta({ id, title })` values become JSON Schema `$defs` and Swift
-type names (`SlopManifest`, `SlopStore`, `SlopWindowShape`). Shared values stay
-JSON-shaped. CI regenerates both artifacts and fails on drift. The host decodes
-the generated models; uniqueness, reserved paths, and traversal are enforced at
-`slop validate` / `slop publish` and again when Convex finalizes a release. The
-native host still refuses to open a store path outside the `.slop` bundle.
+Run `bun run schema:generate` after changing Zod. CI runs the drift check so
+the JSON Schema and Swift models cannot silently diverge.
 
-Manifest metadata includes author, title, description, one or two unique
-categories, tags, stores, and the preferred window size and required shape.
-Geometric shapes (`roundedRect`, `circle`, and `capsule`) may resize. A sculpted
-window uses `imageMask` and an exact-size RGBA PNG under `assets/`; image-masked
-windows are fixed-size. The PNG alpha is the canonical boundary for live
-clipping, 10%-alpha hit testing, screenshots, PDF export, and Quick Look.
+## Authoring and local installation
 
-Image-mask artwork remains reproducible authoring input rather than runtime
-source. For example, `examples/slops/alien-radio/artwork/render.sh` renders its
-checked-in SVG to `assets/alien-radio-chrome.png` and derives
-`assets/window-mask.png`. Both generated PNGs are copied into the runtime
-package, while `artwork/` and `source/` are excluded.
+`@hitslop/cli` owns `slop init`, `dev`, `validate`, `build`, `install`, `pack`,
+`screenshot`, and `publish`. Svelte is the first SDK, not part of the runtime
+contract. `slop dev` uses isolated `.hitslop/dev` store copies and a browser
+mock of the bridge; `--native` is available for WebKit-specific debugging.
 
-## CLI boundary
-
-`@hitslop/cli` is a Bun/TypeScript package exposing `slop init`, `dev`,
-`validate`, `build`, `install`, `pack`, `screenshot`, and `publish`. It owns
-authoring, builds, explicit local template installation, publisher Ed25519
-identity, signing, and uploads. It does not create an end-user document from
-the catalog.
-
-`hitslop-native` stays a small Swift companion for canonical WKWebView
-screenshots, PDF export, and native dev windows. The npm CLI discovers it from
-the installed app, `PATH`, or `HITSLOP_NATIVE_CLI`.
-
-## Catalog, registry, and artifacts
-
-Convex owns searchable catalog metadata, publisher public keys, immutable
-release rows, current release pointers, and anonymous download/install/favorite
-counts. It never receives user document data.
-
-The TanStack Start app is both the public landing page and the Cloudflare Worker
-gateway. The landing page queries Convex live through React Query
-(`convexQuery` + `useSuspenseQuery`). The Worker verifies signed publish
-envelopes, writes content-addressed artifacts/screenshots into private R2, then
-atomically asks Convex to assign the next integer release number. Authors never
-manage versions.
-
-Swift queries Convex only for search/list/detail and anonymous telemetry. Each
-catalog result includes the current immutable R2 artifact key and SHA-256. The
-host downloads that key directly through the R2 gateway; document creation has
-no Convex mutation.
-
-The main macOS app is intended for direct, notarized distribution and is not App
-Sandboxed so it can maintain the shared `~/.hitslop/templates` cache. Quick Look
-extensions remain sandboxed and read only the document macOS gives them.
-
-## Template cache and document creation
-
-There are two deliberately separate kinds of template storage. Explicit local
-installs are developer-owned catalog entries:
+`slop install` stages an explicitly local template as:
 
 ```text
-slop install
-  → build and validate a source-free runtime package
-  → capture a canonical native preview
-  → stage ~/.hitslop/templates/<slug>/{template.slop,cover.png,install.json}
-  → confirm replacement and transactionally swap the wrapper directory
-  → native catalog watcher validates the marker and manifest
+~/.hitslop/templates/<slug>/
+├── template.slop/
+│   └── QuickLook/{Preview,Thumbnail}.png
+└── install.json               artifact SHA-256 and install time
 ```
 
-They never contact Convex or emit telemetry. Choosing one in the catalog copies
-`template.slop` to the user-selected destination and gives the copy a fresh
-document identity. Legacy/unmarked directories under the cache are ignored.
+The install marker does not contain a version or repeat the fixed package
+name. The catalog validates it, reads the same manifest used by hosted
+templates, and duplicates `template.slop` to the chosen destination.
 
-Hosted releases keep their immutable publisher/version cache:
+Hosted templates use a separate immutable cache keyed by publisher, slug, and
+server-assigned release. The host downloads from the R2 gateway only when that
+exact artifact is absent, verifies SHA-256, then duplicates locally. Convex is
+not involved in creating or storing the user's document.
 
-```text
-catalog choice
-  → current artifact key + SHA from search result
-  → download from R2 only when that release is absent
-  → verify and extract to ~/.hitslop/templates/<key>/<slug>/releases/<n>.slop
-  → copy the cached package to the user-selected destination
-  → write local document provenance
-```
+All copies go through `SlopDuplicator`. It makes the document writable,
+snapshots SQLite with the online backup API so committed WAL data is included,
+removes sidecars, and writes a fresh document identity. Existing documents are
+never silently replaced when a template gains a new release.
 
-A later template release affects only newly created documents. Existing
-documents are never silently updated.
+## Platform layout
 
-## Future explicit document updates
+- `apps/catalog`: TanStack Start landing/catalog and private R2 gateway.
+- `apps/registry`: Convex catalog metadata, immutable releases, and anonymous
+  counters.
+- `Packages/cli`, `Packages/runtime`, `Packages/schema`, `Packages/svelte`:
+  publishable TypeScript authoring/runtime packages.
+- `apps/macos/packages/HitSlopCore`: document validation, duplication, archive
+  integrity, and generated shared models.
+- `HitSlopRuntime`: cross-platform WebKit/storage/document creation and iCloud
+  working-copy support.
+- `HitSlopHost`: AppKit windows, masks, toolbar, rendering, previews, and the
+  macOS catalog.
+- `HitSlopRegistry`: read-oriented Convex Swift catalog access and anonymous
+  telemetry.
 
-An update must build a new sibling document from the target cached release,
-copy old data only where store ID and kind still match, validate the result, and
-atomically exchange it with the original while retaining a recoverable backup.
-Changed store kinds require an explicit future migration mechanism. This flow
-is intentionally deferred; the v1 app does not pretend an unsafe update is
-available.
+Convex owns searchable metadata and counters; private R2 owns immutable bytes.
+Publishing uses a local Ed25519 keypair, and Convex assigns release integers.
+Users never manage versions or need an account to publish under their key.
 
-## Security and configuration
+## Future document updates
 
-Publishing has no account UI. The CLI creates an Ed25519 keypair, stores the
-private key in macOS Keychain (or an owner-only `~/.hitslop/identity.json`
-fallback), and signs every publish envelope. Convex binds a publisher/slug to
-the original public key.
-
-Public deployment URLs may be committed. R2 credentials, Cloudflare account
-configuration, and `HITSLOP_INTERNAL_SECRET` are never committed; local values
-use ignored environment files and the corresponding secret is also set in the
-Convex deployment.
-
-Convex Auth anonymous sessions are intentionally not used in v1. They add
-session/provider complexity without establishing a human unless paired with a
-CAPTCHA. Anonymous catalog telemetry instead uses a local installation ID,
-idempotent rows, and can gain rate limits without changing the document model.
-Auth becomes worthwhile when favorites or document state must sync across
-devices.
-
-## Native host boundary
-
-The main app owns catalog lifecycle and independent AppKit document-window
-controllers. Documents are borderless and mask hit testing to their required
-manifest shape. Transparent image-mask pixels are click-through, including
-interior holes. The catalog window is hidden, not reconstructed, while slops
-are open; Command-N reveals it and closing the final document returns to it.
-
-Guest HTML runs in an ephemeral WebKit store behind `slop://`. Only the entry
-HTML, optional stylesheet, and assets are readable from guest JavaScript.
-Declared JSON/SQLite data remains reachable exclusively through `window.slop`.
-Store changes are ordered and scoped by kind/id: external JSON replacement and
-SQLite commits cause SDK refetches without reloading the page, while executable
-HTML/style/asset changes use the visual reload path.
-
-Quick Look extensions are asset consumers only. The main host generates the
-derived PNG assets after a stable `ready()` boundary and tells Finder they
-changed; no Quick Look process executes a slop.
+An explicit update must create a new sibling from the target cached release,
+copy only stores whose ID and kind still match, validate it, and atomically
+exchange it while retaining a backup. Store-kind changes require an explicit
+migration. Until that exists, hitSlop exposes no unsafe update operation.

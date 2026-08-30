@@ -1,5 +1,6 @@
 import AppKit
 import HitSlopCore
+import HitSlopRuntime
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -66,12 +67,15 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     public let session: SlopRuntimeSession
     public var onClose: (() -> Void)?
     public var onOpenDocument: ((URL) -> Void)?
+    private let opened: SlopOpenedDocument
     private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?, hideWork: DispatchWorkItem?
     private var failedOverlay: NSHostingView<FailureOverlay>?, previewWork: DispatchWorkItem?
 
     public init(packageURL: URL) throws {
-        self.packageURL = packageURL.standardizedFileURL
-        session = try SlopRuntimeSession(packageURL: self.packageURL)
+        let opened = try SlopOpenedDocument(presentedURL: packageURL)
+        self.opened = opened
+        self.packageURL = opened.presentedURL
+        session = opened.session
         let windowMask = try SlopWindowMask(package: session.package)
         let spec = session.package.manifest.window, size = NSSize(width: spec.width, height: spec.height)
         let window = FramelessDocumentWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .resizable], backing: .buffered, defer: false)
@@ -128,16 +132,20 @@ private struct ToolbarDragHandle: NSViewRepresentable {
 
     private func duplicate() {
         guard let window else { return }; let panel = NSSavePanel(); panel.allowedContentTypes = [.slop]; panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + " copy.slop"
+        panel.directoryURL = SlopCloud.defaultCreationDirectory()
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let self, let target = panel.url else { return }
-            do { self.onOpenDocument?(try SlopDuplicator.duplicate(from: self.packageURL, to: target)) } catch { self.present("Could not duplicate", error) }
+            do {
+                try self.opened.flush()
+                self.onOpenDocument?(try SlopDuplicator.duplicate(from: self.session.package.rootURL, to: target))
+            } catch { self.present("Could not duplicate", error) }
         }
     }
     private enum ExportKind { case png, pdf }
     private func export(_ kind: ExportKind) {
         let panel = NSSavePanel(); panel.allowedContentTypes = [kind == .png ? .png : .pdf]; panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + (kind == .png ? ".png" : ".pdf")
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        Task { do { try await (kind == .png ? SlopRenderer.pngData(packageURL: packageURL) : SlopRenderer.pdfData(packageURL: packageURL)).write(to: url, options: .atomic) } catch { present("Export failed", error) } }
+        Task { do { try await (kind == .png ? SlopRenderer.pngData(packageURL: session.package.rootURL) : SlopRenderer.pdfData(packageURL: session.package.rootURL)).write(to: url, options: .atomic) } catch { present("Export failed", error) } }
     }
     private func share() { guard let view = toolbar?.contentView else { return }; NSSharingServicePicker(items: [packageURL]).show(relativeTo: view.bounds, of: view, preferredEdge: .minY) }
     private func reveal() { NSWorkspace.shared.activateFileViewerSelecting([packageURL]) }
@@ -160,15 +168,13 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         previewWork?.cancel(); let work = DispatchWorkItem { [weak self] in
             guard let self else { return }; Task { @MainActor in
                 guard let image = try? await self.session.webView.takeSnapshot(configuration: nil), let png = try? SlopPreviewImage.png(from: image, package: self.session.package) else { return }
-                let directory = self.packageURL.appendingPathComponent("QuickLook", isDirectory: true); try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-                try? png.write(to: directory.appendingPathComponent("Preview.png"), options: .atomic); try? png.write(to: directory.appendingPathComponent("Thumbnail.png"), options: .atomic)
-                NSWorkspace.shared.noteFileSystemChanged(self.packageURL.path)
+                try? SlopPreviewWriter.write(png, to: self.packageURL)
             }
         }; previewWork = work; DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
     public func windowDidMove(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
     public func windowDidResize(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
-    public func windowWillClose(_ notification: Notification) { previewWork?.cancel(); session.close(); toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil; onClose?() }
+    public func windowWillClose(_ notification: Notification) { previewWork?.cancel(); opened.close(); toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil; onClose?() }
     private func present(_ title: String, _ error: Error) { let alert = NSAlert(error: error); alert.messageText = title; alert.runModal() }
 }
 

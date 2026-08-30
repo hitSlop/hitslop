@@ -1,5 +1,5 @@
 import { dirname, join } from "node:path";
-import { mkdir, stat } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import { canonicalPublishEnvelope, type PublishEnvelope } from "@hitslop/schema";
 import { buildSlop, packSlop, sha256 } from "./project.ts";
 import { runNative } from "./dev.ts";
@@ -12,7 +12,6 @@ const blobPart = (bytes: Uint8Array): BlobPart => Uint8Array.from(bytes);
 
 export async function publishSlop(root: string, flags: { registry?: string; screenshot?: string[]; publisher?: string }): Promise<string> {
   const built = await buildSlop(root);
-  const packed = await packSlop(built.directory);
   const screenshotPaths = flags.screenshot?.length ? flags.screenshot : [join(root, "screenshots/cover.png")];
   if (!await stat(screenshotPaths[0]!).then(() => true).catch(() => false)) {
     await mkdir(dirname(screenshotPaths[0]!), { recursive: true });
@@ -22,6 +21,12 @@ export async function publishSlop(root: string, flags: { registry?: string; scre
     const bytes = new Uint8Array(await Bun.file(path).arrayBuffer());
     return { path, bytes, sha256: sha256(bytes), contentType: contentType(path) };
   }));
+  if (screenshots[0]?.contentType !== "image/png") throw new Error("The primary screenshot must be a PNG so it can be used by Finder and Quick Look.");
+  const quickLook = join(built.directory, "QuickLook");
+  await mkdir(quickLook, { recursive: true });
+  await writeFile(join(quickLook, "Preview.png"), screenshots[0].bytes);
+  await writeFile(join(quickLook, "Thumbnail.png"), screenshots[0].bytes);
+  const packed = await packSlop(built.directory);
   const identity = await getIdentity(flags.publisher ?? built.manifest.author.name);
   const manifestBytes = await Bun.file(join(built.directory, "manifest.json")).bytes();
   const envelope: PublishEnvelope = {

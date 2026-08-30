@@ -7,12 +7,12 @@ let package = Package(
         .library(name: "HitSlopHost", targets: ["HitSlopHost"]),
         .library(name: "HitSlopCatalog", targets: ["HitSlopCatalog"]),
     ],
-    dependencies: [.package(path: "../HitSlopCore"), .package(path: "../HitSlopRegistry")],
+    dependencies: [.package(path: "../HitSlopCore"), .package(path: "../HitSlopRuntime"), .package(path: "../HitSlopRegistry")],
     targets: [
-        .target(name: "HitSlopHost", dependencies: ["HitSlopCore"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit"), .linkedLibrary("sqlite3")]),
-        .target(name: "HitSlopCatalog", dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRegistry"], linkerSettings: [.linkedFramework("AppKit")]),
+        .target(name: "HitSlopHost", dependencies: ["HitSlopCore", "HitSlopRuntime"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit")]),
+        .target(name: "HitSlopCatalog", dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRuntime", "HitSlopRegistry"], linkerSettings: [.linkedFramework("AppKit")]),
         .testTarget(name: "HitSlopHostTests", dependencies: ["HitSlopHost", "HitSlopCore"]),
-        .testTarget(name: "HitSlopCatalogTests", dependencies: ["HitSlopCatalog", "HitSlopCore"]),
+        .testTarget(name: "HitSlopCatalogTests", dependencies: ["HitSlopCatalog", "HitSlopCore", "HitSlopRuntime"]),
     ],
     swiftLanguageModes: [.v6]
 )

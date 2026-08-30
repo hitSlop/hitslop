@@ -8,7 +8,7 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "12"
+    CURRENT_PROJECT_VERSION: "15"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     DEVELOPMENT_TEAM: 78UAXU8QG8
     CODE_SIGN_STYLE: Automatic
@@ -16,8 +16,13 @@ settings:
 packages:
   HitSlopCore:
     path: ../packages/HitSlopCore
+  HitSlopRuntime:
+    path: ../packages/HitSlopRuntime
   HitSlopHost:
     path: ../packages/HitSlopHost
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.9.6
 targets:
   hitSlop:
     type: application
@@ -29,10 +34,23 @@ targets:
         product: HitSlopHost
       - package: HitSlopHost
         product: HitSlopCatalog
+      - package: Sparkle
+        product: Sparkle
       - target: SlopPreview
         embed: true
       - target: SlopThumbnail
         embed: true
+    postCompileScripts:
+      - name: Embed hitslop-native
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+          case "${CONFIGURATION:-}" in
+            Release) ;;
+            *) exit 0 ;;
+          esac
+          export HITSLOP_NATIVE_ARCHS="${ARCHS:-}"
+          "${SRCROOT}/../../../scripts/embed-hitslop-native.sh" "${TARGET_BUILD_DIR}/${WRAPPER_NAME}"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app
@@ -55,9 +73,11 @@ targets:
     sources:
       - path: Extensions/Preview
     dependencies:
-      - sdk: QuickLookUI.framework
+      - sdk: Quartz.framework
     settings:
       base:
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_USER_SELECTED_FILES: readonly
         ENABLE_DEBUG_DYLIB: NO
         ENABLE_HARDENED_RUNTIME: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app.preview
@@ -74,6 +94,8 @@ targets:
       - sdk: QuickLookThumbnailing.framework
     settings:
       base:
+        ENABLE_APP_SANDBOX: YES
+        ENABLE_USER_SELECTED_FILES: readonly
         ENABLE_DEBUG_DYLIB: NO
         ENABLE_HARDENED_RUNTIME: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app.thumbnail

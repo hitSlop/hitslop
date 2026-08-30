@@ -27,10 +27,9 @@ import Testing
 private func maskedFixture() throws -> URL {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-host-mask-\(UUID().uuidString)", isDirectory: true)
     let root = directory.appendingPathComponent("asymmetric.slop", isDirectory: true)
-    try FileManager.default.createDirectory(at: root.appendingPathComponent("build"), withIntermediateDirectories: true)
     try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
-    try Data("<html></html>".utf8).write(to: root.appendingPathComponent("build/index.html"))
-    let manifest = #"{"format":"hitslop/1","runtime":"web","slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","author":{"name":"Test"},"categories":["Widgets"],"stores":[],"window":{"width":240,"height":180,"resizable":false,"shape":{"kind":"imageMask","path":"assets/window-mask.png"}}}"#
+    try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
+    let manifest = #"{"slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","author":{"name":"Test"},"categories":["Widgets"],"stores":{},"window":{"width":240,"height":180,"resizable":false,"shape":{"kind":"imageMask","path":"assets/window-mask.png"}}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
 
     let width = 240, height = 180

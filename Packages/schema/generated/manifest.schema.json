@@ -8,12 +8,6 @@
         "$schema": {
           "$ref": "#/definitions/__schema0"
         },
-        "format": {
-          "$ref": "#/definitions/SlopFormat"
-        },
-        "runtime": {
-          "$ref": "#/definitions/SlopRuntime"
-        },
         "slug": {
           "$ref": "#/definitions/__schema1"
         },
@@ -33,15 +27,16 @@
           "$ref": "#/definitions/SlopTags"
         },
         "stores": {
-          "$ref": "#/definitions/__schema9"
+          "$ref": "#/definitions/SlopStores"
         },
         "window": {
           "$ref": "#/definitions/SlopWindow"
+        },
+        "document": {
+          "$ref": "#/definitions/__schema20"
         }
       },
       "required": [
-        "format",
-        "runtime",
         "slug",
         "title",
         "description",
@@ -55,16 +50,6 @@
     },
     "__schema0": {
       "type": "string"
-    },
-    "SlopFormat": {
-      "type": "string",
-      "const": "hitslop/1",
-      "title": "SlopFormat"
-    },
-    "SlopRuntime": {
-      "type": "string",
-      "const": "web",
-      "title": "SlopRuntime"
     },
     "__schema1": {
       "type": "string",
@@ -141,40 +126,35 @@
       "minLength": 1,
       "maxLength": 32
     },
-    "__schema9": {
-      "maxItems": 16,
-      "type": "array",
-      "items": {
+    "SlopStores": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/__schema9"
+      },
+      "additionalProperties": {
         "$ref": "#/definitions/SlopStore"
-      }
+      },
+      "title": "SlopStores"
+    },
+    "__schema9": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$"
     },
     "SlopStore": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/__schema10"
-        },
         "kind": {
           "$ref": "#/definitions/SlopStoreKind"
         },
-        "path": {
-          "$ref": "#/definitions/__schema11"
-        },
         "maxBytes": {
-          "$ref": "#/definitions/__schema12"
+          "$ref": "#/definitions/__schema10"
         }
       },
       "required": [
-        "id",
-        "kind",
-        "path"
+        "kind"
       ],
       "additionalProperties": false,
       "title": "SlopStore"
-    },
-    "__schema10": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9-]{0,31}$"
     },
     "SlopStoreKind": {
       "type": "string",
@@ -184,13 +164,7 @@
       ],
       "title": "SlopStoreKind"
     },
-    "__schema11": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 240,
-      "pattern": "^(?!\\/)(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[A-Za-z0-9._-]+(?:\\/[A-Za-z0-9._-]+)*$"
-    },
-    "__schema12": {
+    "__schema10": {
       "type": "integer",
       "exclusiveMinimum": 0,
       "maximum": 1073741824
@@ -199,13 +173,13 @@
       "type": "object",
       "properties": {
         "width": {
-          "$ref": "#/definitions/__schema13"
+          "$ref": "#/definitions/__schema11"
         },
         "height": {
-          "$ref": "#/definitions/__schema14"
+          "$ref": "#/definitions/__schema12"
         },
         "resizable": {
-          "$ref": "#/definitions/__schema15"
+          "$ref": "#/definitions/__schema13"
         },
         "shape": {
           "$ref": "#/definitions/SlopWindowShape"
@@ -219,17 +193,17 @@
       "additionalProperties": false,
       "title": "SlopWindow"
     },
-    "__schema13": {
+    "__schema11": {
       "type": "integer",
       "minimum": 240,
       "maximum": 4096
     },
-    "__schema14": {
+    "__schema12": {
       "type": "integer",
       "minimum": 180,
       "maximum": 4096
     },
-    "__schema15": {
+    "__schema13": {
       "type": "boolean"
     },
     "SlopWindowShape": {
@@ -253,7 +227,7 @@
       "type": "object",
       "properties": {
         "kind": {
-          "$ref": "#/definitions/__schema16"
+          "$ref": "#/definitions/__schema14"
         }
       },
       "required": [
@@ -262,7 +236,7 @@
       "additionalProperties": false,
       "title": "SlopWindowShapeCapsule"
     },
-    "__schema16": {
+    "__schema14": {
       "type": "string",
       "const": "capsule"
     },
@@ -270,7 +244,7 @@
       "type": "object",
       "properties": {
         "kind": {
-          "$ref": "#/definitions/__schema17"
+          "$ref": "#/definitions/__schema15"
         }
       },
       "required": [
@@ -279,7 +253,7 @@
       "additionalProperties": false,
       "title": "SlopWindowShapeCircle"
     },
-    "__schema17": {
+    "__schema15": {
       "type": "string",
       "const": "circle"
     },
@@ -287,10 +261,10 @@
       "type": "object",
       "properties": {
         "kind": {
-          "$ref": "#/definitions/__schema18"
+          "$ref": "#/definitions/__schema16"
         },
         "path": {
-          "$ref": "#/definitions/__schema19"
+          "$ref": "#/definitions/__schema17"
         }
       },
       "required": [
@@ -300,29 +274,24 @@
       "additionalProperties": false,
       "title": "SlopWindowShapeImageMask"
     },
-    "__schema18": {
+    "__schema16": {
       "type": "string",
       "const": "imageMask"
     },
-    "__schema19": {
+    "__schema17": {
       "type": "string",
       "minLength": 1,
       "maxLength": 240,
-      "pattern": "^(?!\\/)(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[A-Za-z0-9._-]+(?:\\/[A-Za-z0-9._-]+)*$",
-      "allOf": [
-        {
-          "$ref": "#/definitions/__schema11"
-        }
-      ]
+      "pattern": "^(?!\\/)(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[A-Za-z0-9._-]+(?:\\/[A-Za-z0-9._-]+)*$"
     },
     "SlopWindowShapeRoundedRect": {
       "type": "object",
       "properties": {
         "kind": {
-          "$ref": "#/definitions/__schema20"
+          "$ref": "#/definitions/__schema18"
         },
         "radius": {
-          "$ref": "#/definitions/__schema21"
+          "$ref": "#/definitions/__schema19"
         }
       },
       "required": [
@@ -332,17 +301,87 @@
       "additionalProperties": false,
       "title": "SlopWindowShapeRoundedRect"
     },
-    "__schema20": {
+    "__schema18": {
       "type": "string",
       "const": "roundedRect"
     },
-    "__schema21": {
+    "__schema19": {
       "type": "number",
       "minimum": 0,
       "maximum": 256
+    },
+    "__schema20": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SlopDocument"
+        }
+      ]
+    },
+    "SlopDocument": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/__schema21"
+        },
+        "template": {
+          "$ref": "#/definitions/__schema22"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false,
+      "title": "SlopDocument"
+    },
+    "__schema21": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "__schema22": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/SlopTemplateLineage"
+        }
+      ]
+    },
+    "SlopTemplateLineage": {
+      "type": "object",
+      "properties": {
+        "publisherKeyId": {
+          "$ref": "#/definitions/__schema23"
+        },
+        "release": {
+          "$ref": "#/definitions/__schema24"
+        },
+        "artifactSha256": {
+          "$ref": "#/definitions/__schema25"
+        }
+      },
+      "required": [
+        "publisherKeyId",
+        "release",
+        "artifactSha256"
+      ],
+      "additionalProperties": false,
+      "title": "SlopTemplateLineage"
+    },
+    "__schema23": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 64
+    },
+    "__schema24": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema25": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     }
   },
   "$id": "https://hitslop.app/schemas/manifest.schema.json",
   "title": "SlopManifest",
-  "description": "The framework-neutral manifest for hitslop/1 web documents."
+  "description": "The framework-neutral manifest for hitSlop web documents."
 }

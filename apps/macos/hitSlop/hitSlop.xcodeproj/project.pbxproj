@@ -13,10 +13,11 @@
 		45B6339C70726C06D5A043D6 /* QuickLookThumbnailing.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E70D98FCCBC32C297F032C0C /* QuickLookThumbnailing.framework */; };
 		61ECEFDCF237A1CAEA3D4B4D /* hitSlopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0CA44E4E2E034921904245 /* hitSlopApp.swift */; };
 		66728B7CCEC29253103ADAA3 /* ThumbnailProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC2E1F30145A01C89AEDF3F /* ThumbnailProvider.swift */; };
+		9090FCA065C865CAA27E84ED /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 801DA3DDC4601A9620A67CA2 /* Sparkle */; };
 		B0C2E605F273A41D157D8D50 /* PreviewProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23C4FDD1C78335E90B120379 /* PreviewProvider.swift */; };
-		C31B84940F10F686ED551A5C /* QuickLookUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E45C88AAAC1ED873AE823A2 /* QuickLookUI.framework */; };
 		CBB5F0BC5F9099472EC8686B /* SlopThumbnail.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 615323870AE3C5381D079520 /* SlopThumbnail.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E297B6E53F2BD00E58FA74AD /* HitSlopHost in Frameworks */ = {isa = PBXBuildFile; productRef = 534C85A4F7ABB2028F8CFD43 /* HitSlopHost */; };
+		E540CE04CF086E164D1E2C32 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6FE7896F626C1000AB4139A /* Quartz.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,14 +56,15 @@
 		18B6C1B2B14650BC9B3D2CB7 /* hitSlop.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = hitSlop.entitlements; sourceTree = "<group>"; };
 		23C4FDD1C78335E90B120379 /* PreviewProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewProvider.swift; sourceTree = "<group>"; };
 		331443C041E6880082093736 /* App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "App-Info.plist"; sourceTree = "<group>"; };
-		3E45C88AAAC1ED873AE823A2 /* QuickLookUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLookUI.framework; path = System/Library/Frameworks/QuickLookUI.framework; sourceTree = SDKROOT; };
 		45514551382EBB8BE80DFFDA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		615323870AE3C5381D079520 /* SlopThumbnail.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SlopThumbnail.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B0CA44E4E2E034921904245 /* hitSlopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = hitSlopApp.swift; sourceTree = "<group>"; };
 		70FD6C6E4EEDB119405E6C46 /* SlopPreview.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SlopPreview.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8D47BB7DF24489694C60AF6E /* hitSlop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hitSlop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A126E8EB9ED7F5FBF1EB9F2 /* HitSlopRuntime */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopRuntime; path = ../packages/HitSlopRuntime; sourceTree = SOURCE_ROOT; };
 		9CC2E1F30145A01C89AEDF3F /* ThumbnailProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailProvider.swift; sourceTree = "<group>"; };
 		B72AB39C2953A03D3213C4FE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C6FE7896F626C1000AB4139A /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
 		D40AB3B4FFE2593992364000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		DB3A8765442F88EF0FD2B9CA /* HitSlopCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopCore; path = ../packages/HitSlopCore; sourceTree = SOURCE_ROOT; };
 		E70D98FCCBC32C297F032C0C /* QuickLookThumbnailing.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLookThumbnailing.framework; path = System/Library/Frameworks/QuickLookThumbnailing.framework; sourceTree = SDKROOT; };
@@ -76,6 +78,7 @@
 			files = (
 				E297B6E53F2BD00E58FA74AD /* HitSlopHost in Frameworks */,
 				358FE74535C9AF5A8A18594F /* HitSlopCatalog in Frameworks */,
+				9090FCA065C865CAA27E84ED /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,7 +86,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C31B84940F10F686ED551A5C /* QuickLookUI.framework in Frameworks */,
+				E540CE04CF086E164D1E2C32 /* Quartz.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -142,6 +145,7 @@
 			children = (
 				DB3A8765442F88EF0FD2B9CA /* HitSlopCore */,
 				FADF5296613A6F018C7DA6D4 /* HitSlopHost */,
+				9A126E8EB9ED7F5FBF1EB9F2 /* HitSlopRuntime */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -149,8 +153,8 @@
 		7A226D7E15549B7C29C4E9A6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				C6FE7896F626C1000AB4139A /* Quartz.framework */,
 				E70D98FCCBC32C297F032C0C /* QuickLookThumbnailing.framework */,
-				3E45C88AAAC1ED873AE823A2 /* QuickLookUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -201,6 +205,7 @@
 			buildConfigurationList = 8FA240F08F07FDE8EF08576D /* Build configuration list for PBXNativeTarget "hitSlop" */;
 			buildPhases = (
 				9EA05FF41715F3E67CF9F844 /* Sources */,
+				275A5FB3E3798FE2692324C8 /* Embed hitslop-native */,
 				788415ECFE9DC2C547277E1A /* Resources */,
 				2B4C339DE1B21D7191945EEA /* Frameworks */,
 				F9762D82A3822B37E1F97792 /* Embed Foundation Extensions */,
@@ -215,6 +220,7 @@
 			packageProductDependencies = (
 				534C85A4F7ABB2028F8CFD43 /* HitSlopHost */,
 				2FD35DB710FCD4812E0ECC6F /* HitSlopCatalog */,
+				801DA3DDC4601A9620A67CA2 /* Sparkle */,
 			);
 			productName = hitSlop;
 			productReference = 8D47BB7DF24489694C60AF6E /* hitSlop.app */;
@@ -272,8 +278,10 @@
 			mainGroup = 7C1AC2CC0C0F6FC94C88DC6B;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				CF81B28B9F27185DF17FFF08 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				0309D4433438012202CF75A3 /* XCLocalSwiftPackageReference "../packages/HitSlopCore" */,
 				D52975DAE24A8785AA0A70A4 /* XCLocalSwiftPackageReference "../packages/HitSlopHost" */,
+				4628784BE51DC030F48B20C9 /* XCLocalSwiftPackageReference "../packages/HitSlopRuntime" */,
 			);
 			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
@@ -296,6 +304,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		275A5FB3E3798FE2692324C8 /* Embed hitslop-native */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed hitslop-native";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\ncase \"${CONFIGURATION:-}\" in\n  Release) ;;\n  *) exit 0 ;;\nesac\nexport HITSLOP_NATIVE_ARCHS=\"${ARCHS:-}\"\n\"${SRCROOT}/../../../scripts/embed-hitslop-native.sh\" \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		93D8CF8C1C242072310F0112 /* Sources */ = {
@@ -373,7 +403,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 15;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 78UAXU8QG8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -404,8 +434,10 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Extensions/SlopExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				INFOPLIST_FILE = Extensions/Thumbnail/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -424,8 +456,10 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Extensions/SlopExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				INFOPLIST_FILE = Extensions/Thumbnail/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -465,8 +499,10 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Extensions/SlopExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				INFOPLIST_FILE = Extensions/Preview/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -515,7 +551,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 15;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 78UAXU8QG8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -574,8 +610,10 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Extensions/SlopExtension.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
 				INFOPLIST_FILE = Extensions/Preview/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -635,11 +673,26 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../packages/HitSlopCore;
 		};
+		4628784BE51DC030F48B20C9 /* XCLocalSwiftPackageReference "../packages/HitSlopRuntime" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../packages/HitSlopRuntime;
+		};
 		D52975DAE24A8785AA0A70A4 /* XCLocalSwiftPackageReference "../packages/HitSlopHost" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../packages/HitSlopHost;
 		};
 /* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CF81B28B9F27185DF17FFF08 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		2FD35DB710FCD4812E0ECC6F /* HitSlopCatalog */ = {
@@ -649,6 +702,11 @@
 		534C85A4F7ABB2028F8CFD43 /* HitSlopHost */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HitSlopHost;
+		};
+		801DA3DDC4601A9620A67CA2 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CF81B28B9F27185DF17FFF08 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -27,12 +27,24 @@ public struct SlopPackage: Sendable {
         manifestData = try Data(contentsOf: manifestURL)
         guard String(data: manifestData, encoding: .utf8) != nil else { throw SlopPackageError.invalid("manifest.json must be UTF-8") }
         manifest = try JSONDecoder().decode(SlopManifest.self, from: manifestData)
-        guard manifest.format == .hitslop1, manifest.runtime == .web else { throw SlopPackageError.invalid("unsupported format or runtime") }
         guard manifest.slug.range(of: #"^[a-z0-9]+(?:-[a-z0-9]+)*$"#, options: .regularExpression) != nil, (2...64).contains(manifest.slug.count) else { throw SlopPackageError.invalid("invalid slug") }
         guard (1...80).contains(manifest.title.count), (1...240).contains(manifest.description.count), (1...80).contains(manifest.author.name.count) else { throw SlopPackageError.invalid("invalid catalog metadata") }
-        guard (1...2).contains(manifest.categories.count), Set(manifest.categories).count == manifest.categories.count else { throw SlopPackageError.invalid("categories must contain one or two unique values") }
-        if let tags = manifest.tags { guard tags.count <= 8, Set(tags).count == tags.count else { throw SlopPackageError.invalid("tags must be unique") } }
-        guard manifest.window.width >= 240, manifest.window.height >= 180 else { throw SlopPackageError.invalid("window is too small") }
+        if let authorURL = manifest.author.url { guard let url = URL(string: authorURL), url.scheme != nil else { throw SlopPackageError.invalid("invalid author URL") } }
+        guard (1...2).contains(manifest.categories.count), Set(manifest.categories).count == manifest.categories.count,
+              manifest.categories.allSatisfy({ (1...40).contains($0.count) }) else { throw SlopPackageError.invalid("categories must contain one or two unique values") }
+        if let tags = manifest.tags {
+            guard tags.count <= 8, Set(tags).count == tags.count, tags.allSatisfy({ (1...32).contains($0.count) }) else { throw SlopPackageError.invalid("tags must be unique") }
+        }
+        if let document = manifest.document {
+            guard UUID(uuidString: document.id) != nil else { throw SlopPackageError.invalid("document id must be a UUID") }
+            if let template = document.template {
+                guard (16...64).contains(template.publisherKeyID.count), template.release > 0,
+                      template.artifactSha256.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) != nil else {
+                    throw SlopPackageError.invalid("invalid template lineage")
+                }
+            }
+        }
+        guard (240...4096).contains(manifest.window.width), (180...4096).contains(manifest.window.height) else { throw SlopPackageError.invalid("window dimensions are out of bounds") }
         switch manifest.window.shape.kind {
         case .circle:
             guard manifest.window.width == manifest.window.height else { throw SlopPackageError.invalid("circle windows must have equal width and height") }
@@ -51,9 +63,20 @@ public struct SlopPackage: Sendable {
             guard image.width == manifest.window.width, image.height == manifest.window.height else { throw SlopPackageError.invalid("window image mask must be exactly \(manifest.window.width)x\(manifest.window.height) pixels") }
             guard ![.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo) else { throw SlopPackageError.invalid("window image mask must contain alpha") }
         }
-        guard FileManager.default.fileExists(atPath: entryURL.path) else { throw SlopPackageError.missing("build/index.html") }
-        guard String(data: try Data(contentsOf: entryURL), encoding: .utf8) != nil else { throw SlopPackageError.invalid("build/index.html must be UTF-8") }
-        let forbidden = Set(["package.json", "bun.lock", "bun.lockb", "node_modules", "source", "src", ".build", ".hitslop"])
+        guard FileManager.default.fileExists(atPath: entryURL.path) else { throw SlopPackageError.missing("app.html") }
+        guard String(data: try Data(contentsOf: entryURL), encoding: .utf8) != nil else { throw SlopPackageError.invalid("app.html must be UTF-8") }
+        let topLevel = try fileManager.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
+        if let legacy = topLevel.first(where: { $0.lastPathComponent == "document.json" || $0.lastPathComponent == "build" }) {
+            throw SlopPackageError.invalid("legacy runtime entry \(legacy.lastPathComponent) is not supported")
+        }
+        if let rootStore = topLevel.first(where: { $0.lastPathComponent != "manifest.json" && ["json", "sqlite"].contains($0.pathExtension.lowercased()) }) {
+            throw SlopPackageError.invalid("stores must live under stores/: \(rootStore.lastPathComponent)")
+        }
+        let allowedTopLevel = Set(["manifest.json", "app.html", "style.css", "assets", "stores", "QuickLook", "AGENTS.md", "Icon\r"])
+        if let unknown = topLevel.first(where: { !allowedTopLevel.contains($0.lastPathComponent) }) {
+            throw SlopPackageError.invalid("unexpected runtime entry \(unknown.lastPathComponent)")
+        }
+        let forbidden = Set(["package.json", "bun.lock", "bun.lockb", "node_modules", "source", "src", "build", "document.json", ".build", ".hitslop"])
         if let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: [.isSymbolicLinkKey]) {
             for case let url as URL in enumerator {
                 guard try url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else { throw SlopPackageError.invalid("runtime documents cannot contain symlinks") }
@@ -61,39 +84,46 @@ public struct SlopPackage: Sendable {
             }
         }
         guard manifest.stores.count <= 16 else { throw SlopPackageError.invalid("too many stores") }
-        var ids = Set<String>(), paths = Set<String>()
-        for store in manifest.stores {
-            guard Self.isSafeRelativePath(store.path) else { throw SlopPackageError.invalid("unsafe store path \(store.path)") }
-            guard store.id.range(of: #"^[a-z][a-z0-9-]{0,31}$"#, options: .regularExpression) != nil else { throw SlopPackageError.invalid("invalid store id \(store.id)") }
-            guard ids.insert(store.id).inserted else { throw SlopPackageError.invalid("duplicate store id \(store.id)") }
-            guard paths.insert(store.path).inserted else { throw SlopPackageError.invalid("duplicate store path \(store.path)") }
-            let storeURL = try Self.containedURL(root: root, relativePath: store.path)
-            guard fileManager.fileExists(atPath: storeURL.path) else { throw SlopPackageError.missing(store.path) }
+        for (id, store) in manifest.stores {
+            guard id.range(of: #"^[a-z][a-z0-9-]{0,31}$"#, options: .regularExpression) != nil else { throw SlopPackageError.invalid("invalid store id \(id)") }
+            let path = Self.storePath(id: id, kind: store.kind)
+            let storeURL = try Self.containedURL(root: root, relativePath: path)
+            guard fileManager.fileExists(atPath: storeURL.path) else { throw SlopPackageError.missing(path) }
             let values = try storeURL.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-            guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("store must be a regular file: \(store.path)") }
+            guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("store must be a regular file: \(path)") }
             if let maxBytes = store.maxBytes { guard maxBytes > 0, maxBytes <= 1_073_741_824 else { throw SlopPackageError.invalid("invalid maxBytes") } }
             if store.kind == .json {
                 let data = try Data(contentsOf: storeURL)
-                if let maxBytes = store.maxBytes, data.count > maxBytes { throw SlopPackageError.invalid("store exceeds maxBytes: \(store.path)") }
+                if let maxBytes = store.maxBytes, data.count > maxBytes { throw SlopPackageError.invalid("store exceeds maxBytes: \(path)") }
                 _ = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
+            } else if let maxBytes = store.maxBytes {
+                let size = [storeURL.path, storeURL.path + "-wal"].reduce(0) { total, path in
+                    total + (((try? fileManager.attributesOfItem(atPath: path)[.size]) as? NSNumber)?.intValue ?? 0)
+                }
+                if size > maxBytes { throw SlopPackageError.invalid("store exceeds maxBytes: \(path)") }
             }
         }
     }
 
-    public var entryURL: URL { rootURL.appendingPathComponent("build/index.html") }
+    public var entryURL: URL { rootURL.appendingPathComponent("app.html") }
     public var styleURL: URL { rootURL.appendingPathComponent("style.css") }
     public var previewURL: URL { rootURL.appendingPathComponent("QuickLook/Preview.png") }
+    public var thumbnailURL: URL { rootURL.appendingPathComponent("QuickLook/Thumbnail.png") }
     public func imageMaskURL() throws -> URL? {
         guard manifest.window.shape.kind == .imageMask, let path = manifest.window.shape.path else { return nil }
         return try Self.containedURL(root: rootURL, relativePath: path)
     }
     public func store(id: String, kind: SlopStoreKind) throws -> URL {
-        guard let store = manifest.stores.first(where: { $0.id == id && $0.kind == kind }) else { throw SlopPackageError.invalid("unknown \(kind.rawValue) store \(id)") }
-        return try Self.containedURL(root: rootURL, relativePath: store.path)
+        guard manifest.stores[id]?.kind == kind else { throw SlopPackageError.invalid("unknown \(kind.rawValue) store \(id)") }
+        return try Self.containedURL(root: rootURL, relativePath: Self.storePath(id: id, kind: kind))
     }
     public func storeRecord(id: String, kind: SlopStoreKind) throws -> SlopStore {
-        guard let store = manifest.stores.first(where: { $0.id == id && $0.kind == kind }) else { throw SlopPackageError.invalid("unknown \(kind.rawValue) store \(id)") }
+        guard let store = manifest.stores[id], store.kind == kind else { throw SlopPackageError.invalid("unknown \(kind.rawValue) store \(id)") }
         return store
+    }
+
+    public static func storePath(id: String, kind: SlopStoreKind) -> String {
+        "stores/\(id).\(kind == .json ? "json" : "sqlite")"
     }
 
     /// Host-side containment check. Schema/publish validation is the authoring gate; this keeps a hand-edited package from walking out of the bundle.

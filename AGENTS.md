@@ -1,16 +1,18 @@
 # hitSlop
 
-`.slop` packages are framework-neutral `hitslop/1` runtime web apps with
-host-owned JSON or SQLite data. Read `manifest.json` first.
+`.slop` packages are framework-neutral runtime web apps with host-owned JSON
+or SQLite data. Read `manifest.json` first.
 
 - Authored templates live in `examples/slops/`; paused templates live in
   `archive/templates/`. Runtime `.slop` packages never contain source,
   `package.json`, dependencies, `.build`, `node_modules`, or package checkouts.
 - Preview with `bun slop dev examples/slops/<id>` and build with
   `bun slop build examples/slops/<id>`.
-- Edit runtime packages only through `style.css`, assets, or stores declared in
-  `stores`. Replace JSON atomically and keep SQLite transactions on one
-  connection.
+- A runtime package has one `manifest.json`, one generated `app.html`, optional
+  `style.css`/`assets`, canonical `stores/<id>.json|sqlite`, and host-generated
+  `QuickLook/`. Never add `document.json` or a `build/` directory.
+- Edit runtime packages only through `style.css`, assets, or declared stores.
+  Replace JSON atomically and keep SQLite transactions on one connection.
 - Reusable TypeScript code lives in `packages/`. Convex lives in
   `apps/registry`; the TanStack Start/R2 gateway lives in `apps/catalog`.
 - Reusable Swift code lives in `apps/macos/packages/`. The Xcode project is only

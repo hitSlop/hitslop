@@ -1,5 +1,8 @@
 import AppKit
+import HitSlopCore
+import HitSlopHost
 import HitSlopRegistry
+import HitSlopRuntime
 import SwiftUI
 
 private enum CatalogFilter: Hashable {
@@ -21,6 +24,7 @@ public struct CatalogView: View {
     @State private var searchTask: Task<Void, Never>?
     @State private var creatingTemplateTitle: String?
     @State private var creationFailure: TemplateCreationFailure?
+    @State private var recentRevision = 0
     @FocusState private var searchFocused: Bool
     @Environment(\.scenePhase) private var scenePhase
     private let openDocumentAction: (URL) -> Void
@@ -33,7 +37,7 @@ public struct CatalogView: View {
 
     private var hostedItems: [CatalogItem] { model.templates.map { CatalogItem(source: .hosted($0)) } }
     private var localItems: [CatalogItem] { localStore.templates.map { CatalogItem(source: .local($0)) } }
-    private var recentDocuments: [URL] { Array(NSDocumentController.shared.recentDocumentURLs.filter { $0.pathExtension == "slop" }.prefix(8)) }
+    private var recentDocuments: [URL] { Array(NSDocumentController.shared.recentDocumentURLs.filter { $0.pathExtension == "slop" && FileManager.default.fileExists(atPath: $0.path) }.prefix(8)) }
     private var categories: [String] { knownCategories.union(hostedItems.flatMap(\.categories)).union(localItems.flatMap(\.categories)).sorted() }
     private var searchTerm: String { query.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase }
 
@@ -55,6 +59,7 @@ public struct CatalogView: View {
                     }
                 }
             }
+            .ignoresSafeArea(.container, edges: .top)
             .overlay(alignment: .bottomTrailing) {
                 if let creatingTemplateTitle {
                     HStack(spacing: 9) {
@@ -79,7 +84,8 @@ public struct CatalogView: View {
                 .frame(width: 1, height: 1).opacity(0)
         }
         .onChange(of: query) { _, value in scheduleSearch(value) }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { localStore.refresh() } }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { localStore.refresh(); recentRevision &+= 1 } }
+        .onReceive(NotificationCenter.default.publisher(for: .hitSlopPreviewDidChange)) { _ in recentRevision &+= 1 }
         .onReceive(model.$templates) { templates in knownCategories.formUnion(templates.flatMap(\.categories)) }
         .onOpenURL { url in if url.pathExtension == "slop" { openDocumentAction(url) } }
         .alert(item: $creationFailure) { failure in
@@ -104,14 +110,14 @@ public struct CatalogView: View {
             } else {
                 switch filter {
                 case .all:
-                    if !recentDocuments.isEmpty { RecentSection(urls: Array(recentDocuments.prefix(4)), open: openDocument) }
+                    if !recentDocuments.isEmpty { RecentSection(urls: Array(recentDocuments.prefix(4)), revision: recentRevision, open: openDocument) }
                     if !localItems.isEmpty { TemplateSection(title: "Installed locally", subtitle: "Ready without a download", items: localItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate) }
                     TemplateSection(title: "Popular right now", subtitle: "From the hitSlop catalog", items: hostedItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
                 case .installed:
                     TemplateSection(title: "Installed", subtitle: "Templates on this Mac", items: localItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
                 case .recents:
                     if recentDocuments.isEmpty { CatalogEmptyState(icon: "clock", title: "Nothing opened yet", message: "Documents you create or open will appear here.") }
-                    else { RecentSection(urls: recentDocuments, open: openDocument) }
+                    else { RecentSection(urls: recentDocuments, revision: recentRevision, open: openDocument) }
                 case .favorites:
                     TemplateSection(title: "Favorites", subtitle: "Saved from the online catalog", items: hostedItems.filter(isFavorite), model: model, catalogURL: model.catalogURL, select: chooseTemplate)
                 case .category(let category):
@@ -131,6 +137,7 @@ public struct CatalogView: View {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.init(filenameExtension: "slop")!]
         panel.canCreateDirectories = true
+        panel.directoryURL = SlopCloud.defaultCreationDirectory()
         let slug: String = switch item.source { case .hosted(let template): template.slug; case .local(let template): template.manifest.slug }
         panel.nameFieldStringValue = "\(slug).slop"
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -140,11 +147,13 @@ public struct CatalogView: View {
             do {
                 switch item.source {
                 case .hosted(let template):
-                    let downloaded = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template, at: url)
+                    let downloaded = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template.remoteTemplate(), at: url)
+                    SlopPreviewWriter.installExistingPreview(for: url)
                     if downloaded { await model.recordDownload(template: template) }
                     await model.recordInstall(template: template)
                 case .local(let template):
-                    try DocumentFactory(catalogURL: model.catalogURL).create(from: template, at: url)
+                    try DocumentFactory(catalogURL: model.catalogURL).create(fromLocalPackage: template.packageURL, at: url)
+                    SlopPreviewWriter.installExistingPreview(for: url)
                 }
                 NSDocumentController.shared.noteNewRecentDocumentURL(url)
                 openDocumentAction(url)
@@ -407,8 +416,9 @@ private struct TemplatePreview: View {
 
 private struct RecentSection: View {
     let urls: [URL]
+    let revision: Int
     let open: (URL) -> Void
-    private let columns = [GridItem(.adaptive(minimum: 180, maximum: 250), spacing: 14)]
+    private let columns = [GridItem(.adaptive(minimum: 150, maximum: 210), spacing: 16, alignment: .top)]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -416,18 +426,48 @@ private struct RecentSection: View {
             LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
                 ForEach(urls, id: \.self) { url in
                     Button { open(url) } label: {
-                        HStack(spacing: 11) {
-                            Image(systemName: "doc.richtext").font(.title3).foregroundStyle(Color.accentColor)
+                        VStack(alignment: .leading, spacing: 8) {
+                            RecentDocumentPreview(url: url, revision: revision)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(url.deletingPathExtension().lastPathComponent).font(.callout.weight(.semibold)).lineLimit(1)
-                                Text(url.deletingLastPathComponent().lastPathComponent).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                Text((try? SlopPackage(rootURL: url).manifest.title) ?? url.deletingPathExtension().lastPathComponent)
+                                    .font(.callout.weight(.semibold)).lineLimit(1)
+                                Text(url.deletingLastPathComponent().lastPathComponent)
+                                    .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                             }
-                            Spacer(minLength: 0)
-                        }.padding(12).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 11))
+                        }
                     }.buttonStyle(.plain)
                 }
             }
         }
+    }
+}
+
+private struct RecentDocumentPreview: View {
+    let url: URL
+    let revision: Int
+
+    var body: some View {
+        ZStack {
+            Color(nsColor: .controlBackgroundColor)
+            if let image = previewImage {
+                Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
+            } else {
+                VStack(spacing: 7) {
+                    Image(nsImage: NSApplication.shared.applicationIconImage).resizable().scaledToFit().frame(width: 34, height: 34)
+                    Text(url.deletingPathExtension().lastPathComponent).font(.caption.weight(.semibold)).lineLimit(1)
+                }.foregroundStyle(.secondary).padding(12)
+            }
+        }
+        .aspectRatio(4 / 3, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.09)))
+        .id(revision)
+    }
+
+    private var previewImage: NSImage? {
+        let quickLook = url.appendingPathComponent("QuickLook", isDirectory: true)
+        return NSImage(contentsOf: quickLook.appendingPathComponent("Thumbnail.png"))
+            ?? NSImage(contentsOf: quickLook.appendingPathComponent("Preview.png"))
     }
 }
 

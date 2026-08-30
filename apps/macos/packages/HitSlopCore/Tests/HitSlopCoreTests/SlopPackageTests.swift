@@ -15,18 +15,27 @@ import Testing
     #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
 }
 
+@Test func rejectsUnexpectedRootEntriesAndAllowsFinderIcon() throws {
+    let root = try fixture()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try Data().write(to: root.appendingPathComponent("Icon\r"))
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    try Data().write(to: root.appendingPathComponent("notes.txt"))
+    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+}
+
 @Test func duplicationCreatesIdentityAndPreservesLineage() throws {
     let source = try fixture()
     let temporary = source.deletingLastPathComponent()
     defer { try? FileManager.default.removeItem(at: temporary) }
-    let lineage = DocumentProvenance.Template(publisherKeyId: "1234567890abcdef", slug: "tiny-counter", release: 4, artifactSha256: String(repeating: "a", count: 64))
-    try DocumentProvenance(template: lineage).write(to: source)
+    let lineage = SlopTemplateLineage(artifactSha256: String(repeating: "a", count: 64), publisherKeyID: "1234567890abcdef", release: 4)
+    try SlopDocumentMetadata.write(to: source, template: lineage)
     let destination = temporary.appendingPathComponent("copy.slop")
     try SlopDuplicator.duplicate(from: source, to: destination)
-    let first = try DocumentProvenance.read(from: source), second = try DocumentProvenance.read(from: destination)
-    #expect(first.id != second.id)
-    #expect(second.template?.release == 4)
-    #expect(try Data(contentsOf: destination.appendingPathComponent("data.json")) == Data("{}\n".utf8))
+    let first = try SlopPackage(rootURL: source).manifest.document, second = try SlopPackage(rootURL: destination).manifest.document
+    #expect(first?.id != second?.id)
+    #expect(second?.template?.release == 4)
+    #expect(try Data(contentsOf: destination.appendingPathComponent("stores/state.json")) == Data("{}\n".utf8))
 }
 
 @Test func validatesImageMaskPixelsAndAlpha() throws {
@@ -34,7 +43,7 @@ import Testing
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
     try writeMask(to: root.appendingPathComponent("assets/window-mask.png"), width: 320, height: 240)
-    let manifest = #"{"format":"hitslop/1","runtime":"web","slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","author":{"name":"Test"},"categories":["Widgets"],"stores":[{"id":"state","kind":"json","path":"data.json"}],"window":{"width":320,"height":240,"resizable":false,"shape":{"kind":"imageMask","path":"assets/window-mask.png"}}}"#
+    let manifest = #"{"slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","author":{"name":"Test"},"categories":["Widgets"],"stores":{"state":{"kind":"json"}},"window":{"width":320,"height":240,"resizable":false,"shape":{"kind":"imageMask","path":"assets/window-mask.png"}}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
 
@@ -45,10 +54,10 @@ import Testing
 private func fixture() throws -> URL {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-core-\(UUID().uuidString)", isDirectory: true)
     let root = directory.appendingPathComponent("tiny-counter.slop", isDirectory: true)
-    try FileManager.default.createDirectory(at: root.appendingPathComponent("build"), withIntermediateDirectories: true)
-    try Data("<html><head></head><body></body></html>".utf8).write(to: root.appendingPathComponent("build/index.html"))
-    try Data("{}\n".utf8).write(to: root.appendingPathComponent("data.json"))
-    let manifest = #"{"format":"hitslop/1","runtime":"web","slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","author":{"name":"Test"},"categories":["Widgets"],"stores":[{"id":"state","kind":"json","path":"data.json"}],"window":{"width":320,"height":240,"shape":{"kind":"roundedRect","radius":22}}}"#
+    try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
+    try Data("<html><head></head><body></body></html>".utf8).write(to: root.appendingPathComponent("app.html"))
+    try Data("{}\n".utf8).write(to: root.appendingPathComponent("stores/state.json"))
+    let manifest = #"{"slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","author":{"name":"Test"},"categories":["Widgets"],"stores":{"state":{"kind":"json"}},"window":{"width":320,"height":240,"shape":{"kind":"roundedRect","radius":22}}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     return root
 }

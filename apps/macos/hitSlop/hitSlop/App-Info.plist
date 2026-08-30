@@ -30,6 +30,22 @@
 	<string>$(HITSLOP_CONVEX_URL)</string>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>NSUbiquitousContainers</key>
+	<dict>
+		<key>iCloud.com.hitslop.app</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerName</key>
+			<string>hitSlop</string>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>Any</string>
+		</dict>
+	</dict>
+	<key>SUFeedURL</key>
+	<string>https://github.com/hitSlop/hitslop/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>OHq/9CpeUKhI0BZFhSerL8wE/hzhhm/x4VO2qnB3RHw=</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

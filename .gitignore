@@ -3,6 +3,12 @@
 .env.local
 .env.*.local
 .dev.vars
+AuthKey_*.p8
+*.p12
+*.p8
+.secrets/
+sparkle_eddsa*
+**/sparkle_eddsa*
 .wrangler/
 _docs/
 **/.build/

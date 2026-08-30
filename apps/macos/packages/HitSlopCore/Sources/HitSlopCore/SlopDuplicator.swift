@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 
 public enum SlopDuplicator {
-    @discardableResult public static func duplicate(from sourceURL: URL, to requestedDestination: URL, template: DocumentProvenance.Template? = nil) throws -> URL {
+    @discardableResult public static func duplicate(from sourceURL: URL, to requestedDestination: URL, template: SlopTemplateLineage? = nil) throws -> URL {
         let source = try SlopPackage(rootURL: sourceURL)
         let destination = requestedDestination.pathExtension.lowercased() == "slop" ? requestedDestination : requestedDestination.appendingPathExtension("slop")
         let fileManager = FileManager.default
@@ -10,16 +10,16 @@ public enum SlopDuplicator {
         do {
             try fileManager.copyItem(at: source.rootURL, to: destination)
             try makeWritable(destination)
-            for store in source.manifest.stores where store.kind == .sqlite {
-                let sourceStore = try source.store(id: store.id, kind: .sqlite)
-                let destinationStore = destination.appendingPathComponent(store.path)
+            for (id, store) in source.manifest.stores where store.kind == .sqlite {
+                let sourceStore = try source.store(id: id, kind: .sqlite)
+                let destinationStore = destination.appendingPathComponent(SlopPackage.storePath(id: id, kind: store.kind))
                 let snapshot = destinationStore.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).sqlite")
                 try SlopSQLiteSnapshot.copy(from: sourceStore, to: snapshot)
                 guard Darwin.rename(snapshot.path, destinationStore.path) == 0 else { throw SlopPackageError.invalid("could not install SQLite snapshot") }
             }
             removeSQLiteSidecars(in: destination)
-            let lineage = template ?? (try? DocumentProvenance.read(from: source.rootURL).template)
-            try DocumentProvenance(template: lineage).write(to: destination)
+            let lineage = template ?? source.manifest.document?.template
+            try SlopDocumentMetadata.write(to: destination, template: lineage)
             _ = try SlopPackage(rootURL: destination)
             return destination
         } catch {
