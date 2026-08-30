@@ -13,7 +13,7 @@ async function fixture(): Promise<{ project: string; templates: string; screensh
   await mkdir(project, { recursive: true });
   await writeFile(join(project, "manifest.json"), JSON.stringify({
     format: "hitslop/1", runtime: "web", slug: "tiny-counter", title: "Tiny Counter", description: "Counts a very small thing.",
-    author: { name: "Test" }, categories: ["Widgets"], stores: [{ id: "state", kind: "json", path: "data.json" }], window: { width: 320, height: 240 },
+    author: { name: "Test" }, categories: ["Widgets"], stores: [{ id: "state", kind: "json", path: "data.json" }], window: { width: 320, height: 240, shape: { kind: "roundedRect", radius: 22 } },
   }));
   await writeFile(join(project, "index.html"), "<main>Hello</main>");
   await writeFile(join(project, "data.json"), "{}\n");

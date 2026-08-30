@@ -1,0 +1,20 @@
+{
+  "$schema": "https://hitslop.app/schemas/manifest.schema.json",
+  "format": "hitslop/1",
+  "runtime": "web",
+  "slug": "alien-radio",
+  "title": "Alien Radio",
+  "description": "A sculpted desktop receiver for exploring listener-supported SomaFM stations.",
+  "author": { "name": "Longtail Labs" },
+  "categories": ["Music", "Widgets"],
+  "tags": ["radio", "somafm", "audio", "image-mask"],
+  "stores": [
+    { "id": "state", "kind": "json", "path": "data.json", "maxBytes": 1048576 }
+  ],
+  "window": {
+    "width": 720,
+    "height": 560,
+    "resizable": false,
+    "shape": { "kind": "imageMask", "path": "assets/window-mask.png" }
+  }
+}

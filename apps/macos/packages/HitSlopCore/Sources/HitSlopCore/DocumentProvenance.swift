@@ -8,6 +8,9 @@ public struct DocumentProvenance: Codable, Sendable {
     public let format: String; public let id: UUID; public let template: Template?
     public init(template: Template? = nil) { format = "hitslop-document/1"; id = UUID(); self.template = template }
     public func write(to packageURL: URL) throws { try JSONEncoder.pretty.encode(self).write(to: packageURL.appendingPathComponent("document.json"), options: .atomic) }
+    public static func read(from packageURL: URL) throws -> DocumentProvenance {
+        try JSONDecoder().decode(Self.self, from: Data(contentsOf: packageURL.appendingPathComponent("document.json")))
+    }
 }
 
 private extension JSONEncoder {

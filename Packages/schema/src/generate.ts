@@ -78,7 +78,7 @@ function resolveRef(property: Record<string, unknown>, root: Record<string, unkn
 }
 
 function renameGeneratedTypes(source: string): string {
-  const shapeKind = source.match(/public enum (Schema\d+): String, Codable \{\n    case capsule/)?.[1];
+  const shapeKind = source.match(/public enum (Schema\d*): String, Codable \{\n    case capsule/)?.[1];
   const shape = source.match(/\/\/ MARK: - (Schema\d+)\npublic struct Schema\d+: Codable \{\n    public let kind:/)?.[1];
   let next = source;
   if (shape) next = next.replaceAll(shape, "SlopWindowShape");

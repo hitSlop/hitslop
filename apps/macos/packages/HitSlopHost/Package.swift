@@ -11,6 +11,7 @@ let package = Package(
     targets: [
         .target(name: "HitSlopHost", dependencies: ["HitSlopCore"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit"), .linkedLibrary("sqlite3")]),
         .target(name: "HitSlopCatalog", dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRegistry"], linkerSettings: [.linkedFramework("AppKit")]),
+        .testTarget(name: "HitSlopHostTests", dependencies: ["HitSlopHost", "HitSlopCore"]),
         .testTarget(name: "HitSlopCatalogTests", dependencies: ["HitSlopCatalog", "HitSlopCore"]),
     ],
     swiftLanguageModes: [.v6]

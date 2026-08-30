@@ -208,12 +208,13 @@
           "$ref": "#/definitions/__schema15"
         },
         "shape": {
-          "$ref": "#/definitions/__schema16"
+          "$ref": "#/definitions/SlopWindowShape"
         }
       },
       "required": [
         "width",
-        "height"
+        "height",
+        "shape"
       ],
       "additionalProperties": false,
       "title": "SlopWindow"
@@ -231,13 +232,6 @@
     "__schema15": {
       "type": "boolean"
     },
-    "__schema16": {
-      "allOf": [
-        {
-          "$ref": "#/definitions/SlopWindowShape"
-        }
-      ]
-    },
     "SlopWindowShape": {
       "oneOf": [
         {
@@ -245,6 +239,9 @@
         },
         {
           "$ref": "#/definitions/SlopWindowShapeCircle"
+        },
+        {
+          "$ref": "#/definitions/SlopWindowShapeImageMask"
         },
         {
           "$ref": "#/definitions/SlopWindowShapeRoundedRect"
@@ -256,7 +253,7 @@
       "type": "object",
       "properties": {
         "kind": {
-          "$ref": "#/definitions/__schema17"
+          "$ref": "#/definitions/__schema16"
         }
       },
       "required": [
@@ -265,7 +262,7 @@
       "additionalProperties": false,
       "title": "SlopWindowShapeCapsule"
     },
-    "__schema17": {
+    "__schema16": {
       "type": "string",
       "const": "capsule"
     },
@@ -273,7 +270,7 @@
       "type": "object",
       "properties": {
         "kind": {
-          "$ref": "#/definitions/__schema18"
+          "$ref": "#/definitions/__schema17"
         }
       },
       "required": [
@@ -282,18 +279,50 @@
       "additionalProperties": false,
       "title": "SlopWindowShapeCircle"
     },
-    "__schema18": {
+    "__schema17": {
       "type": "string",
       "const": "circle"
+    },
+    "SlopWindowShapeImageMask": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/__schema18"
+        },
+        "path": {
+          "$ref": "#/definitions/__schema19"
+        }
+      },
+      "required": [
+        "kind",
+        "path"
+      ],
+      "additionalProperties": false,
+      "title": "SlopWindowShapeImageMask"
+    },
+    "__schema18": {
+      "type": "string",
+      "const": "imageMask"
+    },
+    "__schema19": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^(?!\\/)(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[A-Za-z0-9._-]+(?:\\/[A-Za-z0-9._-]+)*$",
+      "allOf": [
+        {
+          "$ref": "#/definitions/__schema11"
+        }
+      ]
     },
     "SlopWindowShapeRoundedRect": {
       "type": "object",
       "properties": {
         "kind": {
-          "$ref": "#/definitions/__schema19"
+          "$ref": "#/definitions/__schema20"
         },
         "radius": {
-          "$ref": "#/definitions/__schema20"
+          "$ref": "#/definitions/__schema21"
         }
       },
       "required": [
@@ -303,11 +332,11 @@
       "additionalProperties": false,
       "title": "SlopWindowShapeRoundedRect"
     },
-    "__schema19": {
+    "__schema20": {
       "type": "string",
       "const": "roundedRect"
     },
-    "__schema20": {
+    "__schema21": {
       "type": "number",
       "minimum": 0,
       "maximum": 256

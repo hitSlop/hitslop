@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { userInfo } from "node:os";
 import { Database } from "bun:sqlite";
 import { zipSync, type Zippable } from "fflate";
+import { decode as decodePng } from "fast-png";
 import { build as viteBuild } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 import { parseManifest, type SlopManifest } from "@hitslop/schema";
@@ -11,11 +12,31 @@ import cliPackage from "../package.json" with { type: "json" };
 
 export const manifestPath = (root: string): string => join(root, "manifest.json");
 export async function loadManifest(root: string): Promise<SlopManifest> {
-  return parseManifest(JSON.parse(await readFile(manifestPath(root), "utf8")));
+  const manifest = parseManifest(JSON.parse(await readFile(manifestPath(root), "utf8")));
+  await validateWindowShape(root, manifest);
+  return manifest;
 }
 
 const exists = async (path: string): Promise<boolean> => { try { await stat(path); return true; } catch { return false; } };
 export const sha256 = (bytes: Uint8Array | string): string => createHash("sha256").update(bytes).digest("hex");
+
+async function validateWindowShape(root: string, manifest: SlopManifest): Promise<void> {
+  if (manifest.window.shape.kind !== "imageMask") return;
+  const path = join(root, manifest.window.shape.path);
+  if (!await exists(path)) throw new Error(`Missing window image mask: ${manifest.window.shape.path}`);
+  const info = await lstat(path);
+  if (!info.isFile() || info.isSymbolicLink()) throw new Error("The window image mask must be a regular file, not a symlink.");
+  let png: ReturnType<typeof decodePng>;
+  try {
+    png = decodePng(await readFile(path), { checkCrc: true });
+  } catch {
+    throw new Error("The window image mask must be a valid PNG image.");
+  }
+  if (png.width !== manifest.window.width || png.height !== manifest.window.height) {
+    throw new Error(`The window image mask must be exactly ${manifest.window.width}x${manifest.window.height} pixels; received ${png.width}x${png.height}.`);
+  }
+  if (png.channels !== 2 && png.channels !== 4) throw new Error("The window image mask PNG must contain an explicit alpha channel.");
+}
 
 export type ScaffoldOptions = {
   template?: string;
@@ -41,11 +62,11 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
     $schema: "https://hitslop.app/schemas/manifest.schema.json", format: "hitslop/1", runtime: "web", slug,
     title: options.title || defaultTitle,
     description: options.description || "A small, lovable hitSlop app.", author: { name: options.author || userInfo().username }, categories: options.categories?.length ? options.categories : ["Widgets"],
-    stores: [{ id: "state", kind: "json", path: "data.json" }], window: { width: 560, height: 420, resizable: true },
+    stores: [{ id: "state", kind: "json", path: "data.json" }], window: { width: 560, height: 420, resizable: true, shape: { kind: "roundedRect", radius: 22 } },
   }, null, 2) + "\n");
   await writeFile(join(destination, "data.json"), "{\n  \"count\": 0\n}\n");
   await writeFile(join(destination, "index.html"), "<div id=\"app\"></div><script type=\"module\" src=\"/src/main.ts\"></script>\n");
-  await writeFile(join(destination, "src/main.ts"), "import { mount } from 'svelte';\nimport App from './App.svelte';\nmount(App, { target: document.getElementById('app')! });\n");
+  await writeFile(join(destination, "src/main.ts"), "import { mount } from 'svelte';\nimport { ready } from '@hitslop/runtime';\nimport App from './App.svelte';\nmount(App, { target: document.getElementById('app')! });\nready();\n");
   await writeFile(join(destination, "src/App.svelte"), `<script lang="ts">\n  import { jsonStore } from '@hitslop/svelte';\n  const state = jsonStore('state', { count: 0 });\n</script>\n\n<main>\n  <h1>${slug}</h1>\n  <button onclick={() => state.update(value => { value.count += 1; })}>\n    Count {state.current.count}\n  </button>\n</main>\n`);
   await writeFile(join(destination, "style.css"), ":root { color-scheme: light; font-family: ui-rounded, system-ui, sans-serif; background: #f6f7fb; color: #20222a; }\nhtml, body { margin: 0; background: #f6f7fb; }\nmain { min-height: 100vh; display: grid; place-content: center; gap: 1rem; text-align: center; }\nbutton { padding: .8rem 1.2rem; border: 1px solid #d8dbe5; border-radius: 999px; background: white; color: inherit; }\n");
   await writeFile(join(destination, "vite.config.ts"), "import { defineConfig } from 'vite';\nimport { svelte } from '@sveltejs/vite-plugin-svelte';\nexport default defineConfig({ plugins: [svelte()] });\n");

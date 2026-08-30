@@ -6,21 +6,29 @@ private enum CatalogFilter: Hashable {
     case all, installed, recents, favorites, category(String)
 }
 
+private struct TemplateCreationFailure: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+}
+
 public struct CatalogView: View {
     @StateObject private var model: RegistryModel
     @StateObject private var localStore: LocalTemplateStore
     @State private var query = ""
     @State private var filter: CatalogFilter = .all
-    @State private var selected: CatalogItem?
     @State private var knownCategories: Set<String> = []
     @State private var searchTask: Task<Void, Never>?
+    @State private var creatingTemplateTitle: String?
+    @State private var creationFailure: TemplateCreationFailure?
     @FocusState private var searchFocused: Bool
-    @Environment(\.openWindow) private var openWindow
     @Environment(\.scenePhase) private var scenePhase
+    private let openDocumentAction: (URL) -> Void
 
-    public init(deploymentURL: String, catalogURL: URL, templatesURL: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hitslop/templates", isDirectory: true)) {
+    public init(deploymentURL: String, catalogURL: URL, templatesURL: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hitslop/templates", isDirectory: true), openDocument: @escaping (URL) -> Void) {
         _model = StateObject(wrappedValue: RegistryModel(deploymentURL: deploymentURL, catalogURL: catalogURL))
         _localStore = StateObject(wrappedValue: LocalTemplateStore(templatesURL: templatesURL))
+        openDocumentAction = openDocument
     }
 
     private var hostedItems: [CatalogItem] { model.templates.map { CatalogItem(source: .hosted($0)) } }
@@ -36,12 +44,31 @@ public struct CatalogView: View {
         } detail: {
             ZStack {
                 Color(nsColor: .textBackgroundColor).ignoresSafeArea()
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 22) {
-                        CatalogSearchHero(query: $query, focused: $searchFocused)
-                        catalogContent
+                VStack(spacing: 0) {
+                    CatalogSearchBar(query: $query, focused: $searchFocused)
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            catalogContent
+                        }
+                        .padding(.top, 20)
+                        .padding(.bottom, 32)
                     }
-                    .padding(.bottom, 32)
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if let creatingTemplateTitle {
+                    HStack(spacing: 9) {
+                        ProgressView().controlSize(.small)
+                        Text("Creating \(creatingTemplateTitle)…").lineLimit(1)
+                    }
+                    .font(.caption.weight(.medium))
+                    .padding(.horizontal, 13)
+                    .frame(height: 34)
+                    .background(Color(nsColor: .windowBackgroundColor), in: Capsule())
+                    .overlay(Capsule().stroke(Color.primary.opacity(0.10)))
+                    .shadow(color: .black.opacity(0.10), radius: 10, y: 4)
+                    .padding(18)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
         }
@@ -54,8 +81,10 @@ public struct CatalogView: View {
         .onChange(of: query) { _, value in scheduleSearch(value) }
         .onChange(of: scenePhase) { _, phase in if phase == .active { localStore.refresh() } }
         .onReceive(model.$templates) { templates in knownCategories.formUnion(templates.flatMap(\.categories)) }
-        .onOpenURL { url in if url.pathExtension == "slop" { openWindow(id: "slop-document", value: url) } }
-        .sheet(item: $selected) { item in CreateTemplateView(item: item, model: model, openWindow: openWindow) }
+        .onOpenURL { url in if url.pathExtension == "slop" { openDocumentAction(url) } }
+        .alert(item: $creationFailure) { failure in
+            Alert(title: Text("Could not create \(failure.title)"), message: Text(failure.message), dismissButton: .default(Text("OK")))
+        }
         .preferredColorScheme(.light)
     }
 
@@ -71,22 +100,22 @@ public struct CatalogView: View {
             }
 
             if !searchTerm.isEmpty {
-                TemplateSection(title: "Search results", subtitle: "Local and online", items: searchedItems, model: model, catalogURL: model.catalogURL, select: { selected = $0 })
+                TemplateSection(title: "Search results", subtitle: "Local and online", items: searchedItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
             } else {
                 switch filter {
                 case .all:
                     if !recentDocuments.isEmpty { RecentSection(urls: Array(recentDocuments.prefix(4)), open: openDocument) }
-                    if !localItems.isEmpty { TemplateSection(title: "Installed locally", subtitle: "Ready without a download", items: localItems, model: model, catalogURL: model.catalogURL, select: { selected = $0 }) }
-                    TemplateSection(title: "Popular right now", subtitle: "From the hitSlop catalog", items: hostedItems, model: model, catalogURL: model.catalogURL, select: { selected = $0 })
+                    if !localItems.isEmpty { TemplateSection(title: "Installed locally", subtitle: "Ready without a download", items: localItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate) }
+                    TemplateSection(title: "Popular right now", subtitle: "From the hitSlop catalog", items: hostedItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
                 case .installed:
-                    TemplateSection(title: "Installed", subtitle: "Templates on this Mac", items: localItems, model: model, catalogURL: model.catalogURL, select: { selected = $0 })
+                    TemplateSection(title: "Installed", subtitle: "Templates on this Mac", items: localItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
                 case .recents:
                     if recentDocuments.isEmpty { CatalogEmptyState(icon: "clock", title: "Nothing opened yet", message: "Documents you create or open will appear here.") }
                     else { RecentSection(urls: recentDocuments, open: openDocument) }
                 case .favorites:
-                    TemplateSection(title: "Favorites", subtitle: "Saved from the online catalog", items: hostedItems.filter(isFavorite), model: model, catalogURL: model.catalogURL, select: { selected = $0 })
+                    TemplateSection(title: "Favorites", subtitle: "Saved from the online catalog", items: hostedItems.filter(isFavorite), model: model, catalogURL: model.catalogURL, select: chooseTemplate)
                 case .category(let category):
-                    TemplateSection(title: category, subtitle: "Local and online templates", items: (localItems + hostedItems).filter { $0.categories.contains(category) }, model: model, catalogURL: model.catalogURL, select: { selected = $0 })
+                    TemplateSection(title: category, subtitle: "Local and online templates", items: (localItems + hostedItems).filter { $0.categories.contains(category) }, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
                 }
             }
         }
@@ -95,7 +124,36 @@ public struct CatalogView: View {
 
     private var searchedItems: [CatalogItem] { (localItems + hostedItems).filter { $0.searchableText.contains(searchTerm) } }
     private func isFavorite(_ item: CatalogItem) -> Bool { if case .hosted(let template) = item.source { model.isFavorite(template) } else { false } }
-    private func openDocument(_ url: URL) { openWindow(id: "slop-document", value: url) }
+    private func openDocument(_ url: URL) { openDocumentAction(url) }
+
+    private func chooseTemplate(_ item: CatalogItem) {
+        guard creatingTemplateTitle == nil else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.init(filenameExtension: "slop")!]
+        panel.canCreateDirectories = true
+        let slug: String = switch item.source { case .hosted(let template): template.slug; case .local(let template): template.manifest.slug }
+        panel.nameFieldStringValue = "\(slug).slop"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        withAnimation(.easeOut(duration: 0.16)) { creatingTemplateTitle = item.title }
+        Task { @MainActor in
+            do {
+                switch item.source {
+                case .hosted(let template):
+                    let downloaded = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template, at: url)
+                    if downloaded { await model.recordDownload(template: template) }
+                    await model.recordInstall(template: template)
+                case .local(let template):
+                    try DocumentFactory(catalogURL: model.catalogURL).create(from: template, at: url)
+                }
+                NSDocumentController.shared.noteNewRecentDocumentURL(url)
+                openDocumentAction(url)
+            } catch {
+                creationFailure = TemplateCreationFailure(title: item.title, message: error.localizedDescription)
+            }
+            withAnimation(.easeOut(duration: 0.16)) { creatingTemplateTitle = nil }
+        }
+    }
 
     private func select(_ next: CatalogFilter) {
         filter = next
@@ -153,7 +211,7 @@ private struct CatalogSidebar: View {
             }
 
             Divider()
-            Text("Tiny apps · local data").font(.caption2).foregroundStyle(.tertiary).padding(14)
+            Text("Mini app · local data").font(.caption2).foregroundStyle(.tertiary).padding(14)
         }
         .background(Color(nsColor: .controlBackgroundColor))
     }
@@ -192,43 +250,31 @@ private struct SidebarButton: View {
     }
 }
 
-private struct CatalogSearchHero: View {
+private struct CatalogSearchBar: View {
     @Binding var query: String
     var focused: FocusState<Bool>.Binding
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("What are you working on?")
-                    .font(.system(size: 29, weight: .bold, design: .rounded))
-                    .tracking(-0.8)
-                Spacer()
-                Text("Find a tiny app and make it yours.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+        HStack(spacing: 11) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("A timer, an invoice, a strange little tool…", text: $query)
+                .textFieldStyle(.plain)
+                .font(.body)
+                .focused(focused)
+            if !query.isEmpty {
+                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
+                    .buttonStyle(.plain)
+                    .help("Clear search")
+            } else {
+                Text("⌘K").font(.caption2.weight(.medium)).foregroundStyle(.secondary)
             }
-            HStack(spacing: 11) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("A timer, an invoice, a strange little tool…", text: $query)
-                    .textFieldStyle(.plain)
-                    .font(.body)
-                    .focused(focused)
-                if !query.isEmpty {
-                    Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
-                        .buttonStyle(.plain)
-                        .help("Clear search")
-                } else {
-                    Text("⌘K").font(.caption2.weight(.medium)).foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 14)
-            .frame(height: 43)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused.wrappedValue ? Color.accentColor.opacity(0.70) : Color.primary.opacity(0.09), lineWidth: focused.wrappedValue ? 2 : 1))
         }
+        .padding(.horizontal, 14)
+        .frame(height: 42)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused.wrappedValue ? Color.accentColor.opacity(0.70) : Color.primary.opacity(0.09), lineWidth: focused.wrappedValue ? 2 : 1))
         .padding(.horizontal, 28)
-        .padding(.top, 24)
-        .padding(.bottom, 22)
+        .padding(.vertical, 11)
         .background(Color(nsColor: .textBackgroundColor))
         .overlay(alignment: .bottom) { Divider() }
     }
@@ -403,47 +449,5 @@ private struct StatusStrip: View {
     var body: some View {
         Label(message, systemImage: icon).font(.caption).foregroundStyle(.secondary)
             .padding(.horizontal, 12).padding(.vertical, 9).background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
-    }
-}
-
-private struct CreateTemplateView: View {
-    let item: CatalogItem
-    let model: RegistryModel
-    let openWindow: OpenWindowAction
-    @Environment(\.dismiss) private var dismiss
-    @State private var isCreating = false
-    @State private var error: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text(item.title).font(.title.weight(.bold))
-            Text(item.description).foregroundStyle(.secondary)
-            if let error { Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.red).font(.callout) }
-            HStack { Button("Cancel") { dismiss() }; Spacer(); Button(isCreating ? "Creating…" : "Choose Location") { choose() }.buttonStyle(.borderedProminent).disabled(isCreating) }
-        }.padding(26).frame(width: 460)
-    }
-
-    private func choose() {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "slop")!]
-        let slug: String = switch item.source { case .hosted(let template): template.slug; case .local(let template): template.manifest.slug }
-        panel.nameFieldStringValue = "\(slug).slop"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        isCreating = true
-        Task {
-            do {
-                switch item.source {
-                case .hosted(let template):
-                    let downloaded = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template, at: url)
-                    if downloaded { await model.recordDownload(template: template) }
-                    await model.recordInstall(template: template)
-                case .local(let template):
-                    try DocumentFactory(catalogURL: model.catalogURL).create(from: template, at: url)
-                }
-                NSDocumentController.shared.noteNewRecentDocumentURL(url)
-                openWindow(id: "slop-document", value: url)
-                dismiss()
-            } catch { self.error = error.localizedDescription; isCreating = false }
-        }
     }
 }

@@ -1,258 +1,269 @@
 import AppKit
-import CryptoKit
-import Darwin
 import Foundation
 import HitSlopCore
-import SQLite3
-import SwiftUI
 import WebKit
 
-private let bridgeScript = #"""
+private let runtimeScript = #"""
 (() => {
-  const call = (method, args = {}) => window.webkit.messageHandlers.hitslop.postMessage({ method, ...args });
+  const native = window.webkit.messageHandlers.hitslop;
+  let pending = 0, guestReady = false, readySent = false, mutationVersion = 0;
+  const call = (method, args = {}) => {
+    if (method !== 'log' && method !== 'ready') pending += 1;
+    return native.postMessage({ method, ...args }).finally(() => {
+      if (method !== 'log' && method !== 'ready') pending -= 1;
+      scheduleReady();
+    });
+  };
+  const scheduleReady = () => {
+    if (!guestReady || readySent || pending !== 0) return;
+    const version = mutationVersion;
+    let settled = false;
+    const finish = () => {
+      if (settled || readySent) return;
+      if (pending !== 0 || version !== mutationVersion) { settled = true; return scheduleReady(); }
+      settled = true; readySent = true;
+      native.postMessage({ method: 'ready' });
+      window.dispatchEvent(new Event('slop:ready'));
+    };
+    requestAnimationFrame(() => requestAnimationFrame(finish));
+    setTimeout(finish, 100);
+  };
+  new MutationObserver(() => { mutationVersion += 1; scheduleReady(); })
+    .observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
   const listeners = new Map();
   window.__hitslopEmit = event => (listeners.get(`${event.kind}:${event.store}`) || []).forEach(callback => callback(event));
-  const watch = (kind, store, callback) => { const key = `${kind}:${store}`; const values = listeners.get(key) || []; values.push(callback); listeners.set(key, values); return () => listeners.set(key, values.filter(value => value !== callback)); };
-  window.slop = {
-    json: { read: store => call('json.read', {store}), write: (store, value, expectedRevision) => call('json.write', {store, value, expectedRevision}), onChange: (store, callback) => watch('json', store, callback) },
-    db: { query: (store, sql, parameters = []) => call('sqlite.query', {store, sql, parameters}), execute: (store, sql, parameters = []) => call('sqlite.execute', {store, sql, parameters}), transaction: (store, statements) => call('sqlite.transaction', {store, statements}), onChange: (store, callback) => watch('sqlite', store, callback) },
-    ready: () => document.documentElement.dataset.hitslopReady = 'true'
+  const watch = (kind, store, callback) => {
+    const key = `${kind}:${store}`, values = listeners.get(key) || [];
+    values.push(callback); listeners.set(key, values);
+    return () => listeners.set(key, values.filter(value => value !== callback));
   };
+  window.addEventListener('error', event => call('log', { message: `JavaScript error: ${event.message}` }));
+  window.addEventListener('unhandledrejection', event => call('log', { message: `Unhandled rejection: ${String(event.reason)}` }));
+  window.slop = Object.freeze({
+    json: Object.freeze({
+      read: store => call('json.read', { store }),
+      write: (store, value, expectedRevision) => call('json.write', { store, value, expectedRevision }),
+      onChange: (store, callback) => watch('json', store, callback)
+    }),
+    db: Object.freeze({
+      query: (store, sql, parameters = []) => call('sqlite.query', { store, sql, parameters }),
+      execute: (store, sql, parameters = []) => call('sqlite.execute', { store, sql, parameters }),
+      transaction: (store, statements) => call('sqlite.transaction', { store, statements }),
+      onChange: (store, callback) => watch('sqlite', store, callback)
+    }),
+    ready: () => { guestReady = true; document.documentElement.dataset.hitslopReady = 'true'; scheduleReady(); }
+  });
 })();
 """#
 
-private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+@MainActor public protocol SlopRuntimeSessionDelegate: AnyObject {
+    func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
+    func runtimeSessionDidReloadVisuals(_ session: SlopRuntimeSession)
+    func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind, storeID: String)
+    func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
+}
 
-@MainActor public final class SlopBridge: NSObject, WKScriptMessageHandlerWithReply {
+public extension SlopRuntimeSessionDelegate {
+    func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {}
+    func runtimeSessionDidReloadVisuals(_ session: SlopRuntimeSession) {}
+    func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind, storeID: String) {}
+    func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
+}
+
+@MainActor final class SlopBridge: NSObject, WKScriptMessageHandlerWithReply {
+    weak var session: SlopRuntimeSession?
     private let package: SlopPackage
-    weak var webView: WKWebView?
-    nonisolated(unsafe) private var databases: [String: OpaquePointer] = [:]
-    nonisolated(unsafe) private var watchers: [DispatchSourceFileSystemObject] = []
-    private var revisions: [String: String] = [:]
+    private var databases: [String: SlopDatabase] = [:]
+    private var jsonStores: [String: SlopJSONStore] = [:]
 
-    public init(package: SlopPackage) {
+    init(package: SlopPackage) throws {
         self.package = package
-        super.init()
-        startWatching()
+        for store in package.manifest.stores {
+            let url = try package.store(id: store.id, kind: store.kind)
+            if store.kind == .sqlite { databases[store.id] = try SlopDatabase(url: url) }
+            else { jsonStores[store.id] = SlopJSONStore(url: url, maxBytes: store.maxBytes ?? 1_048_576) }
+        }
     }
+    func close() { databases.values.forEach { $0.close() } }
+    func sqliteVersions() -> [String: Int64] { databases.compactMapValues { try? $0.dataVersion() } }
+    func jsonRevisions() -> [String: String] { jsonStores.compactMapValues { try? $0.revision() } }
 
-    deinit {
-        watchers.forEach { $0.cancel() }
-        databases.values.forEach { sqlite3_close($0) }
-    }
-
-    public func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
-        guard let body = message.body as? [String: Any], let method = body["method"] as? String, let store = body["store"] as? String else { replyHandler(nil, "Invalid host request"); return }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
+        guard let body = message.body as? [String: Any], let method = body["method"] as? String else { replyHandler(nil, "Malformed host request"); return }
         do {
             switch method {
+            case "log": print("[slop guest] \(body["message"] as? String ?? "Unknown diagnostic")"); replyHandler(["logged": true], nil)
+            case "ready": session?.bridgeDidBecomeReady(); replyHandler(["ready": true], nil)
             case "json.read":
-                let url = try package.store(id: store, kind: .json); let data = try Data(contentsOf: url); replyHandler(["value": try JSONSerialization.jsonObject(with: data), "revision": Self.hash(data)], nil)
+                let (id, store) = try json(body); let snapshot = try store.read()
+                replyHandler(["store": id, "value": snapshot.value, "revision": snapshot.revision], nil)
             case "json.write":
-                let record = try package.storeRecord(id: store, kind: .json); let url = try package.store(id: store, kind: .json)
-                let old = try Data(contentsOf: url); if let expected = body["expectedRevision"] as? String, !expected.isEmpty, expected != Self.hash(old) { throw SlopPackageError.invalid("revision_conflict") }
-                let data = try JSONSerialization.data(withJSONObject: body["value"] as Any, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
-                if let maxBytes = record.maxBytes, data.count > maxBytes { throw SlopPackageError.invalid("store exceeds maxBytes") }
-                try data.write(to: url, options: .atomic); let revision = Self.hash(data); revisions["json:\(store)"] = revision; emit(kind: "json", store: store, revision: revision); replyHandler(["revision": revision], nil)
-            case "sqlite.query": replyHandler(try sqlite(store: store, body: body, query: true), nil)
-            case "sqlite.execute": let changes = try sqlite(store: store, body: body, query: false); emitSqliteIfNeeded(store); replyHandler(changes, nil)
-            case "sqlite.transaction": let changes = try transaction(store: store, body: body); emitSqliteIfNeeded(store); replyHandler(changes, nil)
+                let (id, store) = try json(body); guard let value = body["value"] else { throw SlopPackageError.invalid("JSON write needs a value") }
+                let revision = try store.write(value, expectedRevision: body["expectedRevision"] as? String)
+                session?.bridgeDidCommit(kind: .json, storeID: id, revision: revision); replyHandler(["store": id, "revision": revision], nil)
+            case "sqlite.query":
+                let (_, database) = try database(body); let statement = try sql(body)
+                replyHandler(try database.query(statement.0, parameters: statement.1), nil)
+            case "sqlite.execute":
+                let (id, database) = try database(body); let statement = try sql(body)
+                let changes = try database.transaction([statement]) { try self.enforceSQLiteLimit(id) }
+                session?.bridgeDidCommit(kind: .sqlite, storeID: id, revision: nil); replyHandler(changes, nil)
+            case "sqlite.transaction":
+                let (id, database) = try database(body)
+                guard let payloads = body["statements"] as? [[String: Any]], !payloads.isEmpty else { throw SlopPackageError.invalid("transaction needs statements") }
+                let changes = try database.transaction(payloads.map(sql)) { try self.enforceSQLiteLimit(id) }
+                session?.bridgeDidCommit(kind: .sqlite, storeID: id, revision: nil); replyHandler(changes, nil)
             default: replyHandler(nil, "Unknown host method")
             }
         } catch { replyHandler(nil, error.localizedDescription) }
     }
 
-    private static func hash(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
-
-    private func emit(kind: String, store: String, revision: String?) {
-        var event: [String: Any] = ["kind": kind, "store": store, "source": "package"]
-        if let revision { event["revision"] = revision }
-        guard let data = try? JSONSerialization.data(withJSONObject: event), let encoded = String(data: data, encoding: .utf8) else { return }
-        webView?.evaluateJavaScript("window.__hitslopEmit(\(encoded))")
+    private func json(_ body: [String: Any]) throws -> (String, SlopJSONStore) {
+        guard let id = body["store"] as? String, let store = jsonStores[id] else { throw SlopPackageError.invalid("unknown JSON store") }
+        return (id, store)
     }
-
-    private func emitSqliteIfNeeded(_ store: String) {
-        let revision = sqliteRevision(store)
-        if revisions["sqlite:\(store)"] != revision {
-            revisions["sqlite:\(store)"] = revision
-            emit(kind: "sqlite", store: store, revision: revision)
+    private func database(_ body: [String: Any]) throws -> (String, SlopDatabase) {
+        guard let id = body["store"] as? String, let store = databases[id] else { throw SlopPackageError.invalid("unknown SQLite store") }
+        return (id, store)
+    }
+    private func sql(_ body: [String: Any]) throws -> (String, [Any]) {
+        guard let sql = body["sql"] as? String, !sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw SlopPackageError.invalid("SQL must not be empty") }
+        return (sql, body["parameters"] as? [Any] ?? [])
+    }
+    private func enforceSQLiteLimit(_ id: String) throws {
+        guard let record = package.manifest.stores.first(where: { $0.id == id }), let maxBytes = record.maxBytes else { return }
+        let url = try package.store(id: id, kind: .sqlite)
+        let size = [url.path, url.path + "-wal"].reduce(0) { total, path in
+            total + (((try? FileManager.default.attributesOfItem(atPath: path)[.size]) as? NSNumber)?.intValue ?? 0)
         }
-    }
-
-    private func sqliteRevision(_ store: String) -> String {
-        guard let url = try? package.store(id: store, kind: .sqlite) else { return "" }
-        let values = [url, URL(fileURLWithPath: url.path + "-wal"), URL(fileURLWithPath: url.path + "-shm")].compactMap { url -> String? in
-            guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey]) else { return nil }
-            return "\(values.fileSize ?? 0):\(values.contentModificationDate?.timeIntervalSince1970 ?? 0)"
-        }
-        return values.joined(separator: "|")
-    }
-
-    private func database(for store: String) throws -> OpaquePointer {
-        if let existing = databases[store] { return existing }
-        let record = try package.storeRecord(id: store, kind: .sqlite)
-        let url = try package.store(id: store, kind: .sqlite)
-        var database: OpaquePointer?
-        guard sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK, let database else { throw SlopPackageError.invalid("could not open SQLite store") }
-        sqlite3_limit(database, SQLITE_LIMIT_ATTACHED, 0)
-        sqlite3_set_authorizer(database, { _, action, _, _, _, _ in
-            switch action {
-            case SQLITE_ATTACH, SQLITE_DETACH: return SQLITE_DENY
-            default: return SQLITE_OK
-            }
-        }, nil)
-        sqlite3_busy_timeout(database, 5000)
-        sqlite3_exec(database, "PRAGMA trusted_schema=OFF", nil, nil, nil)
-        sqlite3_exec(database, "PRAGMA journal_mode=WAL", nil, nil, nil)
-        sqlite3_exec(database, "PRAGMA foreign_keys=ON", nil, nil, nil)
-        if let maxBytes = record.maxBytes { _ = maxBytes }
-        databases[store] = database
-        return database
-    }
-
-    private func sqlite(store: String, body: [String: Any], query: Bool) throws -> Any {
-        let database = try database(for: store)
-        if query { return try runStatement(database: database, body: body, query: true) }
-        guard sqlite3_exec(database, "BEGIN IMMEDIATE", nil, nil, nil) == SQLITE_OK else { throw SlopPackageError.invalid(String(cString: sqlite3_errmsg(database))) }
-        do {
-            let changes = try runStatement(database: database, body: body, query: false)
-            try enforceMaxBytes(store: store, database: database)
-            guard sqlite3_exec(database, "COMMIT", nil, nil, nil) == SQLITE_OK else { throw SlopPackageError.invalid(String(cString: sqlite3_errmsg(database))) }
-            return changes
-        } catch {
-            sqlite3_exec(database, "ROLLBACK", nil, nil, nil)
-            throw error
-        }
-    }
-
-    private func runStatement(database: OpaquePointer, body: [String: Any], query: Bool) throws -> Any {
-        var statement: OpaquePointer?
-        guard let sql = body["sql"] as? String, sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else { throw SlopPackageError.invalid(String(cString: sqlite3_errmsg(database))) }
-        defer { sqlite3_finalize(statement) }
-        try bind(body["parameters"] as? [Any] ?? [], to: statement)
-        if !query { guard sqlite3_step(statement) == SQLITE_DONE else { throw SlopPackageError.invalid(String(cString: sqlite3_errmsg(database))) }; return Int(sqlite3_changes(database)) }
-        var rows: [[String: Any]] = []
-        while sqlite3_step(statement) == SQLITE_ROW {
-            var row: [String: Any] = [:]
-            for column in 0..<sqlite3_column_count(statement) {
-                let name = String(cString: sqlite3_column_name(statement, column))
-                switch sqlite3_column_type(statement, column) {
-                case SQLITE_INTEGER: row[name] = sqlite3_column_int64(statement, column)
-                case SQLITE_FLOAT: row[name] = sqlite3_column_double(statement, column)
-                case SQLITE_TEXT: if let text = sqlite3_column_text(statement, column) { row[name] = String(cString: text) }
-                case SQLITE_NULL: row[name] = NSNull()
-                default:
-                    if let bytes = sqlite3_column_blob(statement, column) { row[name] = Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, column))).base64EncodedString() }
-                    else { row[name] = Data().base64EncodedString() }
-                }
-            }
-            rows.append(row)
-        }
-        return rows
-    }
-
-    private func transaction(store: String, body: [String: Any]) throws -> Int {
-        guard let statements = body["statements"] as? [[String: Any]] else { return 0 }
-        let database = try database(for: store)
-        guard sqlite3_exec(database, "BEGIN IMMEDIATE", nil, nil, nil) == SQLITE_OK else { throw SlopPackageError.invalid(String(cString: sqlite3_errmsg(database))) }
-        do {
-            var changes = 0
-            for statement in statements { changes += try runStatement(database: database, body: statement, query: false) as? Int ?? 0 }
-            try enforceMaxBytes(store: store, database: database)
-            guard sqlite3_exec(database, "COMMIT", nil, nil, nil) == SQLITE_OK else { throw SlopPackageError.invalid(String(cString: sqlite3_errmsg(database))) }
-            return changes
-        } catch {
-            sqlite3_exec(database, "ROLLBACK", nil, nil, nil)
-            throw error
-        }
-    }
-
-    private func enforceMaxBytes(store: String, database: OpaquePointer) throws {
-        guard let maxBytes = try package.storeRecord(id: store, kind: .sqlite).maxBytes else { return }
-        sqlite3_exec(database, "PRAGMA wal_checkpoint(PASSIVE)", nil, nil, nil)
-        let url = try package.store(id: store, kind: .sqlite)
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-        let wal = (try? URL(fileURLWithPath: url.path + "-wal").resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-        if size + wal > maxBytes { throw SlopPackageError.invalid("store exceeds maxBytes") }
-    }
-
-    private func bind(_ parameters: [Any], to statement: OpaquePointer) throws {
-        for (offset, value) in parameters.enumerated() {
-            let index = Int32(offset + 1)
-            let result: Int32
-            if value is NSNull { result = sqlite3_bind_null(statement, index) }
-            else if let value = value as? Bool { result = sqlite3_bind_int(statement, index, value ? 1 : 0) }
-            else if let value = value as? Int { result = sqlite3_bind_int64(statement, index, Int64(value)) }
-            else if let value = value as? Double { result = sqlite3_bind_double(statement, index, value) }
-            else { result = String(describing: value).withCString { sqlite3_bind_text(statement, index, $0, -1, SQLITE_TRANSIENT) } }
-            guard result == SQLITE_OK else { throw SlopPackageError.invalid("could not bind SQLite parameter") }
-        }
-    }
-
-    private func startWatching() {
-        var directories = Set<URL>([package.rootURL])
-        for store in package.manifest.stores {
-            if let url = try? package.store(id: store.id, kind: store.kind) {
-                directories.insert(url.deletingLastPathComponent())
-                if store.kind == .json { revisions["json:\(store.id)"] = (try? Self.hash(Data(contentsOf: url))) ?? "" }
-                else { revisions["sqlite:\(store.id)"] = sqliteRevision(store.id) }
-            }
-        }
-        for directory in directories { watch(directory: directory) }
-    }
-
-    private func watch(directory: URL) {
-        let fd = open(directory.path, O_EVTONLY)
-        guard fd >= 0 else { return }
-        let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: fd, eventMask: [.write, .extend, .attrib, .rename, .delete, .link], queue: .main)
-        source.setCancelHandler { Darwin.close(fd) }
-        source.setEventHandler { [weak self] in self?.packageChanged() }
-        source.resume()
-        watchers.append(source)
-    }
-
-    private func packageChanged() {
-        for store in package.manifest.stores {
-            if store.kind == .json, let url = try? package.store(id: store.id, kind: .json), let data = try? Data(contentsOf: url) {
-                let revision = Self.hash(data)
-                if revisions["json:\(store.id)"] != revision { revisions["json:\(store.id)"] = revision; emit(kind: "json", store: store.id, revision: revision) }
-            } else if store.kind == .sqlite {
-                let revision = sqliteRevision(store.id)
-                if revisions["sqlite:\(store.id)"] != revision { revisions["sqlite:\(store.id)"] = revision; emit(kind: "sqlite", store: store.id, revision: revision) }
-            }
-        }
+        guard size <= maxBytes else { throw SlopPackageError.invalid("SQLite store exceeds maxBytes") }
     }
 }
 
-@MainActor public enum SlopWebViewFactory {
-    public static func make(packageURL: URL) throws -> (WKWebView, SlopBridge) {
-        let package = try SlopPackage(rootURL: packageURL)
-        let controller = WKUserContentController()
-        controller.addUserScript(WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        if let css = try? String(contentsOf: package.styleURL, encoding: .utf8),
-           let encoded = try? JSONSerialization.data(withJSONObject: css, options: [.fragmentsAllowed]),
-           let json = String(data: encoded, encoding: .utf8) {
-            controller.addUserScript(WKUserScript(source: "document.addEventListener('DOMContentLoaded',()=>{const s=document.createElement('style');s.textContent=\(json);document.head.appendChild(s)})", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
+    private let package: SlopPackage
+    init(package: SlopPackage) { self.package = package }
+    func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
+        guard let url = task.request.url else { task.didFailWithError(SlopPackageError.invalid("missing resource URL")); return }
+        do {
+            let resource = try resource(for: url)
+            let headers = [
+                "Content-Type": resource.mime, "Content-Length": String(resource.data.count), "Cache-Control": "no-store",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Content-Security-Policy": "default-src 'none'; script-src slop: 'unsafe-inline'; style-src slop: 'unsafe-inline'; img-src slop: data: blob: https: http:; media-src slop: data: blob: https: http:; font-src slop: data: https: http:; connect-src https: http: wss: ws:; worker-src blob:"
+            ]
+            guard let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers) else { throw SlopPackageError.invalid("could not serve resource") }
+            task.didReceive(response); task.didReceive(resource.data); task.didFinish()
+        } catch { print("[hitSlop scheme] \(error.localizedDescription)"); task.didFailWithError(error) }
+    }
+    func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
+
+    private func resource(for url: URL) throws -> (data: Data, mime: String) {
+        switch url.path {
+        case "", "/", "/index.html": return (try entryHTML(), "text/html; charset=utf-8")
+        case "/style.css":
+            guard FileManager.default.fileExists(atPath: package.styleURL.path) else { return (Data(), "text/css; charset=utf-8") }
+            return (try Data(contentsOf: package.styleURL), "text/css; charset=utf-8")
+        default:
+            let resource = try package.assetURL(path: url.path)
+            guard FileManager.default.fileExists(atPath: resource.path) else { throw SlopPackageError.missing(url.path) }
+            return (try Data(contentsOf: resource), Self.mime(resource.pathExtension))
         }
-        let configuration = WKWebViewConfiguration()
-        configuration.userContentController = controller
-        let view = WKWebView(frame: .init(x: 0, y: 0, width: package.manifest.window.width, height: package.manifest.window.height), configuration: configuration)
-        let bridge = SlopBridge(package: package)
-        bridge.webView = view
-        controller.addScriptMessageHandler(bridge, contentWorld: .page, name: "hitslop")
-        view.setValue(false, forKey: "drawsBackground")
-        view.loadFileURL(package.entryURL, allowingReadAccessTo: package.rootURL)
-        return (view, bridge)
+    }
+    private func entryHTML() throws -> Data {
+        guard var html = String(data: try Data(contentsOf: package.entryURL), encoding: .utf8) else { throw SlopPackageError.invalid("build/index.html must be UTF-8") }
+        let stylesheet = "<link id=\"hitslop-document-styles\" rel=\"stylesheet\" href=\"/style.css\">"
+        if let close = html.range(of: "</head>", options: .caseInsensitive) { html.insert(contentsOf: "\n\(stylesheet)", at: close.lowerBound) }
+        else { html = "<head>\(stylesheet)</head>\n" + html }
+        return Data(html.utf8)
+    }
+    private static func mime(_ ext: String) -> String {
+        ["png":"image/png", "jpg":"image/jpeg", "jpeg":"image/jpeg", "gif":"image/gif", "webp":"image/webp", "svg":"image/svg+xml", "css":"text/css", "json":"application/json", "woff":"font/woff", "woff2":"font/woff2", "mp3":"audio/mpeg", "mp4":"video/mp4"][ext.lowercased()] ?? "application/octet-stream"
     }
 }
 
-public struct SlopDocumentView: NSViewRepresentable {
-    public let packageURL: URL
-    public init(packageURL: URL) { self.packageURL = packageURL }
-    public func makeCoordinator() -> Coordinator { Coordinator() }
-    public func makeNSView(context: Context) -> WKWebView {
-        do { let (view, bridge) = try SlopWebViewFactory.make(packageURL: packageURL); context.coordinator.bridge = bridge; return view }
-        catch { return WKWebView() }
+@MainActor public final class SlopRuntimeSession: NSObject, WKNavigationDelegate {
+    public let package: SlopPackage
+    public let webView: WKWebView
+    public weak var delegate: (any SlopRuntimeSessionDelegate)?
+    public private(set) var isReady = false
+    private let bridge: SlopBridge
+    private let schemeHandler: SlopSchemeHandler
+    private var timer: Timer?, sqliteVersions: [String: Int64], jsonRevisions: [String: String]
+    private var visualFingerprint: Int?, sequence = 0, retryCount = 0, closed = false, lastError: Error?
+
+    public init(packageURL: URL) throws {
+        let package = try SlopPackage(rootURL: packageURL); self.package = package
+        let configuration = WKWebViewConfiguration(); configuration.websiteDataStore = .nonPersistent()
+        let handler = SlopSchemeHandler(package: package); schemeHandler = handler; configuration.setURLSchemeHandler(handler, forURLScheme: "slop")
+        configuration.userContentController.addUserScript(WKUserScript(source: runtimeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
+        let bridge = try SlopBridge(package: package); self.bridge = bridge
+        configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "hitslop")
+        webView = InteractiveWebView(frame: NSRect(x: 0, y: 0, width: package.manifest.window.width, height: package.manifest.window.height), configuration: configuration)
+        sqliteVersions = bridge.sqliteVersions(); jsonRevisions = bridge.jsonRevisions()
+        super.init()
+        bridge.session = self; webView.navigationDelegate = self; webView.setValue(false, forKey: "drawsBackground")
+        visualFingerprint = visualFilesFingerprint()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.poll() } }
     }
-    public func updateNSView(_ nsView: WKWebView, context: Context) {}
-    public final class Coordinator { var bridge: SlopBridge? }
+
+    public func load() { isReady = false; webView.load(URLRequest(url: URL(string: "slop://app/")!)) }
+    public func reload() { isReady = false; webView.reload() }
+    public func close() {
+        guard !closed else { return }; closed = true; timer?.invalidate(); timer = nil; bridge.close()
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "hitslop", contentWorld: .page)
+    }
+    public func waitUntilReady(timeout: Duration = .seconds(15)) async throws {
+        if isReady { return }
+        let clock = ContinuousClock(), deadline = clock.now.advanced(by: timeout)
+        while !isReady, !closed, clock.now < deadline { try await Task.sleep(for: .milliseconds(40)) }
+        guard isReady else {
+            let state = try? await webView.evaluateJavaScript("({url:location.href,bridge:typeof window.slop,ready:document.documentElement.dataset.hitslopReady||null,state:document.readyState,body:document.body?.innerText?.slice(0,120)||null})")
+            throw SlopPackageError.invalid(closed ? "runtime closed" : "timed out waiting for slop.ready(); guest state: \(String(describing: state)); navigation error: \(lastError?.localizedDescription ?? "none")")
+        }
+    }
+    fileprivate func bridgeDidBecomeReady() {
+        guard !isReady else { return }; isReady = true; retryCount = 0
+        delegate?.runtimeSessionDidBecomeReady(self)
+    }
+    fileprivate func bridgeDidCommit(kind: SlopStoreKind, storeID: String, revision: String?) {
+        sqliteVersions = bridge.sqliteVersions(); jsonRevisions = bridge.jsonRevisions(); emit(kind: kind, store: storeID, revision: revision, source: "app")
+        delegate?.runtimeSession(self, didCommit: kind, storeID: storeID)
+    }
+
+    private func poll() {
+        for (id, revision) in bridge.jsonRevisions() where jsonRevisions[id] != revision { jsonRevisions[id] = revision; emit(kind: .json, store: id, revision: revision, source: "external") }
+        for (id, version) in bridge.sqliteVersions() where sqliteVersions[id] != version { sqliteVersions[id] = version; emit(kind: .sqlite, store: id, revision: nil, source: "external") }
+        let fingerprint = visualFilesFingerprint()
+        if fingerprint != visualFingerprint { visualFingerprint = fingerprint; reload(); delegate?.runtimeSessionDidReloadVisuals(self) }
+    }
+    private func emit(kind: SlopStoreKind, store: String, revision: String?, source: String) {
+        sequence += 1
+        let event: [String: Any] = ["kind":kind.rawValue, "store":store, "source":source, "sequence":sequence, "revision":revision ?? NSNull()]
+        guard let data = try? JSONSerialization.data(withJSONObject: event), let json = String(data: data, encoding: .utf8) else { return }
+        webView.evaluateJavaScript("window.__hitslopEmit?.(\(json))")
+    }
+    private func visualFilesFingerprint() -> Int {
+        var hasher = Hasher()
+        for root in [package.entryURL, package.styleURL, package.rootURL.appendingPathComponent("assets")] {
+            if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey]) {
+                for case let url as URL in enumerator { let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]); hasher.combine(url.path); hasher.combine(values?.contentModificationDate); hasher.combine(values?.fileSize) }
+            } else if let values = try? root.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]) { hasher.combine(root.path); hasher.combine(values.contentModificationDate); hasher.combine(values.fileSize) }
+        }
+        return hasher.finalize()
+    }
+    public func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+        let scheme = action.request.url?.scheme?.lowercased()
+        if scheme == "slop" || scheme == "about" { decisionHandler(.allow) }
+        else { if action.navigationType == .linkActivated, let url = action.request.url { NSWorkspace.shared.open(url) }; decisionHandler(.cancel) }
+    }
+    public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { recover(error) }
+    public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { recover(error) }
+    public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { recover(SlopPackageError.invalid("slop web process stopped")) }
+    private func recover(_ error: Error) { lastError = error; if retryCount == 0 { retryCount = 1; load() } else { delegate?.runtimeSession(self, didFail: error) } }
+}
+
+private final class InteractiveWebView: WKWebView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var mouseDownCanMoveWindow: Bool { false }
 }

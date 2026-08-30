@@ -14,6 +14,10 @@ export const relativePath = z.string().min(1).max(240)
   )
   .refine((path) => !reservedStorePaths.has(path.toLowerCase()) && !path.toLowerCase().startsWith("build/"), "must not replace reserved package files");
 
+const pngAssetPath = relativePath
+  .refine((path) => path.startsWith("assets/"), "must be under assets/")
+  .refine((path) => path.toLowerCase().endsWith(".png"), "must be a PNG image");
+
 export const SlopStoreKindSchema = z.enum(["json", "sqlite"]).meta({ id: "SlopStoreKind", title: "SlopStoreKind" });
 
 export const SlopStoreSchema = z.object({
@@ -26,6 +30,7 @@ export const SlopStoreSchema = z.object({
 export const SlopWindowShapeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("capsule") }).strict().meta({ id: "SlopWindowShapeCapsule", title: "SlopWindowShapeCapsule" }),
   z.object({ kind: z.literal("circle") }).strict().meta({ id: "SlopWindowShapeCircle", title: "SlopWindowShapeCircle" }),
+  z.object({ kind: z.literal("imageMask"), path: pngAssetPath }).strict().meta({ id: "SlopWindowShapeImageMask", title: "SlopWindowShapeImageMask" }),
   z.object({ kind: z.literal("roundedRect"), radius: z.number().min(0).max(256) }).strict().meta({ id: "SlopWindowShapeRoundedRect", title: "SlopWindowShapeRoundedRect" }),
 ]).meta({ id: "SlopWindowShape", title: "SlopWindowShape" });
 
@@ -38,8 +43,15 @@ export const SlopWindowSchema = z.object({
   width: z.number().int().min(240).max(4096),
   height: z.number().int().min(180).max(4096),
   resizable: z.boolean().optional(),
-  shape: SlopWindowShapeSchema.optional(),
-}).strict().meta({ id: "SlopWindow", title: "SlopWindow" });
+  shape: SlopWindowShapeSchema,
+}).strict().superRefine((window, context) => {
+  if (window.shape.kind === "circle" && window.width !== window.height) {
+    context.addIssue({ code: "custom", path: ["shape"], message: "circle windows must have equal width and height" });
+  }
+  if (window.shape.kind === "imageMask" && window.resizable !== false) {
+    context.addIssue({ code: "custom", path: ["resizable"], message: "image-masked windows must set resizable to false" });
+  }
+}).meta({ id: "SlopWindow", title: "SlopWindow" });
 
 export const SlopFormatSchema = z.literal("hitslop/1").meta({ id: "SlopFormat", title: "SlopFormat" });
 export const SlopRuntimeSchema = z.literal("web").meta({ id: "SlopRuntime", title: "SlopRuntime" });

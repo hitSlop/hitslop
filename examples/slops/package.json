@@ -3,12 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev:alien-radio": "slop dev alien-radio",
     "dev:focus-timer": "slop dev focus-timer",
     "dev:invoice": "slop dev invoice",
     "dev:kanban": "slop dev kanban-board",
     "dev:random-picker": "slop dev random-picker",
-    "validate": "slop validate focus-timer && slop validate invoice && slop validate kanban-board && slop validate random-picker",
-    "build": "slop build focus-timer && slop build invoice && slop build kanban-board && slop build random-picker",
+    "validate": "slop validate alien-radio && slop validate focus-timer && slop validate invoice && slop validate kanban-board && slop validate random-picker",
+    "build": "slop build alien-radio && slop build focus-timer && slop build invoice && slop build kanban-board && slop build random-picker",
     "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
     "test": "true"
   },

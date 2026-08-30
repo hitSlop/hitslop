@@ -30,8 +30,17 @@ the generated models; uniqueness, reserved paths, and traversal are enforced at
 native host still refuses to open a store path outside the `.slop` bundle.
 
 Manifest metadata includes author, title, description, one or two unique
-categories, tags, stores, and the preferred window size and vector shape. PNG
-window skins remain a future `.slopskin` package.
+categories, tags, stores, and the preferred window size and required shape.
+Geometric shapes (`roundedRect`, `circle`, and `capsule`) may resize. A sculpted
+window uses `imageMask` and an exact-size RGBA PNG under `assets/`; image-masked
+windows are fixed-size. The PNG alpha is the canonical boundary for live
+clipping, 10%-alpha hit testing, screenshots, PDF export, and Quick Look.
+
+Image-mask artwork remains reproducible authoring input rather than runtime
+source. For example, `examples/slops/alien-radio/artwork/render.sh` renders its
+checked-in SVG to `assets/alien-radio-chrome.png` and derives
+`assets/window-mask.png`. Both generated PNGs are copied into the runtime
+package, while `artwork/` and `source/` are excluded.
 
 ## CLI boundary
 
@@ -126,3 +135,22 @@ CAPTCHA. Anonymous catalog telemetry instead uses a local installation ID,
 idempotent rows, and can gain rate limits without changing the document model.
 Auth becomes worthwhile when favorites or document state must sync across
 devices.
+
+## Native host boundary
+
+The main app owns catalog lifecycle and independent AppKit document-window
+controllers. Documents are borderless and mask hit testing to their required
+manifest shape. Transparent image-mask pixels are click-through, including
+interior holes. The catalog window is hidden, not reconstructed, while slops
+are open; Command-N reveals it and closing the final document returns to it.
+
+Guest HTML runs in an ephemeral WebKit store behind `slop://`. Only the entry
+HTML, optional stylesheet, and assets are readable from guest JavaScript.
+Declared JSON/SQLite data remains reachable exclusively through `window.slop`.
+Store changes are ordered and scoped by kind/id: external JSON replacement and
+SQLite commits cause SDK refetches without reloading the page, while executable
+HTML/style/asset changes use the visual reload path.
+
+Quick Look extensions are asset consumers only. The main host generates the
+derived PNG assets after a stable `ready()` boundary and tells Finder they
+changed; no Quick Look process executes a slop.

@@ -7,14 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0739D25213DACB388726A1B1 /* HitSlopHost in Frameworks */ = {isa = PBXBuildFile; productRef = CE576A77092D6E9D418AB0F6 /* HitSlopHost */; };
 		2A24C1D810541A515025BD62 /* SlopPreview.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 70FD6C6E4EEDB119405E6C46 /* SlopPreview.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		32EE242E2EEC85E9A9E285D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 45514551382EBB8BE80DFFDA /* Assets.xcassets */; };
 		358FE74535C9AF5A8A18594F /* HitSlopCatalog in Frameworks */ = {isa = PBXBuildFile; productRef = 2FD35DB710FCD4812E0ECC6F /* HitSlopCatalog */; };
 		45B6339C70726C06D5A043D6 /* QuickLookThumbnailing.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E70D98FCCBC32C297F032C0C /* QuickLookThumbnailing.framework */; };
 		61ECEFDCF237A1CAEA3D4B4D /* hitSlopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0CA44E4E2E034921904245 /* hitSlopApp.swift */; };
 		66728B7CCEC29253103ADAA3 /* ThumbnailProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC2E1F30145A01C89AEDF3F /* ThumbnailProvider.swift */; };
-		918BE9C69116FB75D12192B0 /* HitSlopHost in Frameworks */ = {isa = PBXBuildFile; productRef = 37021A42C27579647CE111A6 /* HitSlopHost */; };
 		B0C2E605F273A41D157D8D50 /* PreviewProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23C4FDD1C78335E90B120379 /* PreviewProvider.swift */; };
 		C31B84940F10F686ED551A5C /* QuickLookUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E45C88AAAC1ED873AE823A2 /* QuickLookUI.framework */; };
 		CBB5F0BC5F9099472EC8686B /* SlopThumbnail.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 615323870AE3C5381D079520 /* SlopThumbnail.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -85,7 +83,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				918BE9C69116FB75D12192B0 /* HitSlopHost in Frameworks */,
 				C31B84940F10F686ED551A5C /* QuickLookUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -94,7 +91,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0739D25213DACB388726A1B1 /* HitSlopHost in Frameworks */,
 				45B6339C70726C06D5A043D6 /* QuickLookThumbnailing.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -195,7 +191,6 @@
 			);
 			name = SlopThumbnail;
 			packageProductDependencies = (
-				CE576A77092D6E9D418AB0F6 /* HitSlopHost */,
 			);
 			productName = SlopThumbnail;
 			productReference = 615323870AE3C5381D079520 /* SlopThumbnail.appex */;
@@ -238,7 +233,6 @@
 			);
 			name = SlopPreview;
 			packageProductDependencies = (
-				37021A42C27579647CE111A6 /* HitSlopHost */,
 			);
 			productName = SlopPreview;
 			productReference = 70FD6C6E4EEDB119405E6C46 /* SlopPreview.appex */;
@@ -652,15 +646,7 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = HitSlopCatalog;
 		};
-		37021A42C27579647CE111A6 /* HitSlopHost */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = HitSlopHost;
-		};
 		534C85A4F7ABB2028F8CFD43 /* HitSlopHost */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = HitSlopHost;
-		};
-		CE576A77092D6E9D418AB0F6 /* HitSlopHost */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HitSlopHost;
 		};

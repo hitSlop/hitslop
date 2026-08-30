@@ -55,8 +55,6 @@ targets:
     sources:
       - path: Extensions/Preview
     dependencies:
-      - package: HitSlopHost
-        product: HitSlopHost
       - sdk: QuickLookUI.framework
     settings:
       base:
@@ -73,8 +71,6 @@ targets:
     sources:
       - path: Extensions/Thumbnail
     dependencies:
-      - package: HitSlopHost
-        product: HitSlopHost
       - sdk: QuickLookThumbnailing.framework
     settings:
       base:

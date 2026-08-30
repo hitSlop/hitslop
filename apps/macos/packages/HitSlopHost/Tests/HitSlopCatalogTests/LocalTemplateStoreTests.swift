@@ -11,7 +11,7 @@ import Testing
     try Data("<main>Hello</main>".utf8).write(to: package.appendingPathComponent("build/index.html"))
     try Data("{}\n".utf8).write(to: package.appendingPathComponent("data.json"))
     let manifest = """
-    {"format":"hitslop/1","runtime":"web","slug":"tiny-counter","title":"Tiny Counter","description":"Counts a very small thing.","author":{"name":"Test"},"categories":["Widgets"],"stores":[{"id":"state","kind":"json","path":"data.json"}],"window":{"width":320,"height":240}}
+    {"format":"hitslop/1","runtime":"web","slug":"tiny-counter","title":"Tiny Counter","description":"Counts a very small thing.","author":{"name":"Test"},"categories":["Widgets"],"stores":[{"id":"state","kind":"json","path":"data.json"}],"window":{"width":320,"height":240,"shape":{"kind":"roundedRect","radius":22}}}
     """
     try Data(manifest.utf8).write(to: package.appendingPathComponent("manifest.json"))
     try Data("png".utf8).write(to: wrapper.appendingPathComponent("cover.png"))

@@ -103,7 +103,7 @@ public enum SlopStoreKind: String, Codable, Sendable {
 public struct SlopWindow: Codable, Sendable {
     public let height: Int
     public let resizable: Bool?
-    public let shape: SlopWindowShape?
+    public let shape: SlopWindowShape
     public let width: Int
 
     public enum CodingKeys: String, CodingKey {
@@ -113,7 +113,7 @@ public struct SlopWindow: Codable, Sendable {
         case width = "width"
     }
 
-    public init(height: Int, resizable: Bool?, shape: SlopWindowShape?, width: Int) {
+    public init(height: Int, resizable: Bool?, shape: SlopWindowShape, width: Int) {
         self.height = height
         self.resizable = resizable
         self.shape = shape
@@ -125,15 +125,18 @@ public struct SlopWindow: Codable, Sendable {
 // MARK: - SlopWindowShape
 public struct SlopWindowShape: Codable, Sendable {
     public let kind: SlopWindowShapeKind
+    public let path: String?
     public let radius: Double?
 
     public enum CodingKeys: String, CodingKey {
         case kind = "kind"
+        case path = "path"
         case radius = "radius"
     }
 
-    public init(kind: SlopWindowShapeKind, radius: Double?) {
+    public init(kind: SlopWindowShapeKind, path: String?, radius: Double?) {
         self.kind = kind
+        self.path = path
         self.radius = radius
     }
 }
@@ -142,5 +145,6 @@ public struct SlopWindowShape: Codable, Sendable {
 public enum SlopWindowShapeKind: String, Codable, Sendable {
     case capsule = "capsule"
     case circle = "circle"
+    case imageMask = "imageMask"
     case roundedRect = "roundedRect"
 }

@@ -20,25 +20,15 @@ public struct DocumentFactory: Sendable {
             downloaded = true; try SlopArchive.extract(archive, to: cached, expectedSHA256: expectedHash)
             let pointer = try JSONSerialization.data(withJSONObject: ["release": template.currentReleaseNumber, "sha256": expectedHash], options: [.prettyPrinted, .sortedKeys]); try pointer.write(to: cacheRoot.appendingPathComponent("current.json"), options: .atomic)
         }
-        let temporary = destination.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).slop", isDirectory: true)
-        try FileManager.default.copyItem(at: cached, to: temporary)
-        try DocumentProvenance(template: .init(publisherKeyId: template.publisherKeyId, slug: template.slug, release: template.currentReleaseNumber, artifactSha256: artifactHash)).write(to: temporary)
-        if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: temporary); throw CocoaError(.fileWriteFileExists) }
-        try FileManager.default.moveItem(at: temporary, to: destination)
+        try SlopDuplicator.duplicate(
+            from: cached,
+            to: destination,
+            template: .init(publisherKeyId: template.publisherKeyId, slug: template.slug, release: template.currentReleaseNumber, artifactSha256: artifactHash)
+        )
         return downloaded
     }
 
     public func create(from template: LocalTemplate, at destination: URL) throws {
-        let temporary = destination.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).slop", isDirectory: true)
-        guard !FileManager.default.fileExists(atPath: destination.path) else { throw CocoaError(.fileWriteFileExists) }
-        do {
-            try FileManager.default.copyItem(at: template.packageURL, to: temporary)
-            try DocumentProvenance().write(to: temporary)
-            _ = try SlopPackage(rootURL: temporary)
-            try FileManager.default.moveItem(at: temporary, to: destination)
-        } catch {
-            try? FileManager.default.removeItem(at: temporary)
-            throw error
-        }
+        try SlopDuplicator.duplicate(from: template.packageURL, to: destination)
     }
 }

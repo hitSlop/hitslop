@@ -129,7 +129,8 @@ Manifest validation now includes:
 - Title, description, and author metadata.
 - One or two unique categories.
 - Up to eight unique tags.
-- A bounded preferred window size and optional shape.
+- A bounded preferred window size and required geometric or PNG-alpha shape. Circle windows must
+  be square; new projects default to a 22-point rounded rectangle.
 - A maximum of sixteen declared JSON or SQLite stores.
 - Unique store IDs and paths.
 - Safe relative paths with traversal rejected.
@@ -342,14 +343,64 @@ Xcode application is a thin layer over four focused Swift packages.
 - Remains a separate companion rather than making the macOS app own the
   TypeScript authoring CLI.
 
-### Thin application and Quick Look
+### Native document shell and Quick Look
 
-The SwiftUI app chooses between the catalog and an opened document. The Xcode
-project also contains fresh Quick Look preview and thumbnail extensions.
+The Xcode target is a thin lifecycle layer, but documents use AppKit window
+controllers because a slop is a floating mini app rather than a conventional
+titled document window. Every open document gets an independent borderless,
+transparent, shape-masked window. The first click reaches guest content, a thin
+top hit target moves the window, and hovering the document reveals host-owned
+controls for close, session-only pinning, duplicate, PNG/PDF export, sharing,
+Finder, path copying, and installed Cursor/Visual Studio Code actions.
+
+Opening a document hides the catalog without destroying its SwiftUI state.
+Command-N restores it, multiple document windows can coexist, and closing the
+last document returns to the existing catalog window.
+
+Quick Look never runs WebKit in an extension. The main host refreshes derived
+`QuickLook/Preview.png` and `QuickLook/Thumbnail.png` assets after readiness or
+data/visual changes; the sandboxed extensions only read those assets.
 
 The main app is intended for direct notarized distribution and is not App
 Sandboxed because the shared cache must live at `~/.hitslop/templates`. Quick
 Look extensions remain sandboxed and can only read the document macOS provides.
+
+## Native runtime safety and refresh behavior
+
+Guest content loads from a private `slop://` URL scheme and a non-persistent
+WebKit data store. The scheme serves only the bundled HTML entry, optional
+stylesheet, and `assets/`; it does not expose `manifest.json`, `document.json`,
+JSON stores, SQLite files, WAL files, or arbitrary package paths. A CSP permits
+ordinary outbound HTTP(S), image/media, and WebSocket use while normal browser
+CORS still applies. User-activated external links open in the default browser.
+
+Package validation is repeated natively before opening. It enforces the format,
+runtime, catalog bounds, required shape, unique declared stores, safe resolved
+paths, UTF-8 HTML/manifest data, JSON validity and byte limits, and rejects
+symlinks plus authoring/build dependency directories.
+
+The bridge owns one SQLite connection per declared store. Queries must be
+read-only, execute calls must mutate, only one statement is accepted per call,
+parameter counts and values are checked, and ATTACH/DETACH, virtual tables,
+extension loading, and unsafe pragmas are denied. Mutations and transactions
+roll back when `maxBytes` is exceeded. JSON writes use atomic replacement and
+optimistic revisions.
+
+The host polls declared store state independently from visual files. Atomic
+external JSON replacement and SQLite commits emit ordered, store-scoped change
+events with `source: "external"`; bridge writes emit `source: "app"`. The Svelte
+helpers subscribe and refetch automatically, so data changes do not reload the
+WebView. Changes to `build/index.html`, `style.css`, or `assets/` take the visual
+reload path. Readiness waits for guest `ready()`, pending bridge calls, DOM
+stability, and two animation frames; exports no longer depend on a fixed sleep.
+WebKit gets one automatic recovery attempt and then shows an in-window Retry
+surface.
+
+All template-to-document copying goes through `SlopDuplicator`. It makes the
+copy writable, snapshots SQLite through the online backup API so committed WAL
+data is included without modifying a cached template, removes sidecars, assigns
+a new document UUID, and preserves template lineage. Existing documents are
+still never silently upgraded.
 
 ## Template download, cache, and creation
 
@@ -500,7 +551,7 @@ The refactor was checked with:
 - TypeScript and Svelte diagnostics with zero errors or warnings.
 - Schema generation followed by a generated-file drift check.
 - Runtime, schema, and Svelte unit tests.
-- Builds of all four maintained templates into source-free `.slop` packages.
+- Builds of all maintained templates into source-free `.slop` packages.
 - A `slop init` and `slop validate` smoke test with explicit manifest metadata.
 - Convex code generation, function bundling, type generation, and upload to the
   connected development deployment.

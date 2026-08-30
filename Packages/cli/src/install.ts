@@ -30,7 +30,7 @@ export async function installTemplate(input: string, options: InstallOptions = {
   await validateRuntimePackage(runtime, manifest);
   const { sha256 } = await packSlop(runtime);
 
-  const templatesRoot = resolve(options.templatesRoot ?? join(homedir(), ".hitslop", "templates"));
+  const templatesRoot = resolve(options.templatesRoot ?? process.env.HITSLOP_TEMPLATES_ROOT ?? join(homedir(), ".hitslop", "templates"));
   const target = join(templatesRoot, manifest.slug);
   const replaced = await exists(target);
   if (replaced && !options.force) {
