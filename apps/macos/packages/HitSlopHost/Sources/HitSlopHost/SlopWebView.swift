@@ -229,7 +229,7 @@ private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.sel
         let controller = WKUserContentController()
         controller.addUserScript(WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         if let css = try? String(contentsOf: package.styleURL, encoding: .utf8),
-           let encoded = try? JSONSerialization.data(withJSONObject: css),
+           let encoded = try? JSONSerialization.data(withJSONObject: css, options: [.fragmentsAllowed]),
            let json = String(data: encoded, encoding: .utf8) {
             controller.addUserScript(WKUserScript(source: "document.addEventListener('DOMContentLoaded',()=>{const s=document.createElement('style');s.textContent=\(json);document.head.appendChild(s)})", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }

@@ -27,6 +27,7 @@ cd my-widget
 bun install
 slop dev
 slop build
+slop install
 slop publish
 ```
 
@@ -36,6 +37,13 @@ the native host. `slop build` emits a source-free runtime directory under
 `dist/<slug>.slop`; publishing assigns the next release number automatically.
 In an interactive terminal, `slop init` asks for the manifest title,
 description, author, and one or two categories; flags and `--yes` support CI.
+
+`slop install` builds and validates the template, captures a fresh native
+preview, and installs it at `~/.hitslop/templates/<slug>/`. The macOS catalog
+discovers these local templates without Convex and duplicates the installed
+seed when you create a document. Existing installs require confirmation or
+`--force`; `--screenshot cover.png` supplies a preview without invoking the
+native screenshot helper.
 
 The CLI package is `@hitslop/cli`; installing it exposes the `slop` executable.
 The unscoped `slop` npm name is owned by another project, so the one-shot form is

@@ -36,9 +36,10 @@ window skins remain a future `.slopskin` package.
 ## CLI boundary
 
 `@hitslop/cli` is a Bun/TypeScript package exposing `slop init`, `dev`,
-`validate`, `build`, `pack`, `screenshot`, and `publish`. It owns authoring,
-builds, publisher Ed25519 identity, signing, and uploads. It does not create an
-end-user document from the catalog.
+`validate`, `build`, `install`, `pack`, `screenshot`, and `publish`. It owns
+authoring, builds, explicit local template installation, publisher Ed25519
+identity, signing, and uploads. It does not create an end-user document from
+the catalog.
 
 `hitslop-native` stays a small Swift companion for canonical WKWebView
 screenshots, PDF export, and native dev windows. The npm CLI discovers it from
@@ -67,6 +68,24 @@ Sandboxed so it can maintain the shared `~/.hitslop/templates` cache. Quick Look
 extensions remain sandboxed and read only the document macOS gives them.
 
 ## Template cache and document creation
+
+There are two deliberately separate kinds of template storage. Explicit local
+installs are developer-owned catalog entries:
+
+```text
+slop install
+  → build and validate a source-free runtime package
+  → capture a canonical native preview
+  → stage ~/.hitslop/templates/<slug>/{template.slop,cover.png,install.json}
+  → confirm replacement and transactionally swap the wrapper directory
+  → native catalog watcher validates the marker and manifest
+```
+
+They never contact Convex or emit telemetry. Choosing one in the catalog copies
+`template.slop` to the user-selected destination and gives the copy a fresh
+document identity. Legacy/unmarked directories under the cache are ignored.
+
+Hosted releases keep their immutable publisher/version cache:
 
 ```text
 catalog choice

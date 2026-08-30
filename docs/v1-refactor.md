@@ -178,6 +178,7 @@ installs the `slop` executable and supports:
 | `slop dev --native` | Open the development URL in the canonical WKWebView host |
 | `slop validate` | Validate a manifest against the Zod contract |
 | `slop build` | Produce a source-free `dist/<slug>.slop` directory |
+| `slop install` | Build, screenshot, and add a template to the local macOS catalog |
 | `slop pack` | Produce a deterministic ZIP artifact |
 | `slop screenshot` | Ask the native helper for a canonical screenshot |
 | `slop publish` | Build, screenshot, sign, and upload a release |
@@ -186,6 +187,13 @@ Interactive `slop init` asks for title, description, author, and one or two
 categories. Equivalent flags plus `--yes` support scripts and CI. The initial
 template selector accepts `svelte` or `svelte-counter`; registry templates can
 be added later without changing the manifest format.
+
+`slop install [path]` accepts either an authoring project or a built `.slop`,
+validates the runtime boundary, captures a native preview, and stages a local
+wrapper at `~/.hitslop/templates/<slug>/`. The wrapper contains
+`template.slop`, `cover.png`, and generated `install.json`; it is separate from
+the hosted publisher/release cache. Replacement is interactive by default and
+requires `--force` in automation. The local catalog path never calls Convex.
 
 The npm package is scoped as `@hitslop/cli` because the unscoped `slop` name is
 owned by another project. `bunx @hitslop/cli` and `npx @hitslop/cli` expose the

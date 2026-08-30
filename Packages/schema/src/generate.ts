@@ -3,27 +3,55 @@ import { resolve } from "node:path";
 import { $ } from "bun";
 import { z } from "zod";
 import { SlopManifestSchema } from "./manifest.ts";
+import { LocalTemplateInstallSchema } from "./install.ts";
 
 const packageRoot = resolve(import.meta.dir, "..");
 const repositoryRoot = resolve(packageRoot, "../..");
 const generated = resolve(packageRoot, "generated");
-const swiftOutput = resolve(repositoryRoot, "apps/macos/packages/HitSlopCore/Sources/HitSlopCore/Generated/SlopManifest.generated.swift");
 await mkdir(generated, { recursive: true });
-await mkdir(resolve(swiftOutput, ".."), { recursive: true });
 
-const schema = z.toJSONSchema(SlopManifestSchema, { target: "draft-7", reused: "ref", io: "input" }) as Record<string, unknown>;
-Object.assign(schema, {
-  $id: "https://hitslop.app/schemas/manifest.schema.json",
+await generate({
+  zodSchema: SlopManifestSchema,
+  schemaName: "manifest.schema.json",
+  swiftName: "SlopManifest.generated.swift",
+  id: "https://hitslop.app/schemas/manifest.schema.json",
   title: "SlopManifest",
   description: "The framework-neutral manifest for hitslop/1 web documents.",
+  transformSwift: renameGeneratedTypes,
+  transformSchema: stampUniqueItems,
 });
-stampUniqueItems(schema, schema);
 
-const schemaPath = resolve(generated, "manifest.schema.json");
-await writeFile(schemaPath, `${JSON.stringify(schema, null, 2)}\n`);
-await $`bunx quicktype --src-lang schema --lang swift --top-level SlopManifest --access-level public --src ${schemaPath} --out ${swiftOutput}`;
-const generatedSwift = await Bun.file(swiftOutput).text();
-await Bun.write(swiftOutput, renameGeneratedTypes(stripQuicktypeHelpers(generatedSwift)));
+await generate({
+  zodSchema: LocalTemplateInstallSchema,
+  schemaName: "local-template-install.schema.json",
+  swiftName: "LocalTemplateInstall.generated.swift",
+  id: "https://hitslop.app/schemas/local-template-install.schema.json",
+  title: "LocalTemplateInstall",
+  description: "Local catalog metadata for an explicitly installed hitSlop template.",
+  transformSwift: renameInstallTypes,
+});
+
+async function generate(options: {
+  zodSchema: z.ZodType;
+  schemaName: string;
+  swiftName: string;
+  id: string;
+  title: string;
+  description: string;
+  transformSchema?: (node: unknown, root: Record<string, unknown>) => void;
+  transformSwift?: (source: string) => string;
+}): Promise<void> {
+  const schema = z.toJSONSchema(options.zodSchema, { target: "draft-7", reused: "ref", io: "input" }) as Record<string, unknown>;
+  Object.assign(schema, { $id: options.id, title: options.title, description: options.description });
+  options.transformSchema?.(schema, schema);
+  const schemaPath = resolve(generated, options.schemaName);
+  const swiftOutput = resolve(repositoryRoot, "apps/macos/packages/HitSlopCore/Sources/HitSlopCore/Generated", options.swiftName);
+  await mkdir(resolve(swiftOutput, ".."), { recursive: true });
+  await writeFile(schemaPath, `${JSON.stringify(schema, null, 2)}\n`);
+  await $`bunx quicktype --src-lang schema --lang swift --top-level ${options.title} --access-level public --src ${schemaPath} --out ${swiftOutput}`;
+  const generatedSwift = stripQuicktypeHelpers(await Bun.file(swiftOutput).text());
+  await Bun.write(swiftOutput, options.transformSwift ? options.transformSwift(generatedSwift) : generatedSwift);
+}
 
 function stampUniqueItems(node: unknown, root: Record<string, unknown>): void {
   if (!node || typeof node !== "object") return;
@@ -56,6 +84,15 @@ function renameGeneratedTypes(source: string): string {
   if (shape) next = next.replaceAll(shape, "SlopWindowShape");
   if (shapeKind) next = next.replaceAll(shapeKind, "SlopWindowShapeKind");
   return next
+    .replaceAll(": Codable {", ": Codable, Sendable {")
+    .replaceAll(": String, Codable {", ": String, Codable, Sendable {");
+}
+
+function renameInstallTypes(source: string): string {
+  return source
+    .replaceAll("Schema0", "LocalTemplateInstallFormat")
+    .replaceAll("Schema1", "LocalTemplatePackageName")
+    .replaceAll("Schema2", "LocalTemplatePreviewName")
     .replaceAll(": Codable {", ": Codable, Sendable {")
     .replaceAll(": String, Codable {", ": String, Codable, Sendable {");
 }

@@ -25,16 +25,16 @@ extension RegistryTemplate: @unchecked Sendable {}
     public init(deploymentURL: String, catalogURL: URL) {
         client = ConvexClient(deploymentUrl: deploymentURL); self.catalogURL = catalogURL
         favoriteTemplateIDs = Set(UserDefaults.standard.stringArray(forKey: "favoriteTemplateIDs") ?? [])
-        subscription = client.subscribe(to: "catalog:popular", with: ["limit": 24], yielding: [RegistryTemplate].self)
-            .receive(on: DispatchQueue.main).sink(receiveCompletion: { [weak self] completion in if case .failure(let error) = completion { self?.errorMessage = error.localizedDescription } }, receiveValue: { [weak self] in self?.templates = $0 })
+        subscription = client.subscribe(to: "catalog:popular", with: ["limit": 24.0], yielding: [RegistryTemplate].self)
+            .receive(on: DispatchQueue.main).sink(receiveCompletion: { [weak self] completion in if case .failure(let error) = completion { self?.errorMessage = error.localizedDescription } }, receiveValue: { [weak self] in self?.errorMessage = nil; self?.templates = $0 })
     }
 
     public func search(_ term: String) {
-        subscribe(to: "catalog:search", arguments: ["term": term, "limit": 36])
+        subscribe(to: "catalog:search", arguments: ["term": term, "limit": 36.0])
     }
 
     public func list(category: String? = nil, sort: String = "popular") {
-        subscribe(to: "catalog:list", arguments: ["category": category, "sort": sort, "limit": 36])
+        subscribe(to: "catalog:list", arguments: ["category": category, "sort": sort, "limit": 36.0])
     }
 
     public func recordInstall(template: RegistryTemplate) async {
@@ -62,7 +62,7 @@ extension RegistryTemplate: @unchecked Sendable {}
     private func subscribe(to query: String, arguments: [String: ConvexEncodable?]) {
         subscription = client.subscribe(to: query, with: arguments, yielding: [RegistryTemplate].self)
             .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { [weak self] completion in if case .failure(let error) = completion { self?.errorMessage = error.localizedDescription } }, receiveValue: { [weak self] in self?.templates = $0 })
+            .sink(receiveCompletion: { [weak self] completion in if case .failure(let error) = completion { self?.errorMessage = error.localizedDescription } }, receiveValue: { [weak self] in self?.errorMessage = nil; self?.templates = $0 })
     }
 
     private func localInstallationID() -> String {

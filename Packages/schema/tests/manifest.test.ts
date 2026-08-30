@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseManifest } from "../src/index.ts";
+import { parseLocalTemplateInstall, parseManifest } from "../src/index.ts";
 
 const valid = {
   format: "hitslop/1", runtime: "web", slug: "counter", title: "Counter",
@@ -18,4 +18,16 @@ describe("SlopManifest", () => {
   test("rejects absolute store paths", () => expect(() => parseManifest({ ...valid, stores: [{ ...valid.stores[0], path: "/tmp/data.json" }] })).toThrow());
   test("rejects reserved store paths", () => expect(() => parseManifest({ ...valid, stores: [{ ...valid.stores[0], path: "manifest.json" }] })).toThrow());
   test("rejects stores under build/", () => expect(() => parseManifest({ ...valid, stores: [{ ...valid.stores[0], path: "build/index.html" }] })).toThrow());
+});
+
+describe("LocalTemplateInstall", () => {
+  const validInstall = {
+    format: "hitslop-template-install/1",
+    package: "template.slop",
+    preview: "cover.png",
+    artifactSha256: "a".repeat(64),
+    installedAt: "2026-08-29T18:00:00.000Z",
+  };
+  test("parses the local install marker", () => expect(parseLocalTemplateInstall(validInstall).package).toBe("template.slop"));
+  test("rejects an unsafe package location", () => expect(() => parseLocalTemplateInstall({ ...validInstall, package: "../template.slop" })).toThrow());
 });

@@ -47,7 +47,7 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
   await writeFile(join(destination, "index.html"), "<div id=\"app\"></div><script type=\"module\" src=\"/src/main.ts\"></script>\n");
   await writeFile(join(destination, "src/main.ts"), "import { mount } from 'svelte';\nimport App from './App.svelte';\nmount(App, { target: document.getElementById('app')! });\n");
   await writeFile(join(destination, "src/App.svelte"), `<script lang="ts">\n  import { jsonStore } from '@hitslop/svelte';\n  const state = jsonStore('state', { count: 0 });\n</script>\n\n<main>\n  <h1>${slug}</h1>\n  <button onclick={() => state.update(value => { value.count += 1; })}>\n    Count {state.current.count}\n  </button>\n</main>\n`);
-  await writeFile(join(destination, "style.css"), ":root { color-scheme: light dark; font-family: ui-rounded, system-ui, sans-serif; }\nbody { margin: 0; }\nmain { min-height: 100vh; display: grid; place-content: center; gap: 1rem; text-align: center; }\nbutton { padding: .8rem 1.2rem; border-radius: 999px; }\n");
+  await writeFile(join(destination, "style.css"), ":root { color-scheme: light; font-family: ui-rounded, system-ui, sans-serif; background: #f6f7fb; color: #20222a; }\nhtml, body { margin: 0; background: #f6f7fb; }\nmain { min-height: 100vh; display: grid; place-content: center; gap: 1rem; text-align: center; }\nbutton { padding: .8rem 1.2rem; border: 1px solid #d8dbe5; border-radius: 999px; background: white; color: inherit; }\n");
   await writeFile(join(destination, "vite.config.ts"), "import { defineConfig } from 'vite';\nimport { svelte } from '@sveltejs/vite-plugin-svelte';\nexport default defineConfig({ plugins: [svelte()] });\n");
   await writeFile(join(destination, "AGENTS.md"), "# hitSlop authoring\n\nRead `manifest.json` first. Run `bunx @hitslop/cli dev` to preview with isolated stores, then `build` and `publish`. Source stays in this project and is never copied into the runtime `.slop`.\n");
 }
@@ -88,7 +88,10 @@ async function walk(root: string, directory = root): Promise<string[]> {
 }
 
 export async function packSlop(directory: string): Promise<{ bytes: Uint8Array; sha256: string }> {
-  const files: Zippable = {}; const epoch = new Date("1980-01-01T00:00:00Z");
+  // ZIP stores calendar fields without a timezone. A UTC timestamp at the 1980
+  // boundary becomes 1979 in western timezones and fflate correctly rejects it.
+  // Local midnight keeps the encoded fields stable and comfortably in range.
+  const files: Zippable = {}; const epoch = new Date(2000, 0, 1, 0, 0, 0);
   for (const path of await walk(directory)) files[path] = [new Uint8Array(await Bun.file(join(directory, path)).arrayBuffer()), { mtime: epoch, level: 9 }];
   const bytes = zipSync(files, { level: 9 }); return { bytes, sha256: sha256(bytes) };
 }

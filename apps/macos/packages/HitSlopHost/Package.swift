@@ -10,7 +10,8 @@ let package = Package(
     dependencies: [.package(path: "../HitSlopCore"), .package(path: "../HitSlopRegistry")],
     targets: [
         .target(name: "HitSlopHost", dependencies: ["HitSlopCore"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit"), .linkedLibrary("sqlite3")]),
-        .target(name: "HitSlopCatalog", dependencies: ["HitSlopHost", "HitSlopRegistry"], linkerSettings: [.linkedFramework("AppKit")]),
+        .target(name: "HitSlopCatalog", dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRegistry"], linkerSettings: [.linkedFramework("AppKit")]),
+        .testTarget(name: "HitSlopCatalogTests", dependencies: ["HitSlopCatalog", "HitSlopCore"]),
     ],
     swiftLanguageModes: [.v6]
 )

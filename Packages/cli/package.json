@@ -1,14 +1,14 @@
 {
   "name": "@hitslop/cli",
   "version": "0.1.0",
-  "description": "Create, develop, build, screenshot, and publish hitSlop apps.",
+  "description": "Create, develop, build, install, screenshot, and publish hitSlop apps.",
   "type": "module",
   "bin": { "slop": "./dist/cli.js" },
   "files": ["dist"],
   "scripts": {
     "build": "bun build src/cli.ts --target bun --format esm --packages external --outfile dist/cli.js && /bin/chmod +x dist/cli.js",
     "check": "tsc -p tsconfig.json",
-    "test": "true"
+    "test": "bun run --cwd ../schema build && bun test"
   },
   "dependencies": {
     "@crustjs/core": "^0.0.19",

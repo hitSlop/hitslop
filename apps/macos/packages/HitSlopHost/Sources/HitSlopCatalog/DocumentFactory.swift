@@ -27,4 +27,18 @@ public struct DocumentFactory: Sendable {
         try FileManager.default.moveItem(at: temporary, to: destination)
         return downloaded
     }
+
+    public func create(from template: LocalTemplate, at destination: URL) throws {
+        let temporary = destination.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).slop", isDirectory: true)
+        guard !FileManager.default.fileExists(atPath: destination.path) else { throw CocoaError(.fileWriteFileExists) }
+        do {
+            try FileManager.default.copyItem(at: template.packageURL, to: temporary)
+            try DocumentProvenance().write(to: temporary)
+            _ = try SlopPackage(rootURL: temporary)
+            try FileManager.default.moveItem(at: temporary, to: destination)
+        } catch {
+            try? FileManager.default.removeItem(at: temporary)
+            throw error
+        }
+    }
 }
