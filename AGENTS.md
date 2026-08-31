@@ -17,8 +17,9 @@ JSON and SQLite data. Read `manifest.json` first.
   immutable in a document. Never add `style.css`, `document.json`, or a build
   directory. The macOS host may add the Finder-managed `Icon\r` metadata file
   to local documents; templates and published artifacts must not contain it.
-- Reusable TypeScript lives in `packages/`; shared Swift Core/Runtime/Registry
-  code lives in `packages/apple`. macOS Host and NativeCLI remain host-specific.
+- Reusable TypeScript lives in `packages/`. Apple Swift products live in the
+  app-local `apps/apple/Packages/HitSlopApple` package; AppKit code remains in
+  its macOS-only Host, Catalog, and NativeCLI targets.
 - macOS uses built-in package Quick Look for previews and derives each local
   document's Finder custom icon from its immutable `QuickLook/Thumbnail.png`.
 - Catalog selection caches immutable artifacts at

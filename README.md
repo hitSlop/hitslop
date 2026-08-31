@@ -7,11 +7,9 @@ Svelte is the first authoring SDK; the runtime contract is framework-neutral.
 ```text
 apps/
 ├── catalog/        TanStack Start catalog and private R2 gateway
-├── ios/            iOS host and iCloud document browser
-├── macos/          thin macOS app and host-only Swift packages
+├── apple/          one Xcode project plus the app-local Apple Swift package
 └── registry/       Convex publishers, templates, releases, and creation counts
 packages/
-├── apple/          shared Core, Runtime, and Registry Swift package
 ├── cli/            @hitslop/cli (`slop`)
 ├── runtime/        framework-neutral browser bridge
 ├── schema/         Zod, generated JSON Schema, and generated Swift models
@@ -88,9 +86,8 @@ bun install
 bun run build
 bun run check
 bun run test
-swift test --package-path packages/apple
-swift test --package-path apps/macos/packages/HitSlopHost
-swift build --package-path apps/macos/packages/HitSlopNativeCLI
+swift test --package-path apps/apple/Packages/HitSlopApple
+swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native
 ```
 
 After changing Zod, run `bun run schema:generate`. JSON Schema is the portable
@@ -103,7 +100,7 @@ publishing, cache, and iCloud boundaries.
 ## Release the macOS app
 
 The app is distributed directly with Developer ID and Sparkle. Versioning lives
-in `apps/macos/hitSlop/project.yml`: `MARKETING_VERSION` is user-facing semver,
+in `apps/apple/project.yml` under `hitSlop-macOS`: `MARKETING_VERSION` is user-facing semver,
 and `CURRENT_PROJECT_VERSION` is a monotonic build integer.
 
 ```sh

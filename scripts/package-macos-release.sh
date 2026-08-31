@@ -11,18 +11,26 @@ set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
-project_dir="$repo_root/apps/macos/hitSlop"
+project_dir="$repo_root/apps/apple"
 project="$project_dir/hitSlop.xcodeproj"
 project_yml="$project_dir/project.yml"
-export_options="$project_dir/ExportOptions.plist"
+export_options="$project_dir/App/macOS/ExportOptions.plist"
 team_id=${HITSLOP_DEVELOPMENT_TEAM:-78UAXU8QG8}
 identity=${HITSLOP_CODESIGN_IDENTITY:-"Developer ID Application: Mushroom DAO Holdings Corp. ($team_id)"}
 output_dir=${HITSLOP_OUTPUT_DIR:-"$repo_root/dist/macos"}
 sparkle_version=${SPARKLE_VERSION:-2.9.6}
 feed_prefix=${HITSLOP_DOWNLOAD_URL_PREFIX:-}
 
-marketing_version=$(/usr/bin/awk -F'"' '/MARKETING_VERSION:/ { print $2; exit }' "$project_yml")
-build_version=$(/usr/bin/awk -F'"' '/CURRENT_PROJECT_VERSION:/ { print $2; exit }' "$project_yml")
+read_macos_setting() {
+  /usr/bin/awk -v setting="$1" '
+    $0 == "  hitSlop-macOS:" { in_target = 1; next }
+    in_target && /^  [^ ]/ { in_target = 0 }
+    in_target && $1 == setting ":" { gsub(/"/, "", $2); print $2; exit }
+  ' "$project_yml"
+}
+
+marketing_version=$(read_macos_setting MARKETING_VERSION)
+build_version=$(read_macos_setting CURRENT_PROJECT_VERSION)
 if [ -z "$marketing_version" ] || [ -z "$build_version" ]; then
   echo "Could not read MARKETING_VERSION / CURRENT_PROJECT_VERSION from $project_yml" >&2
   exit 78
@@ -81,7 +89,7 @@ echo "Archiving universal Release…"
 /usr/bin/xcodebuild \
   -quiet \
   -project "$project" \
-  -scheme hitSlop \
+  -scheme hitSlop-macOS \
   -configuration Release \
   -destination "generic/platform=macOS" \
   -archivePath "$archive_path" \
@@ -113,7 +121,7 @@ echo "Signing nested helper and app…"
 /usr/bin/codesign --force --timestamp --options runtime --sign "$identity" "$app/Contents/Helpers/hitslop-native"
 /usr/bin/codesign --force --timestamp --options runtime --sign "$identity" "$app/Contents/Frameworks/Sparkle.framework"
 /usr/bin/codesign --force --timestamp --options runtime \
-  --entitlements "$project_dir/hitSlop/hitSlop.entitlements" \
+  --entitlements "$project_dir/App/Shared/hitSlop.entitlements" \
   --sign "$identity" "$app"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$app"
 

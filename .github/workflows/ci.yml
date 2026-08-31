@@ -28,19 +28,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Swift package tests
-        run: |
-          swift test --package-path packages/apple
-          swift test --package-path apps/macos/packages/HitSlopHost
+        run: swift test --package-path apps/apple/Packages/HitSlopApple
       - name: Install XcodeGen
         run: brew install xcodegen
-      - name: Generate and verify macOS app contents
-        working-directory: apps/macos/hitSlop
+      - name: Generate Apple project
+        working-directory: apps/apple
+        run: xcodegen generate
+      - name: Verify macOS app contents
+        working-directory: apps/apple
         run: |
-          xcodegen generate
           derived="$RUNNER_TEMP/hitslop-macos-derived"
           xcodebuild \
             -project hitSlop.xcodeproj \
-            -scheme hitSlop \
+            -scheme hitSlop-macOS \
             -configuration Debug \
             -destination "platform=macOS" \
             -derivedDataPath "$derived" \
@@ -50,7 +50,7 @@ jobs:
           test ! -e "$debug_app/Contents/PlugIns/SlopThumbnail.appex"
           xcodebuild \
             -project hitSlop.xcodeproj \
-            -scheme hitSlop \
+            -scheme hitSlop-macOS \
             -configuration Release \
             -destination "platform=macOS" \
             -derivedDataPath "$derived" \
@@ -61,12 +61,11 @@ jobs:
           release_plugins="$derived/Build/Products/Release/hitSlop.app/Contents/PlugIns"
           test ! -e "$release_plugins/SlopThumbnail.appex"
       - name: Generate and build iOS simulator
-        working-directory: apps/ios/hitSlop
+        working-directory: apps/apple
         run: |
-          xcodegen generate
           xcodebuild \
             -project hitSlop.xcodeproj \
-            -scheme hitSlop \
+            -scheme hitSlop-iOS \
             -configuration Debug \
             -sdk iphonesimulator \
             -destination "generic/platform=iOS Simulator" \

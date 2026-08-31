@@ -5,8 +5,9 @@ description: Work on hitSlop Apple hosting, local storage, iCloud coordination, 
 
 # hitSlop native host
 
-- Shared Core, Runtime, and Registry code belongs in `packages/apple`; keep
-  Xcode targets thin. AppKit-only code belongs in `HitSlopHost`.
+- Apple Swift code belongs in `apps/apple/Packages/HitSlopApple`; keep the two
+  Xcode app targets thin. AppKit-only code belongs in `HitSlopHost`,
+  `HitSlopCatalog`, or `HitSlopNativeCLI`.
 - `HitSlopRegistry` performs direct Convex catalog subscriptions and records a
   creation only after a document is successfully created.
 - `DocumentFactory` verifies SHA-256, caches hosted artifacts at

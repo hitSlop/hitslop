@@ -6,7 +6,7 @@ set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
-native_package="$repo_root/apps/macos/packages/HitSlopNativeCLI"
+native_package="$repo_root/apps/apple/Packages/HitSlopApple"
 
 app=${1:-}
 if [ -z "$app" ] || [ ! -d "$app" ]; then

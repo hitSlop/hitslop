@@ -125,11 +125,8 @@ surfacing coordination failures to the UI.
 
 ## Package layout
 
-- `packages/apple`: shared `HitSlopCore`, `HitSlopRuntime`, and
-  `HitSlopRegistry` products used by macOS and iOS.
-- `apps/macos/packages/HitSlopHost`: AppKit catalog, document windows, masking,
-  previews, and rendering.
-- `apps/macos/packages/HitSlopNativeCLI`: WebKit-specific dev, screenshot, and
-  export helper.
+- `apps/apple`: one Xcode project with thin iOS and macOS application targets.
+- `apps/apple/Packages/HitSlopApple`: Core, Runtime, Registry, AppKit Host,
+  Catalog, and native CLI targets shared through one SwiftPM dependency graph.
 - `apps/catalog`: public TanStack catalog and private R2 publish gateway.
 - `apps/registry`: Convex metadata and live catalog subscriptions.

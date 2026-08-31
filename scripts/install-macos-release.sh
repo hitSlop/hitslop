@@ -3,7 +3,7 @@ set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
-project="$repo_root/apps/macos/hitSlop/hitSlop.xcodeproj"
+project="$repo_root/apps/apple/hitSlop.xcodeproj"
 destination=${HITSLOP_APP_DESTINATION:-/Applications/hitSlop.app}
 team_id=${HITSLOP_DEVELOPMENT_TEAM:-78UAXU8QG8}
 signing_identity=${HITSLOP_DEVELOPMENT_IDENTITY:-Apple Development}
@@ -29,7 +29,7 @@ echo "Building development-signed hitSlop Release for ${build_arch}…"
   -quiet \
   -allowProvisioningUpdates \
   -project "$project" \
-  -scheme hitSlop \
+  -scheme hitSlop-macOS \
   -configuration Release \
   -derivedDataPath "$stage_dir/derived" \
   DEVELOPMENT_TEAM="$team_id" \
