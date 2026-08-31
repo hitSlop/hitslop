@@ -1,24 +1,24 @@
 # hitSlop
 
-hitSlop is a native macOS home for tiny, local-first web apps. A `.slop` is a
-self-contained runtime package with host-owned JSON or SQLite data.
-Svelte is the first authoring SDK, but the runtime contract is framework-free.
+hitSlop is a native home for tiny, local-first web apps. A `.slop` is a
+self-contained runtime app whose JSON and SQLite data is owned by the host.
+Svelte is the first authoring SDK; the runtime contract is framework-neutral.
 
 ```text
 apps/
-├── catalog/        TanStack Start catalog + private R2 gateway
-├── macos/          thin app, Quick Look, and native Swift packages
-└── registry/       Convex catalog, releases, and anonymous telemetry
+├── catalog/        TanStack Start catalog and private R2 gateway
+├── ios/            iOS host and iCloud document browser
+├── macos/          thin macOS app and host-only Swift packages
+└── registry/       Convex publishers, templates, releases, and creation counts
 packages/
+├── apple/          shared Core, Runtime, and Registry Swift package
 ├── cli/            @hitslop/cli (`slop`)
-├── runtime/        framework-neutral host bridge
-├── schema/         Zod source, JSON Schema, generated Swift Codable models
-└── svelte/         Svelte 5 JSON/SQLite helpers
-examples/slops/     six maintained, publishable Svelte templates
-archive/templates/  paused templates kept for later repair
+├── runtime/        framework-neutral browser bridge
+├── schema/         Zod, generated JSON Schema, and generated Swift models
+└── svelte/         Svelte 5 JSON and SQLite helpers
 ```
 
-## Develop a slop
+## Author a slop
 
 ```sh
 bun install
@@ -31,38 +31,55 @@ slop install
 slop publish
 ```
 
-`slop dev` opens a normal browser with a mock `window.slop` bridge and isolated
-stores under `.hitslop/dev/`. `slop dev --native` opens the same dev server in
-the native host. `slop build` emits a source-free runtime directory under
-`dist/<slug>.slop`; publishing assigns the next release number automatically.
-In an interactive terminal, `slop init` asks for the manifest title,
-description, author, and one or two categories; flags and `--yes` support CI.
+`slop dev` uses isolated lazy stores under `.hitslop/dev/stores/`. `slop build`
+emits a source-free `dist/<slug>.slop`. Install and publish capture a full
+`QuickLook/Preview.png` and derive a static, maximum-512px
+`QuickLook/Thumbnail.png`; pass `--thumbnail <png>` to supply custom Finder
+artwork. Publish signs one immutable ZIP artifact.
 
-`slop install` builds and validates the template, captures a fresh native
-preview, and installs it at `~/.hitslop/templates/<slug>/`. The macOS catalog
-discovers these local templates without Convex and duplicates the installed
-seed when you create a document. Existing installs require confirmation or
-`--force`; `--screenshot cover.png` supplies a preview without invoking the
-native screenshot helper.
+The manifest is intentionally small:
 
-The runtime contract is intentionally small:
+```json
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "tiny-counter",
+  "title": "Tiny Counter",
+  "description": "Counts a very small thing.",
+  "categories": ["utilities", "personal"],
+  "presentation": { "width": 560, "height": 420 }
+}
+```
+
+Categories are controlled IDs and a manifest has one or two: `productivity`,
+`utilities`, `finance`, `media`, `games`, `developer-tools`, `education`,
+`business`, `personal`, or `other`.
+
+Runtime packages contain generated visuals and optional host data:
 
 ```text
 my-widget.slop/
-├── manifest.json              metadata, stores, window, document identity
-├── app.html                   generated single-file web app
-├── style.css                  optional user-editable overrides
-├── assets/                    optional guest-readable assets
-├── stores/<id>.json|sqlite    host-owned local data
-└── QuickLook/                 host-generated Preview.png + Thumbnail.png
+├── manifest.json
+├── app.html
+├── assets/                    optional immutable assets
+├── stores/
+│   ├── data.json              optional, created lazily
+│   └── data.sqlite            optional, created lazily
+├── QuickLook/
+│   ├── Preview.png            host-generated Quick Look/catalog image
+│   └── Thumbnail.png          immutable author-controlled artwork
+└── Icon\r                     optional macOS-local Finder metadata
 ```
 
-There is no runtime/version field, authored store path, `document.json`, or
-`build/` directory. The host adds document identity to the copied manifest.
+A slop may use JSON, SQLite, both, or neither. The manifest does not declare
+storage. There is no document identity, release lineage, author, tags, runtime
+version, entry path, editable stylesheet, or seed data in the package format.
+On macOS, hitSlop derives Finder's hidden custom-icon metadata from
+`Thumbnail.png` after creating or opening a local document. That metadata is
+never part of a template or published artifact.
 
-The CLI package is `@hitslop/cli`; installing it exposes the `slop` executable.
-The unscoped `slop` npm name is owned by another project, so the one-shot form is
-`bunx @hitslop/cli` (or `npx @hitslop/cli`).
+Publisher ownership is external to the manifest. `slop publish` creates a local
+Ed25519 identity; the registry makes `(publisher key, slug)` unique. Use
+`slop identity show`, `set-name`, `export`, and `import` to manage that identity.
 
 ## Work on this repository
 
@@ -71,67 +88,25 @@ bun install
 bun run build
 bun run check
 bun run test
-```
-
-Initialize or reconnect the Convex deployment from the registry app:
-
-```sh
-cd apps/registry
-bunx convex dev
-```
-
-This repository is already connected to the `hitslop` development deployment.
-Secrets are documented in [.env.example](.env.example) and
-[apps/catalog/.dev.vars.example](apps/catalog/.dev.vars.example); real values
-stay in ignored `.env.local`/`.dev.vars` files and Convex environment variables.
-
-See [docs/architecture.md](docs/architecture.md) for the package, R2 cache,
-release, and document-update boundaries.
-
-The full implementation record is in
-[docs/v1-refactor.md](docs/v1-refactor.md).
-
-## Native packages
-
-The latest native dependency floors are Convex Swift `0.8.1`, ZIPFoundation
-`0.9.20`, and Swift Argument Parser `1.8.2`.
-
-```sh
-swift test --package-path apps/macos/packages/HitSlopCore
-swift build --package-path apps/macos/packages/HitSlopRegistry
-swift build --package-path apps/macos/packages/HitSlopHost
+swift test --package-path packages/apple
+swift test --package-path apps/macos/packages/HitSlopHost
 swift build --package-path apps/macos/packages/HitSlopNativeCLI
-
-cd apps/macos/hitSlop
-xcodegen generate
-xcodebuild -scheme hitSlop -configuration Debug build
 ```
+
+After changing Zod, run `bun run schema:generate`. JSON Schema is the portable
+boundary; the generator derives both the committed schema and Swift Codable
+models from it. CI rejects generated drift.
+
+See [docs/architecture.md](docs/architecture.md) for the complete runtime,
+publishing, cache, and iCloud boundaries.
 
 ## Release the macOS app
 
-Direct Developer ID distribution — there is no Mac App Store listing. Sparkle
-checks `https://github.com/hitSlop/hitslop/releases/latest/download/appcast.xml`.
-
-Versioning lives in `apps/macos/hitSlop/project.yml`:
-
-| Field | Meaning |
-| --- | --- |
-| `MARKETING_VERSION` | User-facing semver (`1.0.0`). Git tag is `v1.0.0`. |
-| `CURRENT_PROJECT_VERSION` | Monotonic integer Sparkle compares. Never reuse. |
+The app is distributed directly with Developer ID and Sparkle. Versioning lives
+in `apps/macos/hitSlop/project.yml`: `MARKETING_VERSION` is user-facing semver,
+and `CURRENT_PROJECT_VERSION` is a monotonic build integer.
 
 ```sh
-# Local unsigned-to-Developer-ID install (this Mac only)
 scripts/install-macos-release.sh
-
-# Universal signed, notarized DMG (needs App Store Connect API key)
 scripts/package-macos-release.sh
 ```
-
-Pushing a `v*` tag on the default branch runs `.github/workflows/macos-release.yml`,
-which publishes the DMG, zip, and Sparkle appcast to GitHub Releases. Signing
-uses **Mushroom DAO Holdings Corp.** (`78UAXU8QG8`). You do not need an App Store
-Connect app record for this; notarization uses the API key only.
-
-GitHub Actions secrets: `MACOS_CERTIFICATE`, `MACOS_CERTIFICATE_PASSWORD`,
-`KEYCHAIN_PASSWORD`, `ASC_API_KEY_P8`, `ASC_API_KEY_ID`, `ASC_API_ISSUER_ID`,
-`SPARKLE_PRIVATE_KEY`.

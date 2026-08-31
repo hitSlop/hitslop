@@ -1,5 +1,6 @@
 type Options<T> = {
   fallback: T; clone: (value: T) => T;
+  open: (initialValue: T) => Promise<{ value: T; revision: string }>;
   read: () => Promise<{ value: T; revision: string }>;
   write: (value: T, revision: string) => Promise<{ revision: string }>;
   onValue: (value: T) => void; onRevision: (revision: string | null) => void;
@@ -29,7 +30,7 @@ export class JsonWriteQueue<T> {
       }
     }
   }
-  private async reloadPersisted(): Promise<void> { const snapshot = await this.options.read(); this.persisted = this.options.clone(snapshot.value); this.revision = snapshot.revision; this.options.onRevision(this.revision); }
+  private async reloadPersisted(): Promise<void> { const snapshot = this.loaded ? await this.options.read() : await this.options.open(this.options.fallback); this.persisted = this.options.clone(snapshot.value); this.revision = snapshot.revision; this.options.onRevision(this.revision); }
   private schedule<TValue>(operation: () => Promise<TValue>): Promise<TValue> { const scheduled = this.operations.then(operation, operation); this.operations = scheduled.catch(() => undefined); return scheduled; }
   private applyPending(): void { const next = this.options.clone(this.persisted); for (const mutate of this.pending) mutate(next); this.options.onValue(next); }
 }

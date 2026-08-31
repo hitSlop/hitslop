@@ -1,21 +1,30 @@
 ---
 name: hitslop-native
-description: Work on hitSlop macOS hosting, local document storage, template caching, screenshots, export, or the native CLI.
+description: Work on hitSlop Apple hosting, local storage, iCloud coordination, template caching, previews, export, or the native CLI.
 ---
 
 # hitSlop native host
 
-- Reusable code belongs in `apps/macos/packages`; keep the Xcode target thin.
-- `HitSlopRegistry` is only catalog search/list/detail and anonymous telemetry.
-  It must not create, download, cache, copy, or update local documents.
-- `HitSlopRuntime.DocumentFactory` downloads the current immutable artifact from
-  the R2 gateway, verifies SHA-256, caches by publisher/slug/release under
-  `~/.hitslop/templates`, and copies it to the chosen destination.
-- JSON writes must be atomic. Run every SQLite transaction on one connection.
-- Do not silently update existing documents when templates change.
-- Use `hitslop-native` only for WebKit-specific screenshot, PDF, and native dev
-  operations; authoring commands belong to `@hitslop/cli`.
-- Generated Swift manifest models come from `bun run schema:generate`; do not
-  edit the generated file directly.
-- Quick Look extensions only read host-generated PNGs. They never execute
-  `app.html`; Finder thumbnails read `QuickLook/Thumbnail.png`.
+- Shared Core, Runtime, and Registry code belongs in `packages/apple`; keep
+  Xcode targets thin. AppKit-only code belongs in `HitSlopHost`.
+- `HitSlopRegistry` performs direct Convex catalog subscriptions and records a
+  creation only after a document is successfully created.
+- `DocumentFactory` verifies SHA-256, caches hosted artifacts at
+  `cache/<publisher>/<slug>/<release>.slop`, and copies locally. Never silently
+  update an existing document.
+- JSON is atomic. Every SQLite transaction stays on one connection. Both fixed
+  stores are lazy and neither is declared by the manifest.
+- Generated Swift manifest models and the bundled validation schema come from
+  `bun run schema:generate`; never edit them directly.
+- Capture a full `QuickLook/Preview.png` and derive a static, maximum-512px
+  `QuickLook/Thumbnail.png` unless the author supplies one. Documents may
+  refresh only the preview; keep the thumbnail immutable. Use macOS's built-in
+  package handling for Quick Look. For Finder list rows, the host derives
+  Finder-managed `Icon\r` metadata from the static thumbnail when it creates or
+  opens a local document. Accept that exact metadata in local documents but
+  never include it in templates or published artifacts. Do not add Quick Look
+  extensions.
+- Skinned windows use an exact-size RGBA PNG as visible backing and mask, with
+  10% alpha click-through and a transparent WebView.
+- On iOS, surface iCloud coordination and flush failures; do not silently lose
+  a store update.

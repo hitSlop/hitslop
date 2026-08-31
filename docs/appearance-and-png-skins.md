@@ -1,42 +1,32 @@
-# Document Styling and Future PNG Skins
+# Presentation and PNG skins
 
-## First-release styling contract
+Visuals are authored and compiled into `app.html`; runtime styles and assets
+are immutable. The host owns native window geometry and hit testing.
 
-Every `.slop` package ships `style.css` at its conventional path. The host loads its minimal baseline first, the cartridge's compiled styles second, and `style.css` last. The file hot-reloads without remounting the guest.
+Standard presentation accepts initial `width` and `height`, optional
+`resizable` (default `true`), and optional `shape` (default `rounded`):
 
-There is no reusable theme catalog or global token contract. Each authored template owns its colors, typography, custom properties, and Bits UI state styles. Runtime overrides may target that document's selectors and variables. Remote imports remain blocked by the runtime content-security policy.
+- `rounded`
+- `ellipse`
+- `capsule`
 
-Vector window shapes are host-owned because CSS clipping alone cannot provide native click-through hit testing. The manifest declares the immutable window size and shape; the app does not expose an appearance or shape picker.
+Custom presentation replaces shape and resizing with `skin`, a safe PNG path
+under `assets/`:
 
-## Proposed `.slopskin` package
-
-PNG-alpha skins can arrive later as a separate, validated package rather than expanding the first-release window-shape enum.
-
-```text
-radio.slopskin/
-├── manifest.json
-├── background.png
-├── background@2x.png        # optional
-└── style.css                # optional companion overrides
+```json
+{
+  "presentation": {
+    "width": 720,
+    "height": 560,
+    "skin": "assets/window-mask.png"
+  }
+}
 ```
 
-The future manifest should use `slop-skin/1` and declare:
+The skin must be an exact-size RGBA PNG. It is used as the visible native
+backing and alpha mask behind a transparent WebView. Alpha below 10% is
+click-through. Skinned windows are fixed-size, and generated previews retain
+their silhouette.
 
-- Stable ID, display name, version, and preview colors.
-- Fixed logical canvas width and height; initial PNG skins should not resize.
-- Background image paths and pixel scale.
-- Content insets defining the safe WebView rectangle.
-- One or more top-left-origin drag rectangles.
-- Alpha hit-test threshold from 0–255.
-- Optional companion style override.
-
-## Validation and rendering
-
-- Require UTF-8 JSON, package-relative paths, PNG input, matching aspect ratios, and bounded dimensions/file sizes.
-- Decode alpha once into a compact hit-test buffer and pass clicks through below the declared threshold.
-- Use the PNG alpha as both the native window mask and visible backing image; place the transparent WebView inside the declared content insets.
-- Reject empty masks, unsafe drag regions, mismatched @2x assets, and content rectangles outside the canvas.
-- Keep skin and vector-shape declarations mutually exclusive.
-- Quick Look and window-appearance exports should preserve the alpha silhouette. Full-content document export should remain rectangular unless a separate shaped-export mode is explicitly selected.
-
-The archived bitmap-mask implementation is useful research, but none of its file formats or APIs are compatibility requirements.
+Keeping the image in the slop package makes a second skin manifest, content
+insets, drag-region DSL, scale variants, and theme compatibility unnecessary.

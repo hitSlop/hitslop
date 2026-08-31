@@ -29,7 +29,7 @@ private func maskedFixture() throws -> URL {
     let root = directory.appendingPathComponent("asymmetric.slop", isDirectory: true)
     try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
     try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
-    let manifest = #"{"slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","author":{"name":"Test"},"categories":["Widgets"],"stores":{},"window":{"width":240,"height":180,"resizable":false,"shape":{"kind":"imageMask","path":"assets/window-mask.png"}}}"#
+    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","categories":["utilities"],"presentation":{"width":240,"height":180,"skin":"assets/window-mask.png"}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
 
     let width = 240, height = 180

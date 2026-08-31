@@ -9,8 +9,7 @@
   ],
   "exports": {
     ".": "./dist/index.js",
-    "./manifest.schema.json": "./generated/manifest.schema.json",
-    "./local-template-install.schema.json": "./generated/local-template-install.schema.json"
+    "./manifest.schema.json": "./generated/manifest.schema.json"
   },
   "scripts": {
     "generate": "bun src/generate.ts",

@@ -1,23 +1,29 @@
 # hitSlop
 
-`.slop` packages are framework-neutral runtime web apps with host-owned JSON
-or SQLite data. Read `manifest.json` first.
+`.slop` packages are framework-neutral runtime web apps with optional host-owned
+JSON and SQLite data. Read `manifest.json` first.
 
 - Authored templates live in `examples/slops/`; paused templates live in
-  `archive/templates/`. Runtime `.slop` packages never contain source,
-  `package.json`, dependencies, `.build`, `node_modules`, or package checkouts.
+  `archive/templates/`. Runtime packages never contain source, dependencies,
+  build caches, seed stores, or editable stylesheets.
 - Preview with `bun slop dev examples/slops/<id>` and build with
   `bun slop build examples/slops/<id>`.
-- A runtime package has one `manifest.json`, one generated `app.html`, optional
-  `style.css`/`assets`, canonical `stores/<id>.json|sqlite`, and host-generated
-  `QuickLook/`. Never add `document.json` or a `build/` directory.
-- Edit runtime packages only through `style.css`, assets, or declared stores.
+- A runtime package has `manifest.json`, generated `app.html`, optional immutable
+  `assets/`, optional canonical `stores/data.json` and `stores/data.sqlite`,
+  and optional `QuickLook/Preview.png` and `QuickLook/Thumbnail.png`.
+- Manifest storage is implicit. A slop can use JSON, SQLite, both, or neither.
   Replace JSON atomically and keep SQLite transactions on one connection.
-- Reusable TypeScript code lives in `packages/`. Convex lives in
-  `apps/registry`; the TanStack Start/R2 gateway lives in `apps/catalog`.
-- Reusable Swift code lives in `apps/macos/packages/`. The Xcode project is only
-  the macOS app and Quick Look integration layer.
-- Catalog selection downloads the immutable R2 artifact into
-  `~/.hitslop/templates/<publisher>/<slug>/releases/<number>.slop`, verifies its
-  SHA-256, and copies it to the user-selected path. Convex never creates or
-  stores a user's local document.
+- Treat `manifest.json`, `app.html`, `assets/`, and `QuickLook/Thumbnail.png` as
+  immutable in a document. Never add `style.css`, `document.json`, or a build
+  directory. The macOS host may add the Finder-managed `Icon\r` metadata file
+  to local documents; templates and published artifacts must not contain it.
+- Reusable TypeScript lives in `packages/`; shared Swift Core/Runtime/Registry
+  code lives in `packages/apple`. macOS Host and NativeCLI remain host-specific.
+- macOS uses built-in package Quick Look for previews and derives each local
+  document's Finder custom icon from its immutable `QuickLook/Thumbnail.png`.
+- Catalog selection caches immutable artifacts at
+  `~/.hitslop/templates/cache/<publisher>/<slug>/<release>.slop`, verifies
+  SHA-256, and copies one to the user-selected path. Convex never stores a local
+  document.
+- Zod is authoritative. Run `bun run schema:generate` after schema changes;
+  JSON Schema then generates the Swift types and validates Swift manifests.

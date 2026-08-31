@@ -7,67 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		2A24C1D810541A515025BD62 /* SlopPreview.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 70FD6C6E4EEDB119405E6C46 /* SlopPreview.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		32EE242E2EEC85E9A9E285D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 45514551382EBB8BE80DFFDA /* Assets.xcassets */; };
 		358FE74535C9AF5A8A18594F /* HitSlopCatalog in Frameworks */ = {isa = PBXBuildFile; productRef = 2FD35DB710FCD4812E0ECC6F /* HitSlopCatalog */; };
-		45B6339C70726C06D5A043D6 /* QuickLookThumbnailing.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E70D98FCCBC32C297F032C0C /* QuickLookThumbnailing.framework */; };
 		61ECEFDCF237A1CAEA3D4B4D /* hitSlopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0CA44E4E2E034921904245 /* hitSlopApp.swift */; };
-		66728B7CCEC29253103ADAA3 /* ThumbnailProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC2E1F30145A01C89AEDF3F /* ThumbnailProvider.swift */; };
 		9090FCA065C865CAA27E84ED /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 801DA3DDC4601A9620A67CA2 /* Sparkle */; };
-		B0C2E605F273A41D157D8D50 /* PreviewProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23C4FDD1C78335E90B120379 /* PreviewProvider.swift */; };
-		CBB5F0BC5F9099472EC8686B /* SlopThumbnail.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 615323870AE3C5381D079520 /* SlopThumbnail.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E297B6E53F2BD00E58FA74AD /* HitSlopHost in Frameworks */ = {isa = PBXBuildFile; productRef = 534C85A4F7ABB2028F8CFD43 /* HitSlopHost */; };
-		E540CE04CF086E164D1E2C32 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C6FE7896F626C1000AB4139A /* Quartz.framework */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		00047E1EEBC572BA7777A5B8 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CDECF904C55C706C56EAFBA5 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = EAF02C3B50C441A0909AF6C9;
-			remoteInfo = SlopPreview;
-		};
-		7597772D258D57C628A142D7 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = CDECF904C55C706C56EAFBA5 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 5E091CFA67C4E0E3BD2620B1;
-			remoteInfo = SlopThumbnail;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		F9762D82A3822B37E1F97792 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				2A24C1D810541A515025BD62 /* SlopPreview.appex in Embed Foundation Extensions */,
-				CBB5F0BC5F9099472EC8686B /* SlopThumbnail.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		18B6C1B2B14650BC9B3D2CB7 /* hitSlop.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = hitSlop.entitlements; sourceTree = "<group>"; };
-		23C4FDD1C78335E90B120379 /* PreviewProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewProvider.swift; sourceTree = "<group>"; };
 		331443C041E6880082093736 /* App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "App-Info.plist"; sourceTree = "<group>"; };
 		45514551382EBB8BE80DFFDA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		615323870AE3C5381D079520 /* SlopThumbnail.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SlopThumbnail.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B0CA44E4E2E034921904245 /* hitSlopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = hitSlopApp.swift; sourceTree = "<group>"; };
-		70FD6C6E4EEDB119405E6C46 /* SlopPreview.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SlopPreview.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8D47BB7DF24489694C60AF6E /* hitSlop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hitSlop.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9A126E8EB9ED7F5FBF1EB9F2 /* HitSlopRuntime */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopRuntime; path = ../packages/HitSlopRuntime; sourceTree = SOURCE_ROOT; };
-		9CC2E1F30145A01C89AEDF3F /* ThumbnailProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailProvider.swift; sourceTree = "<group>"; };
-		B72AB39C2953A03D3213C4FE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		C6FE7896F626C1000AB4139A /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = System/Library/Frameworks/Quartz.framework; sourceTree = SDKROOT; };
-		D40AB3B4FFE2593992364000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		DB3A8765442F88EF0FD2B9CA /* HitSlopCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopCore; path = ../packages/HitSlopCore; sourceTree = SOURCE_ROOT; };
-		E70D98FCCBC32C297F032C0C /* QuickLookThumbnailing.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLookThumbnailing.framework; path = System/Library/Frameworks/QuickLookThumbnailing.framework; sourceTree = SDKROOT; };
 		FADF5296613A6F018C7DA6D4 /* HitSlopHost */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopHost; path = ../packages/HitSlopHost; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -82,22 +34,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		362DBA5FC05A1829B9C23E68 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				E540CE04CF086E164D1E2C32 /* Quartz.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		39627449AC530C152AF1AAC0 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				45B6339C70726C06D5A043D6 /* QuickLookThumbnailing.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -105,28 +41,8 @@
 			isa = PBXGroup;
 			children = (
 				8D47BB7DF24489694C60AF6E /* hitSlop.app */,
-				70FD6C6E4EEDB119405E6C46 /* SlopPreview.appex */,
-				615323870AE3C5381D079520 /* SlopThumbnail.appex */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		479A3E13C348A0D8E8E9BC91 /* Preview */ = {
-			isa = PBXGroup;
-			children = (
-				B72AB39C2953A03D3213C4FE /* Info.plist */,
-				23C4FDD1C78335E90B120379 /* PreviewProvider.swift */,
-			);
-			path = Preview;
-			sourceTree = "<group>";
-		};
-		5ED0030AA9C2B4F675FC53B3 /* Extensions */ = {
-			isa = PBXGroup;
-			children = (
-				479A3E13C348A0D8E8E9BC91 /* Preview */,
-				99E0D8D146ECEF80024C83B6 /* Thumbnail */,
-			);
-			path = Extensions;
 			sourceTree = "<group>";
 		};
 		65726652DA18E7B87446B01B /* hitSlop */ = {
@@ -143,63 +59,23 @@
 		65C6E29BCD2C40928D9069FD /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				DB3A8765442F88EF0FD2B9CA /* HitSlopCore */,
 				FADF5296613A6F018C7DA6D4 /* HitSlopHost */,
-				9A126E8EB9ED7F5FBF1EB9F2 /* HitSlopRuntime */,
 			);
 			name = Packages;
-			sourceTree = "<group>";
-		};
-		7A226D7E15549B7C29C4E9A6 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				C6FE7896F626C1000AB4139A /* Quartz.framework */,
-				E70D98FCCBC32C297F032C0C /* QuickLookThumbnailing.framework */,
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		7C1AC2CC0C0F6FC94C88DC6B = {
 			isa = PBXGroup;
 			children = (
-				5ED0030AA9C2B4F675FC53B3 /* Extensions */,
 				65726652DA18E7B87446B01B /* hitSlop */,
 				65C6E29BCD2C40928D9069FD /* Packages */,
-				7A226D7E15549B7C29C4E9A6 /* Frameworks */,
 				428362E0B1DAB62483A27C3C /* Products */,
 			);
-			sourceTree = "<group>";
-		};
-		99E0D8D146ECEF80024C83B6 /* Thumbnail */ = {
-			isa = PBXGroup;
-			children = (
-				D40AB3B4FFE2593992364000 /* Info.plist */,
-				9CC2E1F30145A01C89AEDF3F /* ThumbnailProvider.swift */,
-			);
-			path = Thumbnail;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		5E091CFA67C4E0E3BD2620B1 /* SlopThumbnail */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 7A8CB778422498D6AE463956 /* Build configuration list for PBXNativeTarget "SlopThumbnail" */;
-			buildPhases = (
-				C753370C7C027846770F0CAD /* Sources */,
-				39627449AC530C152AF1AAC0 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = SlopThumbnail;
-			packageProductDependencies = (
-			);
-			productName = SlopThumbnail;
-			productReference = 615323870AE3C5381D079520 /* SlopThumbnail.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		9FB57B1DA239579A873B6317 /* hitSlop */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8FA240F08F07FDE8EF08576D /* Build configuration list for PBXNativeTarget "hitSlop" */;
@@ -208,13 +84,10 @@
 				275A5FB3E3798FE2692324C8 /* Embed hitslop-native */,
 				788415ECFE9DC2C547277E1A /* Resources */,
 				2B4C339DE1B21D7191945EEA /* Frameworks */,
-				F9762D82A3822B37E1F97792 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				63493B938FBFF3EDE8311FDB /* PBXTargetDependency */,
-				33B849D1D9999585C06C6FB5 /* PBXTargetDependency */,
 			);
 			name = hitSlop;
 			packageProductDependencies = (
@@ -226,24 +99,6 @@
 			productReference = 8D47BB7DF24489694C60AF6E /* hitSlop.app */;
 			productType = "com.apple.product-type.application";
 		};
-		EAF02C3B50C441A0909AF6C9 /* SlopPreview */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 98BE2D462A13B3EDCF0F1716 /* Build configuration list for PBXNativeTarget "SlopPreview" */;
-			buildPhases = (
-				93D8CF8C1C242072310F0112 /* Sources */,
-				362DBA5FC05A1829B9C23E68 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = SlopPreview;
-			packageProductDependencies = (
-			);
-			productName = SlopPreview;
-			productReference = 70FD6C6E4EEDB119405E6C46 /* SlopPreview.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -253,15 +108,7 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
-					5E091CFA67C4E0E3BD2620B1 = {
-						DevelopmentTeam = 78UAXU8QG8;
-						ProvisioningStyle = Automatic;
-					};
 					9FB57B1DA239579A873B6317 = {
-						DevelopmentTeam = 78UAXU8QG8;
-						ProvisioningStyle = Automatic;
-					};
-					EAF02C3B50C441A0909AF6C9 = {
 						DevelopmentTeam = 78UAXU8QG8;
 						ProvisioningStyle = Automatic;
 					};
@@ -279,16 +126,12 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				CF81B28B9F27185DF17FFF08 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				0309D4433438012202CF75A3 /* XCLocalSwiftPackageReference "../packages/HitSlopCore" */,
 				D52975DAE24A8785AA0A70A4 /* XCLocalSwiftPackageReference "../packages/HitSlopHost" */,
-				4628784BE51DC030F48B20C9 /* XCLocalSwiftPackageReference "../packages/HitSlopRuntime" */,
 			);
 			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				EAF02C3B50C441A0909AF6C9 /* SlopPreview */,
-				5E091CFA67C4E0E3BD2620B1 /* SlopThumbnail */,
 				9FB57B1DA239579A873B6317 /* hitSlop */,
 			);
 		};
@@ -328,14 +171,6 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		93D8CF8C1C242072310F0112 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				B0C2E605F273A41D157D8D50 /* PreviewProvider.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		9EA05FF41715F3E67CF9F844 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -344,28 +179,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C753370C7C027846770F0CAD /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				66728B7CCEC29253103ADAA3 /* ThumbnailProvider.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		33B849D1D9999585C06C6FB5 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 5E091CFA67C4E0E3BD2620B1 /* SlopThumbnail */;
-			targetProxy = 7597772D258D57C628A142D7 /* PBXContainerItemProxy */;
-		};
-		63493B938FBFF3EDE8311FDB /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = EAF02C3B50C441A0909AF6C9 /* SlopPreview */;
-			targetProxy = 00047E1EEBC572BA7777A5B8 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0172489AC57241C1FFE30A08 /* Release */ = {
@@ -403,7 +217,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 18;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 78UAXU8QG8;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -429,50 +243,6 @@
 			};
 			name = Release;
 		};
-		28C486950184DA4E014D7CC5 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Extensions/SlopExtension.entitlements;
-				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_DEBUG_DYLIB = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
-				INFOPLIST_FILE = Extensions/Thumbnail/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.hitslop.app.thumbnail;
-				PRODUCT_NAME = SlopThumbnail;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-			};
-			name = Release;
-		};
-		427C2B1E8368320F2677509A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Extensions/SlopExtension.entitlements;
-				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_DEBUG_DYLIB = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
-				INFOPLIST_FILE = Extensions/Thumbnail/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.hitslop.app.thumbnail;
-				PRODUCT_NAME = SlopThumbnail;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-			};
-			name = Debug;
-		};
 		80748AD2CBD34BFED2E10698 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -491,28 +261,6 @@
 				PRODUCT_NAME = hitSlop;
 				SDKROOT = macosx;
 				SKIP_INSTALL = NO;
-			};
-			name = Debug;
-		};
-		82A1452E4F4263D6213BCDCB /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Extensions/SlopExtension.entitlements;
-				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_DEBUG_DYLIB = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
-				INFOPLIST_FILE = Extensions/Preview/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.hitslop.app.preview;
-				PRODUCT_NAME = SlopPreview;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 			};
 			name = Debug;
 		};
@@ -551,7 +299,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 18;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 78UAXU8QG8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -605,54 +353,14 @@
 			};
 			name = Release;
 		};
-		F52F00C038D75AEB2D4FEBA7 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Extensions/SlopExtension.entitlements;
-				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_DEBUG_DYLIB = NO;
-				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
-				INFOPLIST_FILE = Extensions/Preview/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.hitslop.app.preview;
-				PRODUCT_NAME = SlopPreview;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		7A8CB778422498D6AE463956 /* Build configuration list for PBXNativeTarget "SlopThumbnail" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				427C2B1E8368320F2677509A /* Debug */,
-				28C486950184DA4E014D7CC5 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 		8FA240F08F07FDE8EF08576D /* Build configuration list for PBXNativeTarget "hitSlop" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				80748AD2CBD34BFED2E10698 /* Debug */,
 				D49A39A812B243359A3AC025 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		98BE2D462A13B3EDCF0F1716 /* Build configuration list for PBXNativeTarget "SlopPreview" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				82A1452E4F4263D6213BCDCB /* Debug */,
-				F52F00C038D75AEB2D4FEBA7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -669,14 +377,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		0309D4433438012202CF75A3 /* XCLocalSwiftPackageReference "../packages/HitSlopCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../packages/HitSlopCore;
-		};
-		4628784BE51DC030F48B20C9 /* XCLocalSwiftPackageReference "../packages/HitSlopRuntime" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../packages/HitSlopRuntime;
-		};
 		D52975DAE24A8785AA0A70A4 /* XCLocalSwiftPackageReference "../packages/HitSlopHost" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../packages/HitSlopHost;

@@ -17,15 +17,6 @@ private struct AppEnvironment {
     static var deploymentURL: String { Bundle.main.object(forInfoDictionaryKey: "ConvexDeploymentURL") as? String ?? "https://fastidious-malamute-777.convex.cloud" }
 }
 
-extension RegistryTemplate {
-    func remoteTemplate() throws -> SlopRemoteTemplate {
-        guard let artifactKey = currentArtifactKey, let sha = currentArtifactSha256 else {
-            throw SlopPackageError.invalid("template has no current artifact")
-        }
-        return SlopRemoteTemplate(publisherKeyID: publisherKeyId, slug: slug, release: currentReleaseNumber, artifactKey: artifactKey, artifactSha256: sha)
-    }
-}
-
 struct LibraryView: View {
     @StateObject private var library = SlopCloudLibrary()
     @State private var catalogPresented = false
@@ -113,13 +104,14 @@ struct CatalogScreen: View {
 
     private func create(_ template: RegistryTemplate) {
         guard creating == nil else { return }
+        guard SlopCloud.isAvailable else { failure = "Sign in to iCloud Drive before creating a slop."; return }
         creating = template.title
         Task { @MainActor in
             do {
+                guard let remote = template.remoteTemplate() else { throw SlopPackageError.invalid("template has no current artifact") }
                 let url = SlopCloud.uniqueDocumentURL(slug: template.slug)
-                let downloaded = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template.remoteTemplate(), at: url)
-                if downloaded { await model.recordDownload(template: template) }
-                await model.recordInstall(template: template)
+                _ = try await DocumentFactory(catalogURL: model.catalogURL).create(from: remote, at: url)
+                await model.recordCreation(template: template)
                 creating = nil
                 onCreated()
             } catch {
@@ -134,15 +126,16 @@ struct DocumentScreen: View {
     let url: URL
     @Environment(\.scenePhase) private var scenePhase
     @State private var document: SlopOpenedDocument?
-    @State private var error: String?
+    @State private var openError: String?
+    @State private var saveError: String?
 
     var body: some View {
         Group {
             if let document {
                 SlopWebView(webView: document.session.webView)
                     .ignoresSafeArea(edges: .bottom)
-            } else if let error {
-                ContentUnavailableView("Could not open slop", systemImage: "exclamationmark.triangle", description: Text(error))
+            } else if let openError {
+                ContentUnavailableView("Could not open slop", systemImage: "exclamationmark.triangle", description: Text(openError))
             } else {
                 ProgressView("Opening…")
             }
@@ -155,16 +148,20 @@ struct DocumentScreen: View {
             document = nil
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active { try? document?.flush() }
+            if phase != .active { do { try document?.flush() } catch { saveError = error.localizedDescription } }
         }
+        .alert("Could not save to iCloud", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: { Text(saveError ?? "") }
     }
 
     private func open() async {
         do {
-            document = try await SlopOpenedDocument.open(presentedURL: url)
-            document?.session.load()
+            let opened = try await SlopOpenedDocument.open(presentedURL: url)
+            opened.onFlushError = { error in saveError = error.localizedDescription }
+            document = opened; opened.session.load()
         } catch {
-            self.error = error.localizedDescription
+            openError = error.localizedDescription
         }
     }
 }

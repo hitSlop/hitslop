@@ -19,10 +19,8 @@
 		331443C041E6880082093736 /* App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "App-Info.plist"; sourceTree = "<group>"; };
 		45514551382EBB8BE80DFFDA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6B0CA44E4E2E034921904245 /* hitSlopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = hitSlopApp.swift; sourceTree = "<group>"; };
+		841E8C3B5EB184240F6292C3 /* apple */ = {isa = PBXFileReference; lastKnownFileType = folder; name = apple; path = ../../../packages/apple; sourceTree = SOURCE_ROOT; };
 		8D47BB7DF24489694C60AF6E /* hitSlop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = hitSlop.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9A126E8EB9ED7F5FBF1EB9F2 /* HitSlopRuntime */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopRuntime; path = ../../macos/packages/HitSlopRuntime; sourceTree = SOURCE_ROOT; };
-		DB2CA5818813BD7366BEB8E6 /* HitSlopRegistry */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopRegistry; path = ../../macos/packages/HitSlopRegistry; sourceTree = SOURCE_ROOT; };
-		DB3A8765442F88EF0FD2B9CA /* HitSlopCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopCore; path = ../../macos/packages/HitSlopCore; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,9 +59,7 @@
 		65C6E29BCD2C40928D9069FD /* Packages */ = {
 			isa = PBXGroup;
 			children = (
-				DB3A8765442F88EF0FD2B9CA /* HitSlopCore */,
-				DB2CA5818813BD7366BEB8E6 /* HitSlopRegistry */,
-				9A126E8EB9ED7F5FBF1EB9F2 /* HitSlopRuntime */,
+				841E8C3B5EB184240F6292C3 /* apple */,
 			);
 			name = Packages;
 			sourceTree = "<group>";
@@ -128,9 +124,7 @@
 			mainGroup = 7C1AC2CC0C0F6FC94C88DC6B;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				68312FFAC4474584A825F24D /* XCLocalSwiftPackageReference "../../macos/packages/HitSlopCore" */,
-				DA0454BFE2345F568C7F269D /* XCLocalSwiftPackageReference "../../macos/packages/HitSlopRegistry" */,
-				3A2F88BE27A0E45352220B99 /* XCLocalSwiftPackageReference "../../macos/packages/HitSlopRuntime" */,
+				A0FF3E131A99F68334184B41 /* XCLocalSwiftPackageReference "../../../packages/apple" */,
 			);
 			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
@@ -361,17 +355,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		3A2F88BE27A0E45352220B99 /* XCLocalSwiftPackageReference "../../macos/packages/HitSlopRuntime" */ = {
+		A0FF3E131A99F68334184B41 /* XCLocalSwiftPackageReference "../../../packages/apple" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../macos/packages/HitSlopRuntime;
-		};
-		68312FFAC4474584A825F24D /* XCLocalSwiftPackageReference "../../macos/packages/HitSlopCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../macos/packages/HitSlopCore;
-		};
-		DA0454BFE2345F568C7F269D /* XCLocalSwiftPackageReference "../../macos/packages/HitSlopRegistry" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../macos/packages/HitSlopRegistry;
+			relativePath = ../../../packages/apple;
 		};
 /* End XCLocalSwiftPackageReference section */
 

@@ -1,13 +1,8 @@
 {
-  "$schema": "https://hitslop.app/schemas/manifest.schema.json",
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
   "slug": "focus-timer",
   "title": "Focus Timer",
   "description": "A circular focus and rest timer with local session history.",
-  "author": { "name": "Longtail Labs" },
-  "categories": ["Focus", "Productivity"],
-  "tags": ["timer", "pomodoro", "json", "circle"],
-  "stores": {
-    "state": { "kind": "json", "maxBytes": 1048576 }
-  },
-  "window": { "width": 420, "height": 420, "shape": { "kind": "circle" } }
+  "categories": ["productivity", "personal"],
+  "presentation": { "width": 420, "height": 420, "shape": "ellipse" }
 }

@@ -1,13 +1,8 @@
 {
-  "$schema": "https://hitslop.app/schemas/manifest.schema.json",
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
   "slug": "random-picker",
   "title": "Random Picker",
   "description": "A playful capsule for choosing one option and remembering recent picks.",
-  "author": { "name": "Longtail Labs" },
-  "categories": ["Utilities", "Widgets"],
-  "tags": ["random", "picker", "json", "capsule", "bits-ui"],
-  "stores": {
-    "state": { "kind": "json", "maxBytes": 1048576 }
-  },
-  "window": { "width": 560, "height": 320, "shape": { "kind": "capsule" } }
+  "categories": ["utilities", "personal"],
+  "presentation": { "width": 560, "height": 320, "shape": "capsule" }
 }

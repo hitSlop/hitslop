@@ -1,14 +1,14 @@
 # @hitslop/registry
 
-Convex owns searchable catalog metadata, anonymous install/favorite counters,
-immutable release records, screenshots, and `.slop` artifacts. Public source
-archives live on Code.Storage and are referenced by URL.
+Convex owns publisher identities, publisher-scoped templates, immutable release
+metadata, idempotent publish requests, and successful document-creation counts.
+Cloudflare R2 owns the signed immutable artifact and its derived preview.
 
-The repository commits this directory and Convex's generated API files. Real
-deployment identifiers and secrets belong in `.env.local`.
+The registry does not store artifacts, screenshots uploaded separately,
+downloads, installs, favorites, device identifiers, or user documents.
 
-Do not run setup until the maintainer is ready to select the Longtail Labs
-Convex project. From this directory, the setup command is:
+Real deployment identifiers and secrets belong in ignored environment files.
+Initialize or reconnect from this directory with:
 
 ```sh
 bunx convex dev

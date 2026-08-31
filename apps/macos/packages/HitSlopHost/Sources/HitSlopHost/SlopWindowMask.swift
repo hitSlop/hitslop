@@ -4,7 +4,7 @@ import ImageIO
 
 @MainActor final class SlopWindowMask {
     private enum Content {
-        case geometry(SlopWindowShape)
+        case geometry(Shape)
         case image(CGImage, AlphaMap)
     }
 
@@ -42,13 +42,24 @@ import ImageIO
     private let content: Content
 
     init(package: SlopPackage) throws {
-        if let url = try package.imageMaskURL() {
+        if let url = try package.skinURL() {
             guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-                throw SlopPackageError.invalid("could not decode window image mask")
+                throw SlopPackageError.invalid("could not decode window skin")
             }
             content = .image(image, try AlphaMap(image: image))
         } else {
-            content = .geometry(package.manifest.window.shape)
+            content = .geometry(package.shape)
+        }
+    }
+
+    func installBacking(on layer: CALayer?) {
+        guard let layer else { return }
+        switch content {
+        case .geometry:
+            layer.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        case .image(let image, _):
+            layer.contents = image; layer.contentsGravity = .resize
+            layer.isGeometryFlipped = true; layer.magnificationFilter = .linear; layer.minificationFilter = .linear
         }
     }
 
@@ -108,19 +119,16 @@ import ImageIO
         return png
     }
 
-    private static func path(for shape: SlopWindowShape, in rect: CGRect) -> NSBezierPath {
-        switch shape.kind {
-        case .circle:
+    private static func path(for shape: Shape, in rect: CGRect) -> NSBezierPath {
+        switch shape {
+        case .ellipse:
             return NSBezierPath(ovalIn: rect)
         case .capsule:
             let radius = min(rect.width, rect.height) / 2
             return NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
-        case .roundedRect:
-            let radius = min(CGFloat(shape.radius ?? 0), min(rect.width, rect.height) / 2)
+        case .rounded:
+            let radius = min(CGFloat(22), min(rect.width, rect.height) / 2)
             return NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
-        case .imageMask:
-            assertionFailure("imageMask is represented by decoded alpha")
-            return NSBezierPath(rect: rect)
         }
     }
 }

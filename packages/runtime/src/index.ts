@@ -1,18 +1,22 @@
 import type { SlopHost, SlopStatement, WindowSlop } from "./types.ts";
-export type { SlopChange, SlopHost, SlopStatement, SlopStoreKind, WindowSlop } from "./types.ts";
+export type { SlopChange, SlopHost, SlopSnapshot, SlopStatement, SlopStoreKind, WindowSlop } from "./types.ts";
 
 let configuredHost: SlopHost | undefined;
 
 const fromBridge = (bridge: WindowSlop): SlopHost => ({
-  query: <T>(store: string, sql: string, params: unknown[] = []) => bridge.db.query(store, sql, params) as Promise<T[]>,
-  execute: (store, sql, params = []) => bridge.db.execute(store, sql, params),
-  transaction: (store, statements: SlopStatement[]) => bridge.db.transaction(store, statements),
-  jsonRead: async <T>(store: string) => {
-    const result = await bridge.json.read(store);
+  query: <T>(sql: string, params: unknown[] = []) => bridge.db.query(sql, params) as Promise<T[]>,
+  execute: (sql, params = []) => bridge.db.execute(sql, params),
+  transaction: (statements: SlopStatement[]) => bridge.db.transaction(statements),
+  jsonOpen: async <T>(initialValue: T) => {
+    const result = await bridge.json.open(initialValue);
     return { value: result.value as T, revision: result.revision };
   },
-  jsonWrite: async <T>(store: string, value: T, expectedRevision?: string) => bridge.json.write(store, value, expectedRevision),
-  watch: (kind, store, callback) => kind === "json" ? bridge.json.onChange(store, callback) : bridge.db.onChange(store, callback),
+  jsonRead: async <T>() => {
+    const result = await bridge.json.read();
+    return { value: result.value as T, revision: result.revision };
+  },
+  jsonWrite: async <T>(value: T, expectedRevision?: string) => bridge.json.write(value, expectedRevision),
+  watch: (kind, callback) => kind === "json" ? bridge.json.onChange(callback) : bridge.db.onChange(callback),
 });
 
 export function installHost(host: SlopHost): () => void {
@@ -26,13 +30,19 @@ export function getHost(): SlopHost {
   throw new Error("hitSlop host bridge is unavailable. Run this project with `slop dev` or inside hitSlop.");
 }
 
-export const slop: SlopHost = {
-  query: (store, sql, params) => getHost().query(store, sql, params),
-  execute: (store, sql, params) => getHost().execute(store, sql, params),
-  transaction: (store, statements) => getHost().transaction(store, statements),
-  jsonRead: (store) => getHost().jsonRead(store),
-  jsonWrite: (store, value, expectedRevision) => getHost().jsonWrite(store, value, expectedRevision),
-  watch: (kind, store, callback) => getHost().watch(kind, store, callback),
+export const slop = {
+  json: {
+    open: <T>(initialValue: T) => getHost().jsonOpen(initialValue),
+    read: <T>() => getHost().jsonRead<T>(),
+    write: <T>(value: T, expectedRevision?: string) => getHost().jsonWrite(value, expectedRevision),
+    onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("json", callback),
+  },
+  db: {
+    query: <T = Record<string, unknown>>(sql: string, params?: unknown[]) => getHost().query<T>(sql, params),
+    execute: (sql: string, params?: unknown[]) => getHost().execute(sql, params),
+    transaction: (statements: SlopStatement[]) => getHost().transaction(statements),
+    onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("sqlite", callback),
+  },
 };
 
 export function ready(): void { if (typeof window !== "undefined") window.slop?.ready?.(); }

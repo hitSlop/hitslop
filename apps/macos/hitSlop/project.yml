@@ -8,16 +8,12 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "15"
+    CURRENT_PROJECT_VERSION: "18"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
     DEVELOPMENT_TEAM: 78UAXU8QG8
     CODE_SIGN_STYLE: Automatic
     SWIFT_STRICT_CONCURRENCY: minimal
 packages:
-  HitSlopCore:
-    path: ../packages/HitSlopCore
-  HitSlopRuntime:
-    path: ../packages/HitSlopRuntime
   HitSlopHost:
     path: ../packages/HitSlopHost
   Sparkle:
@@ -36,10 +32,6 @@ targets:
         product: HitSlopCatalog
       - package: Sparkle
         product: Sparkle
-      - target: SlopPreview
-        embed: true
-      - target: SlopThumbnail
-        embed: true
     postCompileScripts:
       - name: Embed hitslop-native
         basedOnDependencyAnalysis: false
@@ -67,49 +59,11 @@ targets:
         Release:
           HITSLOP_CATALOG_URL: https://hitslop.app
           HITSLOP_CONVEX_URL: https://fastidious-malamute-777.convex.cloud
-  SlopPreview:
-    type: app-extension
-    platform: macOS
-    sources:
-      - path: Extensions/Preview
-    dependencies:
-      - sdk: Quartz.framework
-    settings:
-      base:
-        ENABLE_APP_SANDBOX: YES
-        ENABLE_USER_SELECTED_FILES: readonly
-        ENABLE_DEBUG_DYLIB: NO
-        ENABLE_HARDENED_RUNTIME: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app.preview
-        PRODUCT_NAME: SlopPreview
-        INFOPLIST_FILE: Extensions/Preview/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Extensions/SlopExtension.entitlements
-        SKIP_INSTALL: YES
-  SlopThumbnail:
-    type: app-extension
-    platform: macOS
-    sources:
-      - path: Extensions/Thumbnail
-    dependencies:
-      - sdk: QuickLookThumbnailing.framework
-    settings:
-      base:
-        ENABLE_APP_SANDBOX: YES
-        ENABLE_USER_SELECTED_FILES: readonly
-        ENABLE_DEBUG_DYLIB: NO
-        ENABLE_HARDENED_RUNTIME: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app.thumbnail
-        PRODUCT_NAME: SlopThumbnail
-        INFOPLIST_FILE: Extensions/Thumbnail/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Extensions/SlopExtension.entitlements
-        SKIP_INSTALL: YES
 schemes:
   hitSlop:
     build:
       targets:
         hitSlop: all
-        SlopPreview: all
-        SlopThumbnail: all
     run:
       config: Debug
       executable: hitSlop

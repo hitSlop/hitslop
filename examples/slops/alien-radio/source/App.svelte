@@ -25,7 +25,7 @@
     { id: "deepspaceone", title: "Deep Space One", description: "Deep ambient electronic and space music.", genre: "ambient", listeners: "—", lastPlaying: "Scanning the outer bands", playlists: [{ url: "https://api.somafm.com/deepspaceone130.pls", format: "aac", quality: "highest" }] },
     { id: "dronezone", title: "Drone Zone", description: "Atmospheric textures with minimal beats.", genre: "ambient", listeners: "—", lastPlaying: "Long-range carrier detected", playlists: [{ url: "https://api.somafm.com/dronezone130.pls", format: "aac", quality: "highest" }] },
   ];
-  const radio = jsonStore<RadioState>("state", {
+  const radio = jsonStore<RadioState>({
     selectedChannelId: "spacestation",
     favoriteChannelIds: ["spacestation", "missioncontrol", "deepspaceone", "dronezone"],
     volume: 0.72,

@@ -6,7 +6,7 @@ import HitSlopRuntime
 import SwiftUI
 
 private enum CatalogFilter: Hashable {
-    case all, installed, recents, favorites, category(String)
+    case all, myTemplates, recents, category(String)
 }
 
 private struct TemplateCreationFailure: Identifiable {
@@ -20,7 +20,6 @@ public struct CatalogView: View {
     @StateObject private var localStore: LocalTemplateStore
     @State private var query = ""
     @State private var filter: CatalogFilter = .all
-    @State private var knownCategories: Set<String> = []
     @State private var searchTask: Task<Void, Never>?
     @State private var creatingTemplateTitle: String?
     @State private var creationFailure: TemplateCreationFailure?
@@ -38,7 +37,7 @@ public struct CatalogView: View {
     private var hostedItems: [CatalogItem] { model.templates.map { CatalogItem(source: .hosted($0)) } }
     private var localItems: [CatalogItem] { localStore.templates.map { CatalogItem(source: .local($0)) } }
     private var recentDocuments: [URL] { Array(NSDocumentController.shared.recentDocumentURLs.filter { $0.pathExtension == "slop" && FileManager.default.fileExists(atPath: $0.path) }.prefix(8)) }
-    private var categories: [String] { knownCategories.union(hostedItems.flatMap(\.categories)).union(localItems.flatMap(\.categories)).sorted() }
+    private let categories = ["productivity", "utilities", "finance", "media", "games", "developer-tools", "education", "business", "personal", "other"]
     private var searchTerm: String { query.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase }
 
     public var body: some View {
@@ -86,7 +85,6 @@ public struct CatalogView: View {
         .onChange(of: query) { _, value in scheduleSearch(value) }
         .onChange(of: scenePhase) { _, phase in if phase == .active { localStore.refresh(); recentRevision &+= 1 } }
         .onReceive(NotificationCenter.default.publisher(for: .hitSlopPreviewDidChange)) { _ in recentRevision &+= 1 }
-        .onReceive(model.$templates) { templates in knownCategories.formUnion(templates.flatMap(\.categories)) }
         .onOpenURL { url in if url.pathExtension == "slop" { openDocumentAction(url) } }
         .alert(item: $creationFailure) { failure in
             Alert(title: Text("Could not create \(failure.title)"), message: Text(failure.message), dismissButton: .default(Text("OK")))
@@ -106,22 +104,20 @@ public struct CatalogView: View {
             }
 
             if !searchTerm.isEmpty {
-                TemplateSection(title: "Search results", subtitle: "Local and online", items: searchedItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
+                TemplateSection(title: "Search results", subtitle: "Local and online", items: searchedItems, catalogURL: model.catalogURL, select: chooseTemplate)
             } else {
                 switch filter {
                 case .all:
                     if !recentDocuments.isEmpty { RecentSection(urls: Array(recentDocuments.prefix(4)), revision: recentRevision, open: openDocument) }
-                    if !localItems.isEmpty { TemplateSection(title: "Installed locally", subtitle: "Ready without a download", items: localItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate) }
-                    TemplateSection(title: "Popular right now", subtitle: "From the hitSlop catalog", items: hostedItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
-                case .installed:
-                    TemplateSection(title: "Installed", subtitle: "Templates on this Mac", items: localItems, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
+                    if !localItems.isEmpty { TemplateSection(title: "Installed locally", subtitle: "Ready without a download", items: localItems, catalogURL: model.catalogURL, select: chooseTemplate) }
+                    TemplateSection(title: "Popular right now", subtitle: "From the hitSlop catalog", items: hostedItems, catalogURL: model.catalogURL, select: chooseTemplate)
+                case .myTemplates:
+                    TemplateSection(title: "My Templates", subtitle: "Templates installed on this Mac", items: localItems, catalogURL: model.catalogURL, select: chooseTemplate)
                 case .recents:
                     if recentDocuments.isEmpty { CatalogEmptyState(icon: "clock", title: "Nothing opened yet", message: "Documents you create or open will appear here.") }
                     else { RecentSection(urls: recentDocuments, revision: recentRevision, open: openDocument) }
-                case .favorites:
-                    TemplateSection(title: "Favorites", subtitle: "Saved from the online catalog", items: hostedItems.filter(isFavorite), model: model, catalogURL: model.catalogURL, select: chooseTemplate)
                 case .category(let category):
-                    TemplateSection(title: category, subtitle: "Local and online templates", items: (localItems + hostedItems).filter { $0.categories.contains(category) }, model: model, catalogURL: model.catalogURL, select: chooseTemplate)
+                    TemplateSection(title: categoryLabel(category), subtitle: "Local and online templates", items: (localItems + hostedItems).filter { $0.categories.contains(category) }, catalogURL: model.catalogURL, select: chooseTemplate)
                 }
             }
         }
@@ -129,7 +125,6 @@ public struct CatalogView: View {
     }
 
     private var searchedItems: [CatalogItem] { (localItems + hostedItems).filter { $0.searchableText.contains(searchTerm) } }
-    private func isFavorite(_ item: CatalogItem) -> Bool { if case .hosted(let template) = item.source { model.isFavorite(template) } else { false } }
     private func openDocument(_ url: URL) { openDocumentAction(url) }
 
     private func chooseTemplate(_ item: CatalogItem) {
@@ -147,10 +142,10 @@ public struct CatalogView: View {
             do {
                 switch item.source {
                 case .hosted(let template):
-                    let downloaded = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template.remoteTemplate(), at: url)
+                    guard let remote = template.remoteTemplate() else { throw SlopPackageError.invalid("template has no current artifact") }
+                    _ = try await DocumentFactory(catalogURL: model.catalogURL).create(from: remote, at: url)
                     SlopPreviewWriter.installExistingPreview(for: url)
-                    if downloaded { await model.recordDownload(template: template) }
-                    await model.recordInstall(template: template)
+                    await model.recordCreation(template: template)
                 case .local(let template):
                     try DocumentFactory(catalogURL: model.catalogURL).create(fromLocalPackage: template.packageURL, at: url)
                     SlopPreviewWriter.installExistingPreview(for: url)
@@ -168,7 +163,7 @@ public struct CatalogView: View {
         filter = next
         guard searchTerm.isEmpty else { return }
         if case .category(let category) = next { model.list(category: category) }
-        else if next == .all || next == .favorites { model.list() }
+        else if next == .all { model.list() }
     }
 
     private func scheduleSearch(_ value: String) {
@@ -182,6 +177,8 @@ public struct CatalogView: View {
             } else { model.search(trimmed) }
         }
     }
+
+    private func categoryLabel(_ id: String) -> String { id == "developer-tools" ? "Developer Tools" : id.capitalized }
 }
 
 private struct CatalogSidebar: View {
@@ -204,16 +201,15 @@ private struct CatalogSidebar: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 3) {
-                    SidebarButton(title: "All Templates", icon: "square.grid.2x2", count: nil, selected: filter == .all) { select(.all) }
-                    SidebarButton(title: "Installed", icon: "arrow.down.circle", count: localCount, selected: filter == .installed) { select(.installed) }
+                    SidebarButton(title: "All Slops", icon: "square.grid.2x2", count: nil, selected: filter == .all) { select(.all) }
                     SidebarButton(title: "Recents", icon: "clock", count: recentCount, selected: filter == .recents) { select(.recents) }
-                    SidebarButton(title: "Favorites", icon: "star", count: nil, selected: filter == .favorites) { select(.favorites) }
+                    SidebarButton(title: "My Templates", icon: "folder", count: localCount, selected: filter == .myTemplates) { select(.myTemplates) }
 
                     if !categories.isEmpty {
                         Text("CATEGORIES").font(.caption2.weight(.semibold)).tracking(1.2).foregroundStyle(.secondary)
                             .padding(.horizontal, 12).padding(.top, 22).padding(.bottom, 6)
                         ForEach(categories, id: \.self) { category in
-                            SidebarButton(title: category, icon: categoryIcon(category), count: nil, selected: filter == .category(category)) { select(.category(category)) }
+                            SidebarButton(title: category == "developer-tools" ? "Developer Tools" : category.capitalized, icon: categoryIcon(category), count: nil, selected: filter == .category(category)) { select(.category(category)) }
                         }
                     }
                 }.padding(.horizontal, 8).padding(.bottom, 18)
@@ -227,12 +223,18 @@ private struct CatalogSidebar: View {
 
     private func categoryIcon(_ category: String) -> String {
         let value = category.localizedLowercase
-        if value.contains("finance") { return "wallet.bifold" }
-        if value.contains("product") || value.contains("focus") { return "checkmark.circle" }
-        if value.contains("document") { return "doc.text" }
-        if value.contains("project") { return "rectangle.3.group" }
-        if value.contains("widget") || value.contains("util") { return "slider.horizontal.3" }
-        return "folder"
+        return switch value {
+        case "productivity": "checkmark.circle"
+        case "utilities": "wrench.and.screwdriver"
+        case "finance": "wallet.bifold"
+        case "media": "play.rectangle"
+        case "games": "gamecontroller"
+        case "developer-tools": "chevron.left.forwardslash.chevron.right"
+        case "education": "graduationcap"
+        case "business": "briefcase"
+        case "personal": "person"
+        default: "ellipsis.circle"
+        }
     }
 }
 
@@ -293,7 +295,6 @@ private struct TemplateSection: View {
     let title: String
     let subtitle: String
     let items: [CatalogItem]
-    let model: RegistryModel
     let catalogURL: URL
     let select: (CatalogItem) -> Void
     private let columns = [GridItem(.adaptive(minimum: 196, maximum: 280), spacing: 18, alignment: .top)]
@@ -311,23 +312,19 @@ private struct TemplateSection: View {
             } else {
                 LazyVGrid(columns: columns, alignment: .leading, spacing: 22) {
                     ForEach(items) { item in
-                        TemplateCard(item: item, catalogURL: catalogURL, isFavorite: favorite(item), toggleFavorite: { toggle(item) }, select: { select(item) })
+                        TemplateCard(item: item, catalogURL: catalogURL, select: { select(item) })
                     }
                 }
             }
         }
     }
 
-    private var emptyMessage: String { title == "Installed" ? "Run `slop install` from a template project to add it to this Mac." : "Try another search or category." }
-    private func favorite(_ item: CatalogItem) -> Bool { if case .hosted(let template) = item.source { model.isFavorite(template) } else { false } }
-    private func toggle(_ item: CatalogItem) { if case .hosted(let template) = item.source { Task { await model.toggleFavorite(template: template) } } }
+    private var emptyMessage: String { title == "My Templates" ? "Run `slop install` from a template project to add it to this Mac." : "Try another search or category." }
 }
 
 private struct TemplateCard: View {
     let item: CatalogItem
     let catalogURL: URL
-    let isFavorite: Bool
-    let toggleFavorite: () -> Void
     let select: () -> Void
     @State private var hovering = false
 
@@ -347,16 +344,6 @@ private struct TemplateCard: View {
                         .padding(.vertical, 5)
                         .background(.ultraThickMaterial, in: Capsule())
                     Spacer()
-                    if case .hosted = item.source {
-                        Button(action: toggleFavorite) {
-                            Image(systemName: isFavorite ? "star.fill" : "star")
-                                .foregroundStyle(isFavorite ? Color.orange : Color.primary)
-                                .frame(width: 30, height: 30)
-                                .background(.ultraThickMaterial, in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .help(isFavorite ? "Remove favorite" : "Favorite")
-                    }
                 }
                 .padding(8)
             }
@@ -366,7 +353,7 @@ private struct TemplateCard: View {
                 HStack(spacing: 5) {
                     Text(item.categories.prefix(2).joined(separator: " · ")).lineLimit(1)
                     Spacer()
-                    if let favorites = item.favorites { Label("\(favorites)", systemImage: "star").labelStyle(.titleAndIcon) }
+                    if let creations = item.creations { Label("\(creations)", systemImage: "doc.on.doc").labelStyle(.titleAndIcon) }
                 }.font(.caption2).foregroundStyle(.tertiary)
             }
         }
@@ -407,7 +394,7 @@ private struct TemplatePreview: View {
     }
 
     private func screenshotURL(_ template: RegistryTemplate) -> URL? {
-        guard let key = template.currentScreenshotKey else { return nil }
+        guard let key = template.currentPreviewKey else { return nil }
         var components = URLComponents(url: catalogURL.appendingPathComponent("api/artifact"), resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "key", value: key)]
         return components?.url
@@ -466,8 +453,7 @@ private struct RecentDocumentPreview: View {
 
     private var previewImage: NSImage? {
         let quickLook = url.appendingPathComponent("QuickLook", isDirectory: true)
-        return NSImage(contentsOf: quickLook.appendingPathComponent("Thumbnail.png"))
-            ?? NSImage(contentsOf: quickLook.appendingPathComponent("Preview.png"))
+        return NSImage(contentsOf: quickLook.appendingPathComponent("Preview.png"))
     }
 }
 

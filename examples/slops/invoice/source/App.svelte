@@ -29,7 +29,7 @@
     { value: "paid", label: "Paid" },
   ];
 
-  const invoice = jsonStore<Invoice>("state", {
+  const invoice = jsonStore<Invoice>({
     number: "INV-001",
     issued: "2026-04-01",
     due: "2026-04-15",

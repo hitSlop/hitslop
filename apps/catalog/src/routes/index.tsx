@@ -1,17 +1,31 @@
 import { convexQuery } from "@convex-dev/react-query";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { api } from "../convex";
 
-const searchQuery = (term: string) => convexQuery(api.catalog.search, { term, limit: 36 });
+const searchQuery = (term: string, category: string) => convexQuery(api.catalog.search, { term, ...(category === "all" ? {} : { category }), limit: 36 });
+const categories = [
+  ["all", "All"],
+  ["productivity", "Productivity"],
+  ["utilities", "Utilities"],
+  ["finance", "Finance"],
+  ["media", "Media"],
+  ["games", "Games"],
+  ["developer-tools", "Developer Tools"],
+  ["education", "Education"],
+  ["business", "Business"],
+  ["personal", "Personal"],
+  ["other", "Other"],
+] as const;
+const categoryLabel = (id: string): string => categories.find(([value]) => value === id)?.[1] ?? id;
 
 export const Route = createFileRoute("/")({ component: Catalog });
 
 function Catalog() {
   const [query, setQuery] = useState("");
   const [term, setTerm] = useState("");
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState("all");
   const search = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -44,9 +58,7 @@ function Catalog() {
         <input ref={search} autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="A timer, an invoice, a strange little tool…" />
         {query ? <button type="button" onClick={() => setQuery("")} aria-label="Clear search">×</button> : <kbd>⌘ K</kbd>}
       </label>
-      <Suspense fallback={<div className="category-skeleton" aria-hidden="true" />}>
-        <Categories term={term} category={category} onChange={setCategory} />
-      </Suspense>
+      <Categories category={category} onChange={setCategory} />
     </section>
 
     <Suspense fallback={<CatalogSkeleton />}>
@@ -57,23 +69,20 @@ function Catalog() {
   </main>;
 }
 
-function Categories({ term, category, onChange }: { term: string; category: string; onChange: (value: string) => void }) {
-  const { data: templates } = useSuspenseQuery(searchQuery(term));
-  const categories = useMemo(() => ["All", ...new Set(templates.flatMap((item) => item.categories))], [templates]);
-  return <div className="categories" aria-label="Template categories">{categories.map((item) => <button type="button" aria-pressed={item === category} className={item === category ? "active" : ""} onClick={() => onChange(item)} key={item}>{item}</button>)}</div>;
+function Categories({ category, onChange }: { category: string; onChange: (value: string) => void }) {
+  return <div className="categories" aria-label="Template categories">{categories.map(([id, label]) => <button type="button" aria-pressed={id === category} className={id === category ? "active" : ""} onClick={() => onChange(id)} key={id}>{label}</button>)}</div>;
 }
 
 function Shelf({ query, term, category }: { query: string; term: string; category: string }) {
-  const { data: templates } = useSuspenseQuery(searchQuery(term));
-  const visible = templates.filter((item) => category === "All" || item.categories.includes(category));
+  const { data: visible } = useSuspenseQuery(searchQuery(term, category));
   return <section className="shelf" id="templates" aria-live="polite">
-    <div className="section-heading"><div><p className="eyebrow">The collection</p><h2>{query ? "Search results" : category === "All" ? "Popular right now" : category}</h2></div><p>{visible.length} {visible.length === 1 ? "template" : "templates"}</p></div>
+    <div className="section-heading"><div><p className="eyebrow">The collection</p><h2>{query ? "Search results" : category === "all" ? "Popular right now" : categoryLabel(category)}</h2></div><p>{visible.length} {visible.length === 1 ? "template" : "templates"}</p></div>
     {visible.length ? <div className="template-grid">{visible.map((item) => <article className="template-card" key={item._id}>
       <a className="template-preview" href={item.currentReleaseId ? `/api/download/${item.currentReleaseId}` : undefined} aria-label={item.currentReleaseId ? `Download ${item.title}` : item.title}>
-        {item.currentScreenshotKey ? <img src={`/api/artifact?key=${encodeURIComponent(item.currentScreenshotKey)}`} alt={`Preview of ${item.title}`} /> : <span className="preview-fallback" aria-hidden="true">✦</span>}
+        {item.currentPreviewKey ? <img src={`/api/artifact?key=${encodeURIComponent(item.currentPreviewKey)}`} alt={`Preview of ${item.title}`} /> : <span className="preview-fallback" aria-hidden="true">✦</span>}
         <span className="preview-badge">CATALOG</span>{item.currentReleaseId && <span className="preview-action">Get <span aria-hidden="true">↓</span></span>}
       </a>
-      <div className="template-copy"><div className="template-title"><h3>{item.title}</h3><span className="favorite-count" title={`${item.favorites} favorites`}>☆ {item.favorites}</span></div><p>{item.description}</p><span className="template-categories">{item.categories.join(" · ")}</span></div>
+      <div className="template-copy"><div className="template-title"><h3>{item.title}</h3><span className="creation-count" title={`${item.creations} documents created`}>{item.creations} created</span></div><p>{item.description}</p><span className="template-categories">{item.categories.map(categoryLabel).join(" · ")}</span></div>
     </article>)}</div> : <div className="empty-state"><span aria-hidden="true">⌕</span><div><h3>No tiny tools found</h3><p>Try a broader word or choose another category.</p></div></div>}
   </section>;
 }

@@ -109,6 +109,7 @@ if [ ! -d "$app" ]; then
 fi
 
 echo "Signing nested helper and app…"
+/usr/bin/codesign --force --timestamp --sign "$identity" "$app/Contents/Helpers/HitSlopApple_HitSlopCore.bundle"
 /usr/bin/codesign --force --timestamp --options runtime --sign "$identity" "$app/Contents/Helpers/hitslop-native"
 /usr/bin/codesign --force --timestamp --options runtime --sign "$identity" "$app/Contents/Frameworks/Sparkle.framework"
 /usr/bin/codesign --force --timestamp --options runtime \

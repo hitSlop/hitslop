@@ -1,7 +1,7 @@
 <script lang="ts">
   import { jsonStore } from "@hitslop/svelte";
 
-  const state = jsonStore("state", { count: 0 });
+  const state = jsonStore({ count: 0 });
 
   function change(by: number): void {
     state.update((value) => { value.count += by; });
@@ -31,7 +31,7 @@
 
     <footer>
       <span class:loading={state.isLoading}><i></i>{state.isLoading ? "Loading" : "Saved locally"}</span>
-      <code>stores/state.json</code>
+      <code>stores/data.json</code>
     </footer>
 
     {#if state.error}

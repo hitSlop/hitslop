@@ -7,7 +7,7 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import X from "@lucide/svelte/icons/x";
   type Option={id:number;label:string};type Pick={id:number;label:string;pickedAt:string};type PickerData={title:string;options:Option[];history:Pick[];nextID:number};
-  const picker=jsonStore<PickerData>("state",{title:"Pick one",options:[],history:[],nextID:1});
+  const picker=jsonStore<PickerData>({title:"Pick one",options:[],history:[],nextID:1});
   let editing=$state(false);let draft=$state("");let spinning=$state(false);let display=$state("");let timer:ReturnType<typeof setInterval>|null=null;
   const winner=$derived(display||picker.current.history[0]?.label||"Ready?");
   function setTitle(value:string):void{picker.update(data=>{data.title=value})}

@@ -7,12 +7,12 @@ let package = Package(
         .library(name: "HitSlopHost", targets: ["HitSlopHost"]),
         .library(name: "HitSlopCatalog", targets: ["HitSlopCatalog"]),
     ],
-    dependencies: [.package(path: "../HitSlopCore"), .package(path: "../HitSlopRuntime"), .package(path: "../HitSlopRegistry")],
+    dependencies: [.package(path: "../../../../packages/apple")],
     targets: [
-        .target(name: "HitSlopHost", dependencies: ["HitSlopCore", "HitSlopRuntime"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit")]),
-        .target(name: "HitSlopCatalog", dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRuntime", "HitSlopRegistry"], linkerSettings: [.linkedFramework("AppKit")]),
-        .testTarget(name: "HitSlopHostTests", dependencies: ["HitSlopHost", "HitSlopCore"]),
-        .testTarget(name: "HitSlopCatalogTests", dependencies: ["HitSlopCatalog", "HitSlopCore", "HitSlopRuntime"]),
+        .target(name: "HitSlopHost", dependencies: [.product(name: "HitSlopCore", package: "apple"), .product(name: "HitSlopRuntime", package: "apple")], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit")]),
+        .target(name: "HitSlopCatalog", dependencies: ["HitSlopHost", .product(name: "HitSlopCore", package: "apple"), .product(name: "HitSlopRuntime", package: "apple"), .product(name: "HitSlopRegistry", package: "apple")], linkerSettings: [.linkedFramework("AppKit")]),
+        .testTarget(name: "HitSlopHostTests", dependencies: ["HitSlopHost", .product(name: "HitSlopCore", package: "apple")]),
+        .testTarget(name: "HitSlopCatalogTests", dependencies: ["HitSlopCatalog", .product(name: "HitSlopCore", package: "apple"), .product(name: "HitSlopRuntime", package: "apple")]),
     ],
     swiftLanguageModes: [.v6]
 )

@@ -1,5 +1,5 @@
 {
-  "originHash" : "8f0ab1455d61c03d256545892169f9437cbf008ae761c0017f98fd4491b18e28",
+  "originHash" : "946ad702fd418a729839db63588ef56b0acc233f3b91c989cd02d7d684c80633",
   "pins" : [
     {
       "identity" : "convex-swift",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
         "version" : "1.8.2"
+      }
+    },
+    {
+      "identity" : "swift-dynamicjson",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/objecthub/swift-dynamicjson.git",
+      "state" : {
+        "revision" : "9648f32126ade414b00b9551c27870d4ad9b168c",
+        "version" : "1.0.2"
       }
     },
     {

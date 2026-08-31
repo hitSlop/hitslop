@@ -1,123 +1,135 @@
 # hitSlop architecture
 
-## The document boundary
+## One package, two optional stores
 
-A `.slop` is a package directory and a complete runtime web app. It has one
-source of metadata and identity: `manifest.json`.
+A `.slop` directory is a complete runtime web app. `manifest.json` describes
+only catalog discovery and native presentation. `app.html` and `assets/` are
+immutable after build. The only mutable package content is host-owned data, the
+host-generated preview, and platform filesystem metadata. Thumbnail artwork is
+captured once with the template and remains static.
 
 ```text
 example.slop/
 ├── manifest.json
 ├── app.html
-├── style.css                  optional editable overrides
-├── assets/                    optional guest-readable assets
+├── assets/                    optional
 ├── stores/
-│   ├── state.json
-│   └── library.sqlite
+│   ├── data.json              optional and lazy
+│   ├── data.sqlite            optional and lazy
+│   └── data.sqlite-{wal,shm}  transient host sidecars
 ├── QuickLook/
-│   ├── Preview.png
-│   └── Thumbnail.png
-└── AGENTS.md                  optional editing guidance
+│   ├── Preview.png            optional until first capture
+│   └── Thumbnail.png          static package-time Finder image
+└── Icon\r                     optional macOS-local Finder metadata
 ```
 
-`app.html` is generated. Source, package manifests, dependencies, and build
-caches never enter the runtime package. There is no format/runtime version,
-authored entry path, authored store path, or separate `document.json`.
+Templates never contain `stores/`. Documents may independently create the JSON
+store, SQLite store, both, or neither. Fixed paths remove store IDs, path
+configuration, kinds, byte limits, seed copying, and migration matching from
+the manifest.
 
-Manifest stores are a dictionary. The key is the bridge ID and determines the
-path: `state: { kind: "json" }` means `stores/state.json`; SQLite uses
-`stores/<id>.sqlite`. A template manifest has no `document`. The host adds a
-fresh document UUID, plus optional immutable release lineage, to the manifest
-when it creates a user document.
+There is no `document.json` and no document identity or release lineage in the
+manifest. Copying a template preserves the manifest byte-for-byte. A later
+release affects only documents created from that release.
 
-The window block owns initial width, height, optional resizing, and shape.
-Rounded rectangles, circles, and capsules can resize. An image-masked window
-must be fixed-size and references an exact-size alpha PNG under `assets/`.
+## Manifest and presentation
 
-## Guest and host responsibilities
+Every manifest requires the v1 `$schema` URL, publisher-scoped slug, title,
+description, one or two controlled category IDs, and presentation dimensions.
+Standard windows are resizable by default and support `rounded`, `ellipse`, or
+`capsule`. A skin instead references an exact-size RGBA PNG under `assets/` and
+is fixed-size.
 
-Guest HTML runs in an ephemeral WebKit data store behind `slop://`. The scheme
-serves only `app.html`, `style.css`, and `assets/`. It never exposes the
-manifest, stores, SQLite sidecars, or Quick Look files.
+The skin PNG is both the visible backing and native mask. The WebView remains
+transparent, and pixels below 10% alpha pass pointer events through the window.
+Quick Look capture preserves that silhouette.
 
-The injected `window.slop` bridge is the only data boundary. It provides JSON
-reads, atomic writes, SQLite queries/mutations/transactions, and store-scoped
-change events. External JSON replacement or SQLite commits refresh reactive
-data without reloading the page. Changes to HTML, CSS, or assets reload the
-visual runtime.
+## Guest boundary
 
-The host creates `QuickLook/Preview.png` and `Thumbnail.png` after the guest
-reaches its stable `ready()` boundary and after visible data changes. Finder's
-thumbnail extension and Quick Look preview extension only read those PNGs;
-neither extension executes guest code. The macOS host also refreshes the
-package's custom Finder icon for immediate feedback.
+Guest code runs in an ephemeral WebKit data store behind `slop://`. The scheme
+serves only `app.html` and `assets/`; it never exposes the manifest, stores,
+SQLite sidecars, or preview.
+
+The bridge is deliberately ID-free:
+
+```ts
+slop.json.open(initial)
+slop.json.read()
+slop.json.write(value, expectedRevision?)
+slop.json.onChange(callback)
+
+slop.db.query(sql, parameters?)
+slop.db.execute(sql, parameters?)
+slop.db.transaction(statements)
+slop.db.onChange(callback)
+```
+
+JSON replacement is atomic and revision-aware. Each SQLite transaction stays
+on one host connection. There are no runtime store-size limits; publish and
+archive boundaries enforce artifact limits instead.
 
 ## Schema pipeline
 
-Zod 4 under `Packages/schema/src` is authoritative:
+Zod in `packages/schema/src` is authoritative for TypeScript validation. The
+generation pipeline is:
 
 ```text
-Zod ── z.infer ──> TypeScript types and runtime validation
-  └── z.toJSONSchema ──> committed JSON Schema
-                           └── quicktype ──> Swift Codable models
+Zod → JSON Schema draft 2020-12 → Swift Codable models
+                         └──────→ bundled Swift runtime validation
 ```
 
-Run `bun run schema:generate` after changing Zod. CI runs the drift check so
-the JSON Schema and Swift models cannot silently diverge.
+`bun run schema:generate` writes the committed JSON Schema, generated Swift
+model, and bundled Swift schema resource. Generated Swift is never edited by
+hand.
 
-## Authoring and local installation
+## Identity, publishing, and registry
 
-`@hitslop/cli` owns `slop init`, `dev`, `validate`, `build`, `install`, `pack`,
-`screenshot`, and `publish`. Svelte is the first SDK, not part of the runtime
-contract. `slop dev` uses isolated `.hitslop/dev` store copies and a browser
-mock of the bridge; `--native` is available for WebKit-specific debugging.
+The CLI keeps a local Ed25519 publisher key. Its key ID owns slugs in the
+registry, so slug uniqueness is publisher-scoped rather than global. The
+display name is editable and the identity can be encrypted for export/import.
 
-`slop install` stages an explicitly local template as:
+Publishing builds, captures a full Quick Look preview, derives a maximum-512px
+Finder thumbnail unless the author supplies one, creates one deterministic ZIP,
+and signs an envelope containing its hash and size. The catalog gateway
+verifies the signature, ZIP structure, expansion limits, package boundary,
+manifest, skin, and two valid static images. It stores the immutable artifact in
+R2 and derives the browser preview and manifest from those signed bytes. macOS
+uses built-in package handling for Quick Look. After creating or opening a
+local document, the host derives Finder's custom icon from the immutable
+`Thumbnail.png`; Finder stores that as hidden `Icon\r` metadata inside the local
+package. This metadata is accepted for documents but rejected from templates
+and published artifacts. Convex assigns a monotonically increasing release
+number.
+
+Convex stores publisher identities, templates, releases, idempotent publish
+requests, and one aggregate `creations` counter. It does not track downloads,
+installs, favorites, devices, or local documents. The counter increments only
+after a host successfully creates a document.
+
+## Local installation and hosted cache
 
 ```text
-~/.hitslop/templates/<slug>/
-├── template.slop/
-│   └── QuickLook/{Preview,Thumbnail}.png
-└── install.json               artifact SHA-256 and install time
+~/.hitslop/templates/
+├── installed/<slug>.slop
+└── cache/<publisher-key>/<slug>/<release>.slop
 ```
 
-The install marker does not contain a version or repeat the fixed package
-name. The catalog validates it, reads the same manifest used by hosted
-templates, and duplicates `template.slop` to the chosen destination.
+Local installs are replaceable templates. Hosted cache entries are immutable
+and verified by SHA-256 before use. There are no wrappers, install markers,
+sidecars, or `current` pointers. All creation paths duplicate the validated
+template to a user-selected destination; Convex never creates or stores it.
 
-Hosted templates use a separate immutable cache keyed by publisher, slug, and
-server-assigned release. The host downloads from the R2 gateway only when that
-exact artifact is absent, verifies SHA-256, then duplicates locally. Convex is
-not involved in creating or storing the user's document.
+On iOS, local documents live in the user's iCloud container. The runtime uses a
+working copy and explicitly flushes the two canonical stores back to iCloud,
+surfacing coordination failures to the UI.
 
-All copies go through `SlopDuplicator`. It makes the document writable,
-snapshots SQLite with the online backup API so committed WAL data is included,
-removes sidecars, and writes a fresh document identity. Existing documents are
-never silently replaced when a template gains a new release.
+## Package layout
 
-## Platform layout
-
-- `apps/catalog`: TanStack Start landing/catalog and private R2 gateway.
-- `apps/registry`: Convex catalog metadata, immutable releases, and anonymous
-  counters.
-- `Packages/cli`, `Packages/runtime`, `Packages/schema`, `Packages/svelte`:
-  publishable TypeScript authoring/runtime packages.
-- `apps/macos/packages/HitSlopCore`: document validation, duplication, archive
-  integrity, and generated shared models.
-- `HitSlopRuntime`: cross-platform WebKit/storage/document creation and iCloud
-  working-copy support.
-- `HitSlopHost`: AppKit windows, masks, toolbar, rendering, previews, and the
-  macOS catalog.
-- `HitSlopRegistry`: read-oriented Convex Swift catalog access and anonymous
-  telemetry.
-
-Convex owns searchable metadata and counters; private R2 owns immutable bytes.
-Publishing uses a local Ed25519 keypair, and Convex assigns release integers.
-Users never manage versions or need an account to publish under their key.
-
-## Future document updates
-
-An explicit update must create a new sibling from the target cached release,
-copy only stores whose ID and kind still match, validate it, and atomically
-exchange it while retaining a backup. Store-kind changes require an explicit
-migration. Until that exists, hitSlop exposes no unsafe update operation.
+- `packages/apple`: shared `HitSlopCore`, `HitSlopRuntime`, and
+  `HitSlopRegistry` products used by macOS and iOS.
+- `apps/macos/packages/HitSlopHost`: AppKit catalog, document windows, masking,
+  previews, and rendering.
+- `apps/macos/packages/HitSlopNativeCLI`: WebKit-specific dev, screenshot, and
+  export helper.
+- `apps/catalog`: public TanStack catalog and private R2 publish gateway.
+- `apps/registry`: Convex metadata and live catalog subscriptions.

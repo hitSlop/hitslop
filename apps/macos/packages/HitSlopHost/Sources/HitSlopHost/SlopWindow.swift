@@ -29,6 +29,7 @@ private final class ShapedView: HoverView {
         maskLayer = windowMask.makeLayer()
         super.init(frame: frame)
         wantsLayer = true
+        windowMask.installBacking(on: layer)
         layer?.mask = maskLayer
     }
     required init?(coder: NSCoder) { nil }
@@ -77,24 +78,26 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         self.packageURL = opened.presentedURL
         session = opened.session
         let windowMask = try SlopWindowMask(package: session.package)
-        let spec = session.package.manifest.window, size = NSSize(width: spec.width, height: spec.height)
+        let spec = session.package.manifest.presentation, size = NSSize(width: spec.width, height: spec.height)
         let window = FramelessDocumentWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .resizable], backing: .buffered, defer: false)
         window.title = session.package.manifest.title; window.minSize = NSSize(width: 240, height: 180); window.isOpaque = false
         window.backgroundColor = .clear; window.hasShadow = true; window.isReleasedWhenClosed = false; window.tabbingMode = .disallowed
-        if spec.resizable == false { window.styleMask.remove(.resizable) }
-        if spec.shape.kind == .circle { window.contentAspectRatio = NSSize(width: 1, height: 1) }
+        if !session.package.isResizable { window.styleMask.remove(.resizable) }
+        if session.package.shape == .ellipse, spec.width == spec.height { window.contentAspectRatio = NSSize(width: 1, height: 1) }
         let container = ShapedView(frame: NSRect(origin: .zero, size: size), windowMask: windowMask)
         session.webView.frame = container.bounds; session.webView.autoresizingMask = [.width, .height]; container.addSubview(session.webView)
         window.contentView = container; window.center()
         super.init(window: window)
         window.delegate = self; session.delegate = self; container.changed = { [weak self] in $0 ? self?.showToolbar() : self?.scheduleHide() }
-        setupToolbar(); session.load()
+        opened.onFlushError = { [weak self] error in self?.present("Could not save to iCloud", error) }
+        setupToolbar()
+        SlopPreviewWriter.installExistingPreview(for: self.packageURL)
+        session.load()
     }
     required init?(coder: NSCoder) { nil }
 
     public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) { failedOverlay?.removeFromSuperview(); failedOverlay = nil; schedulePreview() }
-    public func runtimeSessionDidReloadVisuals(_ session: SlopRuntimeSession) { schedulePreview() }
-    public func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind, storeID: String) { schedulePreview() }
+    public func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind) {}
     public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) { showFailure(error) }
 
     private func setupToolbar() {
@@ -174,7 +177,14 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     public func windowDidMove(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
     public func windowDidResize(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
-    public func windowWillClose(_ notification: Notification) { previewWork?.cancel(); opened.close(); toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil; onClose?() }
+    public func windowDidResignKey(_ notification: Notification) { schedulePreview() }
+    public func windowWillClose(_ notification: Notification) {
+        previewWork?.cancel(); toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil; onClose?()
+        Task { @MainActor [self] in
+            if let image = try? await session.webView.takeSnapshot(configuration: nil), let png = try? SlopPreviewImage.png(from: image, package: session.package) { try? SlopPreviewWriter.write(png, to: packageURL) }
+            opened.close()
+        }
+    }
     private func present(_ title: String, _ error: Error) { let alert = NSAlert(error: error); alert.messageText = title; alert.runModal() }
 }
 

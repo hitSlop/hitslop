@@ -1,10 +1,9 @@
 import { Database } from "bun:sqlite";
-import { cp, mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import type { Plugin } from "vite";
 import { createServer } from "vite";
-import { storePath, type SlopManifest } from "@hitslop/schema";
 import { loadManifest } from "./project.ts";
 
 const readNodeBody = async (request: AsyncIterable<Uint8Array>): Promise<Record<string, unknown>> => {
@@ -13,42 +12,44 @@ const readNodeBody = async (request: AsyncIterable<Uint8Array>): Promise<Record<
   return JSON.parse(new TextDecoder().decode(Buffer.concat(chunks))) as Record<string, unknown>;
 };
 const revision = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
+const exists = async (path: string): Promise<boolean> => { try { await stat(path); return true; } catch { return false; } };
 
-const bridge = `<script>\n(() => {\n const call=async(path,body)=>{const r=await fetch('/__hitslop/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const value=await r.json();if(!r.ok)throw new Error(value.error||r.statusText);return value};\n const watch=(kind,store,cb)=>{let rev;const timer=setInterval(async()=>{try{const value=await call(kind+'/revision',{store});if(rev&&rev!==value.revision)cb({kind,store,source:'package',revision:value.revision});rev=value.revision}catch{}},750);return()=>clearInterval(timer)};\n window.slop={json:{read:store=>call('json/read',{store}),write:(store,value,expectedRevision)=>call('json/write',{store,value,expectedRevision}),onChange:(store,cb)=>watch('json',store,cb)},db:{query:(store,sql,parameters=[])=>call('sqlite/query',{store,sql,parameters}),execute:(store,sql,parameters=[])=>call('sqlite/execute',{store,sql,parameters}),transaction:(store,statements)=>call('sqlite/transaction',{store,statements}),onChange:(store,cb)=>watch('sqlite',store,cb)},ready:()=>{document.documentElement.dataset.hitslopReady='true'}};\n})();\n</script>`;
-
-async function seedStores(root: string, manifest: SlopManifest, reset: boolean): Promise<string> {
-  const dataRoot = join(root, ".hitslop", "dev"); if (reset) await rm(dataRoot, { recursive: true, force: true }); await mkdir(dataRoot, { recursive: true });
-  for (const [id, store] of Object.entries(manifest.stores)) { const path = storePath(id, store.kind); const target = join(dataRoot, path); try { await stat(target); } catch { await mkdir(dirname(target), { recursive: true }); await cp(join(root, path), target); } }
-  return dataRoot;
-}
+const bridge = `<script>\n(() => {\n const listeners={json:new Set(),sqlite:new Set()};\n const call=async(path,body={})=>{const r=await fetch('/__hitslop/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const value=await r.json();if(!r.ok)throw new Error(value.error||r.statusText);return value};\n const emit=(kind,event)=>listeners[kind].forEach(cb=>cb({kind,...event}));\n const watch=(kind,cb)=>{listeners[kind].add(cb);let rev;const timer=setInterval(async()=>{try{const value=await call(kind+'/revision');if(rev!==undefined&&rev!==value.revision)emit(kind,{source:'external',revision:value.revision});rev=value.revision}catch{}},750);return()=>{listeners[kind].delete(cb);clearInterval(timer)}};\n window.slop={json:{open:value=>call('json/open',{value}),read:()=>call('json/read'),write:(value,expectedRevision)=>call('json/write',{value,expectedRevision}).then(result=>(emit('json',{source:'app',revision:result.revision}),result)),onChange:cb=>watch('json',cb)},db:{query:(sql,parameters=[])=>call('sqlite/query',{sql,parameters}),execute:(sql,parameters=[])=>call('sqlite/execute',{sql,parameters}).then(result=>(emit('sqlite',{source:'app'}),result)),transaction:statements=>call('sqlite/transaction',{statements}).then(result=>(emit('sqlite',{source:'app'}),result)),onChange:cb=>watch('sqlite',cb)},ready:()=>{document.documentElement.dataset.hitslopReady='true'}};\n})();\n</script>`;
 
 const forbiddenSQL = /\b(attach|detach|load_extension)\b/i;
 
-function mockHostPlugin(manifest: SlopManifest, dataRoot: string): Plugin {
-  const stores = new Map(Object.entries(manifest.stores));
-  const databases = new Map<string, Database>();
-  const resolveStore = (id: unknown, kind: "json" | "sqlite") => {
-    if (typeof id !== "string") throw new Error("store is required");
-    const store = stores.get(id);
-    if (!store || store.kind !== kind) throw new Error(`Unknown ${kind} store: ${id}`);
-    return { store, path: join(dataRoot, storePath(id, store.kind)) };
-  };
-  const sqlite = (id: unknown): { store: SlopManifest["stores"][number]; path: string; database: Database } => {
-    const resolved = resolveStore(id, "sqlite");
-    let database = databases.get(resolved.path);
+function mockHostPlugin(dataRoot: string): Plugin {
+  const storesRoot = join(dataRoot, "stores");
+  const jsonPath = join(storesRoot, "data.json");
+  const sqlitePath = join(storesRoot, "data.sqlite");
+  let database: Database | undefined;
+  const sqlite = async (): Promise<Database> => {
+    await mkdir(storesRoot, { recursive: true });
     if (!database) {
-      database = new Database(resolved.path, { create: false });
+      database = new Database(sqlitePath, { create: true });
       database.exec("PRAGMA journal_mode=WAL");
       database.exec("PRAGMA busy_timeout=5000");
       database.exec("PRAGMA trusted_schema=OFF");
-      databases.set(resolved.path, database);
     }
-    return { ...resolved, database };
+    return database;
   };
-  const enforceMaxBytes = (path: string, maxBytes?: number) => {
-    if (!maxBytes) return;
-    const size = Bun.file(path).size + (Bun.file(`${path}-wal`).size || 0);
-    if (size > maxBytes) throw new Error("store exceeds maxBytes");
+  const readJSON = async () => {
+    if (!await exists(jsonPath)) throw new Error("JSON store has not been opened");
+    const bytes = new Uint8Array(await Bun.file(jsonPath).arrayBuffer());
+    return { value: JSON.parse(new TextDecoder().decode(bytes)), revision: revision(bytes) };
+  };
+  const openJSON = async (value: unknown) => {
+    await mkdir(storesRoot, { recursive: true });
+    const bytes = new TextEncoder().encode(JSON.stringify(value, null, 2) + "\n");
+    try { await writeFile(jsonPath, bytes, { flag: "wx" }); } catch (error) {
+      if (!(error && typeof error === "object" && "code" in error && error.code === "EEXIST")) throw error;
+    }
+    return readJSON();
+  };
+  const fileRevision = async (paths: string[]): Promise<string | null> => {
+    const hash = createHash("sha256"); let found = false;
+    for (const path of paths) if (await exists(path)) { found = true; hash.update(new Uint8Array(await Bun.file(path).arrayBuffer())); }
+    return found ? hash.digest("hex") : null;
   };
   const assertSQL = (sql: string) => { if (forbiddenSQL.test(sql)) throw new Error("SQLite statement is not allowed"); };
   return { name: "hitslop-mock-host", transformIndexHtml: { order: "pre", handler: (html) => bridge + html }, configureServer(server) {
@@ -56,39 +57,29 @@ function mockHostPlugin(manifest: SlopManifest, dataRoot: string): Plugin {
       response.setHeader("content-type", "application/json");
       try {
         const body = await readNodeBody(nodeRequest); const route = new URL(`http://localhost${nodeRequest.url}`).pathname.replace("/__hitslop/", "");
-        if (route === "json/read") { const { path } = resolveStore(body.store, "json"); const bytes = new Uint8Array(await Bun.file(path).arrayBuffer()); response.end(JSON.stringify({ value: JSON.parse(new TextDecoder().decode(bytes)), revision: revision(bytes) })); return; }
+        if (route === "json/open") { response.end(JSON.stringify(await openJSON(body.value))); return; }
+        if (route === "json/read") { response.end(JSON.stringify(await readJSON())); return; }
         if (route === "json/write") {
-          const { store, path } = resolveStore(body.store, "json");
-          const current = new Uint8Array(await Bun.file(path).arrayBuffer());
-          if (body.expectedRevision && body.expectedRevision !== revision(current)) throw new Error("revision_conflict");
+          const current = await readJSON();
+          if (body.expectedRevision && body.expectedRevision !== current.revision) throw new Error("revision_conflict");
           const bytes = new TextEncoder().encode(JSON.stringify(body.value, null, 2) + "\n");
-          if (store.maxBytes && bytes.byteLength > store.maxBytes) throw new Error("store exceeds maxBytes");
-          const temporary = `${path}.${randomUUID()}.tmp`;
-          await writeFile(temporary, bytes); await rename(temporary, path);
+          const temporary = `${jsonPath}.${randomUUID()}.tmp`;
+          await writeFile(temporary, bytes); await rename(temporary, jsonPath);
           response.end(JSON.stringify({ revision: revision(bytes) })); return;
         }
-        if (route === "json/revision" || route === "sqlite/revision") { const { path } = resolveStore(body.store, route.startsWith("json") ? "json" : "sqlite"); const bytes = new Uint8Array(await Bun.file(path).arrayBuffer()); response.end(JSON.stringify({ revision: revision(bytes) })); return; }
-        const { store, path, database } = sqlite(body.store);
-        if (route === "sqlite/query") { assertSQL(String(body.sql)); const statement = database.query(String(body.sql)); response.end(JSON.stringify(statement.all(...((body.parameters ?? []) as Parameters<typeof statement.all>)))); return; }
+        if (route === "json/revision") { response.end(JSON.stringify({ revision: await fileRevision([jsonPath]) })); return; }
+        if (route === "sqlite/revision") { response.end(JSON.stringify({ revision: await fileRevision([sqlitePath, `${sqlitePath}-wal`]) })); return; }
+        const db = await sqlite();
+        if (route === "sqlite/query") { assertSQL(String(body.sql)); const statement = db.query(String(body.sql)); response.end(JSON.stringify(statement.all(...((body.parameters ?? []) as Parameters<typeof statement.all>)))); return; }
         if (route === "sqlite/execute") {
-          assertSQL(String(body.sql));
-          const statement = database.query(String(body.sql));
-          const result = database.transaction(() => {
-            const run = statement.run(...((body.parameters ?? []) as Parameters<typeof statement.run>));
-            enforceMaxBytes(path, store.maxBytes);
-            return Number(run.changes);
-          })();
+          assertSQL(String(body.sql)); const statement = db.query(String(body.sql));
+          const result = db.transaction(() => Number(statement.run(...((body.parameters ?? []) as Parameters<typeof statement.run>)).changes))();
           response.end(JSON.stringify(result)); return;
         }
         if (route === "sqlite/transaction") {
           const statements = body.statements as Array<{ sql: string; parameters?: unknown[] }>;
           for (const item of statements) assertSQL(item.sql);
-          const changes = database.transaction(() => {
-            let total = 0;
-            for (const item of statements) { const statement = database.query(item.sql); total += Number(statement.run(...((item.parameters ?? []) as Parameters<typeof statement.run>)).changes); }
-            enforceMaxBytes(path, store.maxBytes);
-            return total;
-          })();
+          const changes = db.transaction(() => statements.reduce((total, item) => { const statement = db.query(item.sql); return total + Number(statement.run(...((item.parameters ?? []) as Parameters<typeof statement.run>)).changes); }, 0))();
           response.end(JSON.stringify(changes)); return;
         }
         response.statusCode = 404; response.end(JSON.stringify({ error: "Not found" }));
@@ -98,11 +89,13 @@ function mockHostPlugin(manifest: SlopManifest, dataRoot: string): Plugin {
 }
 
 export async function runDev(root: string, options: { reset: boolean; native: boolean }): Promise<void> {
-  const manifest = await loadManifest(root); const dataRoot = await seedStores(root, manifest, options.reset);
-  const server = await createServer({ root, plugins: [mockHostPlugin(manifest, dataRoot)], server: { port: 0 } }); await server.listen();
+  const manifest = await loadManifest(root); const dataRoot = join(root, ".hitslop", "dev");
+  if (options.reset) await rm(dataRoot, { recursive: true, force: true });
+  await mkdir(dataRoot, { recursive: true });
+  const server = await createServer({ root, plugins: [mockHostPlugin(dataRoot)], server: { port: 0 } }); await server.listen();
   const url = server.resolvedUrls?.local[0]; if (!url) throw new Error("Vite did not expose a development URL");
   console.log(`hitSlop dev: ${url}`);
-  if (options.native) await runNative(["open-dev", url, "--width", String(manifest.window.width), "--height", String(manifest.window.height)]);
+  if (options.native) await runNative(["open-dev", url, "--width", String(manifest.presentation.width), "--height", String(manifest.presentation.height)]);
   else if (process.platform === "darwin") Bun.spawn(["open", url], { stdout: "ignore", stderr: "ignore" });
 }
 

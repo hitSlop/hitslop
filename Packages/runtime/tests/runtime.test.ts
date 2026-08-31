@@ -5,12 +5,13 @@ test("delegates storage calls to the installed host", async () => {
   let value = { count: 1 }; let revision = "one";
   const host: SlopHost = {
     query: async () => [], execute: async () => 0, transaction: async () => 0,
+    jsonOpen: async <T>(initial: T) => ({ value: (value ?? initial) as T, revision }),
     jsonRead: async <T>() => ({ value: value as T, revision }),
-    jsonWrite: async <T>(_store: string, next: T) => { value = next as typeof value; revision = "two"; return { revision }; },
+    jsonWrite: async <T>(next: T) => { value = next as typeof value; revision = "two"; return { revision }; },
     watch: () => () => {},
   };
   const uninstall = installHost(host);
-  expect((await slop.jsonRead<typeof value>("state")).value.count).toBe(1);
-  expect((await slop.jsonWrite("state", { count: 2 }, "one")).revision).toBe("two");
+  expect((await slop.json.open({ count: 0 })).value.count).toBe(1);
+  expect((await slop.json.write({ count: 2 }, "one")).revision).toBe("two");
   uninstall();
 });

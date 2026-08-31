@@ -14,12 +14,8 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_STRICT_CONCURRENCY: minimal
 packages:
-  HitSlopCore:
-    path: ../../macos/packages/HitSlopCore
-  HitSlopRuntime:
-    path: ../../macos/packages/HitSlopRuntime
-  HitSlopRegistry:
-    path: ../../macos/packages/HitSlopRegistry
+  HitSlopApple:
+    path: ../../../packages/apple
 targets:
   hitSlop:
     type: application
@@ -27,11 +23,11 @@ targets:
     sources:
       - path: hitSlop
     dependencies:
-      - package: HitSlopCore
+      - package: HitSlopApple
         product: HitSlopCore
-      - package: HitSlopRuntime
+      - package: HitSlopApple
         product: HitSlopRuntime
-      - package: HitSlopRegistry
+      - package: HitSlopApple
         product: HitSlopRegistry
     settings:
       base:

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Dialog, DropdownMenu } from "bits-ui";
   import { sql, sqliteQuery } from "@hitslop/svelte";
+  import { slop } from "@hitslop/runtime";
   import GripVertical from "@lucide/svelte/icons/grip-vertical";
   import MoreHorizontal from "@lucide/svelte/icons/ellipsis";
   import Plus from "@lucide/svelte/icons/plus";
@@ -9,8 +10,15 @@
   type Column = { id: number; title: string; position: number; color: string };
   type Card = { id: number; column_id: number; title: string; detail: string; priority: string; position: number; created_at: string };
 
-  const columns = sqliteQuery<Column>("main", sql`SELECT id, title, position, color FROM columns ORDER BY position, id`);
-  const cards = sqliteQuery<Card>("main", sql`SELECT id, column_id, title, detail, priority, position, created_at FROM cards ORDER BY position, id`);
+  void slop.db.transaction([
+    { sql: "CREATE TABLE IF NOT EXISTS columns (id INTEGER PRIMARY KEY, title TEXT NOT NULL, position INTEGER NOT NULL, color TEXT NOT NULL)" },
+    { sql: "CREATE TABLE IF NOT EXISTS cards (id INTEGER PRIMARY KEY, column_id INTEGER NOT NULL REFERENCES columns(id), title TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT 'normal', position INTEGER NOT NULL, created_at TEXT NOT NULL)" },
+    { sql: "INSERT OR IGNORE INTO columns (id, title, position, color) VALUES (1, 'Signal', 0, 'butter')" },
+    { sql: "INSERT OR IGNORE INTO columns (id, title, position, color) VALUES (2, 'In motion', 1, 'blue')" },
+    { sql: "INSERT OR IGNORE INTO columns (id, title, position, color) VALUES (3, 'Landed', 2, 'mint')" },
+  ]);
+  const columns = sqliteQuery<Column>(sql`SELECT id, title, position, color FROM columns ORDER BY position, id`);
+  const cards = sqliteQuery<Card>(sql`SELECT id, column_id, title, detail, priority, position, created_at FROM cards ORDER BY position, id`);
   let adding = $state(false);
   let editingID = $state<number | null>(null);
   let draftTitle = $state("");

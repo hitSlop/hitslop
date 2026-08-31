@@ -1,13 +1,8 @@
 {
-  "$schema": "https://hitslop.app/schemas/manifest.schema.json",
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
   "slug": "invoice",
   "title": "Invoice",
   "description": "Line items, tax, and status for a local invoice.",
-  "author": { "name": "Longtail Labs" },
-  "categories": ["Documents", "Finance"],
-  "tags": ["invoice", "billing", "json", "bits-ui"],
-  "stores": {
-    "state": { "kind": "json", "maxBytes": 1048576 }
-  },
-  "window": { "width": 720, "height": 900, "shape": { "kind": "roundedRect", "radius": 22 } }
+  "categories": ["business", "finance"],
+  "presentation": { "width": 720, "height": 900 }
 }

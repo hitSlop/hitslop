@@ -15,34 +15,6 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "EAF02C3B50C441A0909AF6C9"
-               BuildableName = "SlopPreview.appex"
-               BlueprintName = "SlopPreview"
-               ReferencedContainer = "container:hitSlop.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "5E091CFA67C4E0E3BD2620B1"
-               BuildableName = "SlopThumbnail.appex"
-               BlueprintName = "SlopThumbnail"
-               ReferencedContainer = "container:hitSlop.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "9FB57B1DA239579A873B6317"
                BuildableName = "hitSlop.app"
                BlueprintName = "hitSlop"

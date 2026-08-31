@@ -29,18 +29,46 @@ jobs:
       - uses: actions/checkout@v4
       - name: Swift package tests
         run: |
-          swift test --package-path apps/macos/packages/HitSlopCore
+          swift test --package-path packages/apple
           swift test --package-path apps/macos/packages/HitSlopHost
       - name: Install XcodeGen
         run: brew install xcodegen
-      - name: Generate and build unsigned Debug
+      - name: Generate and verify macOS app contents
         working-directory: apps/macos/hitSlop
+        run: |
+          xcodegen generate
+          derived="$RUNNER_TEMP/hitslop-macos-derived"
+          xcodebuild \
+            -project hitSlop.xcodeproj \
+            -scheme hitSlop \
+            -configuration Debug \
+            -destination "platform=macOS" \
+            -derivedDataPath "$derived" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          debug_app="$derived/Build/Products/Debug/hitSlop.app"
+          test ! -e "$debug_app/Contents/PlugIns/SlopThumbnail.appex"
+          xcodebuild \
+            -project hitSlop.xcodeproj \
+            -scheme hitSlop \
+            -configuration Release \
+            -destination "platform=macOS" \
+            -derivedDataPath "$derived" \
+            CODE_SIGNING_ALLOWED=NO \
+            ARCHS="$(uname -m)" \
+            ONLY_ACTIVE_ARCH=YES \
+            build
+          release_plugins="$derived/Build/Products/Release/hitSlop.app/Contents/PlugIns"
+          test ! -e "$release_plugins/SlopThumbnail.appex"
+      - name: Generate and build iOS simulator
+        working-directory: apps/ios/hitSlop
         run: |
           xcodegen generate
           xcodebuild \
             -project hitSlop.xcodeproj \
             -scheme hitSlop \
             -configuration Debug \
-            -destination "platform=macOS" \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
             CODE_SIGNING_ALLOWED=NO \
             build

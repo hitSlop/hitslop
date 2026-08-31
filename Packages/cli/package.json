@@ -1,7 +1,7 @@
 {
   "name": "@hitslop/cli",
   "version": "0.1.0",
-  "description": "Create, develop, build, install, screenshot, and publish hitSlop apps.",
+  "description": "Create, develop, build, install, and publish hitSlop apps.",
   "type": "module",
   "bin": {
     "slop": "./dist/cli.js"

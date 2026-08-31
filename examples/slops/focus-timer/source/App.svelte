@@ -12,7 +12,7 @@
     history: Session[];
   };
 
-  const timer = jsonStore<TimerData>("state", {
+  const timer = jsonStore<TimerData>({
     focusMinutes: 25,
     restMinutes: 5,
     history: [],
