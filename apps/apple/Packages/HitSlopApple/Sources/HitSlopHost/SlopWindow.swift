@@ -148,7 +148,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     private func export(_ kind: ExportKind) {
         let panel = NSSavePanel(); panel.allowedContentTypes = [kind == .png ? .png : .pdf]; panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + (kind == .png ? ".png" : ".pdf")
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        Task { do { try await (kind == .png ? SlopRenderer.pngData(packageURL: session.package.rootURL) : SlopRenderer.pdfData(packageURL: session.package.rootURL)).write(to: url, options: .atomic) } catch { present("Export failed", error) } }
+        Task { do { try await (kind == .png ? SlopRenderer.exportPNGData(session: session) : SlopRenderer.exportPDFData(session: session)).write(to: url, options: .atomic) } catch { present("Export failed", error) } }
     }
     private func share() { guard let view = toolbar?.contentView else { return }; NSSharingServicePicker(items: [packageURL]).show(relativeTo: view.bounds, of: view, preferredEdge: .minY) }
     private func reveal() { NSWorkspace.shared.activateFileViewerSelecting([packageURL]) }
@@ -170,7 +170,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     private func schedulePreview() {
         previewWork?.cancel(); let work = DispatchWorkItem { [weak self] in
             guard let self else { return }; Task { @MainActor in
-                guard let image = try? await self.session.webView.takeSnapshot(configuration: nil), let png = try? SlopPreviewImage.png(from: image, package: self.session.package) else { return }
+                guard let png = try? await SlopRenderer.previewPNGData(session: self.session) else { return }
                 try? SlopPreviewWriter.write(png, to: self.packageURL)
             }
         }; previewWork = work; DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
@@ -181,7 +181,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     public func windowWillClose(_ notification: Notification) {
         previewWork?.cancel(); toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil; onClose?()
         Task { @MainActor [self] in
-            if let image = try? await session.webView.takeSnapshot(configuration: nil), let png = try? SlopPreviewImage.png(from: image, package: session.package) { try? SlopPreviewWriter.write(png, to: packageURL) }
+            if let png = try? await SlopRenderer.previewPNGData(session: session) { try? SlopPreviewWriter.write(png, to: packageURL) }
             opened.close()
         }
     }

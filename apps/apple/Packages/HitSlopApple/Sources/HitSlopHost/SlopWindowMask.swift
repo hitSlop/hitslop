@@ -93,12 +93,12 @@ import ImageIO
         }
     }
 
-    func png(from image: NSImage) throws -> Data {
+    func png(from image: NSImage, scale: CGFloat = 1) throws -> Data {
         let size = image.size
         let masked = NSImage(size: size, flipped: false) { [content] rect in
             switch content {
             case .geometry(let shape):
-                Self.path(for: shape, in: rect).addClip()
+                Self.path(for: shape, in: rect, scale: scale).addClip()
                 image.draw(in: rect)
             case .image(let mask, _):
                 image.draw(in: rect)
@@ -119,7 +119,7 @@ import ImageIO
         return png
     }
 
-    private static func path(for shape: Shape, in rect: CGRect) -> NSBezierPath {
+    private static func path(for shape: Shape, in rect: CGRect, scale: CGFloat = 1) -> NSBezierPath {
         switch shape {
         case .ellipse:
             return NSBezierPath(ovalIn: rect)
@@ -127,7 +127,7 @@ import ImageIO
             let radius = min(rect.width, rect.height) / 2
             return NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
         case .rounded:
-            let radius = min(CGFloat(22), min(rect.width, rect.height) / 2)
+            let radius = min(CGFloat(22) * scale, min(rect.width, rect.height) / 2)
             return NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
         }
     }

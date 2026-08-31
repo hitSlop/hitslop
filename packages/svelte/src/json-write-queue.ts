@@ -12,7 +12,10 @@ export class JsonWriteQueue<T> {
   private persisted: T; private loaded = false; private pending: Array<(value: T) => void> = [];
   private draining: Promise<void> | null = null; private operations = Promise.resolve<unknown>(undefined);
   constructor(private options: Options<T>) { this.persisted = options.clone(options.fallback); options.onValue(options.clone(this.persisted)); }
-  enqueue(mutate: (value: T) => void): void { this.pending.push(mutate); this.applyPending(); void this.drain(); }
+  enqueue(mutate: (value: T) => void): void {
+    this.pending.push(mutate); this.applyPending();
+    void this.drain().catch((error) => this.options.onError(this.message(error)));
+  }
   reload(): Promise<void> { return this.schedule(async () => { await this.reloadPersisted(); this.loaded = true; this.applyPending(); this.options.onError(null); }); }
   drain(): Promise<void> { this.draining ??= this.schedule(() => this.drainLoop()).finally(() => { this.draining = null; }); return this.draining; }
   private async drainLoop(): Promise<void> {
@@ -24,7 +27,7 @@ export class JsonWriteQueue<T> {
         this.persisted = next; this.revision = result.revision; this.pending.shift();
         this.options.onRevision(this.revision); this.options.onSource("app"); this.options.onError(null); this.applyPending();
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = this.message(error);
         if (message.includes("revision_conflict")) { await this.reloadPersisted(); this.applyPending(); continue; }
         this.pending.shift(); this.options.onError(message); this.applyPending();
       }
@@ -33,4 +36,5 @@ export class JsonWriteQueue<T> {
   private async reloadPersisted(): Promise<void> { const snapshot = this.loaded ? await this.options.read() : await this.options.open(this.options.fallback); this.persisted = this.options.clone(snapshot.value); this.revision = snapshot.revision; this.options.onRevision(this.revision); }
   private schedule<TValue>(operation: () => Promise<TValue>): Promise<TValue> { const scheduled = this.operations.then(operation, operation); this.operations = scheduled.catch(() => undefined); return scheduled; }
   private applyPending(): void { const next = this.options.clone(this.persisted); for (const mutate of this.pending) mutate(next); this.options.onValue(next); }
+  private message(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 }

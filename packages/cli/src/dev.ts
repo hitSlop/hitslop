@@ -18,7 +18,7 @@ const bridge = `<script>\n(() => {\n const listeners={json:new Set(),sqlite:new 
 
 const forbiddenSQL = /\b(attach|detach|load_extension)\b/i;
 
-function mockHostPlugin(dataRoot: string): Plugin {
+export function mockHostPlugin(dataRoot: string): Plugin {
   const storesRoot = join(dataRoot, "stores");
   const jsonPath = join(storesRoot, "data.json");
   const sqlitePath = join(storesRoot, "data.sqlite");
@@ -53,10 +53,17 @@ function mockHostPlugin(dataRoot: string): Plugin {
   };
   const assertSQL = (sql: string) => { if (forbiddenSQL.test(sql)) throw new Error("SQLite statement is not allowed"); };
   return { name: "hitslop-mock-host", transformIndexHtml: { order: "pre", handler: (html) => bridge + html }, configureServer(server) {
+    server.httpServer?.once("close", () => { database?.close(); database = undefined; });
     server.middlewares.use("/__hitslop", async (nodeRequest, response) => {
       response.setHeader("content-type", "application/json");
       try {
-        const body = await readNodeBody(nodeRequest); const route = new URL(`http://localhost${nodeRequest.url}`).pathname.replace("/__hitslop/", "");
+        const body = await readNodeBody(nodeRequest);
+        // Connect removes a mounted middleware prefix before invoking its
+        // handler. Keep accepting the full path as well so the bridge behaves
+        // consistently in tests and alternate Vite middleware stacks.
+        const route = new URL(`http://localhost${nodeRequest.url}`).pathname
+          .replace(/^\/+/, "")
+          .replace(/^__hitslop\//, "");
         if (route === "json/open") { response.end(JSON.stringify(await openJSON(body.value))); return; }
         if (route === "json/read") { response.end(JSON.stringify(await readJSON())); return; }
         if (route === "json/write") {
@@ -92,7 +99,10 @@ export async function runDev(root: string, options: { reset: boolean; native: bo
   const manifest = await loadManifest(root); const dataRoot = join(root, ".hitslop", "dev");
   if (options.reset) await rm(dataRoot, { recursive: true, force: true });
   await mkdir(dataRoot, { recursive: true });
-  const server = await createServer({ root, plugins: [mockHostPlugin(dataRoot)], server: { port: 0 } }); await server.listen();
+  // Let Vite choose its normal development port (and increment it when busy).
+  // Vite 8 treats an explicit port of 0 as a literal port and can report it as
+  // already in use instead of asking the operating system for an ephemeral one.
+  const server = await createServer({ root, plugins: [mockHostPlugin(dataRoot)] }); await server.listen();
   const url = server.resolvedUrls?.local[0]; if (!url) throw new Error("Vite did not expose a development URL");
   console.log(`hitSlop dev: ${url}`);
   if (options.native) await runNative(["open-dev", url, "--width", String(manifest.presentation.width), "--height", String(manifest.presentation.height)]);

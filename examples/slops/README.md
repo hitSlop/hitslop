@@ -5,6 +5,12 @@ manifest used by third-party slops. Source CSS is compiled into `app.html`.
 Templates contain no seed stores; JSON and SQLite are initialized lazily through
 the bridge.
 
+Static capture sets `data-slop-capture="static"` on the root. Examples can mark
+editing-only UI with `data-slop-export="hide"`; previews stay at manifest size,
+while PNG and PDF exports capture the full document height. PNG exports use 2x
+resolution, while PDF exports preserve selectable text and WebKit vector output
+on one page.
+
 ```sh
 bun slop dev examples/slops/invoice
 bun slop build examples/slops/invoice

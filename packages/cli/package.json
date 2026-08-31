@@ -6,7 +6,7 @@
   "bin": {
     "slop": "./dist/cli.js"
   },
-  "files": ["dist"],
+  "files": ["dist", "templates"],
   "scripts": {
     "build": "bun build src/cli.ts --target bun --format esm --packages external --outfile dist/cli.js && /bin/chmod +x dist/cli.js",
     "check": "tsc -p tsconfig.json",

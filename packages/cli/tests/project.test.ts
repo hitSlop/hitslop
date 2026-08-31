@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encode } from "fast-png";
 import { manifestSchemaURL } from "@hitslop/schema";
-import { buildSlop, loadManifest } from "../src/project.ts";
+import { buildSlop, loadManifest, scaffold } from "../src/project.ts";
 
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
@@ -40,5 +40,18 @@ describe("immutable artifacts", () => {
     await expect(readFile(join(built.directory, "style.css"))).rejects.toThrow();
     await expect(readFile(join(built.directory, "stores/data.json"))).rejects.toThrow();
     await expect(readFile(join(built.directory, "AGENTS.md"))).rejects.toThrow();
+  });
+});
+
+describe("authoring scaffold", () => {
+  test("includes the design skill, Bits UI, and export-aware starter", async () => {
+    const root = await mkdtemp(join(tmpdir(), "hitslop-scaffold-")); roots.push(root);
+    await scaffold(root, { title: "Tiny Tally", description: "Counts a tiny thing.", categories: ["utilities"] });
+    const packageJSON = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string> };
+    expect(packageJSON.dependencies["bits-ui"]).toBe("^2.19.0");
+    expect(await readFile(join(root, ".agents/skills/hitslop-design/SKILL.md"), "utf8")).toContain("data-slop-export");
+    expect(await readFile(join(root, "AGENTS.md"), "utf8")).toContain("hitslop-design");
+    expect(await readFile(join(root, "src/App.svelte"), "utf8")).toContain('const title = "Tiny Tally"');
+    expect(await readFile(join(root, "src/styles.css"), "utf8")).toContain("--slop-surface");
   });
 });

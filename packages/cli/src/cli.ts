@@ -37,7 +37,7 @@ async function confirmReplacement(target: string): Promise<boolean> {
 
 let app = new Crust("slop").meta({ description: "Build small, self-contained hitSlop apps.", usage: "slop <command>" });
 app = app.command("init", (command) => command.meta({ description: "Create a Svelte hitSlop project and manifest." }).args([{ name: "directory", type: "path", default: "my-slop" }] as const).flags({
-  template: { type: "string", description: "Authoring template (currently svelte-counter)." },
+  template: { type: "string", description: "Svelte authoring template (svelte or svelte-counter)." },
   title: { type: "string", description: "Manifest title." }, description: { type: "string", description: "Manifest description." },
   category: { type: "string", multiple: true, description: "Manifest category; pass once or twice." }, yes: { type: "boolean", description: "Accept manifest defaults without prompting." },
 }).run(async ({ args, flags }) => { const metadata = await initMetadata(args.directory, flags); await scaffold(args.directory, { template: flags.template ?? "svelte-counter", ...metadata }); console.log(`Created ${args.directory}`); }));

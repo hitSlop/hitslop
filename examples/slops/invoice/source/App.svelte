@@ -1,300 +1,207 @@
 <script lang="ts">
-  import { Dialog, Label, Select, Separator } from "bits-ui";
+  import { Select } from "bits-ui";
   import { jsonStore } from "@hitslop/svelte";
   import Check from "@lucide/svelte/icons/check";
-  import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
+  import ChevronDown from "@lucide/svelte/icons/chevron-down";
   import Plus from "@lucide/svelte/icons/plus";
-  import X from "@lucide/svelte/icons/x";
+  import Trash2 from "@lucide/svelte/icons/trash-2";
 
   type Party = { name: string; detail: string };
-  type Line = { id: number; description: string; qty: number; rate: number };
+  type LineItem = { id: number; description: string; quantity: number; rate: number };
   type Status = "draft" | "sent" | "paid";
+  type Currency = "USD" | "CAD" | "EUR" | "GBP" | "AUD" | "JPY";
   type Invoice = {
     number: string;
+    status: Status;
     issued: string;
     due: string;
     from: Party;
-    to: Party;
-    items: Line[];
-    taxRate: number;
+    billTo: Party;
+    items: LineItem[];
+    taxPercent: number;
     notes: string;
-    status: Status;
+    currency: Currency;
     nextID: number;
   };
 
-  const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
   const statuses: { value: Status; label: string }[] = [
     { value: "draft", label: "Draft" },
     { value: "sent", label: "Sent" },
     { value: "paid", label: "Paid" },
   ];
+  const currencies: { value: Currency; label: string }[] = [
+    { value: "USD", label: "USD" },
+    { value: "CAD", label: "CAD" },
+    { value: "EUR", label: "EUR" },
+    { value: "GBP", label: "GBP" },
+    { value: "AUD", label: "AUD" },
+    { value: "JPY", label: "JPY" },
+  ];
 
+  function dateValue(date: Date): string {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 10);
+  }
+
+  const today = new Date();
+  const due = new Date(today); due.setDate(due.getDate() + 14);
   const invoice = jsonStore<Invoice>({
     number: "INV-001",
-    issued: "2026-04-01",
-    due: "2026-04-15",
-    from: { name: "", detail: "" },
-    to: { name: "", detail: "" },
-    items: [],
-    taxRate: 0,
-    notes: "",
     status: "draft",
-    nextID: 1,
+    issued: dateValue(today),
+    due: dateValue(due),
+    from: { name: "", detail: "" },
+    billTo: { name: "", detail: "" },
+    items: [{ id: 1, description: "", quantity: 1, rate: 0 }],
+    taxPercent: 0,
+    notes: "",
+    currency: "USD",
+    nextID: 2,
   });
 
-  let adding = $state(false);
-  let draftDescription = $state("");
-  let draftQty = $state(1);
-  let draftRate = $state(0);
-
-  const subtotal = $derived(
-    invoice.current.items.reduce((sum, item) => sum + item.qty * item.rate, 0)
-  );
-  const tax = $derived(subtotal * invoice.current.taxRate);
+  const subtotal = $derived(invoice.current.items.reduce((sum, item) => sum + item.quantity * item.rate, 0));
+  const tax = $derived(subtotal * invoice.current.taxPercent / 100);
   const total = $derived(subtotal + tax);
 
-  function focusOnMount(node: HTMLInputElement): { destroy: () => void } {
-    const frame = requestAnimationFrame(() => node.focus());
-    return { destroy: () => cancelAnimationFrame(frame) };
+  function money(value: number): string {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency: invoice.current.currency }).format(value);
   }
 
-  function setField(mutate: (value: Invoice) => void): void {
-    invoice.update(mutate);
+  function update(mutate: (value: Invoice) => void): void { invoice.update(mutate); }
+  function updateParty(side: "from" | "billTo", key: keyof Party, value: string): void {
+    update((data) => { data[side][key] = value; });
   }
-
-  function addLine(): void {
-    const description = draftDescription.trim();
-    if (!description) return;
-    const qty = Number(draftQty) || 0;
-    const rate = Number(draftRate) || 0;
-    invoice.update((data) => {
-      data.items.push({ id: data.nextID, description, qty, rate });
+  function updateItem(id: number, key: "description" | "quantity" | "rate", value: string | number): void {
+    update((data) => {
+      const item = data.items.find((candidate) => candidate.id === id);
+      if (!item) return;
+      if (key === "description") item.description = String(value);
+      else item[key] = Number(value) || 0;
+    });
+  }
+  function addItem(): void {
+    update((data) => {
+      data.items.push({ id: data.nextID, description: "", quantity: 1, rate: 0 });
       data.nextID += 1;
     });
-    draftDescription = "";
-    draftQty = 1;
-    draftRate = 0;
-    adding = false;
+  }
+  function removeItem(id: number): void {
+    update((data) => { data.items = data.items.filter((item) => item.id !== id); });
   }
 </script>
 
-<main class="invoice-page" data-slop-selection="none">
-  <header class="invoice-masthead">
-    <div class="invoice-identity">
-      <p class="invoice-kicker">Studio account</p>
-      <div class="invoice-number-wrap">
-        <span aria-hidden="true">№</span>
-        <input
-          class="invoice-number"
-          value={invoice.current.number}
-          onchange={(event) => {
+<main class="invoice-canvas" data-slop-selection="none">
+  <article class="invoice" aria-label="Invoice {invoice.current.number}">
+    <header class="masthead">
+      <div class="identity">
+        <span class="eyebrow">Invoice</span>
+        <label class="number-field">
+          <span class="sr-only">Invoice number</span>
+          <input value={invoice.current.number} oninput={(event) => {
             const number = event.currentTarget.value;
-            setField((data) => { data.number = number; });
-          }}
-          aria-label="Invoice number"
-        />
+            update((data) => { data.number = number; });
+          }} />
+        </label>
       </div>
-      <p class="invoice-kind">Invoice</p>
-    </div>
-    <Select.Root
-      type="single"
-      value={invoice.current.status}
-      items={statuses}
-      onValueChange={(value) => {
-        if (statuses.some((status) => status.value === value)) {
-          setField((data) => { data.status = value as Status; });
-        }
-      }}
-    >
-      <Select.Trigger
-        class="status-trigger"
-        aria-label="Invoice status"
-      >
-        <Select.Value placeholder="Status" />
-        <ChevronsUpDown class="status-caret" strokeWidth={1.75} absoluteStrokeWidth />
-      </Select.Trigger>
-      <Select.Portal>
-        <Select.Content
-          class="status-menu"
-          sideOffset={8}
-        >
-          <Select.Viewport>
-            {#each statuses as item (item.value)}
-              <Select.Item
-                class="status-option"
-                value={item.value}
-                label={item.label}
-              >
-                {#snippet children({ selected })}
-                  {item.label}
-                  {#if selected}<Check class="status-check" strokeWidth={1.75} absoluteStrokeWidth />{/if}
-                {/snippet}
-              </Select.Item>
-            {/each}
-          </Select.Viewport>
-        </Select.Content>
-      </Select.Portal>
-    </Select.Root>
-  </header>
 
-  <section class="invoice-dates" aria-label="Invoice dates">
-    <p>For services rendered</p>
-    <label>Issued
-      <input type="date" value={invoice.current.issued} onchange={(event) => {
-        const issued = event.currentTarget.value;
-        setField((data) => { data.issued = issued; });
-      }} />
-    </label>
-    <label>Due
-      <input type="date" value={invoice.current.due} onchange={(event) => {
-        const due = event.currentTarget.value;
-        setField((data) => { data.due = due; });
-      }} />
-    </label>
-  </section>
+      <Select.Root type="single" value={invoice.current.status} items={statuses} onValueChange={(value) => {
+        if (statuses.some((item) => item.value === value)) update((data) => { data.status = value as Status; });
+      }}>
+        <Select.Trigger class="select-trigger status-trigger" aria-label="Invoice status">
+          <span class="status-dot" data-status={invoice.current.status}></span>
+          <Select.Value placeholder="Status" />
+          <ChevronDown class="select-chevron" data-slop-export="hide" strokeWidth={1.8} absoluteStrokeWidth />
+        </Select.Trigger>
+        <Select.Portal>
+          <Select.Content class="select-content" sideOffset={6}>
+            <Select.Viewport>
+              {#each statuses as item (item.value)}
+                <Select.Item class="select-item" value={item.value} label={item.label}>
+                  {#snippet children({ selected })}
+                    {item.label}{#if selected}<Check strokeWidth={1.8} absoluteStrokeWidth />{/if}
+                  {/snippet}
+                </Select.Item>
+              {/each}
+            </Select.Viewport>
+          </Select.Content>
+        </Select.Portal>
+      </Select.Root>
+    </header>
 
-  <section class="invoice-parties" aria-label="Invoice parties">
-    <div class="party-block">
-      <p class="section-label">From</p>
-      <input class="party-name" value={invoice.current.from.name} onchange={(event) => {
-        const name = event.currentTarget.value;
-        setField((data) => { data.from.name = name; });
-      }} aria-label="From name" />
-      <textarea class="party-detail" value={invoice.current.from.detail} onchange={(event) => {
-        const detail = event.currentTarget.value;
-        setField((data) => { data.from.detail = detail; });
-      }} aria-label="From address"></textarea>
-    </div>
-    <div class="party-block party-client">
-      <p class="section-label">Prepared for</p>
-      <input class="party-name" value={invoice.current.to.name} onchange={(event) => {
-        const name = event.currentTarget.value;
-        setField((data) => { data.to.name = name; });
-      }} aria-label="Client name" />
-      <textarea class="party-detail" value={invoice.current.to.detail} onchange={(event) => {
-        const detail = event.currentTarget.value;
-        setField((data) => { data.to.detail = detail; });
-      }} aria-label="Client address"></textarea>
-    </div>
-  </section>
+    <section class="meta" aria-label="Invoice details">
+      <label><span>Issued</span><input type="date" value={invoice.current.issued} oninput={(event) => {
+        const value = event.currentTarget.value; update((data) => { data.issued = value; });
+      }} /></label>
+      <label><span>Due</span><input type="date" value={invoice.current.due} oninput={(event) => {
+        const value = event.currentTarget.value; update((data) => { data.due = value; });
+      }} /></label>
+      <div class="currency-field">
+        <span>Currency</span>
+        <Select.Root type="single" value={invoice.current.currency} items={currencies} onValueChange={(value) => {
+          if (currencies.some((item) => item.value === value)) update((data) => { data.currency = value as Currency; });
+        }}>
+          <Select.Trigger class="currency-trigger" aria-label="Invoice currency">
+            <Select.Value placeholder="Currency" />
+            <ChevronDown data-slop-export="hide" strokeWidth={1.8} absoluteStrokeWidth />
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content class="select-content currency-content" sideOffset={6}>
+              <Select.Viewport>
+                {#each currencies as item (item.value)}
+                  <Select.Item class="select-item" value={item.value} label={item.label}>
+                    {#snippet children({ selected })}
+                      {item.label}{#if selected}<Check strokeWidth={1.8} absoluteStrokeWidth />{/if}
+                    {/snippet}
+                  </Select.Item>
+                {/each}
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
+      </div>
+    </section>
 
-  <section class="line-section" aria-labelledby="line-items-title">
-    <div class="line-heading" role="row">
-      <h2 id="line-items-title">Work</h2>
-      <span>Qty</span>
-      <span>Rate</span>
-      <span class="amount-heading">Amount</span>
-      <span aria-hidden="true"></span>
-    </div>
-    <div class="line-list" role="table" aria-label="Invoice line items">
-      {#each invoice.current.items as item (item.id)}
-        <div class="line-row" role="row">
-          <label class="line-description">
-            <span class="mobile-caption">Item</span>
-            <input aria-label="Item description" value={item.description} onchange={(event) => {
-              const id = item.id;
-              const description = event.currentTarget.value;
-              setField((data) => {
-                const row = data.items.find((entry) => entry.id === id);
-                if (row) row.description = description;
-              });
-            }} />
-          </label>
-          <label class="line-number">
-            <span class="mobile-caption">Qty</span>
-            <input aria-label="Quantity for {item.description}" type="number" min="0" step="1" value={item.qty} onchange={(event) => {
-              const id = item.id;
-              const qty = Number(event.currentTarget.value) || 0;
-              setField((data) => {
-                const row = data.items.find((entry) => entry.id === id);
-                if (row) row.qty = qty;
-              });
-            }} />
-          </label>
-          <label class="line-number">
-            <span class="mobile-caption">Rate</span>
-            <input aria-label="Rate for {item.description}" type="number" min="0" step="0.01" value={item.rate} onchange={(event) => {
-              const id = item.id;
-              const rate = Number(event.currentTarget.value) || 0;
-              setField((data) => {
-                const row = data.items.find((entry) => entry.id === id);
-                if (row) row.rate = rate;
-              });
-            }} />
-          </label>
-          <div class="line-amount" role="cell">
-            <span class="mobile-caption">Amount</span>
-            <span>{money.format(item.qty * item.rate)}</span>
+    <section class="parties" aria-label="Invoice parties">
+      <label class="party"><span>From</span><input class="party-name" aria-label="From name" placeholder="Your name or company" value={invoice.current.from.name} oninput={(event) => updateParty("from", "name", event.currentTarget.value)} /><textarea aria-label="From details" placeholder="Address and contact details" value={invoice.current.from.detail} oninput={(event) => updateParty("from", "detail", event.currentTarget.value)}></textarea></label>
+      <label class="party"><span>Bill to</span><input class="party-name" aria-label="Bill-to name" placeholder="Client name or company" value={invoice.current.billTo.name} oninput={(event) => updateParty("billTo", "name", event.currentTarget.value)} /><textarea aria-label="Bill-to details" placeholder="Address and contact details" value={invoice.current.billTo.detail} oninput={(event) => updateParty("billTo", "detail", event.currentTarget.value)}></textarea></label>
+    </section>
+
+    <section class="line-items" aria-labelledby="line-items-title">
+      <div class="line-heading" role="row">
+        <h2 id="line-items-title">Description</h2><span>Qty</span><span>Rate</span><span>Amount</span><span data-slop-export="hide"></span>
+      </div>
+      <div class="line-list" role="table" aria-label="Invoice line items">
+        {#each invoice.current.items as item, index (item.id)}
+          <div class="line-item" role="row">
+            <label class="description"><span class="mobile-label">Item</span><input aria-label="Description for line {index + 1}" placeholder="Service or item" value={item.description} oninput={(event) => updateItem(item.id, "description", event.currentTarget.value)} /></label>
+            <label><span class="mobile-label">Qty</span><input aria-label="Quantity for line {index + 1}" type="number" min="0" step="0.01" value={item.quantity} oninput={(event) => updateItem(item.id, "quantity", event.currentTarget.value)} /></label>
+            <label><span class="mobile-label">Rate</span><input aria-label="Rate for line {index + 1}" type="number" min="0" step="0.01" value={item.rate} oninput={(event) => updateItem(item.id, "rate", event.currentTarget.value)} /></label>
+            <output class="line-total"><span class="mobile-label">Amount</span>{money(item.quantity * item.rate)}</output>
+            <button class="remove-item" data-slop-export="hide" aria-label="Remove line {index + 1}" onclick={() => removeItem(item.id)}><Trash2 strokeWidth={1.7} absoluteStrokeWidth /></button>
           </div>
-          <button class="delete-line" aria-label="Delete {item.description}" onclick={() => setField((data) => {
-            data.items = data.items.filter((entry) => entry.id !== item.id);
-          })}><X aria-hidden="true" strokeWidth={1.75} absoluteStrokeWidth /></button>
-        </div>
-      {/each}
-    </div>
-  </section>
+        {/each}
+      </div>
+      <button class="add-item" data-slop-export="hide" onclick={addItem}><Plus strokeWidth={1.8} absoluteStrokeWidth /> Add line item</button>
+    </section>
 
-  {#if invoice.current.items.length === 0}
-    <p class="invoice-empty">No work added yet. Add the first line item to begin the invoice.</p>
-  {/if}
+    <section class="closing">
+      <label class="notes"><span>Notes & terms</span><textarea placeholder="Payment terms, delivery notes, or a thank-you" value={invoice.current.notes} oninput={(event) => {
+        const value = event.currentTarget.value; update((data) => { data.notes = value; });
+      }}></textarea></label>
+      <dl class="totals">
+        <div><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div>
+        <div><dt><label>Tax <span class="tax-input"><input aria-label="Tax percentage" type="number" min="0" step="0.1" value={invoice.current.taxPercent} oninput={(event) => {
+          const value = Number(event.currentTarget.value) || 0; update((data) => { data.taxPercent = value; });
+        }} /><span>%</span></span></label></dt><dd>{money(tax)}</dd></div>
+        <div class="total"><dt>Total</dt><dd>{money(total)}</dd></div>
+      </dl>
+    </section>
 
-  <Dialog.Root bind:open={adding}>
-    <Dialog.Trigger class="add-line">
-      <Plus aria-hidden="true" strokeWidth={1.75} absoluteStrokeWidth /> Add line item
-    </Dialog.Trigger>
-    <Dialog.Portal>
-      <Dialog.Overlay class="dialog-overlay" />
-      <Dialog.Content class="line-dialog">
-        <p class="dialog-kicker">Invoice detail</p>
-        <Dialog.Title>Add line item</Dialog.Title>
-        <Dialog.Description>Describe the work and set the quantity and rate.</Dialog.Description>
-        <Separator.Root class="dialog-rule" />
-        <Label.Root class="dialog-label" for="line-desc">Description</Label.Root>
-        <input id="line-desc" class="dialog-input" bind:value={draftDescription} use:focusOnMount />
-        <div class="dialog-columns">
-          <label class="dialog-label">Quantity
-            <input class="dialog-input" type="number" min="0" bind:value={draftQty} />
-          </label>
-          <label class="dialog-label">Rate
-            <input class="dialog-input" type="number" min="0" step="0.01" bind:value={draftRate} />
-          </label>
-        </div>
-        <div class="dialog-actions">
-          <Dialog.Close class="dialog-cancel">Keep editing invoice</Dialog.Close>
-          <button class="dialog-save" onclick={addLine}>Add line item</button>
-        </div>
-        <Dialog.Close class="dialog-close" aria-label="Close line item dialog"><X strokeWidth={1.75} absoluteStrokeWidth /></Dialog.Close>
-      </Dialog.Content>
-    </Dialog.Portal>
-  </Dialog.Root>
-
-  <div class="invoice-closing">
-    <label class="notes-label"><span>Notes & terms</span>
-      <textarea value={invoice.current.notes} onchange={(event) => {
-        const notes = event.currentTarget.value;
-        setField((data) => { data.notes = notes; });
-      }}></textarea>
-    </label>
-
-    <dl class="invoice-totals">
-    <div><dt>Subtotal</dt><dd>{money.format(subtotal)}</dd></div>
-    <div>
-      <dt>Tax</dt>
-      <dd class="tax-value">
-        <label><span class="sr-only">Tax rate</span><input type="number" min="0" step="0.01" value={invoice.current.taxRate} onchange={(event) => {
-          const taxRate = Number(event.currentTarget.value) || 0;
-          setField((data) => { data.taxRate = taxRate; });
-        }} aria-label="Tax rate" /></label>
-        <span>{money.format(tax)}</span>
-      </dd>
-    </div>
-    <div class="grand-total"><dt>Total due</dt><dd>{money.format(total)}</dd></div>
-    </dl>
-  </div>
-
-  {#if invoice.error}
-    <p class="invoice-error">The invoice could not be saved. {invoice.error}</p>
-  {/if}
-
-  <footer class="invoice-footer"><span>Longtail Labs</span><span>Thank you for the work.</span></footer>
+    <footer>
+      <span>Thank you for your business</span>
+      <span>{invoice.current.currency}</span>
+      <span class:loading={invoice.isLoading} class:error={Boolean(invoice.error)} class="save-state" data-slop-export="hide">{invoice.error ? "Not saved" : invoice.isLoading ? "Opening" : "Saved locally"}</span>
+    </footer>
+    {#if invoice.error}<p class="error-message" data-slop-export="hide">Could not save this invoice. {invoice.error}</p>{/if}
+  </article>
 </main>

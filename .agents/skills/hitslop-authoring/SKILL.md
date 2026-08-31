@@ -25,3 +25,5 @@ description: Create, preview, validate, build, install, or publish hitSlop autho
   macOS host-generated `Icon\r` Finder metadata.
 - Publisher ownership comes from the local key. Use `slop identity` commands to
   inspect, rename, export, or import it.
+- When creating or substantially revising a slop interface, also use the local
+  `hitslop-design` skill.

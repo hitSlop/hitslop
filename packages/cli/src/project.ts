@@ -1,5 +1,6 @@
 import { cp, lstat, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { zipSync, type Zippable } from "fflate";
 import { decode as decodePng } from "fast-png";
@@ -49,24 +50,22 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
   if (await exists(destination) && (await readdir(destination)).length) throw new Error(`Destination is not empty: ${destination}`);
   const slug = basename(destination).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "my-slop";
   const defaultTitle = slug.split("-").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" ");
-  await mkdir(join(destination, "src"), { recursive: true });
+  const title = options.title || defaultTitle;
+  const templateRoot = fileURLToPath(new URL("../templates/svelte", import.meta.url));
+  await cp(templateRoot, destination, { recursive: true });
   await writeFile(join(destination, "package.json"), JSON.stringify({
     name: slug, private: true, type: "module", scripts: { dev: "slop dev", build: "slop build", publish: "slop publish" },
-    dependencies: { "@hitslop/runtime": `^${cliPackage.version}`, "@hitslop/svelte": `^${cliPackage.version}`, "svelte": "^5.0.0" },
+    dependencies: { "@hitslop/runtime": `^${cliPackage.version}`, "@hitslop/svelte": `^${cliPackage.version}`, "bits-ui": "^2.19.0", "svelte": "^5.0.0" },
     devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.0.0", "vite": "^8.0.0" },
   }, null, 2) + "\n");
   await writeFile(join(destination, "manifest.json"), JSON.stringify({
     $schema: manifestSchemaURL, slug,
-    title: options.title || defaultTitle,
+    title,
     description: options.description || "A small, lovable hitSlop app.", categories: options.categories?.length ? options.categories : ["utilities"],
     presentation: { width: 560, height: 420 },
   }, null, 2) + "\n");
-  await writeFile(join(destination, "index.html"), "<div id=\"app\"></div><script type=\"module\" src=\"/src/main.ts\"></script>\n");
-  await writeFile(join(destination, "src/main.ts"), "import { mount } from 'svelte';\nimport { ready } from '@hitslop/runtime';\nimport App from './App.svelte';\nimport './styles.css';\nmount(App, { target: document.getElementById('app')! });\nready();\n");
-  await writeFile(join(destination, "src/App.svelte"), `<script lang="ts">\n  import { jsonStore } from '@hitslop/svelte';\n  const state = jsonStore({ count: 0 });\n</script>\n\n<main>\n  <h1>${slug}</h1>\n  <button onclick={() => state.update(value => { value.count += 1; })}>\n    Count {state.current.count}\n  </button>\n</main>\n`);
-  await writeFile(join(destination, "src/styles.css"), ":root { color-scheme: light; font-family: ui-rounded, system-ui, sans-serif; background: #f6f7fb; color: #20222a; }\nhtml, body { margin: 0; background: #f6f7fb; }\nmain { min-height: 100vh; display: grid; place-content: center; gap: 1rem; text-align: center; }\nbutton { padding: .8rem 1.2rem; border: 1px solid #d8dbe5; border-radius: 999px; background: white; color: inherit; }\n");
-  await writeFile(join(destination, "vite.config.ts"), "import { defineConfig } from 'vite';\nimport { svelte } from '@sveltejs/vite-plugin-svelte';\nexport default defineConfig({ plugins: [svelte()] });\n");
-  await writeFile(join(destination, "AGENTS.md"), "# hitSlop authoring\n\nRead `manifest.json` first. Run `bunx @hitslop/cli dev` to preview with isolated stores, then `build` and `publish`. Source stays in this project and is never copied into the runtime `.slop`.\n");
+  const appPath = join(destination, "src/App.svelte");
+  await writeFile(appPath, (await readFile(appPath, "utf8")).replace("__SLOP_TITLE_LITERAL__", JSON.stringify(title)));
 }
 
 export async function buildSlop(root: string): Promise<{ directory: string; manifest: SlopManifest }> {

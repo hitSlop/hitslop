@@ -35,6 +35,15 @@ emits a source-free `dist/<slug>.slop`. Install and publish capture a full
 `QuickLook/Thumbnail.png`; pass `--thumbnail <png>` to supply custom Finder
 artwork. Publish signs one immutable ZIP artifact.
 
+Static captures set `data-slop-capture="static"` on the document root. Mark
+editing-only controls with `data-slop-export="hide"`; the host omits them from
+PNG, PDF, Quick Look, and catalog imagery. Preview imagery keeps the manifest
+viewport, while PNG/PDF exports use the current width and full document height.
+PNG exports render at deterministic 2x resolution; PDFs retain selectable text
+and WebKit vector rendering on one full-height page.
+Keep content that must export in normal document flow rather than a nested
+scroll region.
+
 The manifest is intentionally small:
 
 ```json
