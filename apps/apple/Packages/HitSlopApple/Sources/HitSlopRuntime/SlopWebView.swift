@@ -68,6 +68,9 @@ private let runtimeScript = #"""
       remove: name => call('media.remove', { name }),
       onChange: callback => watch('media', callback)
     }),
+    window: Object.freeze({
+      resize: size => call('window.resize', size)
+    }),
     ready: () => { guestReady = true; document.documentElement.dataset.hitslopReady = 'true'; scheduleReady(); }
   });
 })();
@@ -76,12 +79,16 @@ private let runtimeScript = #"""
 @MainActor public protocol SlopRuntimeSessionDelegate: AnyObject {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind)
+    func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
 }
 
 public extension SlopRuntimeSessionDelegate {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {}
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind) {}
+    func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize {
+        throw SlopPackageError.invalid("the host does not support dynamic window sizing")
+    }
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
 }
 
@@ -121,12 +128,17 @@ public extension SlopRuntimeSessionDelegate {
                 replyHandler(["exists": snapshot.exists, "revision": snapshot.revision as Any? ?? NSNull()], nil)
             case "media.write":
                 let name = try mediaName(body)
-                guard let data = body["data"] as? String else { throw SlopPackageError.invalid("media write needs image data") }
+                guard let data = body["data"] as? String else { throw SlopPackageError.invalid("media write needs base64 data") }
                 let revision = try mediaStore.write(name, base64: data)
                 session?.bridgeDidCommit(kind: .media, revision: revision); replyHandler(["revision": revision], nil)
             case "media.remove":
                 try mediaStore.remove(try mediaName(body))
                 session?.bridgeDidCommit(kind: .media, revision: nil); replyHandler(["revision": NSNull()], nil)
+            case "window.resize":
+                guard !package.isSkinned else { throw SlopPackageError.invalid("PNG-skinned documents have a fixed window size") }
+                guard let session else { throw SlopPackageError.invalid("runtime session is unavailable") }
+                let applied = try session.bridgeDidRequestResize(try windowSize(body))
+                replyHandler(["width": applied.width, "height": applied.height], nil)
             case "sqlite.query":
                 let statement = try sql(body); replyHandler(try database().query(statement.0, parameters: statement.1), nil)
             case "sqlite.execute":
@@ -152,6 +164,17 @@ public extension SlopRuntimeSessionDelegate {
         guard let name = body["name"] as? String else { throw SlopPackageError.invalid("media operation needs a name") }
         return name
     }
+    private func windowSize(_ body: [String: Any]) throws -> CGSize {
+        guard let width = body["width"] as? NSNumber, let height = body["height"] as? NSNumber else {
+            throw SlopPackageError.invalid("window resize needs numeric width and height")
+        }
+        let values = [width.doubleValue, height.doubleValue]
+        guard values.allSatisfy({ $0.isFinite && $0.rounded() == $0 }),
+              (240...4096).contains(values[0]), (180...4096).contains(values[1]) else {
+            throw SlopPackageError.invalid("window dimensions must be whole pixels between 240x180 and 4096x4096")
+        }
+        return CGSize(width: values[0], height: values[1])
+    }
 }
 
 private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
@@ -164,7 +187,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
             let headers = [
                 "Content-Type": resource.mime, "Content-Length": String(resource.data.count), "Cache-Control": "no-store",
                 "Cross-Origin-Resource-Policy": "same-origin",
-                "Content-Security-Policy": "default-src 'none'; script-src slop: 'unsafe-inline'; style-src slop: 'unsafe-inline'; img-src slop: data: blob: https: http:; media-src slop: data: blob: https: http:; font-src slop: data: https: http:; connect-src https: http: wss: ws:; worker-src blob:"
+                "Content-Security-Policy": "default-src 'none'; script-src slop: 'unsafe-inline' 'wasm-unsafe-eval'; style-src slop: 'unsafe-inline'; img-src slop: data: blob: https: http:; media-src slop: data: blob: https: http:; font-src slop: data: https: http:; connect-src slop: blob: https: http: wss: ws:; worker-src blob:"
             ]
             guard let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers) else { throw SlopPackageError.invalid("could not serve resource") }
             task.didReceive(response); task.didReceive(resource.data); task.didFinish()
@@ -178,7 +201,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
             let resource = try package.mediaURL(name: name)
             guard FileManager.default.fileExists(atPath: resource.path) else { throw SlopPackageError.missing(url.path) }
             let data = try Data(contentsOf: resource)
-            return (data, try SlopMediaStore.imageMIMEType(data))
+            return (data, try SlopMediaStore.mediaMIMEType(data))
         }
         let resource = try package.assetURL(path: url.path)
         guard FileManager.default.fileExists(atPath: resource.path) else { throw SlopPackageError.missing(url.path) }
@@ -200,11 +223,19 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     private let schemeHandler: SlopSchemeHandler
     private var timer: Timer?, sqliteVersion: Int64?, jsonRevision: String?, mediaRevision: String?, sequence = 0, retryCount = 0, closed = false, lastError: Error?
 
-    public init(packageURL: URL) throws {
+    public init(packageURL: URL, renderTargetsEnabled: Bool = false) throws {
         let package = try SlopPackage(rootURL: packageURL); self.package = package
         usesTransparentBackground = package.isSkinned
         let configuration = WKWebViewConfiguration(); configuration.websiteDataStore = .nonPersistent()
         let handler = SlopSchemeHandler(package: package); schemeHandler = handler; configuration.setURLSchemeHandler(handler, forURLScheme: "slop")
+        if renderTargetsEnabled {
+            configuration.userContentController.addUserScript(WKUserScript(
+                source: "document.documentElement.setAttribute('data-slop-renderer', 'true')",
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true,
+                in: .page
+            ))
+        }
         configuration.userContentController.addUserScript(WKUserScript(source: runtimeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
         let bridge = SlopBridge(package: package); self.bridge = bridge
         configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "hitslop")
@@ -244,6 +275,10 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     fileprivate func bridgeDidCommit(kind: SlopStoreKind, revision: String?) {
         sqliteVersion = bridge.sqliteVersion(); jsonRevision = bridge.jsonRevision(); mediaRevision = bridge.mediaRevision(); emit(kind: kind, revision: revision, source: "app"); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
     }
+    fileprivate func bridgeDidRequestResize(_ size: CGSize) throws -> CGSize {
+        guard let delegate else { throw SlopPackageError.invalid("the host does not support dynamic window sizing") }
+        return try delegate.runtimeSession(self, resizeContentTo: size)
+    }
     private func poll() {
         let nextJSON = bridge.jsonRevision(); if nextJSON != jsonRevision { jsonRevision = nextJSON; if nextJSON != nil { emit(kind: .json, revision: nextJSON, source: "external") } }
         let nextSQLite = bridge.sqliteVersion(); if nextSQLite != sqliteVersion { sqliteVersion = nextSQLite; if nextSQLite != nil { emit(kind: .sqlite, revision: nil, source: "external") } }
@@ -278,7 +313,10 @@ extension SlopRuntimeSession: WKUIDelegate {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = parameters.allowsMultipleSelection
-        panel.allowedContentTypes = [.image]
+        // Named media accepts images and bounded ZIP archives. WebKit does not
+        // expose an input's `accept` list here, so keep the native picker in
+        // sync with the host store and include Winamp's ZIP-based extension.
+        panel.allowedContentTypes = [.image, .zip, UTType(filenameExtension: "wsz")].compactMap { $0 }
         panel.begin { response in completionHandler(response == .OK ? panel.urls : nil) }
     }
 }

@@ -8,9 +8,25 @@ import HitSlopHost
 }
 
 struct Screenshot: AsyncParsableCommand {
+    enum Target: String, ExpressibleByArgument { case preview, cover, icon }
     @Argument(transform: URL.init(fileURLWithPath:)) var package: URL
     @Option(transform: URL.init(fileURLWithPath:)) var output: URL
-    @MainActor func run() async throws { try await SlopRenderer.previewPNGData(packageURL: package).write(to: output, options: .atomic); print(output.path) }
+    @Option var target: Target = .preview
+    @Flag var ifPresent = false
+    @MainActor func run() async throws {
+        let data: Data?
+        switch target {
+        case .preview: data = try await SlopRenderer.previewPNGData(packageURL: package)
+        case .cover: data = try await SlopRenderer.targetPNGData(packageURL: package, target: .cover)
+        case .icon: data = try await SlopRenderer.targetPNGData(packageURL: package, target: .icon)
+        }
+        guard let data else {
+            if ifPresent { return }
+            throw ValidationError("The slop does not define a \(target.rawValue) render target.")
+        }
+        try data.write(to: output, options: .atomic)
+        print(output.path)
+    }
 }
 struct Export: AsyncParsableCommand {
     enum Format: String, ExpressibleByArgument { case png, pdf }

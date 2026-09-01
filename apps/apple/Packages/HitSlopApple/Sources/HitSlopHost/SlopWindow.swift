@@ -9,6 +9,19 @@ private final class FramelessDocumentWindow: NSWindow {
     override var canBecomeMain: Bool { true }
 }
 
+func dynamicSlopWindowFrame(current: NSRect, requested: NSSize, visible: NSRect?) -> NSRect {
+    let size = NSSize(
+        width: min(requested.width, visible?.width ?? requested.width),
+        height: min(requested.height, visible?.height ?? requested.height)
+    )
+    var origin = NSPoint(x: current.minX, y: current.maxY - size.height)
+    if let visible {
+        origin.x = min(max(origin.x, visible.minX), visible.maxX - size.width)
+        origin.y = min(max(origin.y, visible.minY), visible.maxY - size.height)
+    }
+    return NSRect(origin: origin, size: size)
+}
+
 private class HoverView: NSView {
     var changed: ((Bool) -> Void)?
     private var area: NSTrackingArea?
@@ -63,6 +76,24 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     func updateNSView(_ view: SlopToolbarDragHandleView, context: Context) { view.onDrag = onDrag }
 }
 
+@MainActor private enum SlopDocumentAssetRefreshQueue {
+    private static var jobs: [UUID: Task<Void, Never>] = [:]
+
+    static func schedule(renderURL: URL, presentedURL: URL) {
+        let id = UUID()
+        jobs[id] = Task { @MainActor in
+            defer { jobs.removeValue(forKey: id) }
+            do {
+                let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: renderURL)
+                if let preview = assets.previewPNG { try SlopPreviewWriter.write(preview, to: presentedURL) }
+                if let icon = assets.finderIconPNG { SlopPreviewWriter.installFinderIcon(icon, for: presentedURL) }
+            } catch {
+                print("[hitSlop assets] Could not refresh \(presentedURL.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
 @MainActor public final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, SlopRuntimeSessionDelegate {
     public let packageURL: URL
     public let session: SlopRuntimeSession
@@ -70,7 +101,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     public var onOpenDocument: ((URL) -> Void)?
     private let opened: SlopOpenedDocument
     private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?, hideWork: DispatchWorkItem?
-    private var failedOverlay: NSHostingView<FailureOverlay>?, previewWork: DispatchWorkItem?
+    private var failedOverlay: NSHostingView<FailureOverlay>?
 
     public init(packageURL: URL) throws {
         let opened = try SlopOpenedDocument(presentedURL: packageURL)
@@ -96,8 +127,14 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     required init?(coder: NSCoder) { nil }
 
-    public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) { failedOverlay?.removeFromSuperview(); failedOverlay = nil; schedulePreview() }
-    public func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind) {}
+    public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) { failedOverlay?.removeFromSuperview(); failedOverlay = nil }
+    public func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo requested: CGSize) throws -> CGSize {
+        guard let window else { throw SlopPackageError.invalid("document window is unavailable") }
+        let frame = dynamicSlopWindowFrame(current: window.frame, requested: requested, visible: window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame)
+        window.setFrame(frame, display: true, animate: true)
+        if toolbar?.isVisible == true { showToolbar() }
+        return frame.size
+    }
     public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) { showFailure(error) }
 
     private func setupToolbar() {
@@ -167,23 +204,15 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         let overlay = NSHostingView(rootView: FailureOverlay(message: error.localizedDescription, retry: { [weak self] in self?.failedOverlay?.removeFromSuperview(); self?.failedOverlay = nil; self?.session.reload() }))
         overlay.frame = content.bounds; overlay.autoresizingMask = [.width, .height]; content.addSubview(overlay); failedOverlay = overlay
     }
-    private func schedulePreview() {
-        previewWork?.cancel(); let work = DispatchWorkItem { [weak self] in
-            guard let self else { return }; Task { @MainActor in
-                guard let png = try? await SlopRenderer.previewPNGData(session: self.session) else { return }
-                try? SlopPreviewWriter.write(png, to: self.packageURL)
-            }
-        }; previewWork = work; DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
-    }
     public func windowDidMove(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
     public func windowDidResize(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
-    public func windowDidResignKey(_ notification: Notification) { schedulePreview() }
     public func windowWillClose(_ notification: Notification) {
-        previewWork?.cancel(); toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil; onClose?()
-        Task { @MainActor [self] in
-            if let png = try? await SlopRenderer.previewPNGData(session: session) { try? SlopPreviewWriter.write(png, to: packageURL) }
-            opened.close()
-        }
+        let renderURL = session.package.rootURL
+        let presentedURL = packageURL
+        toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil
+        opened.close()
+        SlopDocumentAssetRefreshQueue.schedule(renderURL: renderURL, presentedURL: presentedURL)
+        onClose?()
     }
     private func present(_ title: String, _ error: Error) { let alert = NSAlert(error: error); alert.messageText = title; alert.runModal() }
 }

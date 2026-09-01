@@ -5,14 +5,15 @@
   "scripts": {
     "dev:counter": "slop dev svelte-counter",
     "dev:alien-radio": "slop dev alien-radio",
+    "dev:soma-amp": "slop dev soma-amp",
     "dev:focus-timer": "slop dev focus-timer",
     "dev:invoice": "slop dev invoice",
     "dev:resume": "slop dev resume",
     "dev:recipe": "slop dev recipe",
     "dev:kanban": "slop dev kanban-board",
     "dev:random-picker": "slop dev random-picker",
-    "validate": "slop validate svelte-counter && slop validate alien-radio && slop validate focus-timer && slop validate invoice && slop validate resume && slop validate recipe && slop validate kanban-board && slop validate random-picker",
-    "build": "slop build svelte-counter && slop build alien-radio && slop build focus-timer && slop build invoice && slop build resume && slop build recipe && slop build kanban-board && slop build random-picker",
+    "validate": "slop validate svelte-counter && slop validate alien-radio && slop validate soma-amp && slop validate focus-timer && slop validate invoice && slop validate resume && slop validate recipe && slop validate kanban-board && slop validate random-picker",
+    "build": "slop build svelte-counter && slop build alien-radio && slop build soma-amp && slop build focus-timer && slop build invoice && slop build resume && slop build recipe && slop build kanban-board && slop build random-picker",
     "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
     "test": "true"
   },
@@ -21,7 +22,8 @@
     "@hitslop/svelte": "workspace:*",
     "@lucide/svelte": "^1.37.0",
     "bits-ui": "^2.19.0",
-    "svelte": "^5.57.0"
+    "svelte": "^5.57.0",
+    "webamp": "2.3.1"
   },
   "devDependencies": {
     "@hitslop/cli": "workspace:*",

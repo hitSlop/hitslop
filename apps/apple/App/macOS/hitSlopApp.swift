@@ -1,6 +1,8 @@
 import AppKit
 import HitSlopCatalog
+import HitSlopCore
 import HitSlopHost
+import HitSlopRuntime
 import Sparkle
 import SwiftUI
 import UniformTypeIdentifiers
@@ -59,6 +61,10 @@ private struct UpdateSettingsView: View {
     }
 
     private func openDocument(_ url: URL) {
+        if DocumentFactory.isManagedTemplatePackage(url) {
+            createDocument(fromTemplate: url)
+            return
+        }
         let key = url.standardizedFileURL.path
         if let existing = documents[key] { existing.showWindow(nil); existing.window?.makeKeyAndOrderFront(nil); return }
         Task { @MainActor in
@@ -73,6 +79,43 @@ private struct UpdateSettingsView: View {
             } catch { let alert = NSAlert(error: error); alert.messageText = "Could not open slop"; alert.runModal() }
         }
     }
+
+    private func createDocument(fromTemplate url: URL) {
+        showCatalog()
+        let slug: String
+        do {
+            let package = try SlopPackage(rootURL: url)
+            try package.validateAsTemplate()
+            slug = package.manifest.slug
+        } catch {
+            let alert = NSAlert(error: error)
+            alert.messageText = "Could not create slop"
+            if let window = catalog?.window { alert.beginSheetModal(for: window) }
+            else { alert.runModal() }
+            return
+        }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.slop]
+        panel.canCreateDirectories = true
+        panel.directoryURL = SlopCloud.defaultCreationDirectory()
+        panel.nameFieldStringValue = "\(slug).slop"
+        let complete: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard let self, response == .OK, let destination = panel.url else { return }
+            do {
+                try DocumentFactory(catalogURL: self.catalogURL).create(fromLocalPackage: url, at: destination)
+                SlopPreviewWriter.installExistingPreview(for: destination)
+                NSDocumentController.shared.noteNewRecentDocumentURL(destination)
+                self.openDocument(destination)
+            } catch {
+                let alert = NSAlert(error: error)
+                alert.messageText = "Could not create slop"
+                alert.runModal()
+            }
+        }
+        if let window = catalog?.window { panel.beginSheetModal(for: window, completionHandler: complete) }
+        else { complete(panel.runModal()) }
+    }
+
     @objc private func openPanel() {
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.slop]; panel.allowsMultipleSelection = true
         panel.directoryURL = SlopCloud.defaultCreationDirectory()
@@ -154,7 +197,9 @@ private struct UpdateSettingsView: View {
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard menu === recentMenu else { return }
         menu.removeAllItems()
-        let urls = NSDocumentController.shared.recentDocumentURLs.filter { $0.pathExtension.lowercased() == "slop" }
+        let urls = NSDocumentController.shared.recentDocumentURLs.filter {
+            $0.pathExtension.lowercased() == "slop" && !DocumentFactory.isManagedTemplatePackage($0)
+        }
         if urls.isEmpty {
             let empty = menu.addItem(withTitle: "No Recent Documents", action: nil, keyEquivalent: "")
             empty.isEnabled = false

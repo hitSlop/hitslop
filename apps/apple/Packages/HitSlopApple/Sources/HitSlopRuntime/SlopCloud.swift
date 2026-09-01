@@ -24,14 +24,14 @@ public enum SlopCloud {
     }
 
     public static func defaultCreationDirectory() -> URL {
+        #if os(iOS)
         if let documents = documentsURL {
             try? FileManager.default.createDirectory(at: documents, withIntermediateDirectories: true)
             return documents
         }
-        #if os(iOS)
         return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         #else
-        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents", isDirectory: true)
+        return FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
         #endif
     }
 

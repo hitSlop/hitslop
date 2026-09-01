@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import { cp, mkdir } from "node:fs/promises";
+import { cp, mkdir, rm } from "node:fs/promises";
 import { canonicalPublishEnvelope, type PublishEnvelope } from "@hitslop/schema";
 import { buildSlop, packSlop } from "./project.ts";
 import { runNative } from "./dev.ts";
@@ -19,7 +19,14 @@ export async function publishSlop(root: string, flags: { registry?: string; prev
   validateStaticPng(new Uint8Array(await Bun.file(preview).arrayBuffer()), "The template preview");
   const thumbnail = join(quickLook, "Thumbnail.png");
   if (flags.thumbnail) await cp(resolve(flags.thumbnail), thumbnail);
-  else await writeDefaultThumbnail(preview, thumbnail);
+  else {
+    await rm(thumbnail, { force: true });
+    await runNative(["screenshot", built.directory, "--target", "cover", "--if-present", "--output", thumbnail]);
+    if (!await Bun.file(thumbnail).exists()) await writeDefaultThumbnail(preview, thumbnail);
+  }
+  // Static rendering may initialize a lazy store. Published templates never
+  // carry seed data; each created document initializes its own state.
+  await rm(join(built.directory, "stores"), { recursive: true, force: true });
   await validateTemplatePackage(built.directory, { requirePreview: true });
 
   const packed = await packSlop(built.directory);

@@ -26,10 +26,17 @@ import Testing
 
 @Test func duplicateKeepsManifestIdenticalAndStartsWithoutStores() throws {
     let source = try fixture(), temporary = source.deletingLastPathComponent(); defer { try? FileManager.default.removeItem(at: temporary) }
+    try SlopDuplicator.makeImmutable(source)
     let destination = temporary.appendingPathComponent("copy.slop")
     try SlopDuplicator.duplicate(from: source, to: destination)
     #expect(try Data(contentsOf: source.appendingPathComponent("manifest.json")) == Data(contentsOf: destination.appendingPathComponent("manifest.json")))
     #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores").path))
+    let sourceMode = try FileManager.default.attributesOfItem(atPath: source.path)[.posixPermissions] as? NSNumber
+    let destinationMode = try FileManager.default.attributesOfItem(atPath: destination.path)[.posixPermissions] as? NSNumber
+    #expect((sourceMode?.intValue ?? 0) & 0o222 == 0)
+    #expect((destinationMode?.intValue ?? 0) & 0o200 != 0)
+    try FileManager.default.createDirectory(at: destination.appendingPathComponent("stores"), withIntermediateDirectories: true)
+    try Data(#"{}"#.utf8).write(to: destination.appendingPathComponent("stores/data.json"))
 }
 
 @Test func duplicateDocumentPreservesCanonicalStores() throws {
@@ -62,6 +69,18 @@ import Testing
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
     try store.remove("hero")
     #expect(try !store.open("hero").exists)
+}
+
+@Test func namedMediaStoresAcceptBoundedZIPArchives() throws {
+    let root = try fixture(), temporary = root.deletingLastPathComponent(); defer { try? FileManager.default.removeItem(at: temporary) }
+    let encoded = "UEsDBBQAAAAIAG1VIV3uQOUFCQAAAAcAAAAIAAAATUFJTi5CTVBLy6woKS1KBQBQSwECFAAUAAAACABtVSFd7kDlBQkAAAAHAAAACAAAAAAAAAAAAAAAAAAAAAAATUFJTi5CTVBQSwUGAAAAAAEAAQA2AAAALwAAAAAA"
+    let archive = try #require(Data(base64Encoded: encoded))
+    let store = SlopMediaStore(directoryURL: root.appendingPathComponent("stores/media", isDirectory: true))
+    let revision = try store.write("skin", base64: encoded)
+    #expect(try store.open("skin").revision == revision)
+    #expect(try SlopMediaStore.mediaMIMEType(archive) == "application/zip")
+    #expect(throws: SlopPackageError.self) { _ = try store.write("bad", base64: Data("not media".utf8).base64EncodedString()) }
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
 }
 
 @Test func documentsAllowOnlyCanonicalLazyStores() throws {

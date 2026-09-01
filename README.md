@@ -35,6 +35,12 @@ emits a source-free `dist/<slug>.slop`. Install and publish capture a full
 `QuickLook/Thumbnail.png`; pass `--thumbnail <png>` to supply custom Finder
 artwork. Publish signs one immutable ZIP artifact.
 
+`slop install` writes a read-only catalog master at
+`~/.hitslop/templates/<slug>.slop`. Create and test writable documents through
+**My Templates** in hitSlop, or by opening that master — the app copies it to a
+path you choose. Document stores are created only in the copy, so station
+choices, uploaded media, and other personal state never seed the next document.
+
 Static captures set `data-slop-capture="static"` on the document root. Mark
 editing-only controls with `data-slop-export="hide"`; the host omits them from
 PNG, PDF, Quick Look, and catalog imagery. Preview imagery keeps the manifest
@@ -71,14 +77,15 @@ my-widget.slop/
 ├── stores/
 │   ├── data.json              optional, created lazily
 │   ├── data.sqlite            optional, created lazily
-│   └── media/                 optional named images, created lazily
+│   └── media/                 optional named media, created lazily
 ├── QuickLook/
 │   ├── Preview.png            host-generated Quick Look/catalog image
 │   └── Thumbnail.png          immutable author-controlled artwork
 └── Icon\r                     optional macOS-local Finder metadata
 ```
 
-A slop may use JSON, SQLite, named images, any combination, or none. The manifest does not declare
+A slop may use JSON, SQLite, named media, any combination, or none. Named media accepts supported
+images and bounded ZIP archives, is content-sniffed by the host, and is created lazily. The manifest does not declare
 storage. There is no document identity, release lineage, author, tags, runtime
 version, entry path, editable stylesheet, or seed data in the package format.
 On macOS, hitSlop derives Finder's hidden custom-icon metadata from

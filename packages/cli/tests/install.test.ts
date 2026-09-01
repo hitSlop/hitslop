@@ -1,14 +1,19 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { manifestSchemaURL } from "@hitslop/schema";
 import { decode, encode } from "fast-png";
-import { installTemplate, validateTemplatePackage } from "../src/install.ts";
+import { installTemplate, makePackageWritable, validateTemplatePackage } from "../src/install.ts";
 import { thumbnailFromPng } from "../src/static-preview.ts";
 
 const roots: string[] = [];
-afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map(async (root) => {
+    await makePackageWritable(root).catch(() => {});
+    await rm(root, { recursive: true, force: true });
+  }));
+});
 
 async function fixture(): Promise<{ project: string; templates: string; preview: string }> {
   const root = await mkdtemp(join(tmpdir(), "hitslop-install-")); roots.push(root);
@@ -20,33 +25,40 @@ async function fixture(): Promise<{ project: string; templates: string; preview:
   return { project, templates, preview };
 }
 
+const skipNativeCover = { captureCover: async () => false };
+
 describe("installTemplate", () => {
   test("installs one store-free slop with static Quick Look images", async () => {
-    const item = await fixture(); const result = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview });
-    expect(result.directory).toBe(join(item.templates, "installed", "tiny-counter.slop"));
+    const item = await fixture(); const result = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeCover });
+    expect(result.directory).toBe(join(item.templates, "tiny-counter.slop"));
     expect(await readFile(join(result.directory, "app.html"), "utf8")).toContain("Hello");
     expect(await readFile(join(result.directory, "QuickLook", "Preview.png"))).toEqual(await readFile(item.preview));
     expect(await readFile(join(result.directory, "QuickLook", "Thumbnail.png"))).toEqual(await readFile(item.preview));
     await expect(readFile(join(result.directory, "install.json"))).rejects.toThrow();
     await expect(readFile(join(result.directory, "AGENTS.md"))).rejects.toThrow();
+    expect((await lstat(result.directory)).mode & 0o222).toBe(0);
+    expect((await lstat(join(result.directory, "app.html"))).mode & 0o222).toBe(0);
+    await expect(writeFile(join(result.directory, "app.html"), "nope")).rejects.toThrow();
   });
 
   test("asks before replacing and preserves an install when declined", async () => {
-    const item = await fixture(); await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview });
+    const item = await fixture(); await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeCover });
     let asked = false;
-    await expect(installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, confirmOverwrite: async () => { asked = true; return false; } })).rejects.toThrow("cancelled");
+    await expect(installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeCover, confirmOverwrite: async () => { asked = true; return false; } })).rejects.toThrow("cancelled");
     expect(asked).toBeTrue();
-    expect(await readFile(join(item.templates, "installed", "tiny-counter.slop", "app.html"), "utf8")).toContain("Hello");
+    expect(await readFile(join(item.templates, "tiny-counter.slop", "app.html"), "utf8")).toContain("Hello");
   });
 
   test("force replaces an existing install", async () => {
-    const item = await fixture(); await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview });
-    expect((await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, force: true })).replaced).toBeTrue();
+    const item = await fixture(); await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeCover });
+    const replaced = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeCover, force: true });
+    expect(replaced.replaced).toBeTrue();
+    expect((await lstat(replaced.directory)).mode & 0o222).toBe(0);
   });
 
   test("captures a preview when no override is supplied", async () => {
     const item = await fixture(); let captured = false;
-    const result = await installTemplate(item.project, { templatesRoot: item.templates, capturePreview: async (packageDirectory: string, output: string) => {
+    const result = await installTemplate(item.project, { templatesRoot: item.templates, ...skipNativeCover, capturePreview: async (packageDirectory: string, output: string) => {
       captured = true;
       await mkdir(join(packageDirectory, "stores"), { recursive: true });
       await writeFile(join(packageDirectory, "stores", "data.json"), "{}\n");
@@ -64,8 +76,40 @@ describe("installTemplate", () => {
     expect(await readFile(join(result.directory, "QuickLook", "Thumbnail.png"))).toEqual(await readFile(thumbnail));
   });
 
+  test("asks for an authored cover even when app.html does not mention one", async () => {
+    const item = await fixture();
+    let asked = false;
+    await installTemplate(item.project, {
+      templatesRoot: item.templates,
+      preview: item.preview,
+      captureCover: async () => {
+        asked = true;
+        return false;
+      },
+    });
+    expect(asked).toBeTrue();
+  });
+
+  test("uses an authored cover and removes stores initialized during its capture", async () => {
+    const item = await fixture();
+    const cover = Buffer.from(encode({ width: 3, height: 3, channels: 4, data: new Uint8Array(3 * 3 * 4).fill(91) }));
+    const result = await installTemplate(item.project, {
+      templatesRoot: item.templates,
+      preview: item.preview,
+      captureCover: async (packageDirectory, output) => {
+        await mkdir(join(packageDirectory, "stores"), { recursive: true });
+        await writeFile(join(packageDirectory, "stores", "data.json"), "{}\n");
+        await writeFile(output, cover);
+        return true;
+      },
+    });
+    expect(await readFile(join(result.directory, "QuickLook", "Thumbnail.png"))).toEqual(cover);
+    await expect(readFile(join(result.directory, "stores", "data.json"))).rejects.toThrow();
+  });
+
   test("requires two independently valid static preview files", async () => {
-    const item = await fixture(); const result = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview });
+    const item = await fixture(); const result = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeCover });
+    await makePackageWritable(result.directory);
     await writeFile(join(result.directory, "QuickLook", "Thumbnail.png"), encode({ width: 2, height: 1, channels: 4, data: new Uint8Array(8).fill(127) }));
     await expect(validateTemplatePackage(result.directory, { requirePreview: true })).resolves.toBeUndefined();
     await rm(join(result.directory, "QuickLook", "Thumbnail.png"));
@@ -75,7 +119,8 @@ describe("installTemplate", () => {
   });
 
   test("rejects macOS Finder metadata from templates", async () => {
-    const item = await fixture(); const result = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview });
+    const item = await fixture(); const result = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeCover });
+    await makePackageWritable(result.directory);
     await writeFile(join(result.directory, "Icon\r"), "");
     await expect(validateTemplatePackage(result.directory)).rejects.toThrow("Icon");
   });

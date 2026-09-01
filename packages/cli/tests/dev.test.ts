@@ -26,6 +26,13 @@ test("mock host preserves the document shell and hides scrollbar chrome", () => 
   expect(result).toContain("scrollbar-width:none");
   expect(result).toContain("::-webkit-scrollbar");
   expect(result.indexOf("data-hitslop-host")).toBeLessThan(result.indexOf("<title>"));
+
+  const fragment = '<div id="app"></div><script type="module" src="/source/main.ts"></script>';
+  const fragmentResult = (transform.handler as (value: string) => string)(fragment);
+  expect(fragmentResult).toContain("window.slop=");
+  expect(fragmentResult).toContain("window:{resize}");
+  expect(fragmentResult).toContain("hitslopDevWindow");
+  expect(fragmentResult.indexOf("window.slop=")).toBeLessThan(fragmentResult.indexOf('type="module"'));
 });
 
 test("mounted mock bridge opens and persists canonical stores and named media", async () => {
@@ -87,4 +94,10 @@ test("mounted mock bridge opens and persists canonical stores and named media", 
   expect((await call("/media/open", { name: "hero" })).value).toMatchObject({ exists: true });
   expect((await call("/media/remove", { name: "hero" })).status).toBe(200);
   expect((await call("/media/open", { name: "hero" })).value).toEqual({ exists: false, revision: null });
+
+  const zip = "UEsDBBQAAAAIAG1VIV3uQOUFCQAAAAcAAAAIAAAATUFJTi5CTVBLy6woKS1KBQBQSwECFAAUAAAACABtVSFd7kDlBQkAAAAHAAAACAAAAAAAAAAAAAAAAAAAAAAATUFJTi5CTVBQSwUGAAAAAAEAAQA2AAAALwAAAAAA";
+  const zipWrite = await call("/media/write", { name: "skin", data: zip, mimeType: "application/zip" });
+  expect(zipWrite.status).toBe(200);
+  expect((await call("/media/open", { name: "skin" })).value).toMatchObject({ exists: true });
+  expect((await call("/media/write", { name: "bad", data: Buffer.from("not media").toString("base64"), mimeType: "application/zip" })).status).toBe(400);
 }, 15_000);

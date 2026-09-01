@@ -2,6 +2,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 import ImageIO
+import HitSlopCore
 import PDFKit
 import Testing
 @testable import HitSlopHost
@@ -9,7 +10,7 @@ import Testing
 @Test @MainActor func staticCaptureHidesControlsRestoresTheDocumentAndUsesTheRequestedGeometry() async throws {
     let root = try rendererPackage()
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
-    let session = try SlopRuntimeSession(packageURL: root)
+    let session = try SlopRuntimeSession(packageURL: root, renderTargetsEnabled: true)
     defer { session.close() }
     let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
     window.contentView = session.webView
@@ -20,6 +21,24 @@ import Testing
     let previewImage = try #require(CGImageSourceCreateWithData(preview as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
     #expect(previewImage.width == 320)
     #expect(previewImage.height == 240)
+    #expect(try rgba(previewImage, x: 160, y: 120).alpha == 255)
+    #expect(session.webView.value(forKey: "drawsBackground") as? Bool == true)
+
+    let cover = try #require(try await SlopRenderer.targetPNGData(session: session, target: .cover))
+    let coverImage = try #require(CGImageSourceCreateWithData(cover as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    #expect(coverImage.width == 512)
+    #expect(coverImage.height == 512)
+    #expect(try rgba(coverImage, x: 0, y: 0).alpha == 0)
+    let coverCenter = try rgba(coverImage, x: 256, y: 256)
+    #expect(coverCenter.alpha == 255)
+    #expect(coverCenter.green > 140)
+    let icon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
+    let iconImage = try #require(CGImageSourceCreateWithData(icon as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    #expect(iconImage.width == 512)
+    #expect(iconImage.height == 512)
+    #expect(try rgba(iconImage, x: 0, y: 0).alpha == 0)
+    #expect(try rgba(iconImage, x: 256, y: 256).alpha == 255)
+    #expect(session.webView.value(forKey: "drawsBackground") as? Bool == true)
 
     let exported = try await SlopRenderer.exportPNGData(session: session)
     let exportImage = try #require(CGImageSourceCreateWithData(exported as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
@@ -30,9 +49,11 @@ import Testing
     #expect(bottom.blue > 180)
     #expect(bottom.red < 80)
 
-    let state = try await session.webView.evaluateJavaScript("({capture:document.documentElement.getAttribute('data-slop-capture'),display:getComputedStyle(document.querySelector('button')).display})") as? [String: Any]
+    let state = try await session.webView.evaluateJavaScript("({capture:document.documentElement.getAttribute('data-slop-capture'),display:getComputedStyle(document.querySelector('button')).display,target:getComputedStyle(document.querySelector('[data-slop-render=cover]')).display,background:getComputedStyle(document.body).backgroundColor})") as? [String: Any]
     #expect(state?["capture"] is NSNull)
     #expect(state?["display"] as? String == "block")
+    #expect(state?["target"] as? String == "none")
+    #expect(state?["background"] as? String == "rgb(243, 239, 230)")
 
     let pdf = try await SlopRenderer.exportPDFData(session: session)
     let provider = try #require(CGDataProvider(data: pdf as CFData))
@@ -50,14 +71,95 @@ import Testing
     #expect(rightSelection.bounds(for: pdfPage).minX > 150)
 }
 
-private func rendererPackage() throws -> URL {
+@Test @MainActor func coverTargetLargerThanTheWindowStillRendersAt512AndRestoresTheViewport() async throws {
+    let root = try rendererPackage(targetSize: 512)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root, renderTargetsEnabled: true)
+    defer { session.close() }
+    let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = session.webView
+    session.load()
+    try await session.waitUntilReady()
+    #expect(session.webView.frame.size == CGSize(width: 320, height: 240))
+
+    let cover = try #require(try await SlopRenderer.targetPNGData(session: session, target: .cover))
+    let coverImage = try #require(CGImageSourceCreateWithData(cover as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    #expect(coverImage.width == 512)
+    #expect(coverImage.height == 512)
+    #expect(try rgba(coverImage, x: 0, y: 0).alpha == 0)
+    #expect(try rgba(coverImage, x: 256, y: 256).alpha == 255)
+    #expect(session.webView.frame.size == CGSize(width: 320, height: 240))
+}
+
+@Test @MainActor func optionalRenderTargetsReportMissingAndRejectDuplicates() async throws {
+    let missingRoot = try rendererPackage(includeTargets: false)
+    defer { try? FileManager.default.removeItem(at: missingRoot.deletingLastPathComponent()) }
+    #expect(try await SlopRenderer.targetPNGData(packageURL: missingRoot, target: .cover) == nil)
+
+    let duplicateRoot = try rendererPackage(duplicateCover: true)
+    defer { try? FileManager.default.removeItem(at: duplicateRoot.deletingLastPathComponent()) }
+    await #expect(throws: SlopPackageError.self) {
+        _ = try await SlopRenderer.targetPNGData(packageURL: duplicateRoot, target: .cover)
+    }
+}
+
+@Test @MainActor func documentAssetsRenderInAHiddenSessionWithoutTouchingTheEditor() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let visibleSession = try SlopRuntimeSession(packageURL: root)
+    defer { visibleSession.close() }
+    let window = NSWindow(contentRect: visibleSession.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = visibleSession.webView
+    visibleSession.load()
+    try await visibleSession.waitUntilReady()
+    _ = try await visibleSession.webView.evaluateJavaScript("""
+        window.__captureMutations = [];
+        new MutationObserver(() => window.__captureMutations.push(document.documentElement.getAttribute('data-slop-capture')))
+          .observe(document.documentElement, { attributes: true, attributeFilter: ['data-slop-capture'] });
+        document.querySelector('button').focus();
+        """)
+
+    let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
+    let preview = try #require(assets.previewPNG)
+    let previewImage = try #require(CGImageSourceCreateWithData(preview as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    #expect(previewImage.width == 320)
+    #expect(previewImage.height == 240)
+    let icon = try #require(assets.finderIconPNG)
+    let iconImage = try #require(CGImageSourceCreateWithData(icon as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    #expect(iconImage.width == 512)
+    #expect(iconImage.height == 512)
+    #expect(try rgba(iconImage, x: 0, y: 0).alpha == 0)
+
+    let state = try await visibleSession.webView.evaluateJavaScript("({capture:document.documentElement.getAttribute('data-slop-capture'),active:document.activeElement?.tagName,mutations:window.__captureMutations,targets:document.querySelectorAll('[data-slop-render]').length,background:getComputedStyle(document.body).backgroundColor})") as? [String: Any]
+    #expect(state?["capture"] is NSNull)
+    #expect(state?["active"] as? String == "BUTTON")
+    #expect((state?["mutations"] as? [Any])?.isEmpty == true)
+    #expect((state?["targets"] as? NSNumber)?.intValue == 0)
+    #expect(state?["background"] as? String == "rgb(243, 239, 230)")
+    #expect(visibleSession.webView.value(forKey: "drawsBackground") as? Bool == true)
+}
+
+private func rendererPackage(includeTargets: Bool = true, duplicateCover: Bool = false, targetSize: Int = 200) throws -> URL {
     let parent = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-renderer-\(UUID().uuidString)", isDirectory: true)
     let root = parent.appendingPathComponent("renderer.slop", isDirectory: true)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    let renderTargets = includeTargets ? #"""
+    <template id="render-target-template">
+      <section data-slop-render="cover"><span></span></section>
+      <section data-slop-render="icon"><span></span></section>
+      \#(duplicateCover ? #"<section data-slop-render="cover"></section>"# : "")
+    </template>
+    """# : ""
+    let installRenderTargets = includeTargets ? #"""
+    const targetTemplate = document.querySelector('#render-target-template');
+    if (document.documentElement.hasAttribute('data-slop-renderer')) document.body.append(targetTemplate.content.cloneNode(true));
+    targetTemplate.remove();
+    """# : ""
+    let rootWidth = targetSize > 320 ? "100%" : "320px"
     let html = #"""
     <!doctype html><html><head><style>
-    *{box-sizing:border-box}html,body{margin:0;width:320px;min-height:960px;background:#f3efe6}button{display:block;width:100%;height:80px;border:0;background:#f00}.grid{display:grid;grid-template-columns:1fr 1fr}.tail{position:absolute;top:900px;width:100%;height:60px;background:#05f;color:#fff}
-    </style></head><body><button data-slop-export="hide">Control</button><div class="grid"><span>Left column</span><span>Right column</span></div><div class="tail">Bottom content</div><script>window.slop.ready()</script></body></html>
+    *{box-sizing:border-box}html,body{margin:0;width:\#(rootWidth);min-height:960px;background:#f3efe6}button{display:block;width:100%;height:80px;border:0;background:#f00}.grid{display:grid;grid-template-columns:1fr 1fr}.tail{position:absolute;top:900px;width:100%;height:60px;background:#05f;color:#fff}[data-slop-render]{display:none;width:\#(targetSize)px;height:\#(targetSize)px;place-items:center;background:transparent}[data-slop-render] span{display:block;width:120px;height:120px}html[data-slop-capture=cover] body>:not([data-slop-render=cover]),html[data-slop-capture=icon] body>:not([data-slop-render=icon]){display:none}html[data-slop-capture=cover] [data-slop-render=cover]{display:grid}html[data-slop-capture=icon] [data-slop-render=icon]{display:grid}html[data-slop-capture=cover] [data-slop-render=cover] span{background:#0a6}html[data-slop-capture=icon] [data-slop-render=icon] span{background:#60a}
+    </style></head><body><button data-slop-export="hide">Control</button><div class="grid"><span>Left column</span><span>Right column</span></div><div class="tail">Bottom content</div>\#(renderTargets)<script>\#(installRenderTargets)window.slop.ready()</script></body></html>
     """#
     try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"renderer-test","title":"Renderer Test","description":"Static capture fixture.","categories":["developer-tools"],"presentation":{"width":320,"height":240}}"#

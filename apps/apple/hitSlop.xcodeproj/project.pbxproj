@@ -11,12 +11,14 @@
 		05E731AEF1C06E492D5D7D18 /* HitSlopCatalog in Frameworks */ = {isa = PBXBuildFile; productRef = F47B3662C054655C373D2A3F /* HitSlopCatalog */; };
 		0B3F815DB54B804FE2ABE529 /* HitSlopRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 187A94C4DB35D5420C579E3E /* HitSlopRuntime */; };
 		3100D7B7E3D59CF3DA13D845 /* HitSlopCore in Frameworks */ = {isa = PBXBuildFile; productRef = 65BB990F9591043453C7B220 /* HitSlopCore */; };
-		3F91EC9FC8A44F9B3E911B79 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 91BD7843075E7E977199C386 /* Sparkle */; };
+		3F91EC9FC8A44F9B3E911B79 /* HitSlopRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = DFB3D40C542474608A48F2A0 /* HitSlopRuntime */; };
 		55C6D9FAB7F5735305B6FECC /* hitSlopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75719DC5D67261F7EA46EC82 /* hitSlopApp.swift */; };
 		64E30A32DC9F12DA8E8DB6E9 /* hitSlopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 581CEEB49B3FCB2898E086F8 /* hitSlopApp.swift */; };
 		7C84ACC32DEE5720E387AF18 /* HitSlopRegistry in Frameworks */ = {isa = PBXBuildFile; productRef = 27C19B5D676A65DA61C0E14C /* HitSlopRegistry */; };
 		A7BA3F995003EF8564A72C2C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D7F4FFEA3E5F1F8855A530E /* Assets.xcassets */; };
+		B890C72C6C42DAEF9CE89A89 /* HitSlopCore in Frameworks */ = {isa = PBXBuildFile; productRef = 39ACE8CB8475940A02C89F85 /* HitSlopCore */; };
 		C21FAEA050B4277B93C9321B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D7F4FFEA3E5F1F8855A530E /* Assets.xcassets */; };
+		D06DA365A1BAD746AA5643F6 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 91BD7843075E7E977199C386 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,7 +37,9 @@
 			files = (
 				0253D4ECB6F151B1F9332ADA /* HitSlopHost in Frameworks */,
 				05E731AEF1C06E492D5D7D18 /* HitSlopCatalog in Frameworks */,
-				3F91EC9FC8A44F9B3E911B79 /* Sparkle in Frameworks */,
+				3F91EC9FC8A44F9B3E911B79 /* HitSlopRuntime in Frameworks */,
+				B890C72C6C42DAEF9CE89A89 /* HitSlopCore in Frameworks */,
+				D06DA365A1BAD746AA5643F6 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -154,6 +158,8 @@
 			packageProductDependencies = (
 				DB39551676CB8EC1F9FB75DC /* HitSlopHost */,
 				F47B3662C054655C373D2A3F /* HitSlopCatalog */,
+				DFB3D40C542474608A48F2A0 /* HitSlopRuntime */,
+				39ACE8CB8475940A02C89F85 /* HitSlopCore */,
 				91BD7843075E7E977199C386 /* Sparkle */,
 			);
 			productName = "hitSlop-macOS";
@@ -546,6 +552,10 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = HitSlopRegistry;
 		};
+		39ACE8CB8475940A02C89F85 /* HitSlopCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HitSlopCore;
+		};
 		65BB990F9591043453C7B220 /* HitSlopCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HitSlopCore;
@@ -558,6 +568,10 @@
 		DB39551676CB8EC1F9FB75DC /* HitSlopHost */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HitSlopHost;
+		};
+		DFB3D40C542474608A48F2A0 /* HitSlopRuntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HitSlopRuntime;
 		};
 		F47B3662C054655C373D2A3F /* HitSlopCatalog */ = {
 			isa = XCSwiftPackageProductDependency;

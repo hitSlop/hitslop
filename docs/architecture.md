@@ -62,11 +62,17 @@ slop.db.query(sql, parameters?)
 slop.db.execute(sql, parameters?)
 slop.db.transaction(statements)
 slop.db.onChange(callback)
+
+slop.window.resize({ width, height })
 ```
 
 JSON replacement is atomic and revision-aware. Each SQLite transaction stays
 on one host connection. There are no runtime store-size limits; publish and
 archive boundaries enforce artifact limits instead.
+
+Window resizing is host-owned. Standard documents may request a bounded size;
+the host returns the applied dimensions. Manifest dimensions are the initial
+size, while PNG-skinned documents remain fixed to their exact mask.
 
 ## Schema pipeline
 
@@ -110,14 +116,17 @@ after a host successfully creates a document.
 
 ```text
 ~/.hitslop/templates/
-├── installed/<slug>.slop
+├── <slug>.slop
 └── cache/<publisher-key>/<slug>/<release>.slop
 ```
 
-Local installs are replaceable templates. Hosted cache entries are immutable
-and verified by SHA-256 before use. There are no wrappers, install markers,
-sidecars, or `current` pointers. All creation paths duplicate the validated
-template to a user-selected destination; Convex never creates or stores it.
+Local installs are replaceable templates at the templates root. Hosted cache
+entries stay nested, immutable, and verified by SHA-256 before use. Catalog
+masters are not writable at rest; creating a document copies one and then
+makes the copy writable. There are no wrappers, install markers, sidecars, or
+`current` pointers. All creation paths duplicate the validated template to a
+user-selected destination; Convex never creates or stores it. Anything under
+`~/.hitslop/templates` is a catalog input, never a user document.
 
 On iOS, local documents live in the user's iCloud container. The runtime uses a
 working copy and explicitly flushes the two canonical stores back to iCloud,

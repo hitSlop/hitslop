@@ -5,23 +5,9 @@
   import MapPin from "@lucide/svelte/icons/map-pin";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
-
-  type ItemID = string | number;
-  type Skill = { id: ItemID; label: string } | string;
-  type Experience = { id: ItemID; role: string; company: string; period: string; summary: string };
-  type Education = { id: ItemID; school: string; program: string; year: string };
-  type Resume = {
-    name: string;
-    initials?: string;
-    role: string;
-    email: string;
-    location: string;
-    website: string;
-    summary: string;
-    skills: Skill[];
-    experience: Experience[];
-    education: Education[];
-  };
+  import Cover from "./Cover.svelte";
+  import Icon from "./Icon.svelte";
+  import type { Resume, Skill } from "./model";
 
   const resume = jsonStore<Resume>({
     name: "Avery Quinn",
@@ -45,9 +31,10 @@
     ],
     education: [{ id: "parsons", school: "Parsons School of Design", program: "BFA, Communication Design", year: "2018" }],
   });
+  const rendersDocumentAssets = document.documentElement.hasAttribute("data-slop-renderer");
 
   const fallbackInitials = $derived(resume.current.name.split(/\s+/).filter(Boolean).map((word) => word[0]).join("").slice(0, 2).toUpperCase() || "AQ");
-  const badgeInitials = $derived(resume.current.initials ?? fallbackInitials);
+  const badgeInitials = $derived((resume.current.initials?.trim() || fallbackInitials).slice(0, 2).toUpperCase());
 
   function addSkill(): void { resume.current.skills.push({ id: crypto.randomUUID(), label: "New skill" }); }
   function skillLabel(skill: Skill): string { return typeof skill === "string" ? skill : skill.label; }
@@ -126,3 +113,8 @@
     </section>
   </article>
 </main>
+
+{#if rendersDocumentAssets}
+  <Cover resume={resume.current} initials={badgeInitials} />
+  <Icon initials={badgeInitials} />
+{/if}

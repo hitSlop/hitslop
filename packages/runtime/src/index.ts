@@ -1,5 +1,5 @@
-import type { SlopHost, SlopStatement, WindowSlop } from "./types.ts";
-export type { SlopChange, SlopHost, SlopMediaSnapshot, SlopSnapshot, SlopStatement, SlopStoreKind, WindowSlop } from "./types.ts";
+import type { SlopHost, SlopStatement, SlopWindowSize, WindowSlop } from "./types.ts";
+export type { SlopChange, SlopHost, SlopMediaSnapshot, SlopSnapshot, SlopStatement, SlopStoreKind, SlopWindowSize, WindowSlop } from "./types.ts";
 
 let configuredHost: SlopHost | undefined;
 
@@ -19,6 +19,9 @@ const fromBridge = (bridge: WindowSlop): SlopHost => ({
   mediaOpen: (name) => bridge.media.open(name),
   mediaWrite: (name, data, mimeType) => bridge.media.write(name, data, mimeType),
   mediaRemove: (name) => bridge.media.remove(name),
+  resizeWindow: (size) => bridge.window?.resize
+    ? bridge.window.resize(size)
+    : Promise.reject(new Error("The hitSlop host does not support dynamic window sizing.")),
   watch: (kind, callback) => kind === "json" ? bridge.json.onChange(callback) : kind === "sqlite" ? bridge.db.onChange(callback) : bridge.media.onChange(callback),
 });
 
@@ -51,6 +54,9 @@ export const slop = {
     write: (name: string, data: string, mimeType: string) => getHost().mediaWrite(name, data, mimeType),
     remove: (name: string) => getHost().mediaRemove(name),
     onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("media", callback),
+  },
+  window: {
+    resize: (size: SlopWindowSize) => getHost().resizeWindow(size),
   },
 };
 

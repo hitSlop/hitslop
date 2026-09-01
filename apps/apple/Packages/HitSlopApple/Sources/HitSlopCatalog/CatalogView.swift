@@ -28,7 +28,7 @@ public struct CatalogView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let openDocumentAction: (URL) -> Void
 
-    public init(deploymentURL: String, catalogURL: URL, templatesURL: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hitslop/templates", isDirectory: true), openDocument: @escaping (URL) -> Void) {
+    public init(deploymentURL: String, catalogURL: URL, templatesURL: URL = DocumentFactory.defaultTemplatesRoot, openDocument: @escaping (URL) -> Void) {
         _model = StateObject(wrappedValue: RegistryModel(deploymentURL: deploymentURL, catalogURL: catalogURL))
         _localStore = StateObject(wrappedValue: LocalTemplateStore(templatesURL: templatesURL))
         openDocumentAction = openDocument
@@ -36,7 +36,13 @@ public struct CatalogView: View {
 
     private var hostedItems: [CatalogItem] { model.templates.map { CatalogItem(source: .hosted($0)) } }
     private var localItems: [CatalogItem] { localStore.templates.map { CatalogItem(source: .local($0)) } }
-    private var recentDocuments: [URL] { Array(NSDocumentController.shared.recentDocumentURLs.filter { $0.pathExtension == "slop" && FileManager.default.fileExists(atPath: $0.path) }.prefix(8)) }
+    private var recentDocuments: [URL] {
+        Array(NSDocumentController.shared.recentDocumentURLs.filter {
+            $0.pathExtension.lowercased() == "slop"
+                && FileManager.default.fileExists(atPath: $0.path)
+                && !DocumentFactory.isManagedTemplatePackage($0, templatesRoot: localStore.templatesURL)
+        }.prefix(8))
+    }
     private let categories = ["productivity", "utilities", "finance", "media", "games", "developer-tools", "education", "business", "personal", "other"]
     private var searchTerm: String { query.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase }
 
@@ -366,35 +372,37 @@ private struct TemplateCard: View {
 private struct TemplatePreview: View {
     let item: CatalogItem
     let catalogURL: URL
+    @State private var hostedImage: NSImage?
 
     var body: some View {
-        ZStack {
-            Color(nsColor: .controlBackgroundColor)
-            switch item.source {
-            case .local(let template):
-                if let image = NSImage(contentsOf: template.previewURL) { Image(nsImage: image).resizable().scaledToFit() } else { placeholder }
-            case .hosted(let template):
-                if let url = screenshotURL(template) {
-                    AsyncImage(url: url) { phase in
-                        if let image = phase.image { image.resizable().scaledToFit() }
-                        else if phase.error != nil { placeholder }
-                        else { ProgressView().controlSize(.small) }
-                    }
-                } else { placeholder }
+        CatalogArtwork(image: artwork, fallbackAspect: fallbackAspect, cornerRadius: 14, showsShadow: true) {
+            if hostedPreviewURL != nil && hostedImage == nil {
+                ProgressView().controlSize(.small)
+            } else {
+                VStack(spacing: 8) { Image(systemName: "sparkles").font(.title2); Text(item.title).font(.headline).lineLimit(1) }.foregroundStyle(.secondary)
             }
         }
-        .aspectRatio(4 / 3, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.primary.opacity(0.09)))
-        .shadow(color: Color.black.opacity(0.08), radius: 12, y: 6)
+        .task(id: hostedPreviewURL) {
+            hostedImage = nil
+            guard let url = hostedPreviewURL else { return }
+            hostedImage = await loadCatalogImage(url)
+        }
     }
 
-    private var placeholder: some View {
-        VStack(spacing: 8) { Image(systemName: "sparkles").font(.title2); Text(item.title).font(.headline).lineLimit(1) }.foregroundStyle(.secondary)
+    private var artwork: NSImage? {
+        switch item.source {
+        case .local(let template): NSImage(contentsOf: template.thumbnailURL)
+        case .hosted: hostedImage
+        }
     }
 
-    private func screenshotURL(_ template: RegistryTemplate) -> URL? {
-        guard let key = template.currentPreviewKey else { return nil }
+    private var fallbackAspect: CGFloat {
+        if case .local(let template) = item.source { return presentationAspect(template.manifest.presentation) }
+        return 1
+    }
+
+    private var hostedPreviewURL: URL? {
+        guard case .hosted(let template) = item.source, let key = template.currentPreviewKey else { return nil }
         var components = URLComponents(url: catalogURL.appendingPathComponent("api/artifact"), resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "key", value: key)]
         return components?.url
@@ -434,20 +442,12 @@ private struct RecentDocumentPreview: View {
     let revision: Int
 
     var body: some View {
-        ZStack {
-            Color(nsColor: .controlBackgroundColor)
-            if let image = previewImage {
-                Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
-            } else {
-                VStack(spacing: 7) {
-                    Image(nsImage: NSApplication.shared.applicationIconImage).resizable().scaledToFit().frame(width: 34, height: 34)
-                    Text(url.deletingPathExtension().lastPathComponent).font(.caption.weight(.semibold)).lineLimit(1)
-                }.foregroundStyle(.secondary).padding(12)
-            }
+        CatalogArtwork(image: previewImage, fallbackAspect: fallbackAspect, cornerRadius: 12) {
+            VStack(spacing: 7) {
+                Image(nsImage: NSApplication.shared.applicationIconImage).resizable().scaledToFit().frame(width: 34, height: 34)
+                Text(url.deletingPathExtension().lastPathComponent).font(.caption.weight(.semibold)).lineLimit(1)
+            }.foregroundStyle(.secondary).padding(12)
         }
-        .aspectRatio(4 / 3, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary.opacity(0.09)))
         .id(revision)
     }
 
@@ -455,6 +455,51 @@ private struct RecentDocumentPreview: View {
         let quickLook = url.appendingPathComponent("QuickLook", isDirectory: true)
         return NSImage(contentsOf: quickLook.appendingPathComponent("Preview.png"))
     }
+
+    private var fallbackAspect: CGFloat {
+        (try? SlopPackage(rootURL: url).manifest.presentation).map(presentationAspect) ?? 1
+    }
+}
+
+private struct CatalogArtwork<Placeholder: View>: View {
+    let image: NSImage?
+    var fallbackAspect: CGFloat = 1
+    var cornerRadius: CGFloat
+    var showsShadow = false
+    @ViewBuilder var placeholder: () -> Placeholder
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
+            } else {
+                placeholder()
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .aspectRatio(image.map(catalogImageAspect) ?? fallbackAspect, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke(Color.primary.opacity(0.09)))
+        .shadow(color: Color.black.opacity(showsShadow ? 0.08 : 0), radius: showsShadow ? 12 : 0, y: showsShadow ? 6 : 0)
+    }
+}
+
+private func catalogImageAspect(_ image: NSImage) -> CGFloat {
+    let size = image.size
+    guard size.width > 0, size.height > 0 else { return 1 }
+    return size.width / size.height
+}
+
+private func presentationAspect(_ presentation: SlopPresentation) -> CGFloat {
+    let height = CGFloat(presentation.height)
+    guard height > 0 else { return 1 }
+    return CGFloat(presentation.width) / height
+}
+
+private func loadCatalogImage(_ url: URL) async -> NSImage? {
+    if url.isFileURL { return NSImage(contentsOf: url) }
+    guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+    return NSImage(data: data)
 }
 
 private struct CatalogEmptyState: View {

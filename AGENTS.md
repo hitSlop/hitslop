@@ -10,9 +10,9 @@ JSON, SQLite, and named media data. Read `manifest.json` first.
   `bun slop build examples/slops/<id>`.
 - A runtime package has `manifest.json`, generated `app.html`, optional immutable
   `assets/`, optional canonical `stores/data.json`, `stores/data.sqlite`, and
-  user-selected images under `stores/media/`,
+  user-selected supported media under `stores/media/`,
   and optional `QuickLook/Preview.png` and `QuickLook/Thumbnail.png`.
-- Manifest storage is implicit. A slop can use JSON, SQLite, named images, or
+- Manifest storage is implicit. A slop can use JSON, SQLite, named media, or
   any combination. Replace JSON and media atomically and keep SQLite
   transactions on one connection.
 - Treat `manifest.json`, `app.html`, `assets/`, and `QuickLook/Thumbnail.png` as
@@ -26,7 +26,9 @@ JSON, SQLite, and named media data. Read `manifest.json` first.
   document's Finder custom icon from its immutable `QuickLook/Thumbnail.png`.
 - Catalog selection caches immutable artifacts at
   `~/.hitslop/templates/cache/<publisher>/<slug>/<release>.slop`, verifies
-  SHA-256, and copies one to the user-selected path. Convex never stores a local
-  document.
+  SHA-256, and copies one to the user-selected path. Local `slop install`
+  writes `~/.hitslop/templates/<slug>.slop`. Anything under
+  `~/.hitslop/templates` is a catalog master, never a writable document.
+  Convex never stores a local document.
 - Zod is authoritative. Run `bun run schema:generate` after schema changes;
   JSON Schema then generates the Swift types and validates Swift manifests.

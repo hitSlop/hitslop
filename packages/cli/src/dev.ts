@@ -25,9 +25,47 @@ const imageMime = (bytes: Uint8Array): string | null => {
   if (bytes.length >= 12 && new TextDecoder().decode(bytes.subarray(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.subarray(8, 12)) === "WEBP") return "image/webp";
   return null;
 };
+const zipIsValid = (bytes: Uint8Array): boolean => {
+  const u16 = (at: number): number | null => at >= 0 && at + 2 <= bytes.length ? (bytes[at] ?? 0) | (bytes[at + 1] ?? 0) << 8 : null;
+  const u32 = (at: number): number | null => {
+    if (at < 0 || at + 4 > bytes.length) return null;
+    return ((bytes[at] ?? 0) | (bytes[at + 1] ?? 0) << 8 | (bytes[at + 2] ?? 0) << 16 | (bytes[at + 3] ?? 0) << 24) >>> 0;
+  };
+  if (bytes.length > 10 * 1024 * 1024 || bytes.length < 22) return false;
+  const first = Math.max(0, bytes.length - 22 - 65_535), last = bytes.length - 22;
+  let end = -1;
+  for (let at = last; at >= first; at -= 1) if (u32(at) === 0x06054b50) { end = at; break; }
+  if (end < 0) return false;
+  const count = u16(end + 10), centralSize = u32(end + 12), centralOffset = u32(end + 16);
+  if (count == null || centralSize == null || centralOffset == null || count < 1 || count > 256 || centralOffset + centralSize > end) return false;
+  let cursor: number = centralOffset;
+  let total = 0, hasFile = false;
+  for (let index = 0; index < count; index += 1) {
+    if (u32(cursor) !== 0x02014b50) return false;
+    const flags = u16(cursor + 8), method = u16(cursor + 10), compressed = u32(cursor + 20), size = u32(cursor + 24);
+    const nameLength = u16(cursor + 28), extraLength = u16(cursor + 30), commentLength = u16(cursor + 32);
+    if (flags == null || method == null || compressed == null || size == null || nameLength == null || extraLength == null || commentLength == null) return false;
+    if ((flags & 1) !== 0 || ![0, 8].includes(method) || compressed === 0xffff_ffff || size === 0xffff_ffff || size > 25 * 1024 * 1024) return false;
+    total += size; if (total > 50 * 1024 * 1024) return false;
+    const nameStart: number = cursor + 46, next: number = nameStart + nameLength + extraLength + commentLength;
+    if (next > bytes.length) return false;
+    const name = new TextDecoder().decode(bytes.subarray(nameStart, nameStart + nameLength));
+    if (!name.endsWith("/") && !name.endsWith("\\")) hasFile = true;
+    cursor = next;
+  }
+  return hasFile;
+};
+const mediaMime = (bytes: Uint8Array): string | null => imageMime(bytes) ?? (zipIsValid(bytes) ? "application/zip" : null);
 
 const hostStyle = `<style data-hitslop-host>*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}</style>`;
-const bridge = `<script>\n(() => {\n const listeners={json:new Set(),sqlite:new Set(),media:new Set()};\n const call=async(path,body={})=>{const r=await fetch('/__hitslop/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const value=await r.json();if(!r.ok)throw new Error(value.error||r.statusText);return value};\n const emit=(kind,event)=>listeners[kind].forEach(cb=>cb({kind,...event}));\n const watch=(kind,cb)=>{listeners[kind].add(cb);let rev;const timer=setInterval(async()=>{try{const value=await call(kind+'/revision');if(rev!==undefined&&rev!==value.revision)emit(kind,{source:'external',revision:value.revision});rev=value.revision}catch{}},750);return()=>{listeners[kind].delete(cb);clearInterval(timer)}};\n window.slop={json:{open:value=>call('json/open',{value}),read:()=>call('json/read'),write:(value,expectedRevision)=>call('json/write',{value,expectedRevision}).then(result=>(emit('json',{source:'app',revision:result.revision}),result)),onChange:cb=>watch('json',cb)},db:{query:(sql,parameters=[])=>call('sqlite/query',{sql,parameters}),execute:(sql,parameters=[])=>call('sqlite/execute',{sql,parameters}).then(result=>(emit('sqlite',{source:'app'}),result)),transaction:statements=>call('sqlite/transaction',{statements}).then(result=>(emit('sqlite',{source:'app'}),result)),onChange:cb=>watch('sqlite',cb)},media:{open:name=>call('media/open',{name}),write:(name,data,mimeType)=>call('media/write',{name,data,mimeType}).then(result=>(emit('media',{source:'app',revision:result.revision}),result)),remove:name=>call('media/remove',{name}).then(result=>(emit('media',{source:'app',revision:null}),result)),onChange:cb=>watch('media',cb)},ready:()=>{document.documentElement.dataset.hitslopReady='true'}};\n})();\n</script>`;
+const bridge = `<script>\n(() => {\n const listeners={json:new Set(),sqlite:new Set(),media:new Set()};\n const call=async(path,body={})=>{const r=await fetch('/__hitslop/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const value=await r.json();if(!r.ok)throw new Error(value.error||r.statusText);return value};\n const resize=async size=>{const native=window.webkit?.messageHandlers?.hitslopDevWindow;if(native)return native.postMessage(size);return size};\n const emit=(kind,event)=>listeners[kind].forEach(cb=>cb({kind,...event}));\n const watch=(kind,cb)=>{listeners[kind].add(cb);let rev;const timer=setInterval(async()=>{try{const value=await call(kind+'/revision');if(rev!==undefined&&rev!==value.revision)emit(kind,{source:'external',revision:value.revision});rev=value.revision}catch{}},750);return()=>{listeners[kind].delete(cb);clearInterval(timer)}};\n window.slop={json:{open:value=>call('json/open',{value}),read:()=>call('json/read'),write:(value,expectedRevision)=>call('json/write',{value,expectedRevision}).then(result=>(emit('json',{source:'app',revision:result.revision}),result)),onChange:cb=>watch('json',cb)},db:{query:(sql,parameters=[])=>call('sqlite/query',{sql,parameters}),execute:(sql,parameters=[])=>call('sqlite/execute',{sql,parameters}).then(result=>(emit('sqlite',{source:'app'}),result)),transaction:statements=>call('sqlite/transaction',{statements}).then(result=>(emit('sqlite',{source:'app'}),result)),onChange:cb=>watch('sqlite',cb)},media:{open:name=>call('media/open',{name}),write:(name,data,mimeType)=>call('media/write',{name,data,mimeType}).then(result=>(emit('media',{source:'app',revision:result.revision}),result)),remove:name=>call('media/remove',{name}).then(result=>(emit('media',{source:'app',revision:null}),result)),onChange:cb=>watch('media',cb)},window:{resize},ready:()=>{document.documentElement.dataset.hitslopReady='true'}};\n})();\n</script>`;
+
+const injectHost = (html: string): string => {
+  const payload = hostStyle + bridge;
+  return /<head(?:\s[^>]*)?>/i.test(html)
+    ? html.replace(/<head(?:\s[^>]*)?>/i, (tag) => tag + payload)
+    : payload + html;
+};
 
 const forbiddenSQL = /\b(attach|detach|load_extension)\b/i;
 
@@ -75,13 +113,13 @@ export function mockHostPlugin(dataRoot: string): Plugin {
     return hash.digest("hex");
   };
   const assertSQL = (sql: string) => { if (forbiddenSQL.test(sql)) throw new Error("SQLite statement is not allowed"); };
-  return { name: "hitslop-mock-host", transformIndexHtml: { order: "pre", handler: (html) => html.replace(/<head>/i, (tag) => tag + hostStyle + bridge) }, configureServer(server) {
+  return { name: "hitslop-mock-host", transformIndexHtml: { order: "pre", handler: injectHost }, configureServer(server) {
     server.httpServer?.once("close", () => { database?.close(); database = undefined; });
     server.middlewares.use("/media", async (request, response) => {
       try {
         const name = mediaName(decodeURIComponent(new URL(`http://localhost${request.url}`).pathname.replace(/^\/+/, "")));
         const bytes = new Uint8Array(await readFile(join(mediaRoot, name)));
-        const mime = imageMime(bytes); if (!mime) throw new Error("Invalid image");
+        const mime = mediaMime(bytes); if (!mime) throw new Error("Invalid media");
         response.setHeader("content-type", mime); response.setHeader("cache-control", "no-store"); response.end(bytes);
       } catch { response.statusCode = 404; response.end(); }
     });
@@ -116,7 +154,7 @@ export function mockHostPlugin(dataRoot: string): Plugin {
         }
         if (route === "media/write") {
           const name = mediaName(body.name), bytes = Uint8Array.from(Buffer.from(String(body.data ?? ""), "base64"));
-          if (!imageMime(bytes)) throw new Error("Selected file is not a supported image");
+          if (!mediaMime(bytes)) throw new Error("Selected file is not supported media");
           await mkdir(mediaRoot, { recursive: true });
           const path = join(mediaRoot, name), temporary = join(mediaRoot, `.${name}.${randomUUID()}.tmp`);
           await writeFile(temporary, bytes); await rename(temporary, path);

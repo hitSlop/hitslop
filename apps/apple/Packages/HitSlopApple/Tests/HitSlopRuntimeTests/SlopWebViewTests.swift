@@ -5,6 +5,14 @@ import ImageIO
 import Testing
 @testable import HitSlopRuntime
 
+@MainActor private final class WindowResizeDelegate: SlopRuntimeSessionDelegate {
+    var requested: CGSize?
+    func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize {
+        requested = size
+        return CGSize(width: size.width - 5, height: size.height)
+    }
+}
+
 @Test @MainActor func unskinnedRuntimeUsesOpaqueWebViewBacking() throws {
     let root = try webViewPackage(skinned: false)
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
@@ -25,6 +33,108 @@ import Testing
 
     #expect(session.usesTransparentBackground)
     #expect(session.webView.value(forKey: "drawsBackground") as? Bool == false)
+}
+
+@Test @MainActor func runtimeCanFetchNamedMediaThroughItsCustomScheme() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let media = root.appendingPathComponent("stores/media", isDirectory: true)
+    try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
+    let zip = Data(base64Encoded: "UEsDBBQAAAAIAG1VIV3uQOUFCQAAAAcAAAAIAAAATUFJTi5CTVBLy6woKS1KBQBQSwECFAAUAAAACABtVSFd7kDlBQkAAAAHAAAACAAAAAAAAAAAAAAAAAAAAAAATUFJTi5CTVBQSwUGAAAAAAEAAQA2AAAALwAAAAAA")!
+    try zip.write(to: media.appendingPathComponent("skin"))
+    let html = #"""
+    <script>
+    (async () => {
+      try {
+        const response = await fetch('/media/skin');
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        window.fetchResult = { ok: response.ok, type: response.headers.get('content-type'), size: bytes.length, magic: Array.from(bytes.slice(0, 4)).join(',') };
+      } catch (error) {
+        window.fetchResult = { error: String(error) };
+      }
+      window.slop.ready();
+    })();
+    </script>
+    """#
+    try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+
+    session.load()
+    try await session.waitUntilReady()
+    let result = try #require(await session.webView.evaluateJavaScript("window.fetchResult") as? [String: Any])
+    #expect(result["ok"] as? Bool == true)
+    #expect(result["type"] as? String == "application/zip")
+    #expect(result["size"] as? Int == zip.count)
+    #expect(result["magic"] as? String == "80,75,3,4")
+}
+
+@Test @MainActor func runtimeForwardsDynamicWindowResizeAndReturnsAppliedSize() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let html = #"""
+    <script>
+    (async () => {
+      window.resizeResult = await window.slop.window.resize({ width: 725, height: 438 });
+      window.slop.ready();
+    })();
+    </script>
+    """#
+    try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    let delegate = WindowResizeDelegate()
+    session.delegate = delegate
+    defer { session.close() }
+
+    session.load()
+    try await session.waitUntilReady()
+    #expect(delegate.requested == CGSize(width: 725, height: 438))
+    let result = try #require(await session.webView.evaluateJavaScript("window.resizeResult") as? [String: Any])
+    #expect((result["width"] as? NSNumber)?.doubleValue == 720)
+    #expect((result["height"] as? NSNumber)?.doubleValue == 438)
+}
+
+@Test @MainActor func PNGSkinnedRuntimeRejectsDynamicWindowResize() async throws {
+    let root = try webViewPackage(skinned: true)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let html = #"""
+    <script>
+    (async () => {
+      try { await window.slop.window.resize({ width: 725, height: 438 }); }
+      catch (error) { window.resizeError = String(error); }
+      window.slop.ready();
+    })();
+    </script>
+    """#
+    try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+
+    session.load()
+    try await session.waitUntilReady()
+    let error = try #require(await session.webView.evaluateJavaScript("window.resizeError") as? String)
+    #expect(error.contains("fixed window size"))
+}
+
+@Test @MainActor func runtimeCSPAllowsWebAssemblyWithoutJavaScriptEval() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let html = #"""
+    <script>
+    try {
+      new WebAssembly.Module(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
+      window.wasmResult = 'ok';
+    } catch (error) { window.wasmResult = String(error); }
+    window.slop.ready();
+    </script>
+    """#
+    try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+
+    session.load()
+    try await session.waitUntilReady()
+    #expect(try await session.webView.evaluateJavaScript("window.wasmResult") as? String == "ok")
 }
 
 private func webViewPackage(skinned: Bool) throws -> URL {

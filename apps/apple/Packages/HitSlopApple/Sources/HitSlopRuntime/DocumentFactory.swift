@@ -19,6 +19,19 @@ import HitSlopCore
         #endif
     }
 
+    public func isManagedTemplatePackage(_ url: URL) -> Bool {
+        Self.isManagedTemplatePackage(url, templatesRoot: templatesRoot)
+    }
+
+    /// Catalog masters live under the templates root. Resolve POSIX symlinks so
+    /// a link outside the tree cannot open one as a document.
+    public static func isManagedTemplatePackage(_ url: URL, templatesRoot: URL = defaultTemplatesRoot) -> Bool {
+        let candidate = url.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        let root = templatesRoot.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        guard candidate.count > root.count else { return false }
+        return zip(root, candidate).allSatisfy { $0.caseInsensitiveCompare($1) == .orderedSame }
+    }
+
     @discardableResult public func create(from template: SlopRemoteTemplate, at destination: URL) async throws -> Bool {
         let cached = templatesRoot.appendingPathComponent("cache/\(template.publisherKeyID)/\(template.slug)/\(template.release).slop", isDirectory: true)
         var downloaded = false
@@ -32,6 +45,7 @@ import HitSlopCore
             try SlopArchive.extract(archive, to: cached, expectedSHA256: template.artifactSha256)
         }
         try SlopPackage(rootURL: cached).validateAsTemplate()
+        try SlopDuplicator.makeImmutable(cached)
         try SlopDuplicator.duplicate(from: cached, to: destination)
         return downloaded
     }

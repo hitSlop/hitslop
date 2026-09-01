@@ -10,6 +10,13 @@ Standard presentation accepts initial `width` and `height`, optional
 - `ellipse`
 - `capsule`
 
+For an unskinned document whose workflow changes shape, guest code may request
+a new content size with `slop.window.resize({ width, height })`. The manifest
+dimensions remain the initial size, and `resizable` continues to control only
+whether the user can drag-resize the native window. The host validates and fits
+requested sizes to the visible work area. PNG-skinned windows cannot resize
+because their backing image and hit-test mask have exact dimensions.
+
 Custom presentation replaces shape and resizing with `skin`, a safe PNG path
 under `assets/`:
 

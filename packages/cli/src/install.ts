@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, readdir, rename, rm, stat } from "node:fs/promises";
+import { chmod, cp, lstat, mkdir, readFile, readdir, rename, rm, stat } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -14,6 +14,7 @@ export type InstallOptions = {
   templatesRoot?: string;
   confirmOverwrite?: (target: string) => Promise<boolean>;
   capturePreview?: (packageDirectory: string, output: string) => Promise<void>;
+  captureCover?: (packageDirectory: string, output: string) => Promise<boolean>;
 };
 
 export type InstallResult = { directory: string; manifest: SlopManifest; replaced: boolean };
@@ -26,17 +27,16 @@ export async function installTemplate(input: string, options: InstallOptions = {
   await validateTemplatePackage(runtime);
 
   const templatesRoot = resolve(options.templatesRoot ?? process.env.HITSLOP_TEMPLATES_ROOT ?? join(homedir(), ".hitslop", "templates"));
-  const installedRoot = join(templatesRoot, "installed");
-  const target = join(installedRoot, `${manifest.slug}.slop`);
+  const target = join(templatesRoot, `${manifest.slug}.slop`);
   const replaced = await exists(target);
   if (replaced && !options.force) {
     if (!options.confirmOverwrite) throw new Error(`Template ${manifest.slug} is already installed. Pass --force to replace it.`);
     if (!await options.confirmOverwrite(target)) throw new Error("Install cancelled.");
   }
 
-  await mkdir(installedRoot, { recursive: true });
-  const staging = join(installedRoot, `.${manifest.slug}.${randomUUID()}.installing.slop`);
-  const backup = join(installedRoot, `.${manifest.slug}.${randomUUID()}.backup.slop`);
+  await mkdir(templatesRoot, { recursive: true });
+  const staging = join(templatesRoot, `.${manifest.slug}.${randomUUID()}.installing.slop`);
+  const backup = join(templatesRoot, `.${manifest.slug}.${randomUUID()}.backup.slop`);
   try {
     await cp(runtime, staging, { recursive: true, errorOnExist: true });
     const quickLook = join(staging, "QuickLook");
@@ -47,24 +47,41 @@ export async function installTemplate(input: string, options: InstallOptions = {
       const capture = options.capturePreview ?? ((packageDirectory: string, output: string) => runNative(["screenshot", packageDirectory, "--output", output]));
       await capture(staging, preview);
     }
-    // Rendering can initialize lazy stores. An installed template must remain
-    // pristine so every document creates its own first-run state.
-    await rm(join(staging, "stores"), { recursive: true, force: true });
     await validatePreview(preview);
     const thumbnail = join(quickLook, "Thumbnail.png");
     if (options.thumbnail) await cp(resolve(options.thumbnail), thumbnail);
-    else await writeDefaultThumbnail(preview, thumbnail);
+    else {
+      await rm(thumbnail, { force: true });
+      const captured = options.captureCover
+        ? await options.captureCover(staging, thumbnail)
+        : await captureOptionalCover(staging, thumbnail);
+      if (!captured || !await exists(thumbnail)) await writeDefaultThumbnail(preview, thumbnail);
+    }
+    // Rendering can initialize lazy stores. An installed template must remain
+    // pristine so every document creates its own first-run state.
+    await rm(join(staging, "stores"), { recursive: true, force: true });
     await validateQuickLook(staging, true);
-    if (replaced) await rename(target, backup);
+    if (replaced) {
+      await makePackageWritable(target);
+      await rename(target, backup);
+    }
     try { await rename(staging, target); }
     catch (error) { if (replaced && await exists(backup)) await rename(backup, target); throw error; }
+    await makePackageImmutable(target);
     await rm(backup, { recursive: true, force: true });
     return { directory: target, manifest, replaced };
   } finally {
     await rm(staging, { recursive: true, force: true });
-    if (await exists(backup) && !await exists(target)) await rename(backup, target);
-    else await rm(backup, { recursive: true, force: true });
+    if (await exists(backup) && !await exists(target)) {
+      await rename(backup, target);
+      await makePackageImmutable(target).catch(() => {});
+    } else await rm(backup, { recursive: true, force: true });
   }
+}
+
+async function captureOptionalCover(packageDirectory: string, output: string): Promise<boolean> {
+  await runNative(["screenshot", packageDirectory, "--target", "cover", "--if-present", "--output", output]);
+  return await exists(output);
 }
 
 async function validatePreview(path: string): Promise<void> {
@@ -108,4 +125,25 @@ async function rejectForbiddenRuntimeEntries(directory: string): Promise<void> {
     if (forbidden.has(entry.name.toLowerCase())) throw new Error(`Runtime packages cannot contain ${entry.name}.`);
     if (entry.isDirectory()) await rejectForbiddenRuntimeEntries(join(directory, entry.name));
   }
+}
+
+export async function makePackageWritable(root: string): Promise<void> {
+  const walk = async (path: string) => {
+    const info = await lstat(path);
+    if (info.isSymbolicLink()) throw new Error(`Runtime packages cannot contain symlinks: ${path}`);
+    const mode = info.mode & 0o777;
+    await chmod(path, mode | (info.isDirectory() ? 0o700 : 0o600));
+    if (info.isDirectory()) for (const entry of await readdir(path)) await walk(join(path, entry));
+  };
+  await walk(root);
+}
+
+export async function makePackageImmutable(root: string): Promise<void> {
+  const walk = async (path: string) => {
+    const info = await lstat(path);
+    if (info.isSymbolicLink()) throw new Error(`Runtime packages cannot contain symlinks: ${path}`);
+    if (info.isDirectory()) for (const entry of await readdir(path)) await walk(join(path, entry));
+    await chmod(path, (info.mode & 0o777) & ~0o222);
+  };
+  await walk(root);
 }

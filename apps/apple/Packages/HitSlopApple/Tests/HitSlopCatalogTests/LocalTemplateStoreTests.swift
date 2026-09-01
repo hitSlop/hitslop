@@ -8,18 +8,12 @@ import Testing
 @Test @MainActor func discoversAndDuplicatesInstalledTemplate() throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
-    let package = root.appendingPathComponent("installed/tiny-counter.slop", isDirectory: true)
-    try FileManager.default.createDirectory(at: package.appendingPathComponent("QuickLook"), withIntermediateDirectories: true)
-    try Data("<main>Hello</main>".utf8).write(to: package.appendingPathComponent("app.html"))
-    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"tiny-counter","title":"Tiny Counter","description":"Counts a very small thing.","categories":["utilities","personal"],"presentation":{"width":320,"height":240}}"#
-    try Data(manifest.utf8).write(to: package.appendingPathComponent("manifest.json"))
-    let png = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
-    try png.write(to: package.appendingPathComponent("QuickLook/Preview.png"))
-    try png.write(to: package.appendingPathComponent("QuickLook/Thumbnail.png"))
+    let package = try writeTemplate(named: "tiny-counter", in: root)
 
     let store = LocalTemplateStore(templatesURL: root)
     #expect(store.templates.count == 1)
     #expect(store.templates.first?.manifest.title == "Tiny Counter")
+    #expect(store.templates.first?.thumbnailURL.lastPathComponent == "Thumbnail.png")
     #expect(store.issues.isEmpty)
 
     let destination = root.appendingPathComponent("created.slop", isDirectory: true)
@@ -34,15 +28,32 @@ import Testing
     #expect(try Data(contentsOf: destination.appendingPathComponent("QuickLook/Preview.png")) == updatedPreview)
     #expect(try Data(contentsOf: destination.appendingPathComponent("QuickLook/Thumbnail.png")) == png)
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("Icon\r").path))
+    SlopPreviewWriter.installFinderIcon(png, for: destination)
+    #expect(try Data(contentsOf: destination.appendingPathComponent("QuickLook/Thumbnail.png")) == png)
     #expect(!FileManager.default.fileExists(atPath: package.appendingPathComponent("Icon\r").path))
     #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores").path))
 }
 
-@Test @MainActor func reportsLegacyInstallWithoutCrashing() throws {
+@Test @MainActor func ignoresHostedCacheWhenListingTemplates() throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
-    try FileManager.default.createDirectory(at: root.appendingPathComponent("old-wrapper"), withIntermediateDirectories: true)
+    _ = try writeTemplate(named: "tiny-counter", in: root)
+    _ = try writeTemplate(named: "cached-slop", in: root.appendingPathComponent("cache/publisher/cached-slop", isDirectory: true), fileName: "1.slop")
+
     let store = LocalTemplateStore(templatesURL: root)
-    #expect(store.templates.isEmpty)
-    #expect(store.issues == ["Legacy template installs were found. Reinstall them with `slop install`."])
+    #expect(store.templates.map(\.manifest.slug) == ["tiny-counter"])
+    #expect(store.issues.isEmpty)
+}
+
+private let png = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+
+private func writeTemplate(named slug: String, in directory: URL, fileName: String? = nil) throws -> URL {
+    let package = directory.appendingPathComponent(fileName ?? "\(slug).slop", isDirectory: true)
+    try FileManager.default.createDirectory(at: package.appendingPathComponent("QuickLook"), withIntermediateDirectories: true)
+    try Data("<main>Hello</main>".utf8).write(to: package.appendingPathComponent("app.html"))
+    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"\#(slug)","title":"Tiny Counter","description":"Counts a very small thing.","categories":["utilities","personal"],"presentation":{"width":320,"height":240}}"#
+    try Data(manifest.utf8).write(to: package.appendingPathComponent("manifest.json"))
+    try png.write(to: package.appendingPathComponent("QuickLook/Preview.png"))
+    try png.write(to: package.appendingPathComponent("QuickLook/Thumbnail.png"))
+    return package
 }

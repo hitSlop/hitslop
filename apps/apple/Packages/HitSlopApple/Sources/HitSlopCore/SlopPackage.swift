@@ -168,8 +168,12 @@ public enum SlopArchive {
         do {
             for entry in archive { _ = try archive.extract(entry, to: temporary.appendingPathComponent(entry.path)) }
             let package = try SlopPackage(rootURL: temporary); try package.validateAsTemplate()
-            if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
+            if FileManager.default.fileExists(atPath: destination.path) {
+                try SlopDuplicator.makeWritable(destination)
+                try FileManager.default.removeItem(at: destination)
+            }
             try FileManager.default.moveItem(at: temporary, to: destination)
+            try SlopDuplicator.makeImmutable(destination)
         } catch { try? FileManager.default.removeItem(at: temporary); throw error }
     }
 

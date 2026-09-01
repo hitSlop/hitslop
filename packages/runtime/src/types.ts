@@ -3,6 +3,7 @@ export type SlopChange = { kind: SlopStoreKind; source: "app" | "external" | "de
 export type SlopStatement = { sql: string; parameters?: unknown[] };
 export type SlopSnapshot<T> = { value: T; revision: string };
 export type SlopMediaSnapshot = { exists: boolean; revision: string | null };
+export type SlopWindowSize = { width: number; height: number };
 
 export interface SlopHost {
   query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
@@ -14,6 +15,7 @@ export interface SlopHost {
   mediaOpen(name: string): Promise<SlopMediaSnapshot>;
   mediaWrite(name: string, data: string, mimeType: string): Promise<{ revision: string }>;
   mediaRemove(name: string): Promise<{ revision: null }>;
+  resizeWindow(size: SlopWindowSize): Promise<SlopWindowSize>;
   watch(kind: SlopStoreKind, callback: (event: SlopChange) => void): () => void;
 }
 
@@ -35,6 +37,9 @@ export type WindowSlop = {
     write: (name: string, data: string, mimeType: string) => Promise<{ revision: string }>;
     remove: (name: string) => Promise<{ revision: null }>;
     onChange: (callback: (event: SlopChange) => void) => () => void;
+  };
+  window?: {
+    resize: (size: SlopWindowSize) => Promise<SlopWindowSize>;
   };
   ready?: () => void;
 };

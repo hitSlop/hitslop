@@ -1,6 +1,7 @@
 import CryptoKit
 import Foundation
 import ImageIO
+import ZIPFoundation
 
 public final class SlopMediaStore: @unchecked Sendable {
     public let directoryURL: URL
@@ -23,13 +24,13 @@ public final class SlopMediaStore: @unchecked Sendable {
         let url = try url(for: name)
         guard FileManager.default.fileExists(atPath: url.path) else { return (false, nil) }
         let data = try Data(contentsOf: url)
-        _ = try Self.imageMIMEType(data)
+        _ = try Self.mediaMIMEType(data)
         return (true, Self.revision(data))
     }
 
     @discardableResult public func write(_ name: String, base64: String) throws -> String {
-        guard let data = Data(base64Encoded: base64) else { throw SlopPackageError.invalid("image data is not valid base64") }
-        _ = try Self.imageMIMEType(data)
+        guard let data = Data(base64Encoded: base64) else { throw SlopPackageError.invalid("media data is not valid base64") }
+        _ = try Self.mediaMIMEType(data)
         let destination = try url(for: name)
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         try data.write(to: destination, options: .atomic)
@@ -50,17 +51,28 @@ public final class SlopMediaStore: @unchecked Sendable {
             let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             guard values.isRegularFile == true, values.isSymbolicLink != true, Self.isValidName(url.lastPathComponent) else { throw SlopPackageError.invalid("invalid media store entry") }
             let data = try Data(contentsOf: url)
-            _ = try Self.imageMIMEType(data)
+            _ = try Self.mediaMIMEType(data)
             hasher.update(data: Data(url.lastPathComponent.utf8)); hasher.update(data: data)
         }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
     public static func imageMIMEType(_ data: Data) throws -> String {
+        guard let mime = detectedImageMIMEType(data) else { throw SlopPackageError.invalid("selected file is not an image") }
+        return mime
+    }
+
+    public static func mediaMIMEType(_ data: Data) throws -> String {
+        if let mime = detectedImageMIMEType(data) { return mime }
+        try validateZIP(data)
+        return "application/zip"
+    }
+
+    private static func detectedImageMIMEType(_ data: Data) -> String? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               CGImageSourceCreateImageAtIndex(source, 0, nil) != nil,
               let type = CGImageSourceGetType(source) as String? else {
-            throw SlopPackageError.invalid("selected file is not an image")
+            return nil
         }
         switch type {
         case "public.png": return "image/png"
@@ -69,6 +81,29 @@ public final class SlopMediaStore: @unchecked Sendable {
         case "org.webmproject.webp": return "image/webp"
         default: return "image/*"
         }
+    }
+
+    private static func validateZIP(_ data: Data) throws {
+        let compressedLimit = 10 * 1024 * 1024
+        let entryLimit: UInt64 = 25 * 1024 * 1024
+        let totalLimit: UInt64 = 50 * 1024 * 1024
+        guard data.count <= compressedLimit else { throw SlopPackageError.invalid("ZIP media exceeds 10 MB") }
+        let archive: Archive
+        do { archive = try Archive(data: data, accessMode: .read, pathEncoding: nil) }
+        catch { throw SlopPackageError.invalid("selected file is not supported media") }
+        let entries = Array(archive)
+        guard !entries.isEmpty else { throw SlopPackageError.invalid("ZIP media is empty or encrypted") }
+        guard entries.count <= 256 else { throw SlopPackageError.invalid("ZIP media contains more than 256 entries") }
+        var total: UInt64 = 0
+        var hasFile = false
+        for entry in entries {
+            guard entry.type != .symlink else { throw SlopPackageError.invalid("ZIP media cannot contain symlinks") }
+            guard entry.uncompressedSize <= entryLimit else { throw SlopPackageError.invalid("ZIP media entry exceeds 25 MB") }
+            total += entry.uncompressedSize
+            guard total <= totalLimit else { throw SlopPackageError.invalid("ZIP media expands beyond 50 MB") }
+            if entry.type == .file { hasFile = true }
+        }
+        guard hasFile else { throw SlopPackageError.invalid("ZIP media contains no files") }
     }
 
     private static func revision(_ data: Data) -> String {

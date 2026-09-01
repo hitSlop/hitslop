@@ -20,7 +20,11 @@ public enum SlopDuplicator {
             try makeWritable(destination)
             _ = try SlopPackage(rootURL: destination)
             return destination
-        } catch { try? fileManager.removeItem(at: destination); throw error }
+        } catch {
+            try? makeWritable(destination)
+            try? fileManager.removeItem(at: destination)
+            throw error
+        }
     }
 
     public static func nextDuplicateURL(for sourceURL: URL) -> URL {
@@ -33,14 +37,28 @@ public enum SlopDuplicator {
         return directory.appendingPathComponent(base + " copy \(UUID().uuidString)").appendingPathExtension("slop")
     }
 
-    private static func makeWritable(_ root: URL) throws {
+    public static func makeWritable(_ root: URL) throws {
+        try setWriteBits(root, adding: true)
+    }
+
+    public static func makeImmutable(_ root: URL) throws {
+        try setWriteBits(root, adding: false)
+    }
+
+    private static func setWriteBits(_ root: URL, adding: Bool) throws {
         var urls = [root]
-        if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey]) { urls += enumerator.compactMap { $0 as? URL } }
-        for url in urls {
+        if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey]) {
+            urls += enumerator.compactMap { $0 as? URL }
+        }
+        for url in adding ? urls : urls.reversed() {
             let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             guard values.isSymbolicLink != true else { throw SlopPackageError.invalid("symlinks are not allowed") }
             let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-            if let value = attributes[.posixPermissions] as? NSNumber { try FileManager.default.setAttributes([.posixPermissions: value.intValue | (values.isDirectory == true ? 0o700 : 0o600)], ofItemAtPath: url.path) }
+            guard let value = attributes[.posixPermissions] as? NSNumber else { continue }
+            let next = adding
+                ? value.intValue | (values.isDirectory == true ? 0o700 : 0o600)
+                : value.intValue & ~0o222
+            try FileManager.default.setAttributes([.posixPermissions: next], ofItemAtPath: url.path)
         }
     }
 }

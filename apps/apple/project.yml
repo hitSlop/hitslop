@@ -67,6 +67,10 @@ targets:
         product: HitSlopHost
       - package: HitSlopApple
         product: HitSlopCatalog
+      - package: HitSlopApple
+        product: HitSlopRuntime
+      - package: HitSlopApple
+        product: HitSlopCore
       - package: Sparkle
         product: Sparkle
     postCompileScripts:
