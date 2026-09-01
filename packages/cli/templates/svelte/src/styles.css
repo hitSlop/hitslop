@@ -29,7 +29,18 @@ output { display: block; font-size: clamp(70px, 20cqw, 94px); font-weight: 650; 
 .controls .reset { grid-column: 1 / -1; min-height: 30px; border: 0; color: var(--slop-muted); background: transparent; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .error { margin: 10px 0 0; color: #9a2e27; font-size: 11px; }
 button:focus-visible { outline: 3px solid color-mix(in srgb, var(--slop-accent) 34%, transparent); outline-offset: 2px; }
+/* The host flips html[data-slop-capture] to "static" for full-document
+   PNG/PDF export, and to "cover"/"icon" while snapshotting render targets. */
 html[data-slop-capture="static"] [data-slop-export="hide"] { display: none !important; }
+
+/* Uncomment with the render targets in App.svelte. Double-gating on
+   data-slop-renderer keeps targets out of the interactive app entirely.
+.render-target { display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] main,
+html[data-slop-renderer="true"][data-slop-capture="icon"] main { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] [data-slop-render="cover"],
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
+*/
 
 @container (max-width: 360px) {
   .counter { padding: 25px 23px; }

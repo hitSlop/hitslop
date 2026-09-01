@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "react-counter",
+  "title": "React Counter",
+  "description": "A minimal counter for testing the React SDK, JSON persistence, and native host.",
+  "categories": ["developer-tools"],
+  "presentation": { "width": 560, "height": 420 }
+}

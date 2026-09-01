@@ -2,13 +2,19 @@
   "name": "@hitslop/cli",
   "version": "0.1.0",
   "description": "Create, develop, build, install, and publish hitSlop apps.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/cli" },
+  "homepage": "https://hitslop.app",
+  "bugs": { "url": "https://github.com/hitslop/hitslop/issues" },
+  "keywords": ["hitslop", "cli", "local-first", "mini-apps"],
+  "publishConfig": { "access": "public" },
   "type": "module",
   "bin": {
     "slop": "./dist/cli.js"
   },
   "files": ["dist", "templates"],
   "scripts": {
-    "build": "bun build src/cli.ts --target bun --format esm --packages external --outfile dist/cli.js && /bin/chmod +x dist/cli.js",
+    "build": "bun ../../scripts/clean-dist.ts && bun build src/cli.ts --target bun --format esm --packages external --outfile dist/cli.js && /bin/chmod +x dist/cli.js",
     "check": "tsc -p tsconfig.json",
     "test": "bun run --cwd ../schema build && bun test"
   },

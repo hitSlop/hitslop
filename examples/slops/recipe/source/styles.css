@@ -135,6 +135,25 @@ html[data-slop-capture="static"] [data-slop-export="hide"] { display: none !impo
 html[data-slop-capture="static"] input, html[data-slop-capture="static"] textarea, html[data-slop-capture="static"] select { border-bottom-color: transparent; box-shadow: none; }
 html[data-slop-capture="static"] .row-actions { display: none; }
 
+/* Cover/icon render targets, revealed only in the hidden renderer pass. */
+.recipe-render { display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] .recipe-canvas,
+html[data-slop-renderer="true"][data-slop-capture="icon"] .recipe-canvas { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] [data-slop-render="cover"],
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
+
+.cover-card { display: grid; grid-template-rows: 258px minmax(0, 1fr); width: 480px; height: 480px; overflow: hidden; border: 5px solid var(--orange-deep); border-radius: 28px; background: var(--surface); }
+.cover-photo { min-height: 0; margin: 0; overflow: hidden; border-bottom: 3px solid var(--orange-deep); background: #0d0e0c; }
+.cover-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cover-copy { display: flex; min-width: 0; flex-direction: column; padding: 26px 30px 28px; }
+.cover-eyebrow { color: var(--orange); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.cover-copy h1 { overflow: hidden; max-width: 100%; margin: 10px 0 0; color: var(--cream); font-family: Georgia, "Times New Roman", serif; font-size: 44px; font-weight: 500; line-height: .98; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
+.cover-copy p { overflow: hidden; max-width: 100%; margin: auto 0 0; color: var(--muted); font-size: 16px; line-height: 1.35; text-overflow: ellipsis; }
+
+.icon-tile { display: grid; place-items: center; width: 464px; height: 464px; border: 18px solid var(--orange-deep); border-radius: 48px; background: var(--surface); }
+.icon-plate { display: grid; place-items: center; width: 300px; height: 300px; border: 14px solid var(--orange); border-radius: 50%; background: var(--surface-soft); }
+.icon-plate span { width: 150px; height: 150px; border-radius: 50%; background: var(--orange); }
+
 @container (max-width: 560px) {
   .hero { grid-template-columns: 1fr; height: auto; }
   .intro { min-height: 236px; padding: 19px 18px 15px; }

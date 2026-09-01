@@ -19,8 +19,9 @@ jobs:
         with:
           bun-version: "1.4.0"
       - run: bun install --frozen-lockfile
-      - run: bun run check
-      - run: bun run test
+      - run: bun run release:check
+        env:
+          HITSLOP_SKIP_SWIFT: "1"
 
   macos:
     name: macOS

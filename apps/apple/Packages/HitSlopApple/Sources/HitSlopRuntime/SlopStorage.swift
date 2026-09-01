@@ -7,6 +7,9 @@ private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self
 
 final class SlopJSONStore {
     let url: URL
+    /// Stat-first cache for the change poller: re-read and re-hash the file only
+    /// when its modification date or size changes.
+    private var revisionCache: (modified: Date, size: UInt64, revision: String)?
     init(url: URL) { self.url = url }
 
     func open(_ initialValue: Any) throws -> (value: Any, revision: String) {
@@ -32,7 +35,16 @@ final class SlopJSONStore {
         return Self.revision(data)
     }
 
-    func revision() throws -> String? { FileManager.default.fileExists(atPath: url.path) ? Self.revision(try Data(contentsOf: url)) : nil }
+    func revision() throws -> String? {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let modified = attributes[.modificationDate] as? Date,
+              let size = (attributes[.size] as? NSNumber)?.uint64Value
+        else { revisionCache = nil; return nil }
+        if let cached = revisionCache, cached.modified == modified, cached.size == size { return cached.revision }
+        let revision = Self.revision(try Data(contentsOf: url))
+        revisionCache = (modified, size, revision)
+        return revision
+    }
     private static func encode(_ value: Any) throws -> Data {
         var data = try JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed])
         data.append(0x0a); return data
@@ -83,7 +95,10 @@ final class SlopDatabase {
             switch sqlite3_step(statement) {
             case SQLITE_ROW:
                 var row: [String: Any] = [:]
-                for index in 0..<sqlite3_column_count(statement) { row[String(cString: sqlite3_column_name(statement, index))] = column(statement, index) }
+                for index in 0..<sqlite3_column_count(statement) {
+                    let key = sqlite3_column_name(statement, index).map { String(cString: $0) } ?? "column_\(index)"
+                    row[key] = column(statement, index)
+                }
                 rows.append(row)
             case SQLITE_DONE: return rows
             default: throw error()

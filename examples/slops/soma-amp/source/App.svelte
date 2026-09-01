@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fileStore, jsonStore } from "@hitslop/svelte";
-  import { ready, slop } from "@hitslop/runtime";
+  import { capture, ready, slop } from "@hitslop/runtime";
   import { onMount } from "svelte";
   import type WebampType from "webamp";
   import { resolveStations, stationTrack, stations, type ResolvedStation } from "./stations";
@@ -13,7 +13,7 @@
 
   const preferences = jsonStore<Preferences>({ selectedStationId: "groovesalad", skinName: null, milkdropOpen: true });
   const skin = fileStore("skin", { accept: ".wsz,.zip,application/zip" });
-  const renderTargets = document.documentElement.dataset.slopRenderer === "true";
+  const renderTargets = capture.isRenderer();
 
   let appNode: HTMLElement;
   let webampNode = $state() as HTMLElement;

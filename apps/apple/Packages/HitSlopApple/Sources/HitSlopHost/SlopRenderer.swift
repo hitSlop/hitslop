@@ -81,6 +81,19 @@ struct SlopDocumentAssets: Sendable {
     private static let exportPNGScale: CGFloat = 2
     private static let renderTargetSize: CGFloat = 512
 
+    /// Double-rAF plus a 100ms guard: lets layout and paint settle after a
+    /// capture attribute flip or viewport change before measuring/snapshotting.
+    /// This is the whole capture-readiness contract: targets must become
+    /// visible synchronously (CSS-only) when `data-slop-capture` changes.
+    private static let settleScript = #"""
+    await new Promise(resolve => {
+      let finished = false;
+      const finish = () => { if (!finished) { finished = true; resolve(); } };
+      requestAnimationFrame(() => requestAnimationFrame(finish));
+      setTimeout(finish, 100);
+    });
+    """#
+
     public static func previewPNGData(packageURL: URL) async throws -> Data {
         try await render(packageURL: packageURL, output: .previewPNG)
     }
@@ -250,12 +263,7 @@ struct SlopDocumentAssets: Sendable {
             states.get(token).active?.blur();
             root.setAttribute('data-slop-capture', 'static');
             window.scrollTo(0, 0);
-            await new Promise(resolve => {
-              let finished = false;
-              const finish = () => { if (!finished) { finished = true; resolve(); } };
-              requestAnimationFrame(() => requestAnimationFrame(finish));
-              setTimeout(finish, 100);
-            });
+            \#(settleScript)
             const body = document.body;
             return {
               height: Math.ceil(Math.max(
@@ -296,12 +304,7 @@ struct SlopDocumentAssets: Sendable {
             states.get(token).active?.blur();
             root.setAttribute('data-slop-capture', target);
             window.scrollTo(0, 0);
-            await new Promise(resolve => {
-              let finished = false;
-              const finish = () => { if (!finished) { finished = true; resolve(); } };
-              requestAnimationFrame(() => requestAnimationFrame(finish));
-              setTimeout(finish, 100);
-            });
+            \#(settleScript)
             const rect = matches[0].getBoundingClientRect();
             return { found: true, count: 1, x: rect.x, y: rect.y, width: rect.width, height: rect.height };
             """#,
@@ -347,19 +350,7 @@ struct SlopDocumentAssets: Sendable {
     }
 
     private static func settle(_ webView: WKWebView) async throws {
-        _ = try await webView.callAsyncJavaScript(
-            #"""
-            await new Promise(resolve => {
-              let finished = false;
-              const finish = () => { if (!finished) { finished = true; resolve(); } };
-              requestAnimationFrame(() => requestAnimationFrame(finish));
-              setTimeout(finish, 100);
-            });
-            """#,
-            arguments: [:],
-            in: nil,
-            contentWorld: .page
-        )
+        _ = try await webView.callAsyncJavaScript(settleScript, arguments: [:], in: nil, contentWorld: .page)
     }
 
     private static func restore(_ webView: WKWebView, token: String) async throws {

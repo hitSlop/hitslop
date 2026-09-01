@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Dialog, DropdownMenu } from "bits-ui";
-  import { sql, sqliteQuery } from "@hitslop/svelte";
-  import { slop } from "@hitslop/runtime";
+  import { sqliteQuery } from "@hitslop/svelte";
+  import { slop, sql } from "@hitslop/runtime";
   import GripVertical from "@lucide/svelte/icons/grip-vertical";
   import MoreHorizontal from "@lucide/svelte/icons/ellipsis";
   import Plus from "@lucide/svelte/icons/plus";
@@ -33,9 +33,18 @@
     const title = draftTitle.trim();
     if (!title) return;
     const detail = draftDetail.trim();
-    if(editingID===null){const createdAt = new Date().toISOString();const position = Math.max(-1, ...cardsFor(draftColumnID).map((card) => card.position)) + 1;await cards.execute(sql`INSERT INTO cards (column_id, title, detail, priority, position, created_at) VALUES (${draftColumnID}, ${title}, ${detail}, ${draftPriority}, ${position}, ${createdAt})`)}
-    else await cards.execute(sql`UPDATE cards SET title = ${title}, detail = ${detail}, priority = ${draftPriority}, column_id = ${draftColumnID} WHERE id = ${editingID}`);
-    draftTitle = ""; draftDetail = ""; draftPriority = "normal"; editingID=null; adding = false;
+    if (editingID === null) {
+      const createdAt = new Date().toISOString();
+      const position = Math.max(-1, ...cardsFor(draftColumnID).map((card) => card.position)) + 1;
+      await cards.execute(sql`INSERT INTO cards (column_id, title, detail, priority, position, created_at) VALUES (${draftColumnID}, ${title}, ${detail}, ${draftPriority}, ${position}, ${createdAt})`);
+    } else {
+      await cards.execute(sql`UPDATE cards SET title = ${title}, detail = ${detail}, priority = ${draftPriority}, column_id = ${draftColumnID} WHERE id = ${editingID}`);
+    }
+    draftTitle = "";
+    draftDetail = "";
+    draftPriority = "normal";
+    editingID = null;
+    adding = false;
   }
 
   async function moveCard(cardID: number, columnID: number): Promise<void> {
@@ -46,8 +55,23 @@
 
   async function removeCard(cardID: number): Promise<void> { await cards.execute(sql`DELETE FROM cards WHERE id = ${cardID}`); }
 
-  function beginAdd(columnID: number): void { editingID=null;draftTitle="";draftDetail="";draftPriority="normal";draftColumnID = columnID; adding = true; }
-  function beginEdit(card:Card):void{editingID=card.id;draftTitle=card.title;draftDetail=card.detail;draftPriority=card.priority;draftColumnID=card.column_id;adding=true}
+  function beginAdd(columnID: number): void {
+    editingID = null;
+    draftTitle = "";
+    draftDetail = "";
+    draftPriority = "normal";
+    draftColumnID = columnID;
+    adding = true;
+  }
+
+  function beginEdit(card: Card): void {
+    editingID = card.id;
+    draftTitle = card.title;
+    draftDetail = card.detail;
+    draftPriority = card.priority;
+    draftColumnID = card.column_id;
+    adding = true;
+  }
 </script>
 
 <main class="board-shell" data-slop-selection="none">
@@ -97,11 +121,15 @@
     <Dialog.Portal>
       <Dialog.Overlay class="card-overlay" />
       <Dialog.Content class="card-dialog">
-        <form onsubmit={(event)=>{event.preventDefault();void createCard()}}><p>{editingID===null?"New work item":"Edit work item"}</p><Dialog.Title>{editingID===null?"Add a card":"Update card"}</Dialog.Title><Dialog.Description>Keep it clear enough to act on.</Dialog.Description>
-        <label>Title<input bind:value={draftTitle} placeholder="What needs to move?" /></label>
-        <label>Detail<textarea bind:value={draftDetail} placeholder="Optional context"></textarea></label>
-        <label>Priority<select bind:value={draftPriority}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
-        <div class="card-actions"><Dialog.Close type="button">Cancel</Dialog.Close><button type="submit">{editingID===null?"Add card":"Save changes"}</button></div></form>
+        <form onsubmit={(event) => { event.preventDefault(); void createCard(); }}>
+          <p>{editingID === null ? "New work item" : "Edit work item"}</p>
+          <Dialog.Title>{editingID === null ? "Add a card" : "Update card"}</Dialog.Title>
+          <Dialog.Description>Keep it clear enough to act on.</Dialog.Description>
+          <label>Title<input bind:value={draftTitle} placeholder="What needs to move?" /></label>
+          <label>Detail<textarea bind:value={draftDetail} placeholder="Optional context"></textarea></label>
+          <label>Priority<select bind:value={draftPriority}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
+          <div class="card-actions"><Dialog.Close type="button">Cancel</Dialog.Close><button type="submit">{editingID === null ? "Add card" : "Save changes"}</button></div>
+        </form>
         <Dialog.Close class="dialog-close" aria-label="Close"><X /></Dialog.Close>
       </Dialog.Content>
     </Dialog.Portal>

@@ -15,6 +15,7 @@ permissions:
 jobs:
   release:
     name: Sign, notarize, and publish
+    if: github.repository == 'hitslop/hitslop'
     runs-on: macos-15
     env:
       ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}

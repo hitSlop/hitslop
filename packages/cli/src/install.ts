@@ -119,6 +119,8 @@ async function validateQuickLook(path: string, requirePreview: boolean): Promise
 }
 
 async function rejectForbiddenRuntimeEntries(directory: string): Promise<void> {
+  // "icon\r" (lowercased "Icon\r") is macOS Finder's custom-icon metadata file;
+  // the host derives it locally after install, so packages must not ship one.
   const forbidden = new Set(["package.json", "bun.lock", "bun.lockb", "node_modules", "source", "src", "build", "document.json", ".build", ".hitslop", "style.css", "stores", "icon\r"]);
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (entry.isSymbolicLink()) throw new Error(`Runtime packages cannot contain symlinks: ${entry.name}.`);

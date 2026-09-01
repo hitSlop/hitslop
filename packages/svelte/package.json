@@ -2,6 +2,12 @@
   "name": "@hitslop/svelte",
   "version": "0.1.0",
   "description": "Svelte 5 state adapters for the hitSlop runtime.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/svelte" },
+  "homepage": "https://hitslop.app",
+  "bugs": { "url": "https://github.com/hitslop/hitslop/issues" },
+  "keywords": ["hitslop", "svelte", "local-first", "mini-apps"],
+  "publishConfig": { "access": "public" },
   "type": "module",
   "files": [
     "dist"
@@ -10,9 +16,9 @@
     ".": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
     "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
-    "test": "bun test"
+    "test": "echo 'no unit tests: pure logic lives in @hitslop/runtime; rune adapters are covered by svelte-check and the examples'"
   },
   "dependencies": {
     "@hitslop/runtime": "workspace:*"

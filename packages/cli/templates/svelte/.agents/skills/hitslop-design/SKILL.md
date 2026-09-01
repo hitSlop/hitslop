@@ -1,39 +1,50 @@
 ---
 name: hitslop-design
-description: Design or refine hitSlop mini apps and documents with the project’s purpose-led, tactile visual language and export-aware interaction conventions.
+description: Design or refine hitSlop mini apps and documents with a purpose-led tactile language, responsive native-window behavior, transparent or PNG-skinned surfaces, and export-aware capture.
 ---
 
 # hitSlop design
 
-Read `manifest.json` first and design for its actual window size. A slop is a complete, single-purpose digital object, not a small website.
+Read `manifest.json` first and design at its exact initial dimensions. A slop
+is one complete digital object, not a small website.
 
-## Choose the object family
+If the project provides `_vibe/`, inspect it for visual direction. Treat those
+images as inspiration only; do not copy them into source or runtime packages.
 
-- **Paper:** invoices, notes, recipes, resumes, and contacts. Prefer readable type, editorial hierarchy, warm surfaces, fine rules, and direct editing.
-- **Instrument:** timers, trackers, mixers, and analytics. Use compact controls, inset readouts, functional state color, and deliberate hardware-like grouping without ornamental depth.
-- **Skin:** media and novelty tools whose silhouette reinforces their purpose. Use an exact-size RGBA window skin and keep essential interaction inside its safe area.
+## Decide before styling
 
-These are starting points, not enforced themes. Combine them only when the purpose calls for it.
+1. State the single job in one sentence.
+2. Choose a dominant object family: Paper, Instrument, or Skin.
+3. Identify the primary action/readout and persistent state.
+4. Decide whether the window is standard/resizable, transparent, or PNG-skinned.
+5. Define what live editing, static capture, cover, and icon must show.
 
-## Build the interface
+Read [references/object-families.md](references/object-families.md) for visual
+patterns and anti-patterns. Read
+[references/presentation-and-export.md](references/presentation-and-export.md)
+for transparency, resizing, skins, responsive layout, capture, cover, icon, PNG,
+and PDF behavior.
 
-- Make the purpose and primary workflow obvious at a glance. Remove navigation and setup that the small app does not need.
-- Treat the host window as the default outer boundary. Do not wrap the whole slop in another app card, backing slab, or fake offset shadow.
-- Use type, spacing, rules, and tonal contrast before adding containers. Add an internal surface only when it communicates function, such as an instrument readout or selected state.
-- Choose a dominant neutral surface and one purpose-specific accent. Reserve other colors for state.
-- Give each slop a purpose-specific character; shared structure should not make unrelated artifacts look like one reskinned component.
-- Size the manifest around the default content and workflow. Do not create empty space merely to imitate a conventional page size.
-- Keep body copy comfortably readable at the manifest's native size; compactness should come from hierarchy and rhythm, not tiny type.
-- Keep controls compact, labels short, numbers tabular, focus visible, text contrast accessible, and motion reduced when requested.
-- Prefer direct editing and progressive disclosure. Do not open a dialog when an inline action is clearer.
-- Adapt with container queries. Preserve critical actions at narrow sizes rather than hiding them. Slops may scroll even though the host hides scrollbar chrome.
-- Use Bits UI for matching headless interactions; native HTML remains appropriate for basic buttons and fields. Consult the installed Bits UI documentation for the current API.
+## Core design rules
 
-## Design for static output
+- Let the host window be the outer object boundary; do not wrap everything in a
+  generic app card or fake desktop window.
+- Use hierarchy, spacing, typography, rules, and tonal contrast before adding
+  containers.
+- Use one dominant neutral surface and one purpose-specific accent; reserve
+  extra color for meaningful state.
+- Size the initial viewport around realistic default content. Compactness comes
+  from rhythm and hierarchy, never tiny type.
+- Preserve critical actions at narrow sizes. Prefer container queries and
+  reflow to simply hiding features.
+- Keep focus visible, labels concise, numbers tabular, contrast accessible, and
+  motion respectful of `prefers-reduced-motion`.
+- Prefer direct editing and progressive disclosure. Use native HTML or Bits UI
+  only when its interaction matches the job.
+- Mark editing-only UI with `data-slop-export="hide"`; keep exportable content
+  in normal flow.
+- Make each slop purpose-specific. Shared SDK patterns must not make unrelated
+  objects look like one reskinned dashboard.
 
-- Mark editing-only controls and diagnostics with `data-slop-export="hide"`.
-- Use `html[data-slop-capture="static"]` for any additional flattening needed during PNG, PDF, Quick Look, or catalog capture.
-- Make static output look like the artifact itself, not a screenshot of an artifact inside app chrome. Remove outer rounding, backing, and decorative shadows.
-- Keep content that must export in normal document flow. Nested scroll regions are not automatically expanded.
-
-Runtime packages remain source-free: never ship this skill, editable CSS, dependencies, build caches, or seed stores inside a `.slop`.
+Runtime packages remain source-free: never ship skills, editable CSS,
+dependencies, build caches, or seed stores inside a `.slop`.

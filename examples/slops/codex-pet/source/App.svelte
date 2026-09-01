@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fileStore } from "@hitslop/svelte";
-  import { ready, slop } from "@hitslop/runtime";
+  import { capture, ready, slop } from "@hitslop/runtime";
   import { onMount, tick } from "svelte";
   import { parsePetArchive, parsePetPackage, validateSpriteImage, type PetMetadata } from "./pet-package";
 
@@ -30,10 +30,10 @@
   };
 
   const storedPackage = fileStore("pet-package", { accept: ".zip,.codex-pet.zip,application/zip" });
-  const renderTargets = document.documentElement.dataset.slopRenderer === "true";
+  const renderTargets = capture.isRenderer();
   let canvas: HTMLCanvasElement;
-  let coverCanvas: HTMLCanvasElement;
-  let iconCanvas: HTMLCanvasElement;
+  let coverCanvas = $state<HTMLCanvasElement>();
+  let iconCanvas = $state<HTMLCanvasElement>();
   let fileInput: HTMLInputElement;
   let activePet = $state<PetMetadata>(STARTER);
   let activeImage = $state.raw<HTMLImageElement | null>(null);
@@ -280,5 +280,7 @@
   <input bind:this={fileInput} class="file-input" type="file" accept=".zip,.codex-pet.zip,application/zip" onchange={(event) => { void importPackage(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />
 </main>
 
-<canvas bind:this={coverCanvas} class="render-target cover-target" width={RENDER_SIZE} height={RENDER_SIZE} data-slop-render="cover" aria-hidden="true"></canvas>
-<canvas bind:this={iconCanvas} class="render-target icon-target" width={RENDER_SIZE} height={RENDER_SIZE} data-slop-render="icon" aria-hidden="true"></canvas>
+{#if renderTargets}
+  <canvas bind:this={coverCanvas} class="render-target cover-target" width={RENDER_SIZE} height={RENDER_SIZE} data-slop-render="cover" aria-hidden="true"></canvas>
+  <canvas bind:this={iconCanvas} class="render-target icon-target" width={RENDER_SIZE} height={RENDER_SIZE} data-slop-render="icon" aria-hidden="true"></canvas>
+{/if}

@@ -74,10 +74,10 @@ input, textarea, button { outline: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 
 .resume-render { display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
-html[data-slop-capture="cover"] .resume-canvas,
-html[data-slop-capture="icon"] .resume-canvas { display: none; }
-html[data-slop-capture="cover"] [data-slop-render="cover"],
-html[data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] .resume-canvas,
+html[data-slop-renderer="true"][data-slop-capture="icon"] .resume-canvas { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] [data-slop-render="cover"],
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
 
 .cover-sheet { display: grid; grid-template-columns: 118px minmax(0, 1fr); width: 480px; height: 480px; overflow: hidden; border: 5px solid var(--ink); border-radius: 28px; background: var(--paper); }
 .cover-rail { padding: 36px 16px; background: var(--rail); border-right: 2px solid var(--ink); }

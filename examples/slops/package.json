@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev:counter": "slop dev svelte-counter",
+    "dev:react-counter": "slop dev react-counter",
     "dev:alien-radio": "slop dev alien-radio",
     "dev:soma-amp": "slop dev soma-amp",
     "dev:codex-pet": "slop dev codex-pet",
@@ -13,24 +14,30 @@
     "dev:recipe": "slop dev recipe",
     "dev:kanban": "slop dev kanban-board",
     "dev:random-picker": "slop dev random-picker",
-    "validate": "slop validate svelte-counter && slop validate alien-radio && slop validate soma-amp && slop validate codex-pet && slop validate focus-timer && slop validate invoice && slop validate resume && slop validate recipe && slop validate kanban-board && slop validate random-picker",
-    "build": "slop build svelte-counter && slop build alien-radio && slop build soma-amp && slop build codex-pet && slop build focus-timer && slop build invoice && slop build resume && slop build recipe && slop build kanban-board && slop build random-picker",
+    "validate": "slop validate svelte-counter && slop validate react-counter && slop validate alien-radio && slop validate soma-amp && slop validate codex-pet && slop validate focus-timer && slop validate invoice && slop validate resume && slop validate recipe && slop validate kanban-board && slop validate random-picker",
+    "build": "slop build svelte-counter && slop build react-counter && slop build alien-radio && slop build soma-amp && slop build codex-pet && slop build focus-timer && slop build invoice && slop build resume && slop build recipe && slop build kanban-board && slop build random-picker",
     "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
     "test": "bun test codex-pet/source"
   },
   "dependencies": {
+    "@hitslop/react": "workspace:*",
     "@hitslop/runtime": "workspace:*",
     "@hitslop/svelte": "workspace:*",
     "@lucide/svelte": "^1.37.0",
     "bits-ui": "^2.19.0",
     "fflate": "^0.8.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "svelte": "^5.57.0",
     "webamp": "2.3.1"
   },
   "devDependencies": {
     "@hitslop/cli": "workspace:*",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
     "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitejs/plugin-react": "^5.1.4",
     "svelte-check": "^4.7.6",
     "typescript": "^6.0.3",
     "vite": "^8.2.2"

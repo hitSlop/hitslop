@@ -1,6 +1,6 @@
 import { slop } from "@hitslop/runtime";
+import { JsonPersister, type JsonSnapshot } from "@hitslop/runtime/adapter";
 import { untrack } from "svelte";
-import { JsonPersister, type JsonSnapshot } from "./json-persister.js";
 
 const snapshot = <T>(value: T): JsonSnapshot<T> => {
   const json = JSON.stringify($state.snapshot(value));

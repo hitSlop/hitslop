@@ -8,6 +8,8 @@ JSON, SQLite, and named media data. Read `manifest.json` first.
   build caches, seed stores, or editable stylesheets.
 - Preview with `bun slop dev examples/slops/<id>` and build with
   `bun slop build examples/slops/<id>`.
+- Use `_vibe/` as local visual reference material. It is inspiration-only and
+  must not be copied into source, runtime packages, or the open-source release.
 - A runtime package has `manifest.json`, generated `app.html`, optional immutable
   `assets/`, optional canonical `stores/data.json`, `stores/data.sqlite`, and
   user-selected supported media under `stores/media/`,

@@ -94,7 +94,7 @@ enum SlopWorkingCopy {
                 if kind == .sqlite {
                     let temp = target.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).sqlite")
                     try SlopSQLiteSnapshot.copy(from: source, to: temp)
-                    guard Darwin.rename(temp.path, target.path) == 0 else { throw SlopPackageError.invalid("could not replace SQLite store") }
+                    guard Darwin.rename(temp.path, target.path) == 0 else { throw SlopPackageError.invalid("could not replace SQLite store: \(String(cString: strerror(errno)))") }
                     try? FileManager.default.removeItem(at: URL(fileURLWithPath: target.path + "-wal"))
                     try? FileManager.default.removeItem(at: URL(fileURLWithPath: target.path + "-shm"))
                 } else {
@@ -119,7 +119,7 @@ enum SlopWorkingCopy {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         let temp = url.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).sqlite")
         try SlopSQLiteSnapshot.copy(from: url, to: temp)
-        guard Darwin.rename(temp.path, url.path) == 0 else { throw SlopPackageError.invalid("could not install SQLite working copy") }
+        guard Darwin.rename(temp.path, url.path) == 0 else { throw SlopPackageError.invalid("could not install SQLite working copy: \(String(cString: strerror(errno)))") }
         try? FileManager.default.removeItem(at: URL(fileURLWithPath: url.path + "-wal"))
         try? FileManager.default.removeItem(at: URL(fileURLWithPath: url.path + "-shm"))
     }

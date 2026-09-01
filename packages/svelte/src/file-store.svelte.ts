@@ -1,22 +1,7 @@
 import { slop } from "@hitslop/runtime";
+import { chooseLocalFile, fileToBase64, mediaSourceURL, safeMediaName } from "@hitslop/runtime/adapter";
 
 export type FileStoreOptions = { accept?: string };
-
-const safeName = (name: string): string => {
-  if (!/^[a-z][a-z0-9-]{0,63}$/.test(name)) throw new Error("File store names must use lowercase letters, numbers, and hyphens");
-  return name;
-};
-
-const fileData = (file: File): Promise<string> => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onerror = () => reject(reader.error ?? new Error("Could not read that file"));
-  reader.onload = () => {
-    const value = String(reader.result ?? ""), comma = value.indexOf(",");
-    if (comma < 0) reject(new Error("Could not read that file"));
-    else resolve(value.slice(comma + 1));
-  };
-  reader.readAsDataURL(file);
-});
 
 export class FileStore {
   src = $state<string | null>(null);
@@ -27,30 +12,20 @@ export class FileStore {
   private unwatch: (() => void) | null = null;
 
   constructor(readonly name: string, readonly options: FileStoreOptions = {}) {
-    safeName(name);
+    safeMediaName(name, "File");
     void this.reload();
     this.unwatch = slop.media.onChange(() => { void this.reload(); });
   }
 
   choose(): void {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = this.options.accept ?? "";
-    input.hidden = true;
-    input.addEventListener("change", () => {
-      const file = input.files?.[0];
-      input.remove();
-      if (file) void this.replace(file).catch(() => undefined);
-    }, { once: true });
-    document.body.append(input);
-    input.click();
+    chooseLocalFile(this.options.accept ?? "", (file) => { void this.replace(file).catch(() => undefined); });
   }
 
   async replace(file: File): Promise<void> {
     this.isLoading = true;
     this.error = null;
     try {
-      const data = await fileData(file);
+      const data = await fileToBase64(file);
       const result = await slop.media.write(this.name, data, file.type || "application/octet-stream");
       this.adopt(true, result.revision);
     } catch (error) {
@@ -97,7 +72,7 @@ export class FileStore {
   private adopt(exists: boolean, revision: string | null): void {
     this.hasCustomFile = exists;
     this.revision = revision;
-    this.src = exists ? `/media/${this.name}?revision=${encodeURIComponent(revision ?? "current")}` : null;
+    this.src = exists ? mediaSourceURL(this.name, revision) : null;
   }
 }
 

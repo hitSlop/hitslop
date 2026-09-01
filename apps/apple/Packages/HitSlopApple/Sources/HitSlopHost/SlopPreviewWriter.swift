@@ -21,9 +21,14 @@ public extension Notification.Name {
     }
 
     public static func installFinderIcon(_ png: Data, for packageURL: URL) {
-        guard (try? SlopPackage(rootURL: packageURL)) != nil,
-              let image = NSImage(data: png) else { return }
-        _ = NSWorkspace.shared.setIcon(image, forFile: packageURL.path, options: [])
+        guard (try? SlopPackage(rootURL: packageURL)) != nil else { return }
+        guard let image = NSImage(data: png) else {
+            print("[hitSlop preview] Could not decode icon PNG for \(packageURL.lastPathComponent)")
+            return
+        }
+        if !NSWorkspace.shared.setIcon(image, forFile: packageURL.path, options: []) {
+            print("[hitSlop preview] Finder rejected custom icon for \(packageURL.lastPathComponent)")
+        }
         announce(packageURL)
     }
 
@@ -38,7 +43,9 @@ public extension Notification.Name {
             .appendingPathComponent("QuickLook", isDirectory: true)
             .appendingPathComponent("Thumbnail.png")
         guard let image = NSImage(contentsOf: thumbnailURL) else { return }
-        _ = NSWorkspace.shared.setIcon(image, forFile: packageURL.path, options: [])
+        if !NSWorkspace.shared.setIcon(image, forFile: packageURL.path, options: []) {
+            print("[hitSlop preview] Finder rejected thumbnail icon for \(packageURL.lastPathComponent)")
+        }
     }
 
     private static func announce(_ packageURL: URL) {

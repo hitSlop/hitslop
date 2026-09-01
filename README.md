@@ -1,126 +1,108 @@
 # hitSlop
 
-hitSlop is a native home for tiny, local-first web apps. A `.slop` is a
-self-contained runtime app whose JSON, SQLite, and named media data is owned by the host.
-Svelte is the first authoring SDK; the runtime contract is framework-neutral.
+> Tiny apps. Big ideas. Your data stays yours.
 
-```text
-apps/
-├── catalog/        TanStack Start catalog and private R2 gateway
-├── apple/          one Xcode project plus the app-local Apple Swift package
-└── registry/       Convex publishers, templates, releases, and creation counts
-packages/
-├── cli/            @hitslop/cli (`slop`)
-├── runtime/        framework-neutral browser bridge
-├── schema/         Zod, generated JSON Schema, and generated Swift models
-└── svelte/         Svelte 5 JSON, SQLite, and image helpers
-```
+hitSlop is a native home for small, personal, local-first web apps. Each
+`.slop` is a document you can open, move, duplicate, and keep—not an account
+you have to maintain. The app owns its interface; the host owns durable JSON,
+SQLite, named media, previews, export, and native window behavior.
 
-## Author a slop
+<p align="center">
+  <img src="examples/slops/invoice/screenshots/cover.png" width="23%" alt="Invoice slop">
+  <img src="examples/slops/focus-timer/screenshots/cover.png" width="23%" alt="Focus Timer slop">
+  <img src="examples/slops/kanban-board/screenshots/cover.png" width="23%" alt="Kanban Board slop">
+  <img src="examples/slops/random-picker/screenshots/cover.png" width="23%" alt="Random Picker slop">
+</p>
+
+A slop can feel like **paper** (invoice, recipe, résumé), an **instrument**
+(timer, picker, mixer), or a **skin** (a tiny object with its own silhouette).
+Those are design directions, not runtime frameworks: the package contract is
+plain HTML plus host data.
+
+## Make one
+
+Bun and the Svelte template are the supported v1 authoring path:
 
 ```sh
+bunx @hitslop/cli init my-tiny-app
+cd my-tiny-app
 bun install
-bunx @hitslop/cli init my-widget --template svelte-counter
-cd my-widget
-bun install
-slop dev
-slop build
-slop install
-slop publish
+bun run dev
+bun run build
+bun run install
+# when it is ready for the public catalog:
+bun run publish
 ```
 
-`slop dev` uses isolated lazy stores under `.hitslop/dev/stores/`. `slop build`
-emits a source-free `dist/<slug>.slop`. Install and publish capture a full
-`QuickLook/Preview.png` and derive a static, maximum-512px
-`QuickLook/Thumbnail.png`; pass `--thumbnail <png>` to supply custom Finder
-artwork. Publish signs one immutable ZIP artifact.
+The CLI scaffolds a source project, previews it against isolated local stores,
+and builds a source-free `dist/<slug>.slop`. The repository also includes a
+React SDK and a maintained React example, but the v1 CLI does not scaffold
+React projects yet.
 
-`slop install` writes a read-only catalog master at
-`~/.hitslop/templates/<slug>.slop`. Create and test writable documents through
-**My Templates** in hitSlop, or by opening that master — the app copies it to a
-path you choose. Document stores are created only in the copy, so station
-choices, uploaded media, and other personal state never seed the next document.
+Read [Authoring a slop](docs/authoring.md) for the full workflow and
+[Designing tiny software](docs/presentation.md) for object families,
+transparent backgrounds, resizing, cover/icon art, and export-safe layouts.
 
-Static captures set `data-slop-capture="static"` on the document root. Mark
-editing-only controls with `data-slop-export="hide"`; the host omits them from
-PNG, PDF, Quick Look, and catalog imagery. Preview imagery keeps the manifest
-viewport, while PNG/PDF exports use the current width and full document height.
-PNG exports render at deterministic 2x resolution; PDFs retain selectable text
-and WebKit vector rendering on one full-height page.
-Keep content that must export in normal document flow rather than a nested
-scroll region.
-
-The manifest is intentionally small:
-
-```json
-{
-  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
-  "slug": "tiny-counter",
-  "title": "Tiny Counter",
-  "description": "Counts a very small thing.",
-  "categories": ["utilities", "personal"],
-  "presentation": { "width": 560, "height": 420 }
-}
-```
-
-Categories are controlled IDs and a manifest has one or two: `productivity`,
-`utilities`, `finance`, `media`, `games`, `developer-tools`, `education`,
-`business`, `personal`, or `other`.
-
-Runtime packages contain generated visuals and optional host data:
+## What is inside a `.slop`?
 
 ```text
-my-widget.slop/
+tiny-app.slop/
 ├── manifest.json
 ├── app.html
-├── assets/                    optional immutable assets
-├── stores/
-│   ├── data.json              optional, created lazily
-│   ├── data.sqlite            optional, created lazily
-│   └── media/                 optional named media, created lazily
-├── QuickLook/
-│   ├── Preview.png            host-generated Quick Look/catalog image
-│   └── Thumbnail.png          immutable author-controlled artwork
-└── Icon\r                     optional macOS-local Finder metadata
+├── assets/                    optional, immutable
+├── stores/                    optional, host-owned document data
+│   ├── data.json
+│   ├── data.sqlite
+│   └── media/
+└── QuickLook/
+    ├── Preview.png
+    └── Thumbnail.png
 ```
 
-A slop may use JSON, SQLite, named media, any combination, or none. Named media accepts supported
-images and bounded ZIP archives, is content-sniffed by the host, and is created lazily. The manifest does not declare
-storage. There is no document identity, release lineage, author, tags, runtime
-version, entry path, editable stylesheet, or seed data in the package format.
-On macOS, hitSlop derives Finder's hidden custom-icon metadata from
-`Thumbnail.png` after creating or opening a local document. That metadata is
-never part of a template or published artifact.
+Authored templates and published artifacts never contain source, dependencies,
+build caches, seed stores, editable stylesheets, SQLite sidecars, or Finder's
+local `Icon\r` metadata. Storage is implicit: use JSON, SQLite, named media,
+any combination, or none. See [Package format](docs/package-format.md) and
+[Storage](docs/storage.md).
 
-Publisher ownership is external to the manifest. `slop publish` creates a local
-Ed25519 identity; the registry makes `(publisher key, slug)` unique. Use
-`slop identity show`, `set-name`, `export`, and `import` to manage that identity.
+## The system at a glance
 
-## Work on this repository
+- `apps/apple` — the macOS/iOS document host, catalog UI, Quick Look, export,
+  local/iCloud coordination, and the native capture CLI.
+- `apps/catalog` — the public TanStack Start site and hardened Cloudflare R2
+  publish/download gateway.
+- `apps/registry` — Convex metadata for publishers, templates, releases, and
+  aggregate creation counts.
+- `packages/cli` — create, validate, preview, build, install, sign, and publish.
+- `packages/runtime` — the framework-neutral browser bridge.
+- `packages/svelte` and `packages/react` — reactive adapters.
+- `packages/schema` — authoritative Zod schemas and generated Swift/JSON
+  boundaries.
+- `examples/slops` — maintained source examples; `archive/templates` is
+  inventoried prior art, never a runtime package.
+
+The hosted catalog is the convenient default. The protocol and services are
+open, and [self-hosting](docs/self-hosting.md) is documented.
+
+## Work on hitSlop
 
 ```sh
 bun install
-bun run build
-bun run check
-bun run test
-swift test --package-path apps/apple/Packages/HitSlopApple
-swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native
+bun run release:check
 ```
 
-After changing Zod, run `bun run schema:generate`. JSON Schema is the portable
-boundary; the generator derives both the committed schema and Swift Codable
-models from it. CI rejects generated drift.
+That release gate checks generated schemas, TypeScript/Svelte, tests, builds,
+package contents, documentation links, tracked-file hygiene, and the Swift
+package. If you are changing Zod, run `bun run schema:generate` first.
 
-See [docs/architecture.md](docs/architecture.md) for the complete runtime,
-publishing, cache, and iCloud boundaries.
+Start with the [documentation map](docs/README.md), then read
+[Architecture](docs/architecture.md), [Repository guide](docs/repository.md),
+and [Contributing](CONTRIBUTING.md).
 
-## Release the macOS app
+The macOS app is at `1.0.0`. The iOS app and public npm packages are at
+`0.1.0` while their APIs settle.
 
-The app is distributed directly with Developer ID and Sparkle. Versioning lives
-in `apps/apple/project.yml` under `hitSlop-macOS`: `MARKETING_VERSION` is user-facing semver,
-and `CURRENT_PROJECT_VERSION` is a monotonic build integer.
+## License
 
-```sh
-scripts/install-macos-release.sh
-scripts/package-macos-release.sh
-```
+MIT © 2026 hitSlop contributors. See [LICENSE](LICENSE) and
+[third-party notices](THIRD_PARTY_NOTICES.md).

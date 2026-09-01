@@ -1,56 +1,61 @@
-# hitSlop architecture
+# Architecture
 
-## One package, two optional stores
-
-A `.slop` directory is a complete runtime web app. `manifest.json` describes
-only catalog discovery and native presentation. `app.html` and `assets/` are
-immutable after build. The only mutable package content is host-owned data, the
-host-generated preview, and platform filesystem metadata. Thumbnail artwork is
-captured once with the template and remains static.
+hitSlop separates an immutable web application from mutable, host-owned
+document data. That one boundary lets a tiny app remain framework-neutral while
+native hosts provide reliable persistence, windows, preview, export, and cloud
+coordination.
 
 ```text
-example.slop/
-├── manifest.json
-├── app.html
-├── assets/                    optional
-├── stores/
-│   ├── data.json              optional and lazy
-│   ├── data.sqlite            optional and lazy
-│   └── data.sqlite-{wal,shm}  transient host sidecars
-├── QuickLook/
-│   ├── Preview.png            optional until first capture
-│   └── Thumbnail.png          static package-time Finder image
-└── Icon\r                     optional macOS-local Finder metadata
+author source ──CLI build──> immutable .slop template
+                                  │
+                        copy to user-selected path
+                                  ▼
+                         writable .slop document
+                                  │
+             WebView bridge ◀──── host ────▶ JSON / SQLite / media
+                                  │
+                           preview and export
+
+publish ──signed ZIP──> Catalog gateway ──artifact──> R2
+                              │
+                              └──metadata──> Convex registry
 ```
 
-Templates never contain `stores/`. Documents may independently create the JSON
-store, SQLite store, both, or neither. Fixed paths remove store IDs, path
-configuration, kinds, byte limits, seed copying, and migration matching from
-the manifest.
+## Trust boundaries
 
-There is no `document.json` and no document identity or release lineage in the
-manifest. Copying a template preserves the manifest byte-for-byte. A later
-release affects only documents created from that release.
+The guest WebView is untrusted package code. It runs in an ephemeral WebKit data
+store behind the `slop://` scheme, which serves only `app.html` and
+`assets/`. It cannot resolve the manifest, stores, SQLite sidecars, Quick Look
+images, or arbitrary file URLs.
 
-## Manifest and presentation
+The native host validates the manifest before loading, exposes a narrow message
+bridge, validates media by content, and owns every filesystem mutation. JSON is
+atomically replaced with an expected-revision check. SQLite transactions remain
+on one connection. Named media replacement is atomic.
 
-Every manifest requires the v1 `$schema` URL, publisher-scoped slug, title,
-description, one or two controlled category IDs, and presentation dimensions.
-Standard windows are resizable by default and support `rounded`, `ellipse`, or
-`capsule`. A skin instead references an exact-size RGBA PNG under `assets/` and
-is fixed-size.
+The publish gateway treats the submitted ZIP as hostile. It verifies the
+Ed25519 envelope, hash and byte count; rejects unsafe paths, duplicates,
+symlinks, encryption, unsupported compression, excessive entry counts and
+expansion; validates the manifest, package allowlist, PNGs, and exact RGBA skin
+dimensions; then stores content-addressed immutable bytes.
 
-The skin PNG is both the visible backing and native mask. The WebView remains
-transparent, and pixels below 10% alpha pass pointer events through the window.
-Quick Look capture preserves that silhouette.
+## Template, cache, document
 
-## Guest boundary
+These three things must never be confused:
 
-Guest code runs in an ephemeral WebKit data store behind `slop://`. The scheme
-serves only `app.html` and `assets/`; it never exposes the manifest, stores,
-SQLite sidecars, or preview.
+- A built or published **template** is immutable and contains no stores.
+- A **catalog master** under `~/.hitslop/templates` is immutable input. Hosted
+  entries live at `cache/<publisher>/<slug>/<release>.slop` and are verified by
+  SHA-256.
+- A **document** is a copy at a user-selected path. Only the copy may create or
+  change `stores/`, refresh `QuickLook/Preview.png`, or gain Finder metadata.
 
-The bridge is deliberately ID-free:
+Convex stores catalog metadata, never a local document. A new release does not
+mutate existing documents.
+
+## Browser bridge
+
+The framework-neutral API is deliberately ID-free:
 
 ```ts
 slop.json.open(initial)
@@ -63,79 +68,45 @@ slop.db.execute(sql, parameters?)
 slop.db.transaction(statements)
 slop.db.onChange(callback)
 
+slop.media.open(name)
+slop.media.write(name, base64, mimeType)
+slop.media.remove(name)
+slop.media.onChange(callback)
+
 slop.window.resize({ width, height })
+slop.window.drag()
 ```
 
-JSON replacement is atomic and revision-aware. Each SQLite transaction stays
-on one host connection. There are no runtime store-size limits; publish and
-archive boundaries enforce artifact limits instead.
-
-Window resizing is host-owned. Standard documents may request a bounded size;
-the host returns the applied dimensions. Manifest dimensions are the initial
-size, while PNG-skinned documents remain fixed to their exact mask.
+`@hitslop/runtime` exposes this contract. Svelte and React packages adapt it
+to their reactive models; they do not define a second persistence system.
 
 ## Schema pipeline
 
-Zod in `packages/schema/src` is authoritative for TypeScript validation. The
-generation pipeline is:
+Zod under `packages/schema/src` is authoritative:
 
 ```text
 Zod → JSON Schema draft 2020-12 → Swift Codable models
-                         └──────→ bundled Swift runtime validation
+                         └──────→ bundled Swift validation resource
 ```
 
-`bun run schema:generate` writes the committed JSON Schema, generated Swift
-model, and bundled Swift schema resource. Generated Swift is never edited by
-hand.
+Run `bun run schema:generate` after schema changes. Generated output is
+committed and CI rejects drift.
 
-## Identity, publishing, and registry
+## Capture and export
 
-The CLI keeps a local Ed25519 publisher key. Its key ID owns slugs in the
-registry, so slug uniqueness is publisher-scoped rather than global. The
-display name is editable and the identity can be encrypted for export/import.
+The native renderer uses a separate hidden WebView. It marks the root with
+capture state, waits for `slop.ready()`, layout settlement, and a short font/
+paint buffer, then captures. Preview preserves manifest dimensions. PNG and PDF
+exports use current width and full document height; PNG is deterministic 2× and
+PDF retains WebKit text/vector output.
 
-Publishing builds, captures a full Quick Look preview, derives a maximum-512px
-Finder thumbnail unless the author supplies one, creates one deterministic ZIP,
-and signs an envelope containing its hash and size. The catalog gateway
-verifies the signature, ZIP structure, expansion limits, package boundary,
-manifest, skin, and two valid static images. It stores the immutable artifact in
-R2 and derives the browser preview and manifest from those signed bytes. macOS
-uses built-in package handling for Quick Look. After creating or opening a
-local document, the host derives Finder's custom icon from the immutable
-`Thumbnail.png`; Finder stores that as hidden `Icon\r` metadata inside the local
-package. This metadata is accepted for documents but rejected from templates
-and published artifacts. Convex assigns a monotonically increasing release
-number.
+Optional renderer-only `cover` and `icon` targets are 512×512. Finder prefers
+icon then cover; catalog imagery prefers cover then the full preview. See
+[Design and presentation](presentation.md).
 
-Convex stores publisher identities, templates, releases, idempotent publish
-requests, and one aggregate `creations` counter. It does not track downloads,
-installs, favorites, devices, or local documents. The counter increments only
-after a host successfully creates a document.
+## Platform topology
 
-## Local installation and hosted cache
-
-```text
-~/.hitslop/templates/
-├── <slug>.slop
-└── cache/<publisher-key>/<slug>/<release>.slop
-```
-
-Local installs are replaceable templates at the templates root. Hosted cache
-entries stay nested, immutable, and verified by SHA-256 before use. Catalog
-masters are not writable at rest; creating a document copies one and then
-makes the copy writable. There are no wrappers, install markers, sidecars, or
-`current` pointers. All creation paths duplicate the validated template to a
-user-selected destination; Convex never creates or stores it. Anything under
-`~/.hitslop/templates` is a catalog input, never a user document.
-
-On iOS, local documents live in the user's iCloud container. The runtime uses a
-working copy and explicitly flushes the two canonical stores back to iCloud,
-surfacing coordination failures to the UI.
-
-## Package layout
-
-- `apps/apple`: one Xcode project with thin iOS and macOS application targets.
-- `apps/apple/Packages/HitSlopApple`: Core, Runtime, Registry, AppKit Host,
-  Catalog, and native CLI targets shared through one SwiftPM dependency graph.
-- `apps/catalog`: public TanStack catalog and private R2 publish gateway.
-- `apps/registry`: Convex metadata and live catalog subscriptions.
+- [Apple apps](apps/apple.md) own documents and native presentation.
+- [Catalog gateway](apps/catalog.md) owns hostile artifact ingress and R2 egress.
+- [Registry](apps/registry.md) owns searchable metadata and release numbering.
+- [Packages](packages.md) provide authoring and browser APIs.

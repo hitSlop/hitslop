@@ -144,7 +144,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     private func setupToolbar() {
         let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 44), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true; panel.level = .floating; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
-        let tracking = HoverView(frame: panel.contentView!.bounds); panel.contentView = tracking
+        let tracking = HoverView(frame: panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 360, height: 44)); panel.contentView = tracking
         let host = NSHostingView(rootView: toolbarView()); host.frame = tracking.bounds; host.autoresizingMask = [.width, .height]; tracking.addSubview(host)
         tracking.changed = { [weak self] in if $0 { self?.hideWork?.cancel() } else { self?.scheduleHide() } }
         window?.addChildWindow(panel, ordered: .above); panel.orderOut(nil); toolbar = panel; toolbarHost = host
@@ -195,11 +195,15 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     private func reveal() { NSWorkspace.shared.activateFileViewerSelecting([packageURL]) }
     private func copyPath() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(packageURL.path, forType: .string) }
     private func installedEditors() -> [(String, URL)] {
+        // Resolve via Launch Services first so non-/Applications installs work.
         [
-            ("Open in Cursor", "/Applications/Cursor.app"),
-            ("Open in Visual Studio Code", "/Applications/Visual Studio Code.app"),
-            ("Open in VS Code Insiders", "/Applications/Visual Studio Code - Insiders.app"),
-        ].compactMap { FileManager.default.fileExists(atPath: $0.1) ? ($0.0, URL(fileURLWithPath: $0.1)) : nil }
+            ("Open in Cursor", "com.todesktop.230313mzl4w4u92", "/Applications/Cursor.app"),
+            ("Open in Visual Studio Code", "com.microsoft.VSCode", "/Applications/Visual Studio Code.app"),
+            ("Open in VS Code Insiders", "com.microsoft.VSCodeInsiders", "/Applications/Visual Studio Code - Insiders.app"),
+        ].compactMap { title, bundleID, fallbackPath in
+            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) { return (title, url) }
+            return FileManager.default.fileExists(atPath: fallbackPath) ? (title, URL(fileURLWithPath: fallbackPath)) : nil
+        }
     }
     private func openInEditor(_ app: URL) { NSWorkspace.shared.open([packageURL], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration()) }
 

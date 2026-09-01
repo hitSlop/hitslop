@@ -2,11 +2,20 @@
   "name": "@hitslop/runtime",
   "version": "0.1.0",
   "description": "Framework-neutral browser bridge for hitSlop documents.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/runtime" },
+  "homepage": "https://hitslop.app",
+  "bugs": { "url": "https://github.com/hitslop/hitslop/issues" },
+  "keywords": ["hitslop", "local-first", "webview", "mini-apps"],
+  "publishConfig": { "access": "public" },
   "type": "module",
   "files": ["dist"],
-  "exports": { ".": "./dist/index.js" },
+  "exports": {
+    ".": "./dist/index.js",
+    "./adapter": "./dist/adapter.js"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json",
     "test": "bun test"
   },

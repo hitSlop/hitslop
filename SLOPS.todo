@@ -16,14 +16,15 @@ template can gain skins later—such as `invoice x thermal receipt` or
 
 ## Canonical template folder
 
-`examples/slops/` will be the single source folder for every maintained,
-in-progress, and completed authored template. `archive/templates/` and
-`Prototypes/` are temporary sources of prior art, not parallel template homes.
+`examples/slops/` is the single source folder for every maintained,
+in-progress, and completed authored template. The exact inventory below is
+retained as prior art, not as parallel template homes. Unlisted local archive
+or prototype directories stay ignored.
 
 - [ ] Inventory each repository template and map it to one canonical slug in `examples/slops/`, consolidating overlapping versions instead of copying duplicates.
 - [ ] Migrate selected archived templates into current authored packages under `examples/slops/`; repair manifests, storage, accessibility, responsive behavior, export state, and visuals as part of each migration.
 - [ ] Move `Prototypes/ambient-mixer` to `examples/slops/ambient-sound-mixer` when its P0 build begins.
-- [ ] Retire repository-local archived and prototype source copies after their canonical replacement is verified. Keep the external Sandisk backups as read-only prior art rather than importing them wholesale.
+- [ ] Retire repository-local archived and prototype source copies after their canonical replacement is verified.
 
 ## Current examples
 
@@ -39,7 +40,7 @@ so it is intentionally excluded from the implemented count.
 ## P0 — Next foundation set
 
 - [x] **Resume** — Personal / Paper — Directly edit and reorder a polished one-page resume, including experience, education, skills, and contact details. **Visual:** flat warm ivory editorial sheet with a quiet rail, readable typography, fine rules, and one teal signal. **Prior art:** legacy Swift `Resume` template.
-- [ ] **Quick Checklist** — Productivity / Instrument — Add, reorder, complete, archive, and clear short tasks with fast keyboard entry. **Visual:** blush handheld utility with tactile checkboxes and a chunky completion control. **Prior art:** consolidate `archive/templates/field-notes`, `sqlite-field-notes`, and `notebook` rather than reviving overlapping note apps.
+- [ ] **Quick Checklist** — Productivity / Instrument — Add, reorder, complete, archive, and clear short tasks with fast keyboard entry. **Visual:** blush handheld utility with tactile checkboxes and a chunky completion control. **Prior art:** consolidate `archive/templates/field-notes`, `archive/templates/sqlite-field-notes`, and `archive/templates/notebook` rather than reviving overlapping note apps.
 - [ ] **Weekly Planner** — Planning / Paper — Arrange appointments and tasks across a week and mark items complete. **Visual:** ruled cream desk planner with restrained red and blue markings. **Reference:** `archive/templates/weekly-planner`.
 - [x] **Recipe Card** — Food / Paper + Instrument — Edit servings, ingredients, steps, a meal photo, and guided per-step timers. **Visual:** a flat dark countertop recipe with generous food imagery, warm serif type, and a focused orange cooking signal. **Reference:** `archive/templates/recipe-card`.
 - [ ] **Habit Tracker** — Health / Instrument — Track several habits, daily check-ins, streaks, and recent consistency. **Visual:** cheerful yellow Tamagotchi-style pocket board with circular check-ins. **Reference:** `archive/templates/habit-heatmap`.
@@ -108,14 +109,26 @@ so it is intentionally excluded from the implemented count.
 - [ ] **Pixel-Art Canvas** — Creative / Instrument — Draw on a small grid with a limited palette, undo, and clean export. **Visual:** colorful pocket-console cartridge.
 - [ ] **Poster Generator** — Creative / Paper — Edit a constrained message, hierarchy, palette, and composition, then export it. **Visual:** Swiss print-shop tool with bold type and disciplined geometry.
 
-## Prior-art locations
+## Prior-art inventory
 
-Use these as design and behavior references, not as runtime packages to copy:
+These are the only repository prior-art directories allowed through
+`.gitignore`. Use them as design and behavior references, not as runtime
+packages to copy:
 
-- `archive/templates/` — archived authored web templates that require migration and a fresh quality pass.
-- `Prototypes/ambient-mixer` — working direction for the planned Ambient Sound Mixer.
-- `/Volumes/Sandisk/_archive/_backup/hitSlop.swift/_backup-templates` — legacy template catalog and metadata.
-- `/Volumes/Sandisk/_archive/_backup/hitSlop.swift/Packages/SlopCore/Sources/SlopUI/SlopTemplates` — legacy SwiftUI implementations.
+- `archive/templates/countdown-milestones`
+- `archive/templates/expense-pulse`
+- `archive/templates/field-notes`
+- `archive/templates/habit-heatmap`
+- `archive/templates/invoice-minimal`
+- `archive/templates/meeting-notes`
+- `archive/templates/mood-log`
+- `archive/templates/notebook`
+- `archive/templates/recipe-card`
+- `archive/templates/sqlite-field-notes`
+- `archive/templates/subscription-tracker`
+- `archive/templates/trip-planner`
+- `archive/templates/weekly-planner`
+- `Prototypes/ambient-mixer`
 
 Every maintained template must live under `examples/slops/`, follow current
 manifests and storage conventions, support direct local editing, and use

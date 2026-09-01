@@ -1,6 +1,7 @@
 {
   "name": "hitslop",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.4.0",
   "workspaces": [
@@ -10,9 +11,10 @@
     "examples/slops"
   ],
   "scripts": {
-    "build": "bun run schema:generate && bun run --filter '@hitslop/*' build",
+    "build": "bun run schema:generate && bun run --cwd packages/schema build && bun run --cwd packages/runtime build && bun run --cwd packages/svelte build && bun run --cwd packages/react build && bun run --cwd packages/cli build && bun run --cwd apps/registry build && bun run --cwd apps/catalog build && bun run --cwd examples/slops build",
     "check": "bun run schema:check && bun run --filter '@hitslop/*' check",
-    "test": "bun run --filter '@hitslop/*' test",
+    "test": "bun run --cwd packages/schema test && bun run --cwd packages/runtime test && bun run --cwd packages/svelte test && bun run --cwd packages/react test && bun run --cwd packages/cli test && bun run --cwd apps/registry test && bun run --cwd apps/catalog test && bun run --cwd examples/slops test",
+    "release:check": "bun scripts/release-check.ts",
     "schema:generate": "bun run --cwd packages/schema generate",
     "schema:check": "bun run --cwd packages/schema check:generated",
     "slop": "bun packages/cli/src/cli.ts",

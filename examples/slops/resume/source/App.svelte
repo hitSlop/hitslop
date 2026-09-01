@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
   import Globe2 from "@lucide/svelte/icons/globe-2";
   import Mail from "@lucide/svelte/icons/mail";
@@ -31,7 +32,6 @@
     ],
     education: [{ id: "parsons", school: "Parsons School of Design", program: "BFA, Communication Design", year: "2018" }],
   });
-  const rendersDocumentAssets = document.documentElement.hasAttribute("data-slop-renderer");
 
   const fallbackInitials = $derived(resume.current.name.split(/\s+/).filter(Boolean).map((word) => word[0]).join("").slice(0, 2).toUpperCase() || "AQ");
   const badgeInitials = $derived((resume.current.initials?.trim() || fallbackInitials).slice(0, 2).toUpperCase());
@@ -114,7 +114,7 @@
   </article>
 </main>
 
-{#if rendersDocumentAssets}
+{#if capture.isRenderer()}
   <Cover resume={resume.current} initials={badgeInitials} />
   <Icon initials={badgeInitials} />
 {/if}

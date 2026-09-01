@@ -2,6 +2,25 @@
   "name": "@hitslop/schema",
   "version": "0.1.0",
   "description": "Canonical hitSlop schemas and publish protocol.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hitslop/hitslop.git",
+    "directory": "packages/schema"
+  },
+  "homepage": "https://hitslop.app",
+  "bugs": {
+    "url": "https://github.com/hitslop/hitslop/issues"
+  },
+  "keywords": [
+    "hitslop",
+    "schema",
+    "zod",
+    "json-schema"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "files": [
     "dist",
@@ -14,7 +33,7 @@
   "scripts": {
     "generate": "bun src/generate.ts",
     "check:generated": "bun src/check-generated.ts",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json",
     "test": "bun test"
   },

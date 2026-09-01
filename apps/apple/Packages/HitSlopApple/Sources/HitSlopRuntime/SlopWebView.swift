@@ -45,7 +45,7 @@ private let runtimeScript = #"""
   new MutationObserver(() => { mutationVersion += 1; scheduleReady(); })
     .observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
   const listeners = { json: [], sqlite: [], media: [] };
-  window.__hitslopEmit = event => listeners[event.kind].forEach(callback => callback(event));
+  window.__hitslopEmit = event => listeners[event.kind]?.forEach(callback => callback(event));
   const watch = (kind, callback) => { listeners[kind].push(callback); return () => { listeners[kind] = listeners[kind].filter(value => value !== callback); }; };
   window.addEventListener('error', event => call('log', { message: `JavaScript error: ${event.message}` }));
   window.addEventListener('unhandledrejection', event => call('log', { message: `Unhandled rejection: ${String(event.reason)}` }));
@@ -307,9 +307,11 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         let nextMedia = bridge.mediaRevision(); if nextMedia != mediaRevision { mediaRevision = nextMedia; emit(kind: .media, revision: nextMedia, source: "external") }
     }
     private func emit(kind: SlopStoreKind, revision: String?, source: String) {
-        sequence += 1; let event: [String: Any] = ["kind":kind.rawValue, "source":source, "sequence":sequence, "revision":revision ?? NSNull()]
-        guard let data = try? JSONSerialization.data(withJSONObject: event), let json = String(data: data, encoding: .utf8) else { return }
-        webView.evaluateJavaScript("window.__hitslopEmit?.(\(json))")
+        sequence += 1
+        let event: [String: Any] = ["kind": kind.rawValue, "source": source, "sequence": sequence, "revision": revision ?? NSNull()]
+        // callAsyncJavaScript serializes arguments on the WebKit side, so the
+        // event payload never round-trips through string interpolation.
+        webView.callAsyncJavaScript("window.__hitslopEmit?.(event)", arguments: ["event": event], in: nil, in: .page) { _ in }
     }
     public func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
         let scheme = action.request.url?.scheme?.lowercased()

@@ -5,6 +5,10 @@ import ZIPFoundation
 
 public final class SlopMediaStore: @unchecked Sendable {
     public let directoryURL: URL
+    /// Stat-first cache for the change poller: re-read and re-hash entry contents
+    /// only when the listing fingerprint (names, sizes, modification dates) changes.
+    private let cacheLock = NSLock()
+    private var revisionCache: (fingerprint: String, revision: String?)?
 
     public init(directoryURL: URL) { self.directoryURL = directoryURL }
 
@@ -43,18 +47,37 @@ public final class SlopMediaStore: @unchecked Sendable {
     }
 
     public func directoryRevision() throws -> String? {
-        guard FileManager.default.fileExists(atPath: directoryURL.path) else { return nil }
-        let urls = try FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]).sorted { $0.lastPathComponent < $1.lastPathComponent }
-        guard !urls.isEmpty else { return nil }
+        guard FileManager.default.fileExists(atPath: directoryURL.path) else { cacheRevision(nil); return nil }
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey]
+        let urls = try FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: Array(keys)).sorted { $0.lastPathComponent < $1.lastPathComponent }
+        guard !urls.isEmpty else { cacheRevision(nil); return nil }
+        var fingerprint = ""
+        for url in urls {
+            let values = try url.resourceValues(forKeys: keys)
+            guard values.isRegularFile == true, values.isSymbolicLink != true, Self.isValidName(url.lastPathComponent) else { throw SlopPackageError.invalid("invalid media store entry") }
+            fingerprint += "\(url.lastPathComponent)|\(values.fileSize ?? -1)|\(values.contentModificationDate?.timeIntervalSinceReferenceDate ?? 0)\n"
+        }
+        cacheLock.lock()
+        if let cached = revisionCache, cached.fingerprint == fingerprint {
+            defer { cacheLock.unlock() }
+            return cached.revision
+        }
+        cacheLock.unlock()
         var hasher = SHA256()
         for url in urls {
-            let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-            guard values.isRegularFile == true, values.isSymbolicLink != true, Self.isValidName(url.lastPathComponent) else { throw SlopPackageError.invalid("invalid media store entry") }
             let data = try Data(contentsOf: url)
             _ = try Self.mediaMIMEType(data)
             hasher.update(data: Data(url.lastPathComponent.utf8)); hasher.update(data: data)
         }
-        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        let revision = hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        cacheRevision((fingerprint, revision))
+        return revision
+    }
+
+    private func cacheRevision(_ entry: (fingerprint: String, revision: String?)?) {
+        cacheLock.lock()
+        revisionCache = entry
+        cacheLock.unlock()
     }
 
     public static func imageMIMEType(_ data: Data) throws -> String {

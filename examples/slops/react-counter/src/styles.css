@@ -1,0 +1,55 @@
+:root {
+  --slop-surface: #f4f2f9;
+  --slop-panel: #e2e2ee;
+  --slop-ink: #1c1a2e;
+  --slop-muted: #6a6880;
+  --slop-accent: #4a63d0;
+  --slop-rule: color-mix(in srgb, var(--slop-ink) 15%, transparent);
+  color-scheme: light;
+  font-family: "Avenir Next", Avenir, sans-serif;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+html, body, #app { width: 100%; min-height: 100%; margin: 0; }
+body { color: var(--slop-ink); background: var(--slop-surface); }
+button { font: inherit; }
+
+main { min-height: 100vh; container-type: inline-size; background: var(--slop-surface); }
+.counter { display: grid; align-content: center; min-height: 100vh; padding: 34px 38px; }
+.counter header { display: grid; gap: 4px; }
+.counter header > :first-child { margin: 0; color: var(--slop-accent); font-size: 10px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
+h1 { margin: 0; font-size: 25px; font-weight: 670; letter-spacing: -.035em; }
+.readout { margin: 25px 0 14px; border: 1px solid var(--slop-rule); border-radius: 12px; padding: 25px 24px 21px; background: var(--slop-panel); }
+output { display: block; font-size: clamp(70px, 20cqw, 94px); font-weight: 650; line-height: .84; letter-spacing: -.075em; font-variant-numeric: tabular-nums; }
+.readout span { display: block; margin-top: 13px; color: var(--slop-muted); font-size: 12px; }
+.controls { display: grid; grid-template-columns: 1fr 1.25fr; gap: 9px; }
+.controls button { min-height: 48px; border: 1px solid var(--slop-rule); border-radius: 10px; color: var(--slop-ink); background: #e9e7f2; cursor: pointer; font-size: 23px; }
+.controls .primary { border-color: transparent; color: var(--slop-surface); background: var(--slop-accent); }
+.controls .reset { grid-column: 1 / -1; min-height: 30px; border: 0; color: var(--slop-muted); background: transparent; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.error { margin: 10px 0 0; color: #9a2e27; font-size: 11px; }
+button:focus-visible { outline: 3px solid color-mix(in srgb, var(--slop-accent) 34%, transparent); outline-offset: 2px; }
+html[data-slop-capture="static"] [data-slop-export="hide"] { display: none !important; }
+
+/* Cover/icon render targets, revealed only in the hidden renderer pass. */
+.counter-render { display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] .counter,
+html[data-slop-renderer="true"][data-slop-capture="icon"] .counter { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] [data-slop-render="cover"],
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
+
+.cover-card { display: grid; align-content: center; justify-items: start; width: 480px; height: 480px; padding: 46px 50px; border: 5px solid var(--slop-ink); border-radius: 28px; background: var(--slop-surface); }
+.cover-eyebrow { margin: 0; color: var(--slop-accent); font-size: 19px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
+.cover-count { display: block; margin-top: 14px; font-size: 200px; font-weight: 650; line-height: .88; letter-spacing: -.07em; font-variant-numeric: tabular-nums; }
+.cover-caption { margin: 22px 0 0; color: var(--slop-muted); font-size: 25px; }
+
+.icon-tile { display: grid; place-items: center; width: 464px; height: 464px; border: 18px solid var(--slop-ink); border-radius: 48px; background: var(--slop-accent); }
+.icon-tile span { margin-top: -18px; color: var(--slop-surface); font-size: 280px; font-weight: 600; line-height: 1; }
+
+@container (max-width: 360px) {
+  .counter { padding: 25px 23px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}

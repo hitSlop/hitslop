@@ -1,4 +1,5 @@
 <script lang="ts">
+  // import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
 
   const title = __SLOP_TITLE_LITERAL__;
@@ -20,3 +21,22 @@
     {#if state.error}<p class="error" data-slop-export="hide">Your latest change couldn’t be saved.</p>{/if}
   </section>
 </main>
+
+<!--
+  Optional cover/icon artwork. The host renders document assets (Finder icon,
+  catalog card) in a hidden pass with html[data-slop-renderer="true"] set, so
+  targets mounted behind capture.isRenderer() never exist in the interactive
+  app. Each target must be exactly one square element, fully inside the
+  viewport, made visible by CSS alone when html[data-slop-capture] flips (see
+  the commented rules in styles.css), and ready before slop.ready() resolves.
+  Uncomment the capture import above, then:
+
+{#if capture.isRenderer()}
+  <section class="render-target" data-slop-render="cover" aria-hidden="true">
+    <h1>{title}</h1>
+  </section>
+  <section class="render-target" data-slop-render="icon" aria-hidden="true">
+    <span>#</span>
+  </section>
+{/if}
+-->

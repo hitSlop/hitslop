@@ -44,15 +44,22 @@ describe("immutable artifacts", () => {
 });
 
 describe("authoring scaffold", () => {
-  test("includes the design skill, Bits UI, and export-aware starter", async () => {
+  test("includes portable skills, complete scripts, Bits UI, and export-aware starter", async () => {
     const root = await mkdtemp(join(tmpdir(), "hitslop-scaffold-")); roots.push(root);
     await scaffold(root, { title: "Tiny Tally", description: "Counts a tiny thing.", categories: ["utilities"] });
-    const packageJSON = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string> };
+    const packageJSON = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string>; scripts: Record<string, string> };
     expect(packageJSON.dependencies["bits-ui"]).toBe("^2.19.0");
+    expect(packageJSON.scripts).toMatchObject({ validate: "slop validate", install: "slop install" });
+    const authoringSkill = await readFile(join(root, ".agents/skills/hitslop-authoring/SKILL.md"), "utf8");
+    expect(authoringSkill).toContain("Storage is implicit and ID-free");
+    expect(await readFile(join(root, ".agents/skills/hitslop-authoring/references/storage-and-packages.md"), "utf8")).toContain("SQLite");
     const designSkill = await readFile(join(root, ".agents/skills/hitslop-design/SKILL.md"), "utf8");
     expect(designSkill).toContain("data-slop-export");
-    expect(designSkill).toContain("host window as the default outer boundary");
-    expect(await readFile(join(root, "AGENTS.md"), "utf8")).toContain("hitslop-design");
+    expect(designSkill).toContain("host window be the outer object boundary");
+    expect(await readFile(join(root, ".agents/skills/hitslop-design/references/presentation-and-export.md"), "utf8")).toContain("Transparent backgrounds");
+    const agents = await readFile(join(root, "AGENTS.md"), "utf8");
+    expect(agents).toContain("hitslop-authoring");
+    expect(agents).toContain("hitslop-design");
     expect(await readFile(join(root, "src/App.svelte"), "utf8")).toContain('const title = "Tiny Tally"');
     const styles = await readFile(join(root, "src/styles.css"), "utf8");
     expect(styles).toContain("--slop-surface");

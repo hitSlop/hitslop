@@ -1,15 +1,16 @@
 {
   "name": "@hitslop/catalog",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && bun scripts/clean-build-secrets.ts",
+    "build": "bun scripts/build.ts",
     "check": "tsc -p tsconfig.json",
     "test": "bun test tests",
     "preview": "vite preview",
-    "build:production": "CLOUDFLARE_ENV=production VITE_CONVEX_URL=https://fastidious-malamute-777.convex.cloud vite build && bun scripts/clean-build-secrets.ts",
+    "build:production": "CLOUDFLARE_ENV=production VITE_CONVEX_URL=https://fastidious-malamute-777.convex.cloud bun scripts/build.ts",
     "deploy": "bun run build:production && wrangler deploy",
     "cf-typegen": "wrangler types"
   },

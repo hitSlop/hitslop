@@ -29,11 +29,12 @@ test("mock host preserves the document shell and hides scrollbar chrome", () => 
 
   const fragment = '<div id="app"></div><script type="module" src="/source/main.ts"></script>';
   const fragmentResult = (transform.handler as (value: string) => string)(fragment);
-  expect(fragmentResult).toContain("window.slop=");
-  expect(fragmentResult).toContain("window:{resize,drag}");
-  expect(fragmentResult).toContain("action:'drag'");
+  expect(fragmentResult).toContain("window.slop = {");
+  expect(fragmentResult).toContain("window: { resize, drag }");
+  expect(fragmentResult).toContain("action: 'drag'");
   expect(fragmentResult).toContain("hitslopDevWindow");
-  expect(fragmentResult.indexOf("window.slop=")).toBeLessThan(fragmentResult.indexOf('type="module"'));
+  expect(fragmentResult).toContain("new Event('slop:ready')");
+  expect(fragmentResult.indexOf("window.slop = {")).toBeLessThan(fragmentResult.indexOf('type="module"'));
 });
 
 test("mounted mock bridge opens and persists canonical stores and named media", async () => {

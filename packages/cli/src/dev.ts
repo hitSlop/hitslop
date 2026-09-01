@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import type { Plugin } from "vite";
 import { createServer } from "vite";
+import { injectHost } from "./dev-bridge.ts";
 import { loadManifest } from "./project.ts";
 
 const readNodeBody = async (request: AsyncIterable<Uint8Array>): Promise<Record<string, unknown>> => {
@@ -57,16 +58,8 @@ const zipIsValid = (bytes: Uint8Array): boolean => {
 };
 const mediaMime = (bytes: Uint8Array): string | null => imageMime(bytes) ?? (zipIsValid(bytes) ? "application/zip" : null);
 
-const hostStyle = `<style data-hitslop-host>*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}</style>`;
-const bridge = `<script>\n(() => {\n const listeners={json:new Set(),sqlite:new Set(),media:new Set()};\n const call=async(path,body={})=>{const r=await fetch('/__hitslop/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const value=await r.json();if(!r.ok)throw new Error(value.error||r.statusText);return value};\n const resize=async size=>{const native=window.webkit?.messageHandlers?.hitslopDevWindow;if(native)return native.postMessage({action:'resize',...size});return size};\n const drag=async()=>{const native=window.webkit?.messageHandlers?.hitslopDevWindow;if(native)return native.postMessage({action:'drag'});return undefined};\n const emit=(kind,event)=>listeners[kind].forEach(cb=>cb({kind,...event}));\n const watch=(kind,cb)=>{listeners[kind].add(cb);let rev;const timer=setInterval(async()=>{try{const value=await call(kind+'/revision');if(rev!==undefined&&rev!==value.revision)emit(kind,{source:'external',revision:value.revision});rev=value.revision}catch{}},750);return()=>{listeners[kind].delete(cb);clearInterval(timer)}};\n window.slop={json:{open:value=>call('json/open',{value}),read:()=>call('json/read'),write:(value,expectedRevision)=>call('json/write',{value,expectedRevision}).then(result=>(emit('json',{source:'app',revision:result.revision}),result)),onChange:cb=>watch('json',cb)},db:{query:(sql,parameters=[])=>call('sqlite/query',{sql,parameters}),execute:(sql,parameters=[])=>call('sqlite/execute',{sql,parameters}).then(result=>(emit('sqlite',{source:'app'}),result)),transaction:statements=>call('sqlite/transaction',{statements}).then(result=>(emit('sqlite',{source:'app'}),result)),onChange:cb=>watch('sqlite',cb)},media:{open:name=>call('media/open',{name}),write:(name,data,mimeType)=>call('media/write',{name,data,mimeType}).then(result=>(emit('media',{source:'app',revision:result.revision}),result)),remove:name=>call('media/remove',{name}).then(result=>(emit('media',{source:'app',revision:null}),result)),onChange:cb=>watch('media',cb)},window:{resize,drag},ready:()=>{document.documentElement.dataset.hitslopReady='true'}};\n})();\n</script>`;
-
-const injectHost = (html: string): string => {
-  const payload = hostStyle + bridge;
-  return /<head(?:\s[^>]*)?>/i.test(html)
-    ? html.replace(/<head(?:\s[^>]*)?>/i, (tag) => tag + payload)
-    : payload + html;
-};
-
+// Dev-only speed bump. The real guest SQL enforcement is the sqlite3
+// authorizer + read-only checks in the native host (SlopStorage.swift).
 const forbiddenSQL = /\b(attach|detach|load_extension)\b/i;
 
 export function mockHostPlugin(dataRoot: string): Plugin {
@@ -98,10 +91,20 @@ export function mockHostPlugin(dataRoot: string): Plugin {
     }
     return readJSON();
   };
+  // Stat first, hash only when mtime/size changed: revision endpoints are
+  // polled continuously and the SQLite db + WAL can be large.
+  const revisionCache = new Map<string, { statKey: string; revision: string | null }>();
   const fileRevision = async (paths: string[]): Promise<string | null> => {
+    const stats = await Promise.all(paths.map(async (path) => { try { return await stat(path); } catch { return null; } }));
+    const statKey = stats.map((entry) => entry ? `${entry.mtimeMs}:${entry.size}` : "missing").join("|");
+    const cacheKey = paths.join("|");
+    const cached = revisionCache.get(cacheKey);
+    if (cached && cached.statKey === statKey) return cached.revision;
     const hash = createHash("sha256"); let found = false;
     for (const path of paths) if (await exists(path)) { found = true; hash.update(new Uint8Array(await Bun.file(path).arrayBuffer())); }
-    return found ? hash.digest("hex") : null;
+    const value = found ? hash.digest("hex") : null;
+    revisionCache.set(cacheKey, { statKey, revision: value });
+    return value;
   };
   const mediaRevision = async (): Promise<string | null> => {
     const glob = new Bun.Glob("*");

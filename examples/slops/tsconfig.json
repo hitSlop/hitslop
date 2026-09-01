@@ -13,11 +13,14 @@
     "target": "ES2022",
     "types": ["vite/client"],
     "verbatimModuleSyntax": true,
+    "jsx": "react-jsx",
     "paths": {
+      "@hitslop/react": ["../../packages/react/src/index.ts"],
       "@hitslop/runtime": ["../../packages/runtime/src/index.ts"],
+      "@hitslop/runtime/adapter": ["../../packages/runtime/src/adapter.ts"],
       "@hitslop/svelte": ["../../packages/svelte/src/index.ts"]
     }
   },
-  "include": ["**/*.svelte", "**/*.ts", "**/*.js"],
+  "include": ["**/*.svelte", "**/*.ts", "**/*.tsx", "**/*.js"],
   "exclude": ["**/*.test.ts"]
 }

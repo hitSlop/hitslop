@@ -14,8 +14,14 @@ public enum SlopDuplicator {
                 try SlopSQLiteSnapshot.copy(from: source.sqliteStoreURL, to: snapshot)
                 if fileManager.fileExists(atPath: target.path) { try fileManager.removeItem(at: target) }
                 try fileManager.moveItem(at: snapshot, to: target)
-                try? fileManager.removeItem(atPath: target.path + "-wal")
-                try? fileManager.removeItem(atPath: target.path + "-shm")
+                // A stale WAL beside a freshly copied database is a corruption
+                // vector: SQLite would replay foreign frames into the snapshot.
+                for suffix in ["-wal", "-shm"] {
+                    let sidecar = target.path + suffix
+                    guard fileManager.fileExists(atPath: sidecar) else { continue }
+                    do { try fileManager.removeItem(atPath: sidecar) }
+                    catch { print("[hitSlop duplicate] Could not remove \(sidecar): \(error.localizedDescription)") }
+                }
             }
             try makeWritable(destination)
             _ = try SlopPackage(rootURL: destination)

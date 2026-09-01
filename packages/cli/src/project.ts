@@ -54,7 +54,13 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
   const templateRoot = fileURLToPath(new URL("../templates/svelte", import.meta.url));
   await cp(templateRoot, destination, { recursive: true });
   await writeFile(join(destination, "package.json"), JSON.stringify({
-    name: slug, private: true, type: "module", scripts: { dev: "slop dev", build: "slop build", publish: "slop publish" },
+    name: slug, private: true, type: "module", scripts: {
+      dev: "slop dev",
+      validate: "slop validate",
+      build: "slop build",
+      install: "slop install",
+      publish: "slop publish",
+    },
     dependencies: { "@hitslop/runtime": `^${cliPackage.version}`, "@hitslop/svelte": `^${cliPackage.version}`, "bits-ui": "^2.19.0", "svelte": "^5.0.0" },
     devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.0.0", "vite": "^8.0.0" },
   }, null, 2) + "\n");

@@ -1,9 +1,24 @@
 # hitSlop catalog
 
-The public landing page and template catalog will be a TanStack Start app
-deployed to Cloudflare Workers. The first interface centers on “What are you
-working on?”, with recent, popular, installed, favorite, and category views.
+The public TanStack Start catalog and Cloudflare artifact gateway.
 
-The application shell will be generated after the Convex deployment exists so
-its server and client environment bindings are created once, against the real
-Longtail Labs project.
+The browser reads searchable template metadata from Convex. Server routes
+validate signed publish ZIPs, store immutable content-addressed artifacts and
+previews in R2, finalize releases through a private Convex HTTP endpoint, and
+stream allowed downloads.
+
+Public browser configuration starts from `.env.example`; server-only local
+configuration starts from `.dev.vars.example`. Never commit either populated
+file. The build wrapper removes copied dev vars on success or failure and scans
+output for configured secret values.
+
+```sh
+bun run dev
+bun run check
+bun run test
+bun run build
+bun run deploy
+```
+
+See [Catalog and artifact gateway](../../docs/apps/catalog.md) and
+[Self-hosting](../../docs/self-hosting.md).

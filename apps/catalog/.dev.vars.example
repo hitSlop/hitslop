@@ -1,3 +1,4 @@
+# Copy to .dev.vars for local development. This file is only placeholders.
 CONVEX_URL=https://your-deployment.convex.cloud
 CONVEX_SITE_URL=https://your-deployment.convex.site
-HITSLOP_INTERNAL_SECRET=replace-with-the-same-local-convex-secret
+HITSLOP_INTERNAL_SECRET=generate-a-long-random-value-and-set-the-same-value-in-convex
