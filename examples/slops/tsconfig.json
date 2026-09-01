@@ -18,5 +18,6 @@
       "@hitslop/svelte": ["../../packages/svelte/src/index.ts"]
     }
   },
-  "include": ["**/*.svelte", "**/*.ts", "**/*.js"]
+  "include": ["**/*.svelte", "**/*.ts", "**/*.js"],
+  "exclude": ["**/*.test.ts"]
 }

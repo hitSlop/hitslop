@@ -54,6 +54,7 @@
         "@hitslop/svelte": "workspace:*",
         "@lucide/svelte": "^1.37.0",
         "bits-ui": "^2.19.0",
+        "fflate": "^0.8.3",
         "svelte": "^5.57.0",
         "webamp": "2.3.1",
       },

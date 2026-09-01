@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import HitSlopCore
 import ImageIO
+import QuartzCore
 import Testing
 @testable import HitSlopHost
 
@@ -22,6 +23,20 @@ import Testing
     let alphaAtBottom = rendered[(10 * 240 + 120) * 4 + 3]
     #expect(alphaAtTop > 25)
     #expect(alphaAtBottom <= 25)
+}
+
+@Test @MainActor func transparentGeometryInstallsAClearBacking() throws {
+    let parent = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-transparent-\(UUID().uuidString)", isDirectory: true)
+    let root = parent.appendingPathComponent("transparent.slop", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: parent) }
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
+    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"transparent","title":"Transparent","description":"Tests transparent geometry.","categories":["utilities"],"presentation":{"width":240,"height":180,"background":"transparent"}}"#
+    try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
+    let mask = try SlopWindowMask(package: SlopPackage(rootURL: root))
+    let layer = CALayer()
+    mask.installBacking(on: layer)
+    #expect(layer.backgroundColor?.alpha == 0)
 }
 
 private func maskedFixture() throws -> URL {

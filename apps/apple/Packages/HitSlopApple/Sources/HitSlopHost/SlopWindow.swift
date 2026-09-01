@@ -112,7 +112,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         let spec = session.package.manifest.presentation, size = NSSize(width: spec.width, height: spec.height)
         let window = FramelessDocumentWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .resizable], backing: .buffered, defer: false)
         window.title = session.package.manifest.title; window.minSize = NSSize(width: 240, height: 180); window.isOpaque = false
-        window.backgroundColor = .clear; window.hasShadow = true; window.isReleasedWhenClosed = false; window.tabbingMode = .disallowed
+        window.backgroundColor = .clear; window.hasShadow = !session.package.usesTransparentBackground || session.package.isSkinned; window.isReleasedWhenClosed = false; window.tabbingMode = .disallowed
         if !session.package.isResizable { window.styleMask.remove(.resizable) }
         if session.package.shape == .ellipse, spec.width == spec.height { window.contentAspectRatio = NSSize(width: 1, height: 1) }
         let container = ShapedView(frame: NSRect(origin: .zero, size: size), windowMask: windowMask)
@@ -134,6 +134,10 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         window.setFrame(frame, display: true, animate: true)
         if toolbar?.isVisible == true { showToolbar() }
         return frame.size
+    }
+    public func runtimeSessionDidRequestWindowDrag(_ session: SlopRuntimeSession) throws {
+        guard let window else { throw SlopPackageError.invalid("document window is unavailable") }
+        try session.performWindowDrag(on: window)
     }
     public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) { showFailure(error) }
 

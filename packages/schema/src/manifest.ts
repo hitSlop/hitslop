@@ -39,6 +39,7 @@ export const SlopStandardPresentationSchema = z.object({
   ...dimensions,
   resizable: z.boolean().optional(),
   shape: z.enum(["rounded", "ellipse", "capsule"]).optional(),
+  background: z.literal("transparent").optional(),
 }).strict().meta({ id: "SlopStandardPresentation", title: "SlopStandardPresentation" });
 
 export const SlopSkinPresentationSchema = z.object({

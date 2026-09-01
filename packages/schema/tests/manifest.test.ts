@@ -23,9 +23,11 @@ describe("SlopManifest", () => {
     expect("resizable" in presentation ? presentation.resizable : undefined).toBeUndefined();
   });
   test("accepts built-in presentation shapes", () => expect(parseManifest({ ...valid, presentation: { width: 480, height: 360, shape: "ellipse", resizable: false } }).presentation).toMatchObject({ shape: "ellipse" }));
+  test("accepts a transparent standard presentation", () => expect(parseManifest({ ...valid, presentation: { width: 480, height: 360, background: "transparent", resizable: false } }).presentation).toMatchObject({ background: "transparent" }));
   test("accepts a fixed PNG skin", () => expect(parseManifest({ ...valid, presentation: { width: 480, height: 360, skin: "assets/skin.png" } }).presentation).toMatchObject({ skin: "assets/skin.png" }));
   test("skins reject resizing, traversal, and non-PNG files", () => {
     expect(() => parseManifest({ ...valid, presentation: { width: 480, height: 360, skin: "assets/skin.png", resizable: false } })).toThrow();
+    expect(() => parseManifest({ ...valid, presentation: { width: 480, height: 360, skin: "assets/skin.png", background: "transparent" } })).toThrow();
     expect(() => parseManifest({ ...valid, presentation: { width: 480, height: 360, skin: "../skin.png" } })).toThrow();
     expect(() => parseManifest({ ...valid, presentation: { width: 480, height: 360, skin: "assets/skin.jpg" } })).toThrow();
   });

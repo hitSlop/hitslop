@@ -4,12 +4,50 @@ import HitSlopCore
 import HitSlopRuntime
 import WebKit
 
+@MainActor private final class SlopDevelopmentWebView: WKWebView {
+    private var windowDragEvent: NSEvent?
+    nonisolated(unsafe) private var windowDragMonitor: Any?
+
+    override init(frame: CGRect, configuration: WKWebViewConfiguration) {
+        super.init(frame: frame, configuration: configuration)
+        windowDragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self, event.window === self.window,
+                  self.bounds.contains(self.convert(event.locationInWindow, from: nil)) else { return event }
+            self.windowDragEvent = event
+            return event
+        }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("SlopDevelopmentWebView must be created programmatically") }
+
+    deinit {
+        if let windowDragMonitor { NSEvent.removeMonitor(windowDragMonitor) }
+    }
+
+    func consumeWindowDragEvent(for window: NSWindow) -> NSEvent? {
+        defer { windowDragEvent = nil }
+        guard let event = windowDragEvent, event.type == .leftMouseDown, event.buttonNumber == 0,
+              event.window === window, ProcessInfo.processInfo.systemUptime - event.timestamp < 1 else { return nil }
+        return event
+    }
+}
+
 @MainActor private final class SlopDevelopmentWindowBridge: NSObject, WKScriptMessageHandlerWithReply {
     weak var window: NSWindow?
+    weak var webView: SlopDevelopmentWebView?
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
-        guard let body = message.body as? [String: Any],
-              let width = body["width"] as? NSNumber,
+        guard let body = message.body as? [String: Any] else {
+            replyHandler(nil, "Window request must be an object"); return
+        }
+        if body["action"] as? String == "drag" {
+            guard let window, let event = webView?.consumeWindowDragEvent(for: window) else {
+                replyHandler(nil, "Window dragging requires a current left mouse-down gesture"); return
+            }
+            window.performDrag(with: event); replyHandler(["dragging": true], nil); return
+        }
+        guard let width = body["width"] as? NSNumber,
               let height = body["height"] as? NSNumber else {
             replyHandler(nil, "Window resize needs numeric width and height"); return
         }
@@ -102,7 +140,7 @@ struct SlopDocumentAssets: Sendable {
                 throw error
             }
             guard let rect else { return nil }
-            let drawsBackground = session.webView.value(forKey: "drawsBackground") as? Bool ?? !session.package.isSkinned
+            let drawsBackground = session.webView.value(forKey: "drawsBackground") as? Bool ?? !session.package.usesTransparentBackground
             session.webView.setValue(false, forKey: "drawsBackground")
             defer { session.webView.setValue(drawsBackground, forKey: "drawsBackground") }
             do {
@@ -348,9 +386,9 @@ struct SlopDocumentAssets: Sendable {
         let configuration = WKWebViewConfiguration()
         let bridge = SlopDevelopmentWindowBridge()
         configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "hitslopDevWindow")
-        let view = WKWebView(frame: .init(origin: .zero, size: size), configuration: configuration)
+        let view = SlopDevelopmentWebView(frame: .init(origin: .zero, size: size), configuration: configuration)
         let window = NSWindow(contentRect: view.frame, styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        bridge.window = window
+        bridge.window = window; bridge.webView = view
         window.title = "hitSlop Dev"
         window.contentView = view
         view.load(URLRequest(url: url))

@@ -1,0 +1,51 @@
+:root { color: #fff7eb; background: transparent; font-family: ui-rounded, "SF Pro Rounded", system-ui, sans-serif; font-synthesis: none; }
+* { box-sizing: border-box; }
+html, body, #app { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+button { font: inherit; }
+
+.pet-shell { position: relative; width: 240px; height: 180px; overflow: hidden; background: transparent; }
+.pet {
+  position: absolute; top: 5px; left: 72px; width: 96px; height: 104px;
+  border: 0; padding: 0; background: transparent;
+  cursor: grab; touch-action: none; image-rendering: pixelated; user-select: none;
+  filter: drop-shadow(0 9px 7px rgba(41, 25, 18, .24)); transition: filter 140ms ease, transform 140ms ease;
+}
+.pet canvas { display: block; width: 96px; height: 104px; pointer-events: none; }
+.pet:hover { filter: drop-shadow(0 11px 8px rgba(41, 25, 18, .3)); transform: translateY(-2px); }
+.pet:active { cursor: grabbing; transform: translateY(1px) scale(.985); }
+.pet.still { transition: none; }
+
+.pet-rail {
+  position: absolute; right: 8px; bottom: 25px; left: 8px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) max-content max-content;
+  align-items: center; gap: 6px; min-height: 34px; padding: 5px 6px 5px 10px; border: 1px solid rgba(255,255,255,.16); border-radius: 18px;
+  color: #f9eee2; background: rgba(35, 27, 24, .78); box-shadow: 0 7px 20px rgba(35, 22, 16, .2); backdrop-filter: blur(14px);
+  opacity: 0; transform: translateY(5px); transition: opacity 140ms ease, transform 140ms ease; pointer-events: none;
+}
+.pet-shell:hover .pet-rail, .pet-rail:focus-within { opacity: 1; transform: none; pointer-events: auto; }
+.pet-rail span, .pet-rail small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pet-rail span { font-size: 10px; font-weight: 780; }
+.pet-rail small { color: #cfbcae; font-size: 8px; }
+.pet-rail button { min-width: 30px; height: 23px; border: 0; border-radius: 12px; padding: 0 7px; color: #3b2821; background: #ffd281; cursor: pointer; font-size: 7px; font-weight: 850; letter-spacing: .04em; }
+.pet-rail button:last-child { color: #f6e8db; background: #685047; }
+.pet-rail button:hover, .pet-rail button:focus-visible { outline: 2px solid rgba(255, 229, 187, .8); outline-offset: 1px; }
+.pet-rail button:disabled { opacity: .55; cursor: wait; }
+.pet-market {
+  position: absolute; bottom: 4px; left: 50%; width: max-content; border: 1px solid rgba(76, 51, 41, .1); border-radius: 999px;
+  padding: 2px 7px; color: #5a3e34; background: rgba(255, 247, 235, .8); box-shadow: 0 2px 8px rgba(47, 29, 22, .1);
+  backdrop-filter: blur(8px); font-size: 10px; font-weight: 720; letter-spacing: .015em; text-align: center; text-decoration: none;
+  transform: translateX(-50%); transition: color 120ms ease, transform 120ms ease, background 120ms ease;
+}
+.pet-market:hover, .pet-market:focus-visible { color: #3f2922; background: rgba(255, 247, 235, .96); outline: none; transform: translate(-50%, -1px); text-decoration: underline; text-underline-offset: 2px; }
+.file-input { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.drop-target { position: absolute; inset: 6px; display: grid; place-items: center; border: 2px dashed rgba(255, 210, 129, .9); border-radius: 24px; color: #ffe2aa; background: rgba(38, 27, 23, .78); backdrop-filter: blur(8px); font-size: 12px; font-weight: 900; letter-spacing: .14em; }
+.error { position: absolute; right: 14px; bottom: 64px; left: 14px; max-height: 58px; overflow: hidden; border: 1px solid rgba(255, 183, 164, .4); border-radius: 10px; padding: 7px 9px; color: #ffe9e2; background: rgba(87, 32, 27, .9); box-shadow: 0 7px 18px rgba(45, 18, 15, .18); cursor: pointer; font-size: 8px; line-height: 1.35; text-align: left; }
+
+.render-target { position: fixed; inset: 0 auto auto 0; display: none; width: 512px; height: 512px; overflow: hidden; background: transparent; }
+html[data-slop-capture="cover"] .pet-shell,
+html[data-slop-capture="icon"] .pet-shell { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="cover"] .cover-target,
+html[data-slop-renderer="true"][data-slop-capture="icon"] .icon-target { display: block; }
+html[data-slop-capture="static"] [data-slop-export="hide"] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) { .pet, .pet-rail { transition: none; } }

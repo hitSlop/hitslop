@@ -1,6 +1,7 @@
 #if os(macOS)
 import AppKit
 import Foundation
+import HitSlopCore
 import ImageIO
 import Testing
 @testable import HitSlopRuntime
@@ -33,6 +34,28 @@ import Testing
 
     #expect(session.usesTransparentBackground)
     #expect(session.webView.value(forKey: "drawsBackground") as? Bool == false)
+}
+
+@Test @MainActor func transparentStandardRuntimeUsesTransparentWebViewBacking() throws {
+    let root = try webViewPackage(skinned: false, transparent: true)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+
+    #expect(session.usesTransparentBackground)
+    #expect(session.webView.value(forKey: "drawsBackground") as? Bool == false)
+    #expect(!session.package.isSkinned)
+    #expect(!session.package.isResizable)
+}
+
+@Test @MainActor func runtimeRejectsWindowDragWithoutCurrentMouseDown() throws {
+    let root = try webViewPackage(skinned: false, transparent: true)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    let window = NSWindow(contentRect: .init(x: 0, y: 0, width: 320, height: 240), styleMask: .borderless, backing: .buffered, defer: false)
+    defer { session.close() }
+
+    #expect(throws: SlopPackageError.self) { try session.performWindowDrag(on: window) }
 }
 
 @Test @MainActor func runtimeCanFetchNamedMediaThroughItsCustomScheme() async throws {
@@ -137,14 +160,14 @@ import Testing
     #expect(try await session.webView.evaluateJavaScript("window.wasmResult") as? String == "ok")
 }
 
-private func webViewPackage(skinned: Bool) throws -> URL {
+private func webViewPackage(skinned: Bool, transparent: Bool = false) throws -> URL {
     let parent = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-webview-\(UUID().uuidString)", isDirectory: true)
     let root = parent.appendingPathComponent("fixture.slop", isDirectory: true)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try Data("<main>Hello</main>".utf8).write(to: root.appendingPathComponent("app.html"))
     let presentation = skinned
         ? #"{"width":320,"height":240,"skin":"assets/skin.png"}"#
-        : #"{"width":320,"height":240}"#
+        : transparent ? #"{"width":320,"height":240,"resizable":false,"background":"transparent"}"# : #"{"width":320,"height":240}"#
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"webview-fixture","title":"WebView Fixture","description":"Runtime opacity fixture.","categories":["utilities"],"presentation":\#(presentation)}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     if skinned {

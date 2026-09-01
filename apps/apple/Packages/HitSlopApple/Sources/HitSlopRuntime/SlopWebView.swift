@@ -69,7 +69,8 @@ private let runtimeScript = #"""
       onChange: callback => watch('media', callback)
     }),
     window: Object.freeze({
-      resize: size => call('window.resize', size)
+      resize: size => call('window.resize', size),
+      drag: () => call('window.drag')
     }),
     ready: () => { guestReady = true; document.documentElement.dataset.hitslopReady = 'true'; scheduleReady(); }
   });
@@ -80,6 +81,7 @@ private let runtimeScript = #"""
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind)
     func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize
+    func runtimeSessionDidRequestWindowDrag(_ session: SlopRuntimeSession) throws
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
 }
 
@@ -88,6 +90,9 @@ public extension SlopRuntimeSessionDelegate {
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind) {}
     func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize {
         throw SlopPackageError.invalid("the host does not support dynamic window sizing")
+    }
+    func runtimeSessionDidRequestWindowDrag(_ session: SlopRuntimeSession) throws {
+        throw SlopPackageError.invalid("the host does not support window dragging")
     }
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
 }
@@ -139,6 +144,10 @@ public extension SlopRuntimeSessionDelegate {
                 guard let session else { throw SlopPackageError.invalid("runtime session is unavailable") }
                 let applied = try session.bridgeDidRequestResize(try windowSize(body))
                 replyHandler(["width": applied.width, "height": applied.height], nil)
+            case "window.drag":
+                guard let session else { throw SlopPackageError.invalid("runtime session is unavailable") }
+                try session.bridgeDidRequestWindowDrag()
+                replyHandler(["dragging": true], nil)
             case "sqlite.query":
                 let statement = try sql(body); replyHandler(try database().query(statement.0, parameters: statement.1), nil)
             case "sqlite.execute":
@@ -225,7 +234,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
 
     public init(packageURL: URL, renderTargetsEnabled: Bool = false) throws {
         let package = try SlopPackage(rootURL: packageURL); self.package = package
-        usesTransparentBackground = package.isSkinned
+        usesTransparentBackground = package.usesTransparentBackground
         let configuration = WKWebViewConfiguration(); configuration.websiteDataStore = .nonPersistent()
         let handler = SlopSchemeHandler(package: package); schemeHandler = handler; configuration.setURLSchemeHandler(handler, forURLScheme: "slop")
         if renderTargetsEnabled {
@@ -279,6 +288,19 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         guard let delegate else { throw SlopPackageError.invalid("the host does not support dynamic window sizing") }
         return try delegate.runtimeSession(self, resizeContentTo: size)
     }
+    fileprivate func bridgeDidRequestWindowDrag() throws {
+        guard let delegate else { throw SlopPackageError.invalid("the host does not support window dragging") }
+        try delegate.runtimeSessionDidRequestWindowDrag(self)
+    }
+    #if os(macOS)
+    public func performWindowDrag(on window: NSWindow) throws {
+        guard let webView = webView as? InteractiveWebView,
+              let event = webView.consumeWindowDragEvent(for: window) else {
+            throw SlopPackageError.invalid("window dragging requires a current left mouse-down gesture")
+        }
+        window.performDrag(with: event)
+    }
+    #endif
     private func poll() {
         let nextJSON = bridge.jsonRevision(); if nextJSON != jsonRevision { jsonRevision = nextJSON; if nextJSON != nil { emit(kind: .json, revision: nextJSON, source: "external") } }
         let nextSQLite = bridge.sqliteVersion(); if nextSQLite != sqliteVersion { sqliteVersion = nextSQLite; if nextSQLite != nil { emit(kind: .sqlite, revision: nil, source: "external") } }
@@ -322,7 +344,36 @@ extension SlopRuntimeSession: WKUIDelegate {
 }
 
 private final class InteractiveWebView: WKWebView {
+    private var windowDragEvent: NSEvent?
+    nonisolated(unsafe) private var windowDragMonitor: Any?
+
+    override init(frame: CGRect, configuration: WKWebViewConfiguration) {
+        super.init(frame: frame, configuration: configuration)
+        windowDragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            guard let self, event.window === self.window,
+                  self.bounds.contains(self.convert(event.locationInWindow, from: nil)) else { return event }
+            self.windowDragEvent = event
+            return event
+        }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("InteractiveWebView must be created programmatically") }
+
+    deinit {
+        if let windowDragMonitor { NSEvent.removeMonitor(windowDragMonitor) }
+    }
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var mouseDownCanMoveWindow: Bool { false }
+    func consumeWindowDragEvent(for window: NSWindow) -> NSEvent? {
+        defer { windowDragEvent = nil }
+        guard let event = windowDragEvent,
+              event.type == .leftMouseDown,
+              event.buttonNumber == 0,
+              event.window === window,
+              ProcessInfo.processInfo.systemUptime - event.timestamp < 1 else { return nil }
+        return event
+    }
 }
 #endif

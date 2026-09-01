@@ -106,6 +106,9 @@
         },
         "shape": {
           "$ref": "#/$defs/__schema7"
+        },
+        "background": {
+          "$ref": "#/$defs/__schema8"
         }
       },
       "required": [
@@ -136,6 +139,10 @@
         "capsule"
       ]
     },
+    "__schema8": {
+      "type": "string",
+      "const": "transparent"
+    },
     "SlopSkinPresentation": {
       "type": "object",
       "properties": {
@@ -146,7 +153,7 @@
           "$ref": "#/$defs/__schema5"
         },
         "skin": {
-          "$ref": "#/$defs/__schema8"
+          "$ref": "#/$defs/__schema9"
         }
       },
       "required": [
@@ -157,7 +164,7 @@
       "additionalProperties": false,
       "title": "SlopSkinPresentation"
     },
-    "__schema8": {
+    "__schema9": {
       "type": "string",
       "minLength": 12,
       "maxLength": 240,

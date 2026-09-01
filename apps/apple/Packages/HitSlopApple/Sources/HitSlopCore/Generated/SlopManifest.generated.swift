@@ -46,6 +46,7 @@ public enum SlopCategory: String, Codable, Sendable, CaseIterable {
 
 // MARK: - SlopPresentation
 public struct SlopPresentation: Codable, Sendable {
+    public let background: Background?
     public let height: Int
     public let resizable: Bool?
     public let shape: Shape?
@@ -53,6 +54,7 @@ public struct SlopPresentation: Codable, Sendable {
     public let skin: String?
 
     public enum CodingKeys: String, CodingKey {
+        case background = "background"
         case height = "height"
         case resizable = "resizable"
         case shape = "shape"
@@ -60,7 +62,8 @@ public struct SlopPresentation: Codable, Sendable {
         case skin = "skin"
     }
 
-    public init(height: Int, resizable: Bool?, shape: Shape?, width: Int, skin: String?) {
+    public init(background: Background?, height: Int, resizable: Bool?, shape: Shape?, width: Int, skin: String?) {
+        self.background = background
         self.height = height
         self.resizable = resizable
         self.shape = shape
@@ -69,6 +72,10 @@ public struct SlopPresentation: Codable, Sendable {
     }
 }
 
+
+public enum Background: String, Codable, Sendable, CaseIterable {
+    case transparent = "transparent"
+}
 
 public enum Shape: String, Codable, Sendable, CaseIterable {
     case capsule = "capsule"

@@ -16,6 +16,7 @@ export interface SlopHost {
   mediaWrite(name: string, data: string, mimeType: string): Promise<{ revision: string }>;
   mediaRemove(name: string): Promise<{ revision: null }>;
   resizeWindow(size: SlopWindowSize): Promise<SlopWindowSize>;
+  dragWindow(): Promise<void>;
   watch(kind: SlopStoreKind, callback: (event: SlopChange) => void): () => void;
 }
 
@@ -40,6 +41,7 @@ export type WindowSlop = {
   };
   window?: {
     resize: (size: SlopWindowSize) => Promise<SlopWindowSize>;
+    drag?: () => Promise<void>;
   };
   ready?: () => void;
 };

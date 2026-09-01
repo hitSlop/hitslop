@@ -40,8 +40,10 @@ import ImageIO
     }
 
     private let content: Content
+    private let transparentBacking: Bool
 
     init(package: SlopPackage) throws {
+        transparentBacking = package.usesTransparentBackground
         if let url = try package.skinURL() {
             guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
                 throw SlopPackageError.invalid("could not decode window skin")
@@ -56,7 +58,7 @@ import ImageIO
         guard let layer else { return }
         switch content {
         case .geometry:
-            layer.backgroundColor = NSColor.windowBackgroundColor.cgColor
+            layer.backgroundColor = transparentBacking ? NSColor.clear.cgColor : NSColor.windowBackgroundColor.cgColor
         case .image(let image, _):
             layer.contents = image; layer.contentsGravity = .resize
             layer.isGeometryFlipped = true; layer.magnificationFilter = .linear; layer.minificationFilter = .linear

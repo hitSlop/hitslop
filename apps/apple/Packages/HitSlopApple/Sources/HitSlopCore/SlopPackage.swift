@@ -56,6 +56,7 @@ public struct SlopPackage: Sendable {
     public var sqliteStoreURL: URL { storesURL.appendingPathComponent("data.sqlite") }
     public var mediaStoresURL: URL { storesURL.appendingPathComponent("media", isDirectory: true) }
     public var isSkinned: Bool { manifest.presentation.skin != nil }
+    public var usesTransparentBackground: Bool { isSkinned || manifest.presentation.background == .transparent }
     public var isResizable: Bool { isSkinned ? false : manifest.presentation.resizable ?? true }
     public var shape: Shape { manifest.presentation.shape ?? .rounded }
 
