@@ -3,7 +3,7 @@ import HitSlopCore
 import Testing
 @testable import HitSlopRuntime
 
-@Test func workingCopyFlushesJSONAndSQLiteStores() throws {
+@Test func workingCopyFlushesJSONSQLiteAndMediaStores() throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     let presented = try makePackage(in: root.appendingPathComponent("presented.slop", isDirectory: true))
@@ -20,12 +20,17 @@ import Testing
         ("INSERT INTO items (title) VALUES (?)", ["cloud"]),
     ])
     database.close()
+    let media = working.appendingPathComponent("stores/media", isDirectory: true)
+    try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
+    let image = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+    try image.write(to: media.appendingPathComponent("hero"))
 
     try SlopWorkingCopy.pushStores(from: working, to: presented)
 
     let json = try Data(contentsOf: presented.appendingPathComponent("stores/data.json"))
     #expect(String(data: json, encoding: .utf8)?.contains("7") == true)
     #expect(!FileManager.default.fileExists(atPath: presented.appendingPathComponent("stores/data.sqlite").path + "-wal"))
+    #expect(try Data(contentsOf: presented.appendingPathComponent("stores/media/hero")) == image)
 
     let flushed = try SlopDatabase(url: presented.appendingPathComponent("stores/data.sqlite"))
     defer { flushed.close() }

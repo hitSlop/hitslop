@@ -1,7 +1,7 @@
 # hitSlop
 
 hitSlop is a native home for tiny, local-first web apps. A `.slop` is a
-self-contained runtime app whose JSON and SQLite data is owned by the host.
+self-contained runtime app whose JSON, SQLite, and named media data is owned by the host.
 Svelte is the first authoring SDK; the runtime contract is framework-neutral.
 
 ```text
@@ -13,7 +13,7 @@ packages/
 ├── cli/            @hitslop/cli (`slop`)
 ├── runtime/        framework-neutral browser bridge
 ├── schema/         Zod, generated JSON Schema, and generated Swift models
-└── svelte/         Svelte 5 JSON and SQLite helpers
+└── svelte/         Svelte 5 JSON, SQLite, and image helpers
 ```
 
 ## Author a slop
@@ -70,14 +70,15 @@ my-widget.slop/
 ├── assets/                    optional immutable assets
 ├── stores/
 │   ├── data.json              optional, created lazily
-│   └── data.sqlite            optional, created lazily
+│   ├── data.sqlite            optional, created lazily
+│   └── media/                 optional named images, created lazily
 ├── QuickLook/
 │   ├── Preview.png            host-generated Quick Look/catalog image
 │   └── Thumbnail.png          immutable author-controlled artwork
 └── Icon\r                     optional macOS-local Finder metadata
 ```
 
-A slop may use JSON, SQLite, both, or neither. The manifest does not declare
+A slop may use JSON, SQLite, named images, any combination, or none. The manifest does not declare
 storage. There is no document identity, release lineage, author, tags, runtime
 version, entry path, editable stylesheet, or seed data in the package format.
 On macOS, hitSlop derives Finder's hidden custom-icon metadata from

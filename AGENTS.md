@@ -1,7 +1,7 @@
 # hitSlop
 
 `.slop` packages are framework-neutral runtime web apps with optional host-owned
-JSON and SQLite data. Read `manifest.json` first.
+JSON, SQLite, and named media data. Read `manifest.json` first.
 
 - Authored templates live in `examples/slops/`; paused templates live in
   `archive/templates/`. Runtime packages never contain source, dependencies,
@@ -9,10 +9,12 @@ JSON and SQLite data. Read `manifest.json` first.
 - Preview with `bun slop dev examples/slops/<id>` and build with
   `bun slop build examples/slops/<id>`.
 - A runtime package has `manifest.json`, generated `app.html`, optional immutable
-  `assets/`, optional canonical `stores/data.json` and `stores/data.sqlite`,
+  `assets/`, optional canonical `stores/data.json`, `stores/data.sqlite`, and
+  user-selected images under `stores/media/`,
   and optional `QuickLook/Preview.png` and `QuickLook/Thumbnail.png`.
-- Manifest storage is implicit. A slop can use JSON, SQLite, both, or neither.
-  Replace JSON atomically and keep SQLite transactions on one connection.
+- Manifest storage is implicit. A slop can use JSON, SQLite, named images, or
+  any combination. Replace JSON and media atomically and keep SQLite
+  transactions on one connection.
 - Treat `manifest.json`, `app.html`, `assets/`, and `QuickLook/Thumbnail.png` as
   immutable in a document. Never add `style.css`, `document.json`, or a build
   directory. The macOS host may add the Finder-managed `Icon\r` metadata file

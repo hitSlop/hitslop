@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import type { Plugin } from "vite";
@@ -13,8 +13,21 @@ const readNodeBody = async (request: AsyncIterable<Uint8Array>): Promise<Record<
 };
 const revision = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 const exists = async (path: string): Promise<boolean> => { try { await stat(path); return true; } catch { return false; } };
+const mediaName = (value: unknown): string => {
+  const name = String(value ?? "");
+  if (!/^[a-z][a-z0-9-]{0,63}$/.test(name)) throw new Error("Invalid media name");
+  return name;
+};
+const imageMime = (bytes: Uint8Array): string | null => {
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes.length >= 6 && new TextDecoder().decode(bytes.subarray(0, 6)).match(/^GIF8[79]a$/)) return "image/gif";
+  if (bytes.length >= 12 && new TextDecoder().decode(bytes.subarray(0, 4)) === "RIFF" && new TextDecoder().decode(bytes.subarray(8, 12)) === "WEBP") return "image/webp";
+  return null;
+};
 
-const bridge = `<script>\n(() => {\n const listeners={json:new Set(),sqlite:new Set()};\n const call=async(path,body={})=>{const r=await fetch('/__hitslop/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const value=await r.json();if(!r.ok)throw new Error(value.error||r.statusText);return value};\n const emit=(kind,event)=>listeners[kind].forEach(cb=>cb({kind,...event}));\n const watch=(kind,cb)=>{listeners[kind].add(cb);let rev;const timer=setInterval(async()=>{try{const value=await call(kind+'/revision');if(rev!==undefined&&rev!==value.revision)emit(kind,{source:'external',revision:value.revision});rev=value.revision}catch{}},750);return()=>{listeners[kind].delete(cb);clearInterval(timer)}};\n window.slop={json:{open:value=>call('json/open',{value}),read:()=>call('json/read'),write:(value,expectedRevision)=>call('json/write',{value,expectedRevision}).then(result=>(emit('json',{source:'app',revision:result.revision}),result)),onChange:cb=>watch('json',cb)},db:{query:(sql,parameters=[])=>call('sqlite/query',{sql,parameters}),execute:(sql,parameters=[])=>call('sqlite/execute',{sql,parameters}).then(result=>(emit('sqlite',{source:'app'}),result)),transaction:statements=>call('sqlite/transaction',{statements}).then(result=>(emit('sqlite',{source:'app'}),result)),onChange:cb=>watch('sqlite',cb)},ready:()=>{document.documentElement.dataset.hitslopReady='true'}};\n})();\n</script>`;
+const hostStyle = `<style data-hitslop-host>*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}</style>`;
+const bridge = `<script>\n(() => {\n const listeners={json:new Set(),sqlite:new Set(),media:new Set()};\n const call=async(path,body={})=>{const r=await fetch('/__hitslop/'+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const value=await r.json();if(!r.ok)throw new Error(value.error||r.statusText);return value};\n const emit=(kind,event)=>listeners[kind].forEach(cb=>cb({kind,...event}));\n const watch=(kind,cb)=>{listeners[kind].add(cb);let rev;const timer=setInterval(async()=>{try{const value=await call(kind+'/revision');if(rev!==undefined&&rev!==value.revision)emit(kind,{source:'external',revision:value.revision});rev=value.revision}catch{}},750);return()=>{listeners[kind].delete(cb);clearInterval(timer)}};\n window.slop={json:{open:value=>call('json/open',{value}),read:()=>call('json/read'),write:(value,expectedRevision)=>call('json/write',{value,expectedRevision}).then(result=>(emit('json',{source:'app',revision:result.revision}),result)),onChange:cb=>watch('json',cb)},db:{query:(sql,parameters=[])=>call('sqlite/query',{sql,parameters}),execute:(sql,parameters=[])=>call('sqlite/execute',{sql,parameters}).then(result=>(emit('sqlite',{source:'app'}),result)),transaction:statements=>call('sqlite/transaction',{statements}).then(result=>(emit('sqlite',{source:'app'}),result)),onChange:cb=>watch('sqlite',cb)},media:{open:name=>call('media/open',{name}),write:(name,data,mimeType)=>call('media/write',{name,data,mimeType}).then(result=>(emit('media',{source:'app',revision:result.revision}),result)),remove:name=>call('media/remove',{name}).then(result=>(emit('media',{source:'app',revision:null}),result)),onChange:cb=>watch('media',cb)},ready:()=>{document.documentElement.dataset.hitslopReady='true'}};\n})();\n</script>`;
 
 const forbiddenSQL = /\b(attach|detach|load_extension)\b/i;
 
@@ -22,6 +35,7 @@ export function mockHostPlugin(dataRoot: string): Plugin {
   const storesRoot = join(dataRoot, "stores");
   const jsonPath = join(storesRoot, "data.json");
   const sqlitePath = join(storesRoot, "data.sqlite");
+  const mediaRoot = join(storesRoot, "media");
   let database: Database | undefined;
   const sqlite = async (): Promise<Database> => {
     await mkdir(storesRoot, { recursive: true });
@@ -51,9 +65,26 @@ export function mockHostPlugin(dataRoot: string): Plugin {
     for (const path of paths) if (await exists(path)) { found = true; hash.update(new Uint8Array(await Bun.file(path).arrayBuffer())); }
     return found ? hash.digest("hex") : null;
   };
+  const mediaRevision = async (): Promise<string | null> => {
+    const glob = new Bun.Glob("*");
+    const names: string[] = [];
+    try { for await (const name of glob.scan({ cwd: mediaRoot, onlyFiles: true })) names.push(name); } catch { return null; }
+    if (names.length === 0) return null;
+    const hash = createHash("sha256");
+    for (const name of names.sort()) { hash.update(name); hash.update(new Uint8Array(await Bun.file(join(mediaRoot, name)).arrayBuffer())); }
+    return hash.digest("hex");
+  };
   const assertSQL = (sql: string) => { if (forbiddenSQL.test(sql)) throw new Error("SQLite statement is not allowed"); };
-  return { name: "hitslop-mock-host", transformIndexHtml: { order: "pre", handler: (html) => bridge + html }, configureServer(server) {
+  return { name: "hitslop-mock-host", transformIndexHtml: { order: "pre", handler: (html) => html.replace(/<head>/i, (tag) => tag + hostStyle + bridge) }, configureServer(server) {
     server.httpServer?.once("close", () => { database?.close(); database = undefined; });
+    server.middlewares.use("/media", async (request, response) => {
+      try {
+        const name = mediaName(decodeURIComponent(new URL(`http://localhost${request.url}`).pathname.replace(/^\/+/, "")));
+        const bytes = new Uint8Array(await readFile(join(mediaRoot, name)));
+        const mime = imageMime(bytes); if (!mime) throw new Error("Invalid image");
+        response.setHeader("content-type", mime); response.setHeader("cache-control", "no-store"); response.end(bytes);
+      } catch { response.statusCode = 404; response.end(); }
+    });
     server.middlewares.use("/__hitslop", async (nodeRequest, response) => {
       response.setHeader("content-type", "application/json");
       try {
@@ -76,6 +107,26 @@ export function mockHostPlugin(dataRoot: string): Plugin {
         }
         if (route === "json/revision") { response.end(JSON.stringify({ revision: await fileRevision([jsonPath]) })); return; }
         if (route === "sqlite/revision") { response.end(JSON.stringify({ revision: await fileRevision([sqlitePath, `${sqlitePath}-wal`]) })); return; }
+        if (route === "media/revision") { response.end(JSON.stringify({ revision: await mediaRevision() })); return; }
+        if (route === "media/open") {
+          const path = join(mediaRoot, mediaName(body.name));
+          if (!await exists(path)) { response.end(JSON.stringify({ exists: false, revision: null })); return; }
+          const bytes = new Uint8Array(await readFile(path));
+          response.end(JSON.stringify({ exists: true, revision: revision(bytes) })); return;
+        }
+        if (route === "media/write") {
+          const name = mediaName(body.name), bytes = Uint8Array.from(Buffer.from(String(body.data ?? ""), "base64"));
+          if (!imageMime(bytes)) throw new Error("Selected file is not a supported image");
+          await mkdir(mediaRoot, { recursive: true });
+          const path = join(mediaRoot, name), temporary = join(mediaRoot, `.${name}.${randomUUID()}.tmp`);
+          await writeFile(temporary, bytes); await rename(temporary, path);
+          response.end(JSON.stringify({ revision: revision(bytes) })); return;
+        }
+        if (route === "media/remove") {
+          const path = join(mediaRoot, mediaName(body.name));
+          try { await unlink(path); } catch (error) { if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) throw error; }
+          response.end(JSON.stringify({ revision: null })); return;
+        }
         const db = await sqlite();
         if (route === "sqlite/query") { assertSQL(String(body.sql)); const statement = db.query(String(body.sql)); response.end(JSON.stringify(statement.all(...((body.parameters ?? []) as Parameters<typeof statement.all>)))); return; }
         if (route === "sqlite/execute") {

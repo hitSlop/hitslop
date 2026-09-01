@@ -11,7 +11,7 @@ public enum SlopPackageError: LocalizedError {
     }
 }
 
-public enum SlopStoreKind: String, Sendable { case json, sqlite }
+public enum SlopStoreKind: String, Sendable { case json, sqlite, media }
 
 public struct SlopPackage: Sendable {
     public let rootURL: URL
@@ -54,6 +54,7 @@ public struct SlopPackage: Sendable {
     public var storesURL: URL { rootURL.appendingPathComponent("stores", isDirectory: true) }
     public var jsonStoreURL: URL { storesURL.appendingPathComponent("data.json") }
     public var sqliteStoreURL: URL { storesURL.appendingPathComponent("data.sqlite") }
+    public var mediaStoresURL: URL { storesURL.appendingPathComponent("media", isDirectory: true) }
     public var isSkinned: Bool { manifest.presentation.skin != nil }
     public var isResizable: Bool { isSkinned ? false : manifest.presentation.resizable ?? true }
     public var shape: Shape { manifest.presentation.shape ?? .rounded }
@@ -70,7 +71,9 @@ public struct SlopPackage: Sendable {
         return url
     }
 
-    public func storeURL(kind: SlopStoreKind) -> URL { kind == .json ? jsonStoreURL : sqliteStoreURL }
+    public func storeURL(kind: SlopStoreKind) -> URL {
+        switch kind { case .json: jsonStoreURL; case .sqlite: sqliteStoreURL; case .media: mediaStoresURL }
+    }
 
     public func validateAsTemplate(requirePreview: Bool = true) throws {
         if FileManager.default.fileExists(atPath: storesURL.path) { throw SlopPackageError.invalid("templates cannot contain stores") }
@@ -109,6 +112,8 @@ public struct SlopPackage: Sendable {
         return try Self.containedURL(root: rootURL, relativePath: relative)
     }
 
+    public func mediaURL(name: String) throws -> URL { try SlopMediaStore(directoryURL: mediaStoresURL).url(for: name) }
+
     private static func validateManifest(_ data: Data) throws {
         guard String(data: data, encoding: .utf8) != nil else { throw SlopPackageError.invalid("manifest.json must be UTF-8") }
         guard let schemaURL = Bundle.module.url(forResource: "manifest.schema", withExtension: "json") else { throw SlopPackageError.invalid("bundled manifest schema is missing") }
@@ -120,11 +125,16 @@ public struct SlopPackage: Sendable {
     private func validateStores() throws {
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: storesURL.path) else { return }
-        let allowed = Set(["data.json", "data.sqlite", "data.sqlite-wal", "data.sqlite-shm"])
-        for url in try fileManager.contentsOfDirectory(at: storesURL, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]) {
+        let allowed = Set(["data.json", "data.sqlite", "data.sqlite-wal", "data.sqlite-shm", "media"])
+        for url in try fileManager.contentsOfDirectory(at: storesURL, includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey]) {
             guard allowed.contains(url.lastPathComponent) else { throw SlopPackageError.invalid("unexpected store file \(url.lastPathComponent)") }
-            let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-            guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("store must be a regular file: \(url.lastPathComponent)") }
+            let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
+            if url.lastPathComponent == "media" {
+                guard values.isDirectory == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("media store must be a directory") }
+                _ = try SlopMediaStore(directoryURL: url).directoryRevision()
+            } else {
+                guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("store must be a regular file: \(url.lastPathComponent)") }
+            }
         }
         if fileManager.fileExists(atPath: jsonStoreURL.path) { _ = try JSONSerialization.jsonObject(with: Data(contentsOf: jsonStoreURL), options: [.fragmentsAllowed]) }
     }

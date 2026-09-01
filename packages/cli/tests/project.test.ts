@@ -49,9 +49,14 @@ describe("authoring scaffold", () => {
     await scaffold(root, { title: "Tiny Tally", description: "Counts a tiny thing.", categories: ["utilities"] });
     const packageJSON = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string> };
     expect(packageJSON.dependencies["bits-ui"]).toBe("^2.19.0");
-    expect(await readFile(join(root, ".agents/skills/hitslop-design/SKILL.md"), "utf8")).toContain("data-slop-export");
+    const designSkill = await readFile(join(root, ".agents/skills/hitslop-design/SKILL.md"), "utf8");
+    expect(designSkill).toContain("data-slop-export");
+    expect(designSkill).toContain("host window as the default outer boundary");
     expect(await readFile(join(root, "AGENTS.md"), "utf8")).toContain("hitslop-design");
     expect(await readFile(join(root, "src/App.svelte"), "utf8")).toContain('const title = "Tiny Tally"');
-    expect(await readFile(join(root, "src/styles.css"), "utf8")).toContain("--slop-surface");
+    const styles = await readFile(join(root, "src/styles.css"), "utf8");
+    expect(styles).toContain("--slop-surface");
+    expect(styles).not.toContain("--slop-backing");
+    expect(styles).not.toContain("box-shadow");
   });
 });

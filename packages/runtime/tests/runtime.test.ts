@@ -8,10 +8,16 @@ test("delegates storage calls to the installed host", async () => {
     jsonOpen: async <T>(initial: T) => ({ value: (value ?? initial) as T, revision }),
     jsonRead: async <T>() => ({ value: value as T, revision }),
     jsonWrite: async <T>(next: T) => { value = next as typeof value; revision = "two"; return { revision }; },
+    mediaOpen: async () => ({ exists: false, revision: null }),
+    mediaWrite: async () => ({ revision: "media-one" }),
+    mediaRemove: async () => ({ revision: null }),
     watch: () => () => {},
   };
   const uninstall = installHost(host);
   expect((await slop.json.open({ count: 0 })).value.count).toBe(1);
   expect((await slop.json.write({ count: 2 }, "one")).revision).toBe("two");
+  expect((await slop.media.open("hero")).exists).toBe(false);
+  expect((await slop.media.write("hero", "aW1hZ2U=", "image/png")).revision).toBe("media-one");
+  expect((await slop.media.remove("hero")).revision).toBeNull();
   uninstall();
 });

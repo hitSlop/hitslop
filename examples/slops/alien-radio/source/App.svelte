@@ -113,7 +113,7 @@
 
   function choose(channel: Channel): void {
     const wasPlaying = !audio.paused;
-    radio.update((state) => { state.selectedChannelId = channel.id; });
+    radio.current.selectedChannelId = channel.id;
     browserOpen = false;
     query = "";
     error = null;
@@ -129,19 +129,18 @@
   }
 
   function toggleFavorite(): void {
-    radio.update((state) => {
-      state.favoriteChannelIds = state.favoriteChannelIds.includes(selected.id)
-        ? state.favoriteChannelIds.filter((id) => id !== selected.id)
-        : [...state.favoriteChannelIds, selected.id];
-    });
+    radio.current.favoriteChannelIds = radio.current.favoriteChannelIds.includes(selected.id)
+      ? radio.current.favoriteChannelIds.filter((id) => id !== selected.id)
+      : [...radio.current.favoriteChannelIds, selected.id];
   }
 
   function setVolume(value: number): void {
-    radio.update((state) => { state.volume = value; if (value > 0) state.muted = false; });
+    radio.current.volume = value;
+    if (value > 0) radio.current.muted = false;
   }
 
   function toggleMute(): void {
-    radio.update((state) => { state.muted = !state.muted; });
+    radio.current.muted = !radio.current.muted;
   }
 
   async function refreshChannels(): Promise<void> {

@@ -7,7 +7,7 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
 
   type Party = { name: string; detail: string };
-  type LineItem = { id: number; description: string; quantity: number; rate: number };
+  type LineItem = { id: string; description: string; quantity: number | null; rate: number | null };
   type Status = "draft" | "sent" | "paid";
   type Currency = "USD" | "CAD" | "EUR" | "GBP" | "AUD" | "JPY";
   type Invoice = {
@@ -18,10 +18,9 @@
     from: Party;
     billTo: Party;
     items: LineItem[];
-    taxPercent: number;
+    taxPercent: number | null;
     notes: string;
     currency: Currency;
-    nextID: number;
   };
 
   const statuses: { value: Status; label: string }[] = [
@@ -52,41 +51,25 @@
     due: dateValue(due),
     from: { name: "", detail: "" },
     billTo: { name: "", detail: "" },
-    items: [{ id: 1, description: "", quantity: 1, rate: 0 }],
+    items: [{ id: "initial-line-item", description: "", quantity: 1, rate: 0 }],
     taxPercent: 0,
     notes: "",
     currency: "USD",
-    nextID: 2,
   });
 
-  const subtotal = $derived(invoice.current.items.reduce((sum, item) => sum + item.quantity * item.rate, 0));
-  const tax = $derived(subtotal * invoice.current.taxPercent / 100);
+  const subtotal = $derived(invoice.current.items.reduce((sum, item) => sum + (item.quantity ?? 0) * (item.rate ?? 0), 0));
+  const tax = $derived(subtotal * (invoice.current.taxPercent ?? 0) / 100);
   const total = $derived(subtotal + tax);
 
   function money(value: number): string {
     return new Intl.NumberFormat(undefined, { style: "currency", currency: invoice.current.currency }).format(value);
   }
 
-  function update(mutate: (value: Invoice) => void): void { invoice.update(mutate); }
-  function updateParty(side: "from" | "billTo", key: keyof Party, value: string): void {
-    update((data) => { data[side][key] = value; });
-  }
-  function updateItem(id: number, key: "description" | "quantity" | "rate", value: string | number): void {
-    update((data) => {
-      const item = data.items.find((candidate) => candidate.id === id);
-      if (!item) return;
-      if (key === "description") item.description = String(value);
-      else item[key] = Number(value) || 0;
-    });
-  }
   function addItem(): void {
-    update((data) => {
-      data.items.push({ id: data.nextID, description: "", quantity: 1, rate: 0 });
-      data.nextID += 1;
-    });
+    invoice.current.items.push({ id: crypto.randomUUID(), description: "", quantity: 1, rate: 0 });
   }
-  function removeItem(id: number): void {
-    update((data) => { data.items = data.items.filter((item) => item.id !== id); });
+  function removeItem(id: string): void {
+    invoice.current.items = invoice.current.items.filter((item) => item.id !== id);
   }
 </script>
 
@@ -97,15 +80,12 @@
         <span class="eyebrow">Invoice</span>
         <label class="number-field">
           <span class="sr-only">Invoice number</span>
-          <input value={invoice.current.number} oninput={(event) => {
-            const number = event.currentTarget.value;
-            update((data) => { data.number = number; });
-          }} />
+          <input bind:value={invoice.current.number} />
         </label>
       </div>
 
       <Select.Root type="single" value={invoice.current.status} items={statuses} onValueChange={(value) => {
-        if (statuses.some((item) => item.value === value)) update((data) => { data.status = value as Status; });
+        if (statuses.some((item) => item.value === value)) invoice.current.status = value as Status;
       }}>
         <Select.Trigger class="select-trigger status-trigger" aria-label="Invoice status">
           <span class="status-dot" data-status={invoice.current.status}></span>
@@ -129,16 +109,12 @@
     </header>
 
     <section class="meta" aria-label="Invoice details">
-      <label><span>Issued</span><input type="date" value={invoice.current.issued} oninput={(event) => {
-        const value = event.currentTarget.value; update((data) => { data.issued = value; });
-      }} /></label>
-      <label><span>Due</span><input type="date" value={invoice.current.due} oninput={(event) => {
-        const value = event.currentTarget.value; update((data) => { data.due = value; });
-      }} /></label>
+      <label><span>Issued</span><input type="date" bind:value={invoice.current.issued} /></label>
+      <label><span>Due</span><input type="date" bind:value={invoice.current.due} /></label>
       <div class="currency-field">
         <span>Currency</span>
         <Select.Root type="single" value={invoice.current.currency} items={currencies} onValueChange={(value) => {
-          if (currencies.some((item) => item.value === value)) update((data) => { data.currency = value as Currency; });
+          if (currencies.some((item) => item.value === value)) invoice.current.currency = value as Currency;
         }}>
           <Select.Trigger class="currency-trigger" aria-label="Invoice currency">
             <Select.Value placeholder="Currency" />
@@ -162,8 +138,8 @@
     </section>
 
     <section class="parties" aria-label="Invoice parties">
-      <label class="party"><span>From</span><input class="party-name" aria-label="From name" placeholder="Your name or company" value={invoice.current.from.name} oninput={(event) => updateParty("from", "name", event.currentTarget.value)} /><textarea aria-label="From details" placeholder="Address and contact details" value={invoice.current.from.detail} oninput={(event) => updateParty("from", "detail", event.currentTarget.value)}></textarea></label>
-      <label class="party"><span>Bill to</span><input class="party-name" aria-label="Bill-to name" placeholder="Client name or company" value={invoice.current.billTo.name} oninput={(event) => updateParty("billTo", "name", event.currentTarget.value)} /><textarea aria-label="Bill-to details" placeholder="Address and contact details" value={invoice.current.billTo.detail} oninput={(event) => updateParty("billTo", "detail", event.currentTarget.value)}></textarea></label>
+      <label class="party"><span>From</span><input class="party-name" aria-label="From name" placeholder="Your name or company" bind:value={invoice.current.from.name} /><textarea aria-label="From details" placeholder="Address and contact details" bind:value={invoice.current.from.detail}></textarea></label>
+      <label class="party"><span>Bill to</span><input class="party-name" aria-label="Bill-to name" placeholder="Client name or company" bind:value={invoice.current.billTo.name} /><textarea aria-label="Bill-to details" placeholder="Address and contact details" bind:value={invoice.current.billTo.detail}></textarea></label>
     </section>
 
     <section class="line-items" aria-labelledby="line-items-title">
@@ -173,10 +149,10 @@
       <div class="line-list" role="table" aria-label="Invoice line items">
         {#each invoice.current.items as item, index (item.id)}
           <div class="line-item" role="row">
-            <label class="description"><span class="mobile-label">Item</span><input aria-label="Description for line {index + 1}" placeholder="Service or item" value={item.description} oninput={(event) => updateItem(item.id, "description", event.currentTarget.value)} /></label>
-            <label><span class="mobile-label">Qty</span><input aria-label="Quantity for line {index + 1}" type="number" min="0" step="0.01" value={item.quantity} oninput={(event) => updateItem(item.id, "quantity", event.currentTarget.value)} /></label>
-            <label><span class="mobile-label">Rate</span><input aria-label="Rate for line {index + 1}" type="number" min="0" step="0.01" value={item.rate} oninput={(event) => updateItem(item.id, "rate", event.currentTarget.value)} /></label>
-            <output class="line-total"><span class="mobile-label">Amount</span>{money(item.quantity * item.rate)}</output>
+            <label class="description"><span class="mobile-label">Item</span><input aria-label="Description for line {index + 1}" placeholder="Service or item" bind:value={item.description} /></label>
+            <label><span class="mobile-label">Qty</span><input aria-label="Quantity for line {index + 1}" type="number" min="0" step="0.01" bind:value={item.quantity} /></label>
+            <label><span class="mobile-label">Rate</span><input aria-label="Rate for line {index + 1}" type="number" min="0" step="0.01" bind:value={item.rate} /></label>
+            <output class="line-total"><span class="mobile-label">Amount</span>{money((item.quantity ?? 0) * (item.rate ?? 0))}</output>
             <button class="remove-item" data-slop-export="hide" aria-label="Remove line {index + 1}" onclick={() => removeItem(item.id)}><Trash2 strokeWidth={1.7} absoluteStrokeWidth /></button>
           </div>
         {/each}
@@ -185,23 +161,13 @@
     </section>
 
     <section class="closing">
-      <label class="notes"><span>Notes & terms</span><textarea placeholder="Payment terms, delivery notes, or a thank-you" value={invoice.current.notes} oninput={(event) => {
-        const value = event.currentTarget.value; update((data) => { data.notes = value; });
-      }}></textarea></label>
+      <label class="notes"><span>Notes & terms</span><textarea placeholder="Payment terms, delivery notes, or a thank-you" bind:value={invoice.current.notes}></textarea></label>
       <dl class="totals">
         <div><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div>
-        <div><dt><label>Tax <span class="tax-input"><input aria-label="Tax percentage" type="number" min="0" step="0.1" value={invoice.current.taxPercent} oninput={(event) => {
-          const value = Number(event.currentTarget.value) || 0; update((data) => { data.taxPercent = value; });
-        }} /><span>%</span></span></label></dt><dd>{money(tax)}</dd></div>
+        <div><dt><label>Tax <span class="tax-input"><input aria-label="Tax percentage" type="number" min="0" step="0.1" bind:value={invoice.current.taxPercent} /><span>%</span></span></label></dt><dd>{money(tax)}</dd></div>
         <div class="total"><dt>Total</dt><dd>{money(total)}</dd></div>
       </dl>
     </section>
 
-    <footer>
-      <span>Thank you for your business</span>
-      <span>{invoice.current.currency}</span>
-      <span class:loading={invoice.isLoading} class:error={Boolean(invoice.error)} class="save-state" data-slop-export="hide">{invoice.error ? "Not saved" : invoice.isLoading ? "Opening" : "Saved locally"}</span>
-    </footer>
-    {#if invoice.error}<p class="error-message" data-slop-export="hide">Could not save this invoice. {invoice.error}</p>{/if}
   </article>
 </main>

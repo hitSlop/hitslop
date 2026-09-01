@@ -13,6 +13,8 @@ import Testing
 
     #expect(!session.usesTransparentBackground)
     #expect(session.webView.value(forKey: "drawsBackground") as? Bool == true)
+    let hostScripts = session.webView.configuration.userContentController.userScripts.map(\.source)
+    #expect(hostScripts.contains { $0.contains("scrollbar-width:none") && $0.contains("::-webkit-scrollbar") })
 }
 
 @Test @MainActor func skinnedRuntimeUsesTransparentWebViewBacking() throws {

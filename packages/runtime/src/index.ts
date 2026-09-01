@@ -1,5 +1,5 @@
 import type { SlopHost, SlopStatement, WindowSlop } from "./types.ts";
-export type { SlopChange, SlopHost, SlopSnapshot, SlopStatement, SlopStoreKind, WindowSlop } from "./types.ts";
+export type { SlopChange, SlopHost, SlopMediaSnapshot, SlopSnapshot, SlopStatement, SlopStoreKind, WindowSlop } from "./types.ts";
 
 let configuredHost: SlopHost | undefined;
 
@@ -16,7 +16,10 @@ const fromBridge = (bridge: WindowSlop): SlopHost => ({
     return { value: result.value as T, revision: result.revision };
   },
   jsonWrite: async <T>(value: T, expectedRevision?: string) => bridge.json.write(value, expectedRevision),
-  watch: (kind, callback) => kind === "json" ? bridge.json.onChange(callback) : bridge.db.onChange(callback),
+  mediaOpen: (name) => bridge.media.open(name),
+  mediaWrite: (name, data, mimeType) => bridge.media.write(name, data, mimeType),
+  mediaRemove: (name) => bridge.media.remove(name),
+  watch: (kind, callback) => kind === "json" ? bridge.json.onChange(callback) : kind === "sqlite" ? bridge.db.onChange(callback) : bridge.media.onChange(callback),
 });
 
 export function installHost(host: SlopHost): () => void {
@@ -26,7 +29,7 @@ export function installHost(host: SlopHost): () => void {
 
 export function getHost(): SlopHost {
   if (configuredHost) return configuredHost;
-  if (typeof window !== "undefined" && window.slop?.json && window.slop.db) return fromBridge(window.slop);
+  if (typeof window !== "undefined" && window.slop?.json && window.slop.db && window.slop.media) return fromBridge(window.slop);
   throw new Error("hitSlop host bridge is unavailable. Run this project with `slop dev` or inside hitSlop.");
 }
 
@@ -42,6 +45,12 @@ export const slop = {
     execute: (sql: string, params?: unknown[]) => getHost().execute(sql, params),
     transaction: (statements: SlopStatement[]) => getHost().transaction(statements),
     onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("sqlite", callback),
+  },
+  media: {
+    open: (name: string) => getHost().mediaOpen(name),
+    write: (name: string, data: string, mimeType: string) => getHost().mediaWrite(name, data, mimeType),
+    remove: (name: string) => getHost().mediaRemove(name),
+    onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("media", callback),
   },
 };
 

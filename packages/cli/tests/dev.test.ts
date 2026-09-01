@@ -16,7 +16,19 @@ afterEach(async () => {
   if (root) await rm(root, { recursive: true, force: true }); root = undefined;
 });
 
-test("mounted mock bridge opens and persists both canonical stores", async () => {
+test("mock host preserves the document shell and hides scrollbar chrome", () => {
+  const transform = mockHostPlugin("/tmp/hitslop-unused").transformIndexHtml;
+  if (!transform || typeof transform === "function") throw new Error("mock host plugin is missing its HTML transform");
+  const html = "<!doctype html><html><head><title>Fixture</title></head><body></body></html>";
+  const result = (transform.handler as (value: string) => string)(html);
+  expect(result.startsWith("<!doctype html><html><head>")).toBe(true);
+  expect(result).toContain("data-hitslop-host");
+  expect(result).toContain("scrollbar-width:none");
+  expect(result).toContain("::-webkit-scrollbar");
+  expect(result.indexOf("data-hitslop-host")).toBeLessThan(result.indexOf("<title>"));
+});
+
+test("mounted mock bridge opens and persists canonical stores and named media", async () => {
   root = await mkdtemp(join(tmpdir(), "hitslop-dev-bridge-"));
   closeEmitter = new EventEmitter();
   let mountedAt = "";
@@ -68,4 +80,11 @@ test("mounted mock bridge opens and persists both canonical stores", async () =>
   expect((await call("/sqlite/execute", { sql: "INSERT INTO note (value) VALUES (?)", parameters: ["saved"] })).status).toBe(200);
   const query = await call("/sqlite/query", { sql: "SELECT value FROM note" });
   expect(query.value).toEqual([{ value: "saved" }]);
+
+  const image = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+  const mediaWrite = await call("/media/write", { name: "hero", data: image, mimeType: "image/png" });
+  expect(mediaWrite.status).toBe(200);
+  expect((await call("/media/open", { name: "hero" })).value).toMatchObject({ exists: true });
+  expect((await call("/media/remove", { name: "hero" })).status).toBe(200);
+  expect((await call("/media/open", { name: "hero" })).value).toEqual({ exists: false, revision: null });
 }, 15_000);

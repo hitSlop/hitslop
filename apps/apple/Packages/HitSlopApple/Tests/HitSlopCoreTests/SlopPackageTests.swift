@@ -38,11 +38,30 @@ import Testing
     try Data(#"{"count":3}"#.utf8).write(to: source.appendingPathComponent("stores/data.json"))
     let database = try SlopDatabaseFixture(url: source.appendingPathComponent("stores/data.sqlite"))
     try database.write()
+    let media = source.appendingPathComponent("stores/media", isDirectory: true)
+    try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
+    try writeSkin(to: media.appendingPathComponent("hero"), width: 2, height: 2)
     let destination = temporary.appendingPathComponent("document-copy.slop")
     try SlopDuplicator.duplicate(from: source, to: destination)
     #expect(try Data(contentsOf: destination.appendingPathComponent("stores/data.json")) == Data(#"{"count":3}"#.utf8))
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/data.sqlite").path))
     #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/data.sqlite-wal").path))
+    #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/media/hero").path))
+}
+
+@Test func namedMediaStoresValidateImagesAndReplaceAtomically() throws {
+    let root = try fixture(), temporary = root.deletingLastPathComponent(); defer { try? FileManager.default.removeItem(at: temporary) }
+    let input = temporary.appendingPathComponent("input.png")
+    try writeSkin(to: input, width: 2, height: 2)
+    let store = SlopMediaStore(directoryURL: root.appendingPathComponent("stores/media", isDirectory: true))
+    let first = try store.write("hero", base64: Data(contentsOf: input).base64EncodedString())
+    #expect(try store.open("hero").exists)
+    #expect(try store.open("hero").revision == first)
+    #expect(throws: SlopPackageError.self) { _ = try store.write("../hero", base64: Data(contentsOf: input).base64EncodedString()) }
+    #expect(throws: SlopPackageError.self) { _ = try store.write("bad", base64: Data("not an image".utf8).base64EncodedString()) }
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    try store.remove("hero")
+    #expect(try !store.open("hero").exists)
 }
 
 @Test func documentsAllowOnlyCanonicalLazyStores() throws {

@@ -4,5 +4,5 @@
   "title": "Invoice",
   "description": "Line items, tax, and status for a local invoice.",
   "categories": ["business", "finance"],
-  "presentation": { "width": 720, "height": 900 }
+  "presentation": { "width": 640, "height": 640 }
 }

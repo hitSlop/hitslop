@@ -101,6 +101,15 @@ enum SlopWorkingCopy {
                     try Data(contentsOf: source).write(to: target, options: .atomic)
                 }
             }
+            let sourceMedia = package.mediaStoresURL
+            if FileManager.default.fileExists(atPath: sourceMedia.path) {
+                let targetMedia = destination.appendingPathComponent("stores/media", isDirectory: true)
+                try FileManager.default.createDirectory(at: targetMedia.deletingLastPathComponent(), withIntermediateDirectories: true)
+                let temporary = targetMedia.deletingLastPathComponent().appendingPathComponent(".media-\(UUID().uuidString)", isDirectory: true)
+                try FileManager.default.copyItem(at: sourceMedia, to: temporary)
+                if FileManager.default.fileExists(atPath: targetMedia.path) { try FileManager.default.removeItem(at: targetMedia) }
+                try FileManager.default.moveItem(at: temporary, to: targetMedia)
+            }
         }
     }
 

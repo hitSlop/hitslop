@@ -1,3 +1,4 @@
 export { jsonStore, JsonStore } from "./json-store.svelte.js";
+export { imageStore, ImageStore, type ImageStoreOptions } from "./image-store.svelte.js";
 export { sqliteQuery, SqliteQuery } from "./sqlite-query.svelte.js";
 export { sql } from "./sql.js";

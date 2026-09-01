@@ -56,14 +56,12 @@
       const elapsed = duration;
       const startedAt = new Date().toISOString();
       stopTick();
-      timer.update((data) => {
-        data.history.unshift({
-          startedAt,
-          kind,
-          seconds: elapsed,
-        });
-        data.history = data.history.slice(0, 12);
+      timer.current.history.unshift({
+        startedAt,
+        kind,
+        seconds: elapsed,
       });
+      timer.current.history = timer.current.history.slice(0, 12);
       kind = kind === "focus" ? "rest" : "focus";
       syncRemaining();
     }, 1000);
@@ -83,7 +81,8 @@
 
   function setPreset(focusMinutes: number, restMinutes: number): void {
     stopTick();
-    timer.update((data) => { data.focusMinutes = focusMinutes; data.restMinutes = restMinutes; });
+    timer.current.focusMinutes = focusMinutes;
+    timer.current.restMinutes = restMinutes;
   }
 
   $effect(() => {
@@ -166,7 +165,7 @@
         value={timer.current.focusMinutes}
         onchange={(event) => {
           const focusMinutes = Number(event.currentTarget.value) || 25;
-          timer.update((data) => { data.focusMinutes = focusMinutes; });
+          timer.current.focusMinutes = focusMinutes;
         }}
       />
       </label>
@@ -178,7 +177,7 @@
         value={timer.current.restMinutes}
         onchange={(event) => {
           const restMinutes = Number(event.currentTarget.value) || 5;
-          timer.update((data) => { data.restMinutes = restMinutes; });
+          timer.current.restMinutes = restMinutes;
         }}
       />
       </label>

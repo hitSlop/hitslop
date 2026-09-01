@@ -11,6 +11,11 @@ description: Create, preview, validate, build, install, or publish hitSlop autho
   `bunx @hitslop/cli`.
 - Use `slop dev` with isolated `.hitslop/dev/stores`; add `--native` only for
   host rendering and window-mask behavior.
+- Review substantial interface changes in both live and static capture states at
+  the manifest's exact dimensions. Confirm readable type, default-content fit,
+  hidden editing controls, and scrolling without visible scrollbar chrome.
+- When storage behavior is unchanged, test revised templates against copied
+  persisted stores so the visual pass does not silently break existing data.
 - Treat `dist/<slug>.slop/app.html` as generated. Source CSS is compiled into it.
 - Never copy source, dependencies, build caches, stylesheets, or seed stores
   into a runtime template.
