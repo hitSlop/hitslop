@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "contact-card",
+  "title": "Contact Card",
+  "description": "A translucent mint glass badge and digital business card with direct links, bio, and vCard export.",
+  "categories": ["personal", "utilities"],
+  "presentation": { "width": 440, "height": 580, "shape": "rounded" }
+}

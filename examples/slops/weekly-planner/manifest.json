@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "weekly-planner",
+  "title": "Weekly Planner",
+  "description": "A ruled cream desk planner for scheduling days, time-blocking, and keeping weekly focus in view.",
+  "categories": ["productivity", "personal"],
+  "presentation": { "width": 760, "height": 560, "shape": "rounded" }
+}

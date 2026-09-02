@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "personal-budget",
+  "title": "Personal Budget",
+  "description": "A graphite pocket calculator fused with a dark paper ledger for monthly budgeting, spending categories, and quick calculations.",
+  "categories": ["finance", "utilities"],
+  "presentation": { "width": 780, "height": 530, "shape": "rounded" }
+}

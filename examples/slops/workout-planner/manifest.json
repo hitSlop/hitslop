@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "workout-planner",
+  "title": "Workout Planner",
+  "description": "A Game Boy-inspired training cartridge with exercises, sets, reps, and completion tracking.",
+  "categories": ["personal", "utilities"],
+  "presentation": { "width": 440, "height": 620, "shape": "rounded" }
+}

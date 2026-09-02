@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "countdown-milestones",
+  "title": "Countdown & Milestones",
+  "description": "A compact digital departure clock in a capsule body for tracking big events, live countdowns, and key milestones.",
+  "categories": ["utilities", "productivity"],
+  "presentation": { "width": 440, "height": 580, "shape": "rounded" }
+}

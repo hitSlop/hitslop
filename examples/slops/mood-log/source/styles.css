@@ -1,0 +1,359 @@
+:root {
+  --journal-bg: #fcfbfa;
+  --journal-surface: #f5f2eb;
+  --journal-border: #e6dfd1;
+  --ink: #26221f;
+  --ink-muted: #6e6761;
+  --ink-dim: #a39c94;
+  --orb-1: #a78bfa;
+  --orb-2: #38bdf8;
+  --orb-3: #4ade80;
+  --orb-4: #facc15;
+  --orb-5: #fb7185;
+  --radius: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Georgia, serif;
+  color: var(--ink);
+  background: #1b1917;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.journal-canvas {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  background: #1e1c19;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.journal-sheet {
+  flex: 1;
+  background: var(--journal-bg);
+  border-radius: var(--radius);
+  border: 2px solid var(--journal-border);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), inset 0 2px 0 #ffffff;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* Header */
+.journal-header {
+  border-bottom: 1.5px solid var(--journal-border);
+  padding-bottom: 8px;
+}
+
+.prompt-input {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+}
+
+/* Today Check-in Form Card */
+.checkin-card {
+  background: var(--journal-surface);
+  border: 1px solid var(--journal-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.orbs-selector-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.orbs-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mood-orb-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.mood-orb-btn:hover {
+  transform: scale(1.12);
+}
+
+.mood-orb-btn.selected {
+  transform: scale(1.18);
+  border-color: #ffffff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+}
+
+.energy-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
+.energy-slider {
+  width: 65px;
+  accent-color: var(--ink);
+}
+
+.note-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.reflection-input {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid var(--journal-border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  padding: 6px 10px;
+  outline: none;
+}
+
+.log-btn {
+  background: var(--ink);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Timeline List */
+.entries-timeline {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.entry-orb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.entry-meta {
+  display: flex;
+  flex-direction: column;
+  width: 65px;
+  flex-shrink: 0;
+}
+
+.entry-day {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.entry-energy {
+  font-size: 9.5px;
+  color: var(--ink-dim);
+}
+
+.entry-note {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--ink);
+  font-style: italic;
+  min-width: 0;
+}
+
+.delete-entry-btn {
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.entry-item:hover .delete-entry-btn {
+  opacity: 1;
+}
+
+.delete-entry-btn:hover {
+  color: #ef4444;
+}
+
+/* Footer */
+.journal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--ink-muted);
+  border-top: 1px solid var(--journal-border);
+  padding-top: 6px;
+}
+
+/* Static export styling */
+html[data-slop-capture="static"] [data-slop-export="hide"] {
+  display: none !important;
+}
+
+html[data-slop-capture="static"] input {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* 512x512 Icon Render Target */
+.journal-render {
+  display: none !important;
+  width: 512px;
+  height: 512px;
+  place-items: center;
+  overflow: hidden;
+  background: transparent;
+}
+
+html[data-slop-renderer="true"][data-slop-capture="icon"] .journal-canvas {
+  display: none;
+}
+
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] {
+  display: grid !important;
+}
+
+.journal-icon {
+  width: 512px;
+  height: 512px;
+  background: #171513;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-journal-sheet {
+  width: 440px;
+  height: 440px;
+  background: #fcfbfa;
+  border-radius: 40px;
+  border: 14px solid #e6dfd1;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.icon-journal-head {
+  border-bottom: 3px solid #26221f;
+  padding-bottom: 12px;
+}
+
+.icon-title-line {
+  display: block;
+  width: 160px;
+  height: 18px;
+  background: #26221f;
+  border-radius: 4px;
+}
+
+.icon-orbs-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 4px;
+}
+
+.icon-mood-orb {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.icon-mood-orb.orb-1 { background: #a78bfa; }
+.icon-mood-orb.orb-2 { background: #38bdf8; }
+.icon-mood-orb.orb-3 { background: #4ade80; }
+.icon-mood-orb.orb-4 { background: #facc15; }
+.icon-mood-orb.orb-5 { background: #fb7185; }
+
+.icon-mood-orb.active {
+  transform: scale(1.15);
+  box-shadow: 0 0 14px #fb7185;
+}
+
+.icon-journal-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.icon-entry {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.icon-entry-date {
+  width: 50px;
+  height: 12px;
+  background: #26221f;
+  border-radius: 3px;
+}
+
+.icon-entry-text {
+  flex: 1;
+  height: 12px;
+  background: #e2dbce;
+  border-radius: 3px;
+}
