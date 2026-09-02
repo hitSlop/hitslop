@@ -17,7 +17,14 @@ bun slop dev examples/slops/invoice
 bun slop build examples/slops/invoice
 bun slop dev examples/slops/alien-radio --native
 bun slop dev examples/slops/soma-amp --native
+bun slop dev examples/slops/expense-log
+bun slop dev examples/slops/trip-itinerary
+bun slop dev examples/slops/metronome-tapper
+bun slop dev examples/slops/flashcards
+bun slop dev examples/slops/pixel-art
 ```
+
+Recent product templates: `expense-log` is a thermal receipt for purchases and category totals; `trip-itinerary` is a boarding-pass day planner with a packing stub; `metronome-tapper` is a studio pendulum with tap tempo and woodblock clicks; `flashcards` is an index-card Leitner box; `pixel-art` is a 16×16 handheld sprite desk.
 
 `alien-radio` demonstrates a fixed exact-size RGBA skin. `kanban-board` uses
 the canonical SQLite store. Recipe combines JSON with a named image store; the

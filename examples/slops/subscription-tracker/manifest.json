@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "subscription-tracker",
+  "title": "Subscription Tracker",
+  "description": "A calm local ledger for recurring costs, renewal dates, and monthly pace.",
+  "categories": ["finance", "personal"],
+  "presentation": { "width": 640, "height": 720 }
+}

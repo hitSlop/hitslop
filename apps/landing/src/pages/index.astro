@@ -1,0 +1,126 @@
+---
+import FocusTimer from "../components/FocusTimer.svelte";
+import BidirectionalSync from "../components/BidirectionalSync.svelte";
+import Invoice from "../components/Invoice.svelte";
+import PromptMaker from "../components/PromptMaker.svelte";
+import RandomPicker from "../components/RandomPicker.svelte";
+import TemplateBrowser from "../components/TemplateBrowser.svelte";
+import { SITE_LINKS } from "../constants";
+import "../styles/global.css";
+
+const faqs = [
+  { question: "What is a .slop?", answer: "A .slop is a tiny app or living document you can open, move, duplicate, share, commit, and keep. Its interface and local data travel together as one package." },
+  { question: "Where does my data live?", answer: "In the writable document on your Mac. A slop can use JSON, SQLite, named media, or no persistence at all. Convex never stores your local document." },
+  { question: "Can an AI edit it?", answer: "Yes. Your AI can work with the same ordinary local data you do. Edit the UI and the file changes; edit the file and an open slop updates in real time." },
+  { question: "Do I need to host anything?", answer: "No. A published slop is a signed, source-free artifact people can download and run. You do not need to deploy a web app, provision a database, or build user accounts just to share a useful little tool." },
+  { question: "Can I share the result without sharing the app?", answer: "Yes. Export the current document as a high-resolution PNG or a PDF with selectable text and vector output—handy for invoices, recipes, plans, and anything meant to leave your desktop." },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fafbfd" />
+    <meta name="description" content="Tiny local-first apps and documents that live on your desktop." />
+    <title>hitSlop — Tiny apps &amp; docs for your desktop</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="masthead">
+      <a class="wordmark" href="/" aria-label="hitSlop home"><span class="brand-mark"><img src="/assets/appicon.png" alt="" /></span><span>hitSlop</span></a>
+      <nav aria-label="Primary navigation">
+        <a href="#why">Why hitSlop</a><a href="#make">Make one</a><a href="#templates">Browse</a>
+        <a href={SITE_LINKS.repository} target="_blank" rel="noreferrer">GitHub</a>
+        {SITE_LINKS.discord && <a href={SITE_LINKS.discord} target="_blank" rel="noreferrer">Discord</a>}
+      </nav>
+      <a class="nav-download" href={SITE_LINKS.download} target="_blank" rel="noreferrer">Download <span aria-hidden="true">↘</span></a>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Local-first software for macOS</p>
+          <h1 id="hero-title">Tiny apps &amp; docs that live on your desktop.</h1>
+          <p class="hero-lede">Each <code>.slop</code> is one local-first file you can open, move, duplicate, share, commit, and keep. Its interface, data, and media stay together on your Mac—no account required.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href={SITE_LINKS.download} target="_blank" rel="noreferrer"><span aria-hidden="true">↓</span> Download for macOS</a>
+            <a class="button button-secondary" href="#objects">Try the slops <span aria-hidden="true">↘</span></a>
+          </div>
+          <ul class="hero-facts" aria-label="Key hitSlop features"><li>Open, move &amp; share</li><li>Local JSON, SQLite &amp; media</li><li>Export PNG &amp; PDF</li></ul>
+        </div>
+        <figure class="desktop-still">
+          <div class="desktop-still-frame"><img src="/assets/desktop-hero.webp" alt="A Mac desktop filled with colorful focused apps, documents, and .slop files" width="1448" height="1086" fetchpriority="high" /></div>
+          <figcaption>Your tools where you expect them: on your desktop, beside everything else.</figcaption>
+        </figure>
+      </section>
+
+      <section class="objects" id="objects" aria-labelledby="objects-title">
+        <div class="section-intro"><p class="eyebrow">One format, many personalities</p><h2 id="objects-title">Little apps.<br />Real objects.</h2><p>A slop can read like paper, operate like an instrument, or take on a shape of its own. These are live, in-memory demos—give them a try.</p></div>
+        <div class="object-gallery">
+          <article class="object object-focus"><div class="object-stage focus-stage"><FocusTimer client:visible /></div><div class="object-caption"><span><strong>Pomodoro</strong>Focus and rest, without a dashboard.</span><small>Instrument · Interactive</small></div></article>
+          <article class="object object-invoice"><div class="object-stage invoice-stage"><Invoice client:visible /></div><div class="object-caption"><span><strong>Invoice</strong>Edit the document directly. Totals follow.</span><small>Paper · Interactive</small></div></article>
+          <article class="object object-picker"><div class="object-stage picker-stage"><RandomPicker client:visible /></div><div class="object-caption"><span><strong>Random Picker</strong>A tiny decision-making capsule.</span><small>Instrument · Interactive</small></div></article>
+        </div>
+      </section>
+
+      <section class="local-section" id="why" aria-labelledby="local-title">
+        <div class="local-copy">
+          <p class="eyebrow">A file, not an account</p><h2 id="local-title">Everything travels with the document.</h2>
+          <p>A slop is not a thin shell around somebody else’s cloud. It is a file you own, with its interface and durable stores together in one place.</p>
+          <div class="local-actions" aria-label="Things you can do with a slop"><span>Open</span><span>Move</span><span>Duplicate</span><span>Share</span><span>Commit</span><span>Keep</span></div>
+        </div>
+        <div class="package-anatomy" aria-label="Contents of a slop document">
+          <div class="package-tab"><img src="/assets/appicon.png" alt="" /><span>my-work.slop</span><small>on your Mac</small></div>
+          <div class="package-files">
+            <div class="file-row immutable"><span>manifest.json</span><small>identity + presentation</small></div><div class="file-row immutable"><span>app.html</span><small>the interface</small></div><div class="file-row immutable"><span>assets/</span><small>immutable app media</small></div>
+            <div class="store-group"><div class="store-label"><span>stores/</span><small>your editable data</small></div><div class="file-row"><span>data.json</span><small>documents + settings</small></div><div class="file-row"><span>data.sqlite</span><small>collections + queries</small></div><div class="file-row"><span>media/</span><small>images + named files</small></div></div>
+          </div>
+          <p class="package-note">Portable enough for Finder. Legible enough for Git.</p>
+        </div>
+      </section>
+
+      <section class="sync-section" aria-labelledby="sync-title">
+        <div class="sync-copy"><p class="eyebrow">Same file. Same truth.</p><h2 id="sync-title">You edit the UI.<br />Your AI edits the data.</h2><p>Changes flow both ways. Use the interface when that is easier; use an editor or AI when that is faster. An open slop updates in real time.</p></div>
+        <BidirectionalSync client:visible />
+      </section>
+
+      <section class="make-section" id="make" aria-labelledby="make-title">
+        <div class="make-copy"><p class="eyebrow">Make the tool you actually want</p><h2 id="make-title">Describe one small job. Get one small app.</h2><p>Start from a sentence or fork an existing slop. Ask your AI to change the layout, add a field, restyle the object, or wire up a different local store. You keep the source project and the finished file.</p><a class="text-link" href={SITE_LINKS.authoring} target="_blank" rel="noreferrer">Read the authoring guide <span aria-hidden="true">↗</span></a></div>
+        <PromptMaker client:visible />
+        <div class="fork-row" aria-label="Fork and redesign a slop">
+          <div class="fork-object fork-before"><small>Original</small><div><span>Reading list</span><strong>12 books</strong><i></i><i></i><i></i></div></div>
+          <div class="fork-prompt"><span>Fork</span><p>“Make it feel like a library checkout card and add ratings.”</p><b aria-hidden="true">→</b></div>
+          <div class="fork-object fork-after"><small>Your version</small><div><span>Jordan’s library</span><strong>12 books</strong><i>★★★★★</i><i>★★★★☆</i><i>★★★☆☆</i></div></div>
+        </div>
+      </section>
+
+      <section class="publish-section" aria-labelledby="publish-title">
+        <div class="publish-copy"><p class="eyebrow">Share software without starting a startup</p><h2 id="publish-title">No hosting. No database setup. No auth maze.</h2><p>Build one signed, source-free <code>.slop</code> and publish it to the catalog. People download a working local object; you do not inherit a tiny production system just because you made a useful tiny app.</p><code class="publish-command">bun run publish</code></div>
+        <div class="publish-board">
+          <div class="infra-list" aria-label="Infrastructure you do not need"><p><span aria-hidden="true">×</span><strong>Hosting</strong><small>No server to keep alive</small></p><p><span aria-hidden="true">×</span><strong>Database setup</strong><small>No cloud schema to provision</small></p><p><span aria-hidden="true">×</span><strong>User accounts</strong><small>No auth flows or password resets</small></p></div>
+          <div class="publish-flow" aria-label="Publishing flow"><div><span>1</span><strong>Your source</strong><small>Svelte, React, or plain HTML</small></div><i aria-hidden="true">→</i><div><span>2</span><strong>Signed .slop</strong><small>Runtime, preview, and icon</small></div><i aria-hidden="true">→</i><div><span>3</span><strong>Catalog</strong><small>Ready to download and fork</small></div></div>
+        </div>
+      </section>
+
+      <section class="export-section" aria-labelledby="export-title">
+        <div class="export-art" aria-hidden="true"><div class="export-paper"><header><span>Invoice</span><b>PAID</b></header><p>Northwind Studio</p><div><span>Product design</span><strong>$2,500</strong></div><div><span>Development</span><strong>$1,440</strong></div><footer><span>Total</span><strong>$3,940</strong></footer></div><span class="format format-png">PNG<small>2×</small></span><span class="format format-pdf">PDF<small>vector</small></span></div>
+        <div class="export-copy"><p class="eyebrow">Share the result</p><h2 id="export-title">The app can stay local. The work can go anywhere.</h2><p>Export a crisp PNG or a PDF with selectable text and vector output. Send the invoice, print the recipe, drop the plan into a message—without asking the recipient to install anything.</p><ul><li>Editing controls disappear from captures</li><li>Full document height, not a cropped window</li><li>Preview and Finder icon stay with the file</li></ul></div>
+      </section>
+
+      <section class="capability-strip" aria-label="hitSlop capabilities"><p>Framework-neutral on purpose</p><span>HTML</span><span>Svelte</span><span>React</span><span>JSON</span><span>SQLite</span><span>Named media</span><span>Quick Look</span><span>PNG</span><span>PDF</span></section>
+      <section class="catalog-section" id="templates" aria-labelledby="catalog-title">
+        <div class="catalog-heading"><div><p class="eyebrow">The public catalog</p><h2 id="catalog-title">Find your next<br />{" "}favorite tiny app.</h2></div><p>Download a template, create a writable copy, and adapt it to the way you work. Every slop is a starting point, not a constraint.</p></div>
+        <TemplateBrowser client:visible />
+      </section>
+      <section class="faq-section" aria-labelledby="faq-title"><div><p class="eyebrow">Questions, answered</p><h2 id="faq-title">The small print, in plain English.</h2></div><div class="faq-list">{faqs.map((faq) => <details><summary>{faq.question}<span aria-hidden="true">+</span></summary><p>{faq.answer}</p></details>)}</div></section>
+      <section class="final-cta" aria-labelledby="cta-title"><div><p class="eyebrow">Small files. Big ideas.</p><h2 id="cta-title">Put your next tiny tool on your desktop.</h2></div><a class="button button-primary" href={SITE_LINKS.download} target="_blank" rel="noreferrer">Download hitSlop <span aria-hidden="true">↓</span></a><div class="cta-art" aria-hidden="true"><span></span><span></span><img src="/assets/appicon.png" alt="" /></div></section>
+    </main>
+
+    <footer class="site-footer" id="community">
+      <a class="wordmark" href="/" aria-label="hitSlop home"><span class="brand-mark"><img src="/assets/appicon.png" alt="" /></span><span>hitSlop</span></a><p>Local-first small software for macOS.</p>
+      <nav aria-label="Footer navigation"><a href={SITE_LINKS.repository} target="_blank" rel="noreferrer">GitHub</a><a href={SITE_LINKS.authoring} target="_blank" rel="noreferrer">Docs</a>{SITE_LINKS.discord && <a href={SITE_LINKS.discord} target="_blank" rel="noreferrer">Discord</a>}<span>MIT © 2026</span></nav>
+    </footer>
+  </body>
+</html>

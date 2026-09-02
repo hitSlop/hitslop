@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Switch, Tabs } from "bits-ui";
   import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
   import Pause from "@lucide/svelte/icons/pause";
   import Play from "@lucide/svelte/icons/play";
+  import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import Icon from "./Icon.svelte";
 
   type Kind = "focus" | "rest";
@@ -31,6 +31,7 @@
   const progress = $derived(duration === 0 ? 0 : 1 - remaining / duration);
   const ring = $derived(Math.max(0, Math.min(1, progress)));
   const label = $derived(format(remaining));
+  const completedPomodoros = $derived(timer.current.history.filter((session) => session.kind === "focus").length);
 
   function format(total: number): string {
     const clamped = Math.max(0, total);
@@ -74,17 +75,9 @@
     else start();
   }
 
-  function setKind(next: Kind): void {
-    if (kind === next) return;
+  function reset(): void {
     stopTick();
-    kind = next;
     syncRemaining();
-  }
-
-  function setPreset(focusMinutes: number, restMinutes: number): void {
-    stopTick();
-    timer.current.focusMinutes = focusMinutes;
-    timer.current.restMinutes = restMinutes;
   }
 
   $effect(() => {
@@ -96,33 +89,20 @@
 </script>
 
 <main
-  class="timer-shell"
+  class="tomato-timer"
   data-running={running ? "true" : "false"}
+  data-kind={kind}
   data-slop-selection="none"
   aria-label="Focus instrument"
 >
-  <header class="timer-header">
-    <div>
-      <p>Longtail studio</p>
-      <h1>Focus instrument</h1>
-    </div>
-    <span class="timer-state"><i aria-hidden="true"></i>{running ? "Running" : "Ready"}</span>
-  </header>
-
-  <Tabs.Root value={kind} onValueChange={(value) => {
-    if (value === "focus" || value === "rest") setKind(value);
-  }} class="mode-switch">
-    <Tabs.List aria-label="Timer mode">
-      <Tabs.Trigger value="focus">01 / Focus</Tabs.Trigger>
-      <Tabs.Trigger value="rest">02 / Rest</Tabs.Trigger>
-    </Tabs.List>
-  </Tabs.Root>
+  <span class="leaf-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+  <output class="completed-count" aria-label={`${completedPomodoros} completed pomodoros`}><span aria-hidden="true">🍅</span>{completedPomodoros}</output>
 
   <section class="timer-stage" aria-label={`${kind} timer: ${label} remaining`}>
     <div class="dial-wrap">
       <svg class="timer-dial" viewBox="0 0 120 120" aria-hidden="true">
-        {#each Array(12) as _, index}
-          <line x1="60" y1="3" x2="60" y2={index % 3 === 0 ? 9 : 6} transform={`rotate(${index * 30} 60 60)`} />
+        {#each Array(24) as _, index}
+          <line x1="60" y1="3" x2="60" y2={index % 3 === 0 ? 9 : 6} transform={`rotate(${index * 15} 60 60)`} />
         {/each}
         <circle class="dial-track" cx="60" cy="60" r="48" />
         <circle
@@ -136,68 +116,16 @@
         />
       </svg>
       <div class="timer-readout">
-        <span>{kind === "focus" ? "Deep work" : "Recovery"}</span>
         <strong>{label}</strong>
-        <small>{Math.round(ring * 100)}% elapsed</small>
+        <small>{Math.round(ring * 100)}% steeped</small>
       </div>
     </div>
 
-    <div class="run-control">
-      <span>{running ? "Live interval" : "Ready when you are"}</span>
-      <Switch.Root checked={running} onCheckedChange={() => toggleRun()} class="run-switch" aria-label={running ? "Pause timer" : "Start timer"}>
-        <Switch.Thumb class="run-thumb">
-          {#if running}<Pause fill="currentColor" />{:else}<Play fill="currentColor" />{/if}
-        </Switch.Thumb>
-      </Switch.Root>
+    <div class="run-control" data-slop-export="hide">
+      <button class="run-button" onclick={toggleRun} aria-label={running ? "Pause timer" : "Start timer"}>{#if running}<Pause fill="currentColor" />{:else}<Play fill="currentColor" />{/if}<span>{running ? "Pause" : "Start"}</span></button>
+      <button class="reset-button" onclick={reset} aria-label="Reset timer"><RotateCcw /></button>
     </div>
   </section>
-
-  <footer class="timer-footer">
-    <div class="timer-presets" aria-label="Timer presets">
-      <span>Programs</span>
-      <button onclick={() => setPreset(25, 5)}>25 / 05</button>
-      <button onclick={() => setPreset(50, 10)}>50 / 10</button>
-    </div>
-    <div class="duration-settings">
-      <label><span>Focus</span>
-      <input
-        type="number"
-        min="1"
-        max="90"
-        value={timer.current.focusMinutes}
-        onchange={(event) => {
-          const focusMinutes = Number(event.currentTarget.value) || 25;
-          timer.current.focusMinutes = focusMinutes;
-        }}
-      />
-      </label>
-      <label><span>Rest</span>
-      <input
-        type="number"
-        min="1"
-        max="30"
-        value={timer.current.restMinutes}
-        onchange={(event) => {
-          const restMinutes = Number(event.currentTarget.value) || 5;
-          timer.current.restMinutes = restMinutes;
-        }}
-      />
-      </label>
-    </div>
-
-    <div class="session-history">
-      <p>Recent</p>
-      {#if timer.current.history.length > 0}
-        <ol>
-          {#each timer.current.history.slice(0, 2) as session (session.startedAt)}
-            <li><span>{session.kind}</span><strong>{Math.round(session.seconds / 60)}m</strong></li>
-          {/each}
-        </ol>
-      {:else}
-        <span>No sessions yet</span>
-      {/if}
-    </div>
-  </footer>
 
   {#if timer.error}
     <p class="timer-error">The timer history could not be saved. {timer.error}</p>

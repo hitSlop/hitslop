@@ -3,9 +3,9 @@
 > Tiny apps. Big ideas. Your data stays yours.
 
 hitSlop is a native home for small, personal, local-first web apps. Each
-`.slop` is a document you can open, move, duplicate, and keep—not an account
-you have to maintain. The app owns its interface; the host owns durable JSON,
-SQLite, named media, previews, export, and native window behavior.
+`.slop` is a document you can open, move, duplicate, share, commit, and keep—not
+an account you have to maintain. The app owns its interface; the host owns
+durable JSON, SQLite, named media, previews, export, and native window behavior.
 
 <p align="center">
   <img src="examples/slops/invoice/screenshots/preview.png" width="30%" alt="Invoice slop">
@@ -17,6 +17,24 @@ A slop can feel like **paper** (invoice, recipe, résumé), an **instrument**
 (timer, picker, mixer), or a **skin** (a tiny object with its own silhouette).
 Those are design directions, not runtime frameworks: the package contract is
 plain HTML plus host data.
+
+## Same file, same truth
+
+Slops are designed for bidirectional editing. Change a value in the rendered
+interface and its local store updates. Change the JSON or SQLite data on disk
+and an open slop can follow the new revision. You and your AI can work on the
+same ordinary local data without a proprietary cloud record in the middle.
+
+Start from an existing slop and fork it into the tool you actually want. Ask
+your AI to change the design, add a field, or use a different store; keep the
+source project and build another portable `.slop`.
+
+Publishing does not require hosting a web app, provisioning a database, or
+building authentication. The catalog receives a signed, source-free runtime
+artifact, while personal document stores stay out of the published template.
+When the result—not the app—is what you need to share, export the current
+document as a high-resolution PNG or a PDF with selectable text and vector
+output.
 
 ## Make one
 

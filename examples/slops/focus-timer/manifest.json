@@ -1,8 +1,8 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
   "slug": "focus-timer",
-  "title": "Focus Timer",
-  "description": "A circular focus and rest timer with local session history.",
+  "title": "Pomodoro",
+  "description": "A playful tomato timer for focus sprints, breaks, and local session history.",
   "categories": ["productivity", "personal"],
-  "presentation": { "width": 420, "height": 420, "shape": "ellipse" }
+  "presentation": { "width": 440, "height": 440, "resizable": false, "shape": "ellipse" }
 }

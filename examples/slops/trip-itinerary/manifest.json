@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "trip-itinerary",
+  "title": "Trip Itinerary",
+  "description": "A lilac transit boarding pass for organizing flights, hotels, daily stops, and travel stubs.",
+  "categories": ["productivity", "personal"],
+  "presentation": { "width": 640, "height": 580, "shape": "rounded" }
+}

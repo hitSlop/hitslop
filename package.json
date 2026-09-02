@@ -6,6 +6,7 @@
   "packageManager": "bun@1.4.0",
   "workspaces": [
     "apps/catalog",
+    "apps/landing",
     "apps/registry",
     "packages/*",
     "examples/slops"
@@ -19,6 +20,7 @@
     "schema:check": "bun run --cwd packages/schema check:generated",
     "slop": "bun packages/cli/src/cli.ts",
     "catalog:dev": "bun run --cwd apps/catalog dev",
+    "landing:dev": "bun run --cwd apps/landing dev",
     "convex:dev": "bun run --cwd apps/registry dev",
     "swift:build": "swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native"
   },

@@ -1,0 +1,21 @@
+{
+  "name": "@hitslop/landing-poc",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/svelte": "^9.0.1",
+    "astro": "^7.2.10",
+    "svelte": "^5.57.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^6.0.3"
+  }
+}

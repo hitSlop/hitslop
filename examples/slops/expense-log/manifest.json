@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "expense-log",
+  "title": "Expense Log",
+  "description": "A thermal paper receipt roll for rapidly recording purchases, tracking categories, and running totals.",
+  "categories": ["finance", "utilities"],
+  "presentation": { "width": 380, "height": 640, "shape": "rounded" }
+}
