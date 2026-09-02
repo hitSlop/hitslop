@@ -6,7 +6,6 @@
   import MapPin from "@lucide/svelte/icons/map-pin";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
-  import Cover from "./Cover.svelte";
   import Icon from "./Icon.svelte";
   import type { Resume, Skill } from "./model";
 
@@ -115,6 +114,5 @@
 </main>
 
 {#if capture.isRenderer()}
-  <Cover resume={resume.current} initials={badgeInitials} />
   <Icon initials={badgeInitials} />
 {/if}

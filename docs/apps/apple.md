@@ -26,7 +26,7 @@ to build for iOS.
 ## Opening a document
 
 The host validates the package, derives a Finder icon from immutable
-`QuickLook/Thumbnail.png` where appropriate, creates an ephemeral WebView,
+`QuickLook/Icon.png` where appropriate, creates an ephemeral WebView,
 serves only allowed immutable resources, and wires the bridge to canonical
 stores. Closing a macOS document uses a separate hidden renderer to refresh
 preview assets; it does not put the interactive window into capture mode.

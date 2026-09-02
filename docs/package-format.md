@@ -17,7 +17,7 @@ my-app/
 └── public/assets/              optional immutable files
 ```
 
-It may also contain `Cover.svelte` or `Icon.svelte` components and local
+It may also contain an `Icon.svelte` component and local
 screenshots. It must not contain real document stores.
 
 ## Runtime template
@@ -29,7 +29,7 @@ my-app.slop/
 ├── assets/                    optional and immutable
 └── QuickLook/
     ├── Preview.png            required for install/publish
-    └── Thumbnail.png          immutable Finder/catalog artwork
+    └── Icon.png               immutable Finder/catalog artwork
 ```
 
 A writable document may lazily add canonical data:
@@ -74,5 +74,5 @@ manifest byte-for-byte.
 ## Immutability rule
 
 In a document, treat `manifest.json`, `app.html`, `assets/`, and
-`QuickLook/Thumbnail.png` as immutable. The host may atomically update stores,
+`QuickLook/Icon.png` as immutable. The host may atomically update stores,
 refresh `QuickLook/Preview.png`, and manage local filesystem metadata.

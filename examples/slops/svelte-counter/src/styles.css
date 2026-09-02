@@ -31,6 +31,12 @@ output { display: block; font-size: clamp(70px, 20cqw, 94px); font-weight: 650; 
 button:focus-visible { outline: 3px solid color-mix(in srgb, var(--slop-accent) 34%, transparent); outline-offset: 2px; }
 html[data-slop-capture="static"] [data-slop-export="hide"] { display: none !important; }
 
+.counter-render { position: fixed; inset: 0 auto auto 0; display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
+html[data-slop-renderer="true"][data-slop-capture="icon"] main { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
+.icon-tile { display: grid; place-items: center; width: 464px; height: 464px; border: 18px solid var(--slop-ink); border-radius: 72px; background: var(--slop-accent); }
+.icon-tile span { margin-top: -18px; color: var(--slop-surface); font-size: 280px; font-weight: 600; line-height: 1; }
+
 @container (max-width: 360px) {
   .counter { padding: 25px 23px; }
 }

@@ -13,11 +13,11 @@ JSON, SQLite, and named media data. Read `manifest.json` first.
 - A runtime package has `manifest.json`, generated `app.html`, optional immutable
   `assets/`, optional canonical `stores/data.json`, `stores/data.sqlite`, and
   user-selected supported media under `stores/media/`,
-  and optional `QuickLook/Preview.png` and `QuickLook/Thumbnail.png`.
+  and optional `QuickLook/Preview.png` and `QuickLook/Icon.png`.
 - Manifest storage is implicit. A slop can use JSON, SQLite, named media, or
   any combination. Replace JSON and media atomically and keep SQLite
   transactions on one connection.
-- Treat `manifest.json`, `app.html`, `assets/`, and `QuickLook/Thumbnail.png` as
+- Treat `manifest.json`, `app.html`, `assets/`, and `QuickLook/Icon.png` as
   immutable in a document. Never add `style.css`, `document.json`, or a build
   directory. The macOS host may add the Finder-managed `Icon\r` metadata file
   to local documents; templates and published artifacts must not contain it.
@@ -25,7 +25,7 @@ JSON, SQLite, and named media data. Read `manifest.json` first.
   app-local `apps/apple/Packages/HitSlopApple` package; AppKit code remains in
   its macOS-only Host, Catalog, and NativeCLI targets.
 - macOS uses built-in package Quick Look for previews and derives each local
-  document's Finder custom icon from its immutable `QuickLook/Thumbnail.png`.
+  document's Finder custom icon from its immutable `QuickLook/Icon.png`.
 - Catalog selection caches immutable artifacts at
   `~/.hitslop/templates/cache/<publisher>/<slug>/<release>.slop`, verifies
   SHA-256, and copies one to the user-selected path. Local `slop install`

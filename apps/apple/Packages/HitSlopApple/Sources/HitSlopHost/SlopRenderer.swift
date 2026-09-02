@@ -65,7 +65,6 @@ import WebKit
 }
 
 public enum SlopRenderTarget: String, Sendable {
-    case cover
     case icon
 }
 
@@ -122,12 +121,7 @@ struct SlopDocumentAssets: Sendable {
         try await session.waitUntilReady()
 
         let preview = try? await capture(session: session, output: .previewPNG)
-        let icon: Data?
-        if let authoredIcon = try await targetPNGData(session: session, target: .icon) {
-            icon = authoredIcon
-        } else {
-            icon = try await targetPNGData(session: session, target: .cover)
-        }
+        let icon = try await targetPNGData(session: session, target: .icon)
         return SlopDocumentAssets(previewPNG: preview, finderIconPNG: icon)
     }
 

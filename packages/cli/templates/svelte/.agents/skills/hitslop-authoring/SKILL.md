@@ -36,8 +36,8 @@ adding persistence or changing the runtime boundary.
 - Storage is implicit and ID-free. Never add storage declarations or release
   versions to the manifest.
 - Treat `dist/<slug>.slop` as generated output.
-- Publishing captures `QuickLook/Preview.png`, produces a maximum-512px
-  `Thumbnail.png`, and signs one immutable ZIP.
+- Publishing captures `QuickLook/Preview.png`, produces an exact 512×512
+  `QuickLook/Icon.png`, and signs one immutable ZIP.
 - Publisher ownership comes from the local Ed25519 identity; back it up with
   `slop identity export`.
 

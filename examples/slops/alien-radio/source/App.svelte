@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
+  import Icon from "./Icon.svelte";
 
   type Playlist = { url: string; format: string; quality: string };
   type Channel = {
@@ -273,3 +275,5 @@
 
   <a class="soma" href="https://somafm.com/support/" target="_blank" rel="noreferrer">Powered by listener-supported SomaFM · Support the signal ↗</a>
 </main>
+
+{#if capture.isRenderer()}<Icon />{/if}

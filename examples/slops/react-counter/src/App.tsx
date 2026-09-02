@@ -25,18 +25,9 @@ export default function App() {
         </div>
       </section>
       {renderTargets && (
-        <>
-          <section className="counter-render" data-slop-render="cover" aria-hidden="true">
-            <div className="cover-card">
-              <p className="cover-eyebrow">Quick counter</p>
-              <span className="cover-count">{state.value.count}</span>
-              <p className="cover-caption">things counted</p>
-            </div>
-          </section>
-          <section className="counter-render" data-slop-render="icon" aria-hidden="true">
-            <div className="icon-tile"><span>+</span></div>
-          </section>
-        </>
+        <section className="counter-render" data-slop-render="icon" aria-hidden="true">
+          <div className="icon-tile"><span>+</span></div>
+        </section>
       )}
     </main>
   );

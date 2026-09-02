@@ -31,17 +31,17 @@ shadow; hierarchy comes from readable type, compact rhythm, rules, and
 purposeful internal surfaces.
 
 Build emits `dist/<slug>.slop`; install and publish capture a full
-`QuickLook/Preview.png` and derive a static `QuickLook/Thumbnail.png`. Pass
-`--thumbnail <png>` to supply custom artwork. A 512x512 PNG with a centered
-subject, comfortable safe margins, and no essential small text works best in
-Finder; otherwise the CLI preserves the preview's aspect ratio and scales its
-longest edge to at most 512 pixels. Source, dependencies, data seeds, and
-Finder's host-generated `Icon\r` metadata never enter the runtime template.
+`QuickLook/Preview.png` and produce an exact 512×512 `QuickLook/Icon.png`. Pass
+`--icon <png>` to supply custom artwork. A centered subject, comfortable safe
+margins, and no essential small text work best in Finder and compact catalog
+rows. Without a custom target or file, the CLI fits the preview into a square
+icon canvas. Source, dependencies, data seeds, and Finder's host-generated
+`Icon\r` metadata never enter the runtime template.
 
-## Cover and icon render targets
+## Icon render target
 
-An app may expose one optional square element with `data-slop-render="cover"`
-and one with `data-slop-render="icon"`. The contract, in full:
+An app may expose one optional square element with `data-slop-render="icon"`.
+The contract, in full:
 
 - **Mount only in the renderer pass.** The host renders document assets in a
   hidden session that sets `html[data-slop-renderer="true"]` before any guest
@@ -54,24 +54,22 @@ and one with `data-slop-render="icon"`. The contract, in full:
   </script>
 
   {#if capture.isRenderer()}
-    <Cover />
     <Icon />
   {/if}
   ```
 
-- **Exactly one element per target**, square (width == height), and fully
+- **Exactly one element**, square (width == height), and fully
   inside the viewport. The hidden renderer grows to at least 512px so a 512px
   canvas does not have to fit the interactive window. Snapshot output is
   always 512×512.
 - **Reveal via CSS alone.** The host flips `html[data-slop-capture]` to
-  `"cover"` or `"icon"` (and `"static"` for full-document export) and waits
+  `"icon"` (and `"static"` for full-document export) and waits
   only for layout to settle — a double `requestAnimationFrame` plus 100ms. No
   async work may be required to make a target visible. Use the double-gated
   form so targets can never flash inside the interactive app:
 
   ```css
   [data-slop-render] { display: none !important; width: 512px; height: 512px; background: transparent; }
-  html[data-slop-renderer="true"][data-slop-capture="cover"] [data-slop-render="cover"],
   html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
   ```
 
@@ -82,14 +80,10 @@ and one with `data-slop-render="icon"`. The contract, in full:
   background; keep the target's outer canvas transparent and paint only the
   intended object.
 
-Fallback chain: when a document closes, the macOS host renders a hidden
-session and prefers the live icon, then the live cover, for Finder metadata
-(it never captures while the interactive document is open). Install and
-publish prefer the cover for `QuickLook/Thumbnail.png`, which the catalog uses
-for template cards; without a cover, the CLI derives the thumbnail from the
-full `Preview.png` (`packages/cli/src/static-preview.ts`, longest edge scaled
-to 512px). Recently opened documents keep the live `Preview.png` at the slop's
-own aspect ratio.
+When a document closes, the macOS host may render the live icon for Finder
+metadata without touching the interactive editor. Install and publish persist
+the authored or derived icon as immutable `QuickLook/Icon.png`. Recently opened
+documents keep the live `Preview.png` at the slop's own aspect ratio.
 
 These are compiled DOM contracts—the runtime never contains or discovers
-framework source files such as `Cover.svelte` or `Icon.svelte`.
+framework source files such as `Icon.svelte`.

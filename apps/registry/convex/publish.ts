@@ -6,7 +6,8 @@ export const finalize = internalMutation({
   args: {
     requestId: v.string(), publisherKeyId: v.string(), publicKey: v.string(), displayName: v.string(),
     artifactKey: v.string(), artifactSha256: v.string(), artifactBytes: v.number(),
-    previewKey: v.string(), previewSha256: v.string(), previewBytes: v.number(), manifest: v.any(),
+    previewKey: v.string(), previewSha256: v.string(), previewBytes: v.number(),
+    iconKey: v.string(), iconSha256: v.string(), iconBytes: v.number(), manifest: v.any(),
   },
   returns: v.object({ templateId: v.id("templates"), releaseId: v.id("releases"), releaseNumber: v.number() }),
   handler: async (ctx, args) => {
@@ -35,7 +36,8 @@ export const finalize = internalMutation({
         publisherId: publisher._id, publisherKeyId: publisher.keyId, slug: manifest.slug,
         title: manifest.title, description: manifest.description, categories: manifest.categories, searchText,
         currentReleaseNumber: 0, currentPreviewKey: args.previewKey, currentPreviewSha256: args.previewSha256,
-        currentPreviewBytes: args.previewBytes, creations: 0, createdAt: now, updatedAt: now,
+        currentPreviewBytes: args.previewBytes, currentIconKey: args.iconKey, currentIconSha256: args.iconSha256,
+        currentIconBytes: args.iconBytes, creations: 0, createdAt: now, updatedAt: now,
       });
       template = (await ctx.db.get(id))!;
     }
@@ -45,12 +47,14 @@ export const finalize = internalMutation({
       templateId: template._id, number: releaseNumber,
       artifactKey: args.artifactKey, artifactSha256: args.artifactSha256, artifactBytes: args.artifactBytes,
       previewKey: args.previewKey, previewSha256: args.previewSha256, previewBytes: args.previewBytes,
+      iconKey: args.iconKey, iconSha256: args.iconSha256, iconBytes: args.iconBytes,
       manifest: args.manifest, createdAt: now,
     });
     await ctx.db.patch(template._id, {
       title: manifest.title, description: manifest.description, categories: manifest.categories, searchText,
       currentReleaseId: releaseId, currentReleaseNumber: releaseNumber,
       currentPreviewKey: args.previewKey, currentPreviewSha256: args.previewSha256, currentPreviewBytes: args.previewBytes,
+      currentIconKey: args.iconKey, currentIconSha256: args.iconSha256, currentIconBytes: args.iconBytes,
       updatedAt: now,
     });
     await ctx.db.insert("publishRequests", { requestId: args.requestId, publisherId: publisher._id, releaseId, createdAt: now });

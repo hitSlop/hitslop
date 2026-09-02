@@ -5,11 +5,11 @@ import { buildSlop, packSlop } from "./project.ts";
 import { runNative } from "./dev.ts";
 import { getIdentity, sign } from "./identity.ts";
 import { validateTemplatePackage } from "./install.ts";
-import { validateStaticPng, writeDefaultThumbnail } from "./static-preview.ts";
+import { validateIconPng, validateStaticPng, writeDefaultIcon } from "./static-preview.ts";
 
 const blobPart = (bytes: Uint8Array): BlobPart => Uint8Array.from(bytes);
 
-export async function publishSlop(root: string, flags: { registry?: string; preview?: string; thumbnail?: string }): Promise<string> {
+export async function publishSlop(root: string, flags: { registry?: string; preview?: string; icon?: string }): Promise<string> {
   const built = await buildSlop(root);
   const quickLook = join(built.directory, "QuickLook");
   const preview = join(quickLook, "Preview.png");
@@ -17,13 +17,14 @@ export async function publishSlop(root: string, flags: { registry?: string; prev
   if (flags.preview) await cp(resolve(flags.preview), preview);
   else await runNative(["screenshot", built.directory, "--output", preview]);
   validateStaticPng(new Uint8Array(await Bun.file(preview).arrayBuffer()), "The template preview");
-  const thumbnail = join(quickLook, "Thumbnail.png");
-  if (flags.thumbnail) await cp(resolve(flags.thumbnail), thumbnail);
+  const icon = join(quickLook, "Icon.png");
+  if (flags.icon) await cp(resolve(flags.icon), icon);
   else {
-    await rm(thumbnail, { force: true });
-    await runNative(["screenshot", built.directory, "--target", "cover", "--if-present", "--output", thumbnail]);
-    if (!await Bun.file(thumbnail).exists()) await writeDefaultThumbnail(preview, thumbnail);
+    await rm(icon, { force: true });
+    await runNative(["screenshot", built.directory, "--target", "icon", "--if-present", "--output", icon]);
+    if (!await Bun.file(icon).exists()) await writeDefaultIcon(preview, icon);
   }
+  validateIconPng(new Uint8Array(await Bun.file(icon).arrayBuffer()));
   // Static rendering may initialize a lazy store. Published templates never
   // carry seed data; each created document initializes its own state.
   await rm(join(built.directory, "stores"), { recursive: true, force: true });

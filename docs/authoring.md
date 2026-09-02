@@ -43,14 +43,14 @@ The build bundles the web app into generated `app.html`, copies allowed
 immutable assets, validates the manifest and package boundary, and writes
 `dist/<slug>.slop`. Inspect the result: it must be source-free and store-free.
 
-## Preview, thumbnail, and icon
+## Preview and icon
 
 `install` and `publish` use the native renderer to capture a full preview and
-derive a maximum-512px thumbnail. Dedicated cover/icon DOM targets give better
-results; see [Design and presentation](presentation.md).
+produce an exact 512×512 icon. A dedicated icon DOM target gives the best
+result; see [Design and presentation](presentation.md).
 
 For CI or exceptional artwork, pass `--preview <png>` and/or
-`--thumbnail <png>`. These flags replace capture inputs; they do not relax PNG
+`--icon <png>`. These flags replace capture inputs; they do not relax PNG
 or package validation.
 
 ## Install and test a real document

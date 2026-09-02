@@ -33,11 +33,10 @@ Preview preserves manifest dimensions. PNG/PDF export uses current width and
 full document height; PNG is deterministic 2× and PDF keeps selectable text/
 vectors. Keep export content in normal flow, not nested scroll panels.
 
-## Cover and icon
+## Icon
 
-Mount at most one 512×512 `data-slop-render="cover"` and one
-`data-slop-render="icon"` target only when `capture.isRenderer()` is true.
-Reveal each only in its capture mode. Cover should communicate job and character
-at catalog size. Icon should use a simpler silhouette with safe margins and no
-essential small text. Finder prefers icon then cover; catalog prefers cover then
-the full preview.
+Mount at most one 512×512 `data-slop-render="icon"` target only when
+`capture.isRenderer()` is true. Reveal it only in icon capture mode. The icon
+should communicate the job with a strong silhouette, safe margins, and no
+essential small text. Catalog detail uses the full preview; Finder and compact
+catalog rows use the icon.

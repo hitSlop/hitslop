@@ -47,13 +47,13 @@ app = app.command("build", (command) => command.args([{ name: "path", type: "pat
 app = app.command("install", (command) => command.meta({ description: "Build and install a template into the local hitSlop catalog." }).args([{ name: "path", type: "path", default: "." }] as const).flags({
   force: { type: "boolean", description: "Replace an existing local template without prompting." },
   preview: { type: "path", description: "Use this PNG instead of capturing a fresh native preview." },
-  thumbnail: { type: "path", description: "Use this PNG as the static Finder thumbnail instead of deriving it from the preview." },
+  icon: { type: "path", description: "Use this 512x512 PNG as the catalog and Finder icon." },
 }).run(async ({ args, flags }) => {
-  const result = await installTemplate(args.path, { force: flags.force ?? false, ...(flags.preview ? { preview: flags.preview } : {}), ...(flags.thumbnail ? { thumbnail: flags.thumbnail } : {}), confirmOverwrite: confirmReplacement });
+  const result = await installTemplate(args.path, { force: flags.force ?? false, ...(flags.preview ? { preview: flags.preview } : {}), ...(flags.icon ? { icon: flags.icon } : {}), confirmOverwrite: confirmReplacement });
   console.log(`${result.replaced ? "Updated" : "Installed"} ${result.manifest.title} at ${result.directory}`);
 }));
-app = app.command("publish", (command) => command.args([{ name: "path", type: "path", default: "." }] as const).flags({ registry: { type: "string", description: "Catalog publish endpoint. Defaults to https://hitslop.app/api/publish. Set HITSLOP_REGISTRY_URL=http://localhost:3000/api/publish for a local catalog." }, preview: { type: "path" }, thumbnail: { type: "path", description: "Use this PNG as the static Finder thumbnail instead of deriving it from the preview." } }).run(async ({ args, flags }) => {
-  console.log(await publishSlop(args.path, { ...(flags.registry ? { registry: flags.registry } : {}), ...(flags.preview ? { preview: flags.preview } : {}), ...(flags.thumbnail ? { thumbnail: flags.thumbnail } : {}) }));
+app = app.command("publish", (command) => command.args([{ name: "path", type: "path", default: "." }] as const).flags({ registry: { type: "string", description: "Catalog publish endpoint. Defaults to https://hitslop.app/api/publish. Set HITSLOP_REGISTRY_URL=http://localhost:3000/api/publish for a local catalog." }, preview: { type: "path" }, icon: { type: "path", description: "Use this 512x512 PNG as the catalog and Finder icon." } }).run(async ({ args, flags }) => {
+  console.log(await publishSlop(args.path, { ...(flags.registry ? { registry: flags.registry } : {}), ...(flags.preview ? { preview: flags.preview } : {}), ...(flags.icon ? { icon: flags.icon } : {}) }));
 }));
 
 async function secret(prompt: string): Promise<string> {

@@ -1,137 +1,266 @@
 <script lang="ts">
-  import { Dialog, DropdownMenu } from "bits-ui";
-  import { sqliteQuery } from "@hitslop/svelte";
-  import { slop, sql } from "@hitslop/runtime";
+  import { capture } from "@hitslop/runtime";
+  import { jsonStore } from "@hitslop/svelte";
+  import ArrowDown from "@lucide/svelte/icons/arrow-down";
+  import ArrowLeft from "@lucide/svelte/icons/arrow-left";
+  import ArrowRight from "@lucide/svelte/icons/arrow-right";
+  import ArrowUp from "@lucide/svelte/icons/arrow-up";
+  import Check from "@lucide/svelte/icons/check";
   import GripVertical from "@lucide/svelte/icons/grip-vertical";
-  import MoreHorizontal from "@lucide/svelte/icons/ellipsis";
   import Plus from "@lucide/svelte/icons/plus";
+  import Trash2 from "@lucide/svelte/icons/trash-2";
   import X from "@lucide/svelte/icons/x";
+  import { onDestroy } from "svelte";
+  import Icon from "./Icon.svelte";
 
-  type Column = { id: number; title: string; position: number; color: string };
-  type Card = { id: number; column_id: number; title: string; detail: string; priority: string; position: number; created_at: string };
+  type Lane = { id: string; title: string; limit: number | null };
+  type Card = { id: string; laneId: string; title: string; note: string; tag: string; order: number };
+  type Board = { title: string; doneLaneId: string | null; lanes: Lane[]; cards: Card[] };
 
-  void slop.db.transaction([
-    { sql: "CREATE TABLE IF NOT EXISTS columns (id INTEGER PRIMARY KEY, title TEXT NOT NULL, position INTEGER NOT NULL, color TEXT NOT NULL)" },
-    { sql: "CREATE TABLE IF NOT EXISTS cards (id INTEGER PRIMARY KEY, column_id INTEGER NOT NULL REFERENCES columns(id), title TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', priority TEXT NOT NULL DEFAULT 'normal', position INTEGER NOT NULL, created_at TEXT NOT NULL)" },
-    { sql: "INSERT OR IGNORE INTO columns (id, title, position, color) VALUES (1, 'Signal', 0, 'butter')" },
-    { sql: "INSERT OR IGNORE INTO columns (id, title, position, color) VALUES (2, 'In motion', 1, 'blue')" },
-    { sql: "INSERT OR IGNORE INTO columns (id, title, position, color) VALUES (3, 'Landed', 2, 'mint')" },
-  ]);
-  const columns = sqliteQuery<Column>(sql`SELECT id, title, position, color FROM columns ORDER BY position, id`);
-  const cards = sqliteQuery<Card>(sql`SELECT id, column_id, title, detail, priority, position, created_at FROM cards ORDER BY position, id`);
-  let adding = $state(false);
-  let editingID = $state<number | null>(null);
-  let draftTitle = $state("");
-  let draftDetail = $state("");
-  let draftPriority = $state("normal");
-  let draftColumnID = $state(1);
-  let draggingID = $state<number | null>(null);
+  const board = jsonStore<Board>({
+    title: "Work Order Board",
+    doneLaneId: "shipped",
+    lanes: [
+      { id: "queued", title: "Queued", limit: null },
+      { id: "running", title: "Running", limit: 3 },
+      { id: "review", title: "Review", limit: 2 },
+      { id: "shipped", title: "Shipped", limit: null },
+    ],
+    cards: [
+      { id: "spindle", laneId: "queued", title: "Rebuild the spindle jig", note: "Waiting on the 12mm collet before setup can start.", tag: "shop", order: 0 },
+      { id: "catalog", laneId: "queued", title: "Price the spring catalog", note: "Compare last season's margins first.", tag: "admin", order: 1 },
+      { id: "anodize", laneId: "running", title: "Anodize the panel batch", note: "Bath is up to temperature; 40 pieces on the rack.", tag: "finish", order: 0 },
+      { id: "wiring", laneId: "running", title: "Loom the control wiring", note: "", tag: "assembly", order: 1 },
+      { id: "gauge", laneId: "review", title: "Check the gauge tolerances", note: "Two pieces sit 0.04mm over. Decide scrap or rework.", tag: "qa", order: 0 },
+      { id: "crate", laneId: "shipped", title: "Crate the Hutton order", note: "Left on the Thursday truck.", tag: "logistics", order: 0 },
+    ],
+  });
 
-  function cardsFor(columnID: number): Card[] { return cards.current.filter((card) => card.column_id === columnID); }
+  let draggingCardID = $state<string | null>(null);
+  let dropLaneID = $state<string | null>(null);
+  let armedLaneID = $state<string | null>(null);
+  let draggingLaneID = $state<string | null>(null);
+  let announcement = $state("");
 
-  async function createCard(): Promise<void> {
-    const title = draftTitle.trim();
-    if (!title) return;
-    const detail = draftDetail.trim();
-    if (editingID === null) {
-      const createdAt = new Date().toISOString();
-      const position = Math.max(-1, ...cardsFor(draftColumnID).map((card) => card.position)) + 1;
-      await cards.execute(sql`INSERT INTO cards (column_id, title, detail, priority, position, created_at) VALUES (${draftColumnID}, ${title}, ${detail}, ${draftPriority}, ${position}, ${createdAt})`);
-    } else {
-      await cards.execute(sql`UPDATE cards SET title = ${title}, detail = ${detail}, priority = ${draftPriority}, column_id = ${draftColumnID} WHERE id = ${editingID}`);
-    }
-    draftTitle = "";
-    draftDetail = "";
-    draftPriority = "normal";
-    editingID = null;
-    adding = false;
+  const laneCards = $derived.by(() => {
+    const grouped = new Map<string, Card[]>();
+    for (const lane of board.current.lanes) grouped.set(lane.id, []);
+    for (const card of board.current.cards) grouped.get(card.laneId)?.push(card);
+    for (const cards of grouped.values()) cards.sort((a, b) => a.order - b.order);
+    return grouped;
+  });
+  const doneCount = $derived(board.current.doneLaneId ? cardsFor(board.current.doneLaneId).length : 0);
+  const openCount = $derived(board.current.cards.length - doneCount);
+  const overLimitCount = $derived(board.current.lanes.filter((lane) => isOverLimit(lane)).length);
+
+  function cardsFor(laneID: string): Card[] { return laneCards.get(laneID) ?? []; }
+  function isOverLimit(lane: Lane): boolean { return lane.limit !== null && lane.limit > 0 && cardsFor(lane.id).length > lane.limit; }
+  function laneIndex(laneID: string): number { return board.current.lanes.findIndex((lane) => lane.id === laneID); }
+  function nextOrder(laneID: string): number { return cardsFor(laneID).reduce((highest, card) => Math.max(highest, card.order + 1), 0); }
+  function laneTitle(laneID: string): string { return board.current.lanes.find((lane) => lane.id === laneID)?.title.trim() || "lane"; }
+  function isDone(laneID: string): boolean { return board.current.doneLaneId === laneID; }
+  function toggleDoneLane(laneID: string): void {
+    board.current.doneLaneId = isDone(laneID) ? null : laneID;
+    announcement = board.current.doneLaneId ? `${laneTitle(laneID)} is now the completed lane.` : "No completed lane set.";
   }
 
-  async function moveCard(cardID: number, columnID: number): Promise<void> {
-    const position = Math.max(-1, ...cardsFor(columnID).map((card) => card.position)) + 1;
-    await cards.execute(sql`UPDATE cards SET column_id = ${columnID}, position = ${position} WHERE id = ${cardID}`);
-    draggingID = null;
+  function addLane(): void {
+    board.current.lanes.push({ id: crypto.randomUUID(), title: `Lane ${board.current.lanes.length + 1}`, limit: null });
+    announcement = `Lane added. ${board.current.lanes.length} lanes on the board.`;
+  }
+  function removeLane(id: string): void {
+    const index = laneIndex(id);
+    const lane = board.current.lanes[index];
+    if (!lane || board.current.lanes.length < 2) return;
+    // Emptying a lane must never destroy work: its orders fall into the neighbour.
+    const refuge = board.current.lanes[index === 0 ? 1 : index - 1];
+    const stranded = cardsFor(id);
+    let order = refuge ? nextOrder(refuge.id) : 0;
+    for (const card of stranded) { if (refuge) { card.laneId = refuge.id; card.order = order++; } }
+    board.current.lanes = board.current.lanes.filter((item) => item.id !== id);
+    const moved = stranded.length === 0 ? "" : ` ${stranded.length} ${stranded.length === 1 ? "order" : "orders"} moved to ${refuge?.title.trim() || "the next lane"}.`;
+    announcement = `${lane.title.trim() || "Lane"} removed.${moved}`;
+  }
+  function reorderLane(id: string, targetID: string): void {
+    const from = laneIndex(id);
+    const to = laneIndex(targetID);
+    if (from < 0 || to < 0 || from === to) return;
+    const [lane] = board.current.lanes.splice(from, 1);
+    if (lane) board.current.lanes.splice(to, 0, lane);
+  }
+  function nudgeLane(id: string, direction: -1 | 1): void {
+    const target = board.current.lanes[laneIndex(id) + direction];
+    if (!target) return;
+    reorderLane(id, target.id);
+    announcement = `${laneTitle(id)} is now lane ${laneIndex(id) + 1} of ${board.current.lanes.length}.`;
+  }
+  function addCard(laneID: string): void {
+    board.current.cards.push({ id: crypto.randomUUID(), laneId: laneID, title: "New work order", note: "", tag: "", order: nextOrder(laneID) });
+    announcement = `Work order added to ${laneTitle(laneID)}.`;
+  }
+  function removeCard(id: string): void {
+    const card = board.current.cards.find((item) => item.id === id);
+    board.current.cards = board.current.cards.filter((item) => item.id !== id);
+    if (card) announcement = `${card.title.trim() || "Work order"} removed.`;
+  }
+  function shiftLane(id: string, direction: -1 | 1): void {
+    const card = board.current.cards.find((item) => item.id === id);
+    if (!card) return;
+    const target = board.current.lanes[laneIndex(card.laneId) + direction];
+    if (!target) return;
+    card.order = nextOrder(target.id);
+    card.laneId = target.id;
+    announcement = `${card.title.trim() || "Work order"} moved to ${target.title.trim() || "lane"}.`;
+  }
+  function shiftWithinLane(id: string, direction: -1 | 1): void {
+    const card = board.current.cards.find((item) => item.id === id);
+    if (!card) return;
+    const siblings = cardsFor(card.laneId);
+    const index = siblings.indexOf(card);
+    const neighbour = siblings[index + direction];
+    if (!neighbour) return;
+    [card.order, neighbour.order] = [neighbour.order, card.order];
+    announcement = `${card.title.trim() || "Work order"} is now position ${index + 1 + direction} in ${laneTitle(card.laneId)}.`;
+  }
+  function dropOnLane(laneID: string): void {
+    const id = draggingCardID;
+    draggingCardID = null;
+    dropLaneID = null;
+    const card = board.current.cards.find((item) => item.id === id);
+    if (!card || card.laneId === laneID) return;
+    card.order = nextOrder(laneID);
+    card.laneId = laneID;
+    announcement = `${card.title.trim() || "Work order"} moved to ${laneTitle(laneID)}.`;
   }
 
-  async function removeCard(cardID: number): Promise<void> { await cards.execute(sql`DELETE FROM cards WHERE id = ${cardID}`); }
-
-  function beginAdd(columnID: number): void {
-    editingID = null;
-    draftTitle = "";
-    draftDetail = "";
-    draftPriority = "normal";
-    draftColumnID = columnID;
-    adding = true;
-  }
-
-  function beginEdit(card: Card): void {
-    editingID = card.id;
-    draftTitle = card.title;
-    draftDetail = card.detail;
-    draftPriority = card.priority;
-    draftColumnID = card.column_id;
-    adding = true;
-  }
+  onDestroy(() => board.destroy());
 </script>
 
-<main class="board-shell" data-slop-selection="none">
-  <header class="board-header">
-    <div><p>Longtail works / 04</p><h1>Movement board</h1></div>
-    <div class="board-meter"><strong>{cards.current.length}</strong><span>cards<br />in motion</span></div>
-  </header>
+<main class="kanban-canvas" data-slop-selection="none">
+  <div class="chassis">
+    <header class="rail">
+      <div class="rail-mark" aria-hidden="true"><span></span><span></span></div>
+      <div class="rail-name">
+        <h1 class="sr-only">{board.current.title.trim() || "Board"}</h1>
+        <input class="rail-title" aria-label="Board name" bind:value={board.current.title} />
+      </div>
+      <dl class="rail-meters">
+        <div><dt>Open</dt><dd>{String(openCount).padStart(2, "0")}</dd></div>
+        <div><dt>Done</dt><dd>{String(doneCount).padStart(2, "0")}</dd></div>
+        <div class="meter-wip" data-alert={overLimitCount > 0}><dt>Over WIP</dt><dd>{String(overLimitCount).padStart(2, "0")}</dd></div>
+      </dl>
+    </header>
 
-  <section class="board" aria-label="Kanban board">
-    {#each columns.current as column, index (column.id)}
-      <article class="lane" data-tone={column.color} ondragover={(event) => event.preventDefault()} ondrop={() => { if (draggingID !== null) void moveCard(draggingID, column.id); }}>
-        <header><span>0{index + 1}</span><h2>{column.title}</h2><strong>{cardsFor(column.id).length}</strong></header>
-        <div class="lane-cards">
-          {#each cardsFor(column.id) as card (card.id)}
-            <div class="card" role="listitem" aria-label={`${card.title}, ${card.priority} priority`} draggable={true} ondragstart={(event) => { draggingID = card.id; event.dataTransfer?.setData("text/plain", String(card.id)); }} ondragend={() => { draggingID = null; }} data-dragging={draggingID === card.id}>
-              <GripVertical class="card-grip" aria-hidden="true" />
-              <div class="card-copy"><strong>{card.title}</strong>{#if card.detail}<span>{card.detail}</span>{/if}</div>
-              <span class="priority" data-priority={card.priority}>{card.priority}</span>
-              <DropdownMenu.Root>
-                <DropdownMenu.Trigger class="card-menu" aria-label="Card actions"><MoreHorizontal /></DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                  <DropdownMenu.Content class="move-menu" sideOffset={6}>
-                    <DropdownMenu.Item class="move-item" onclick={() => beginEdit(card)}>Edit card</DropdownMenu.Item>
-                    <DropdownMenu.Separator class="menu-rule" />
-                    <p>Move card</p>
-                    {#each columns.current as destination (destination.id)}
-                      <DropdownMenu.Item class="move-item" disabled={destination.id === column.id} onclick={() => void moveCard(card.id, destination.id)}>{destination.title}</DropdownMenu.Item>
-                    {/each}
-                    <DropdownMenu.Separator class="menu-rule" />
-                    <DropdownMenu.Item class="move-item danger" onclick={() => void removeCard(card.id)}>Delete card</DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-              </DropdownMenu.Root>
-            </div>
-          {/each}
-          {#if cardsFor(column.id).length === 0}<p class="lane-empty">Drop a card here.</p>{/if}
-        </div>
-        <button class="lane-add" onclick={() => beginAdd(column.id)}><Plus />Add card</button>
-      </article>
-    {/each}
-  </section>
+    <div class="deck">
+      {#each board.current.lanes as lane, index (lane.id)}
+        {@const cards = cardsFor(lane.id)}
+        <section
+          class="lane"
+          class:lane-drop={dropLaneID === lane.id}
+          class:lane-over={isOverLimit(lane)}
+          class:lane-dragging={draggingLaneID === lane.id}
+          class:lane-done={isDone(lane.id)}
+          aria-label="{lane.title} lane, {cards.length} work orders"
+          draggable={armedLaneID === lane.id}
+          ondragstart={(event) => { if (armedLaneID !== lane.id) return; draggingLaneID = lane.id; event.dataTransfer?.setData("text/plain", lane.id); }}
+          ondragend={() => { draggingLaneID = null; armedLaneID = null; dropLaneID = null; }}
+          onpointerup={() => { armedLaneID = null; }}
+          ondragover={(event) => {
+            if (draggingLaneID) { event.preventDefault(); reorderLane(draggingLaneID, lane.id); return; }
+            if (draggingCardID) { event.preventDefault(); dropLaneID = lane.id; }
+          }}
+          ondragleave={() => { if (dropLaneID === lane.id) dropLaneID = null; }}
+          ondrop={(event) => { event.preventDefault(); if (draggingLaneID) { announcement = `${laneTitle(draggingLaneID)} is now lane ${laneIndex(draggingLaneID) + 1} of ${board.current.lanes.length}.`; draggingLaneID = null; armedLaneID = null; return; } dropOnLane(lane.id); }}
+        >
+          <header class="lane-head">
+            <button
+              type="button"
+              class="lane-grip"
+              data-slop-export="hide"
+              aria-label="Reorder {lane.title} lane, position {index + 1} of {board.current.lanes.length}"
+              title="Drag to reorder, or use the arrow keys"
+              onpointerdown={() => { armedLaneID = lane.id; }}
+              onblur={() => { if (armedLaneID === lane.id && !draggingLaneID) armedLaneID = null; }}
+              onkeydown={(event) => {
+                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                event.preventDefault();
+                nudgeLane(lane.id, event.key === "ArrowLeft" ? -1 : 1);
+                queueMicrotask(() => event.currentTarget?.focus());
+              }}
+            ><GripVertical /></button>
+            <input class="lane-title" aria-label="Lane {index + 1} name" bind:value={lane.title} />
+            <button
+              type="button"
+              class="lane-done-toggle"
+              data-slop-export={isDone(lane.id) ? undefined : "hide"}
+              aria-pressed={isDone(lane.id)}
+              aria-label="Mark {lane.title} as the completed lane"
+              title={isDone(lane.id) ? "This is the completed lane" : "Mark as the completed lane"}
+              onclick={() => toggleDoneLane(lane.id)}
+            ><Check /></button>
+            <label class="lane-limit" title="Work-in-progress limit">
+              <span class="lane-count">{String(cards.length).padStart(2, "0")}</span>
+              <span class="lane-slash" aria-hidden="true">/</span>
+              <input aria-label="{lane.title} work-in-progress limit" type="number" min="0" placeholder="–" bind:value={lane.limit} />
+            </label>
+            <button
+              type="button"
+              class="lane-remove"
+              data-slop-export="hide"
+              aria-label="Remove {lane.title} lane"
+              title={cards.length > 0 ? `Remove this lane — ${cards.length} ${cards.length === 1 ? "order moves" : "orders move"} to the neighbouring lane` : "Remove this lane"}
+              disabled={board.current.lanes.length < 2}
+              onclick={() => removeLane(lane.id)}
+            ><X /></button>
+          </header>
 
-  <footer><span>Drag to move</span><span>{cards.current.length} cards</span><span>Use the menu to edit</span></footer>
-  {#if cards.error || columns.error}<p class="board-error">The board could not be updated.</p>{/if}
+          <div class="lane-slot">
+            {#each cards as card, position (card.id)}
+              <article
+                class="ticket"
+                class:ticket-dragging={draggingCardID === card.id}
+                draggable="true"
+                ondragstart={(event) => { draggingCardID = card.id; event.dataTransfer?.setData("text/plain", card.id); }}
+                ondragend={() => { draggingCardID = null; dropLaneID = null; }}
+              >
+                <div class="ticket-stub" aria-hidden="true">
+                  <span class="punch"></span>
+                  <span class="ticket-no">{String(position + 1).padStart(2, "0")}</span>
+                </div>
+                <div class="ticket-body">
+                  <textarea class="ticket-title" rows="1" aria-label="Work order title" bind:value={card.title}></textarea>
+                  <textarea class="ticket-note" rows="2" placeholder="Notes" aria-label="Work order notes" bind:value={card.note}></textarea>
+                  <div class="ticket-foot">
+                    <input class="ticket-tag" placeholder="tag" aria-label="Work order tag" bind:value={card.tag} />
+                    <div class="ticket-actions" data-slop-export="hide">
+                      <button type="button" aria-label="Move to previous lane" disabled={index === 0} onclick={() => shiftLane(card.id, -1)}><ArrowLeft /></button>
+                      <button type="button" aria-label="Move up in lane" disabled={position === 0} onclick={() => shiftWithinLane(card.id, -1)}><ArrowUp /></button>
+                      <button type="button" aria-label="Move down in lane" disabled={position === cards.length - 1} onclick={() => shiftWithinLane(card.id, 1)}><ArrowDown /></button>
+                      <button type="button" aria-label="Move to next lane" disabled={index === board.current.lanes.length - 1} onclick={() => shiftLane(card.id, 1)}><ArrowRight /></button>
+                      <button type="button" class="ticket-remove" aria-label="Remove work order" onclick={() => removeCard(card.id)}><Trash2 /></button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            {/each}
 
-  <Dialog.Root bind:open={adding}>
-    <Dialog.Portal>
-      <Dialog.Overlay class="card-overlay" />
-      <Dialog.Content class="card-dialog">
-        <form onsubmit={(event) => { event.preventDefault(); void createCard(); }}>
-          <p>{editingID === null ? "New work item" : "Edit work item"}</p>
-          <Dialog.Title>{editingID === null ? "Add a card" : "Update card"}</Dialog.Title>
-          <Dialog.Description>Keep it clear enough to act on.</Dialog.Description>
-          <label>Title<input bind:value={draftTitle} placeholder="What needs to move?" /></label>
-          <label>Detail<textarea bind:value={draftDetail} placeholder="Optional context"></textarea></label>
-          <label>Priority<select bind:value={draftPriority}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
-          <div class="card-actions"><Dialog.Close type="button">Cancel</Dialog.Close><button type="submit">{editingID === null ? "Add card" : "Save changes"}</button></div>
-        </form>
-        <Dialog.Close class="dialog-close" aria-label="Close"><X /></Dialog.Close>
-      </Dialog.Content>
-    </Dialog.Portal>
-  </Dialog.Root>
+            {#if cards.length === 0}
+              <p class="lane-empty">Empty slot</p>
+            {/if}
+
+            <button type="button" class="lane-add" data-slop-export="hide" onclick={() => addCard(lane.id)}><Plus />Work order</button>
+          </div>
+        </section>
+      {/each}
+
+      <button type="button" class="deck-add" data-slop-export="hide" aria-label="Add lane" title="Add lane" onclick={addLane}><Plus /><span>Lane</span></button>
+    </div>
+  </div>
+
+  {#if board.error}<p class="friendly-error" data-slop-export="hide">Your latest changes couldn’t be saved.</p>{/if}
+  <p class="sr-only" role="status" aria-live="polite">{announcement}</p>
 </main>
+
+{#if capture.isRenderer()}
+  <Icon />
+{/if}

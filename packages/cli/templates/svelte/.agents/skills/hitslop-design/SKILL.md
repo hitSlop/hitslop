@@ -17,12 +17,12 @@ images as inspiration only; do not copy them into source or runtime packages.
 2. Choose a dominant object family: Paper, Instrument, or Skin.
 3. Identify the primary action/readout and persistent state.
 4. Decide whether the window is standard/resizable, transparent, or PNG-skinned.
-5. Define what live editing, static capture, cover, and icon must show.
+5. Define what live editing, static capture, and icon must show.
 
 Read [references/object-families.md](references/object-families.md) for visual
 patterns and anti-patterns. Read
 [references/presentation-and-export.md](references/presentation-and-export.md)
-for transparency, resizing, skins, responsive layout, capture, cover, icon, PNG,
+for transparency, resizing, skins, responsive layout, capture, icon, PNG,
 and PDF behavior.
 
 ## Core design rules

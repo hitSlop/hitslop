@@ -50,7 +50,7 @@ public struct SlopPackage: Sendable {
 
     public var entryURL: URL { rootURL.appendingPathComponent("app.html") }
     public var previewURL: URL { rootURL.appendingPathComponent("QuickLook/Preview.png") }
-    public var thumbnailURL: URL { rootURL.appendingPathComponent("QuickLook/Thumbnail.png") }
+    public var iconURL: URL { rootURL.appendingPathComponent("QuickLook/Icon.png") }
     public var storesURL: URL { rootURL.appendingPathComponent("stores", isDirectory: true) }
     public var jsonStoreURL: URL { storesURL.appendingPathComponent("data.json") }
     public var sqliteStoreURL: URL { storesURL.appendingPathComponent("data.sqlite") }
@@ -80,15 +80,18 @@ public struct SlopPackage: Sendable {
         if FileManager.default.fileExists(atPath: storesURL.path) { throw SlopPackageError.invalid("templates cannot contain stores") }
         if FileManager.default.fileExists(atPath: rootURL.appendingPathComponent("Icon\r").path) { throw SlopPackageError.invalid("templates cannot contain a Finder custom icon") }
         if requirePreview {
-            for url in [previewURL, thumbnailURL] {
+            for url in [previewURL, iconURL] {
                 let relativePath = "QuickLook/\(url.lastPathComponent)"
                 guard FileManager.default.fileExists(atPath: url.path) else { throw SlopPackageError.missing(relativePath) }
                 let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
                 guard values.isRegularFile == true, (values.fileSize ?? 0) <= 5 * 1024 * 1024,
                       let source = CGImageSourceCreateWithURL(url as CFURL, nil),
                       CGImageSourceGetType(source) as String? == "public.png",
-                      CGImageSourceCreateImageAtIndex(source, 0, nil) != nil else {
+                      let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
                     throw SlopPackageError.invalid("\(relativePath) must be a PNG no larger than 5 MB")
+                }
+                if url == iconURL, (image.width != 512 || image.height != 512) {
+                    throw SlopPackageError.invalid("\(relativePath) must be exactly 512x512 pixels")
                 }
             }
         }
@@ -143,7 +146,7 @@ public struct SlopPackage: Sendable {
     private func validateQuickLook() throws {
         let directory = rootURL.appendingPathComponent("QuickLook", isDirectory: true)
         guard FileManager.default.fileExists(atPath: directory.path) else { return }
-        let allowed = Set(["Preview.png", "Thumbnail.png"])
+        let allowed = Set(["Preview.png", "Icon.png"])
         for url in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) where !allowed.contains(url.lastPathComponent) {
             throw SlopPackageError.invalid("unexpected QuickLook entry \(url.lastPathComponent)")
         }

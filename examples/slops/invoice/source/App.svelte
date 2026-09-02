@@ -1,10 +1,12 @@
 <script lang="ts">
   import { Select } from "bits-ui";
+  import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
   import Check from "@lucide/svelte/icons/check";
   import ChevronDown from "@lucide/svelte/icons/chevron-down";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import Icon from "./Icon.svelte";
 
   type Party = { name: string; detail: string };
   type LineItem = { id: string; description: string; quantity: number | null; rate: number | null };
@@ -60,6 +62,7 @@
   const subtotal = $derived(invoice.current.items.reduce((sum, item) => sum + (item.quantity ?? 0) * (item.rate ?? 0), 0));
   const tax = $derived(subtotal * (invoice.current.taxPercent ?? 0) / 100);
   const total = $derived(subtotal + tax);
+  const statusLabel = $derived(statuses.find((item) => item.value === invoice.current.status)?.label ?? "Draft");
 
   function money(value: number): string {
     return new Intl.NumberFormat(undefined, { style: "currency", currency: invoice.current.currency }).format(value);
@@ -171,3 +174,7 @@
 
   </article>
 </main>
+
+{#if capture.isRenderer()}
+  <Icon />
+{/if}

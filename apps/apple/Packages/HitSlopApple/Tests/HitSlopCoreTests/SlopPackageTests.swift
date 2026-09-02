@@ -107,11 +107,11 @@ import Testing
     let png = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
     try png.write(to: quickLook.appendingPathComponent("Preview.png"))
     #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
-    try png.write(to: quickLook.appendingPathComponent("Thumbnail.png"))
+    try writeSkin(to: quickLook.appendingPathComponent("Icon.png"), width: 512, height: 512)
     #expect(throws: Never.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
-    try writeSkin(to: quickLook.appendingPathComponent("Thumbnail.png"), width: 2, height: 1)
-    #expect(throws: Never.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
-    try Data("different".utf8).write(to: quickLook.appendingPathComponent("Thumbnail.png"))
+    try writeSkin(to: quickLook.appendingPathComponent("Icon.png"), width: 2, height: 1)
+    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
+    try Data("different".utf8).write(to: quickLook.appendingPathComponent("Icon.png"))
     #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
 }
 

@@ -8,10 +8,9 @@ you have to maintain. The app owns its interface; the host owns durable JSON,
 SQLite, named media, previews, export, and native window behavior.
 
 <p align="center">
-  <img src="examples/slops/invoice/screenshots/cover.png" width="23%" alt="Invoice slop">
-  <img src="examples/slops/focus-timer/screenshots/cover.png" width="23%" alt="Focus Timer slop">
-  <img src="examples/slops/kanban-board/screenshots/cover.png" width="23%" alt="Kanban Board slop">
-  <img src="examples/slops/random-picker/screenshots/cover.png" width="23%" alt="Random Picker slop">
+  <img src="examples/slops/invoice/screenshots/preview.png" width="30%" alt="Invoice slop">
+  <img src="examples/slops/focus-timer/screenshots/preview.png" width="30%" alt="Focus Timer slop">
+  <img src="examples/slops/random-picker/screenshots/preview.png" width="30%" alt="Random Picker slop">
 </p>
 
 A slop can feel like **paper** (invoice, recipe, résumé), an **instrument**
@@ -41,7 +40,7 @@ React projects yet.
 
 Read [Authoring a slop](docs/authoring.md) for the full workflow and
 [Designing tiny software](docs/presentation.md) for object families,
-transparent backgrounds, resizing, cover/icon art, and export-safe layouts.
+transparent backgrounds, resizing, icon art, and export-safe layouts.
 
 ## What is inside a `.slop`?
 
@@ -56,7 +55,7 @@ tiny-app.slop/
 │   └── media/
 └── QuickLook/
     ├── Preview.png
-    └── Thumbnail.png
+    └── Icon.png
 ```
 
 Authored templates and published artifacts never contain source, dependencies,

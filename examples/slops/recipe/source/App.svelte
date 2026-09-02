@@ -12,7 +12,6 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import X from "@lucide/svelte/icons/x";
   import { onDestroy } from "svelte";
-  import Cover from "./Cover.svelte";
   import Icon from "./Icon.svelte";
 
   type Ingredient = { id: string; text: string; checked: boolean };
@@ -282,6 +281,5 @@
 </main>
 
 {#if capture.isRenderer()}
-  <Cover title={recipe.current.title} description={recipe.current.description} heroSrc={hero.src} />
   <Icon />
 {/if}

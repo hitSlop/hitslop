@@ -74,23 +74,8 @@ input, textarea, button { outline: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 
 .resume-render { display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
-html[data-slop-renderer="true"][data-slop-capture="cover"] .resume-canvas,
 html[data-slop-renderer="true"][data-slop-capture="icon"] .resume-canvas { display: none; }
-html[data-slop-renderer="true"][data-slop-capture="cover"] [data-slop-render="cover"],
 html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
-
-.cover-sheet { display: grid; grid-template-columns: 118px minmax(0, 1fr); width: 480px; height: 480px; overflow: hidden; border: 5px solid var(--ink); border-radius: 28px; background: var(--paper); }
-.cover-rail { padding: 36px 16px; background: var(--rail); border-right: 2px solid var(--ink); }
-.cover-monogram { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; color: var(--paper); background: var(--accent); font-size: 24px; font-weight: 780; letter-spacing: -.04em; }
-.cover-content { display: flex; min-width: 0; flex-direction: column; padding: 42px 32px 36px; }
-.cover-eyebrow { color: var(--accent); font-size: 13px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
-.cover-content h1 { max-width: 100%; margin: 14px 0 0; overflow: hidden; color: var(--ink); font-size: 52px; font-weight: 650; line-height: .94; letter-spacing: -.06em; text-overflow: ellipsis; }
-.cover-content p { max-width: 100%; margin: 16px 0 0; overflow: hidden; color: var(--accent); font-size: 18px; font-weight: 650; line-height: 1.2; text-overflow: ellipsis; }
-.cover-rule { height: 3px; margin-top: 32px; background: var(--ink); }
-.cover-structure { display: grid; gap: 14px; margin-top: auto; }
-.cover-structure span { height: 8px; border-radius: 999px; background: var(--accent-soft); }
-.cover-structure span:nth-child(2) { width: 78%; }
-.cover-structure span:nth-child(3) { width: 58%; }
 
 .icon-sheet { display: grid; grid-template-columns: 92px minmax(0, 1fr); width: 464px; height: 464px; overflow: hidden; border: 18px solid var(--ink); border-radius: 48px; background: var(--paper); }
 .icon-rail { background: var(--accent); }

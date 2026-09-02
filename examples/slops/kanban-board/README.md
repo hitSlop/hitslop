@@ -1,5 +1,9 @@
 # Kanban Board
 
-A compact SQLite board with drag-and-drop cards and keyboard-accessible move actions.
+An anodized job-shop schedule board. Lanes are brushed metal rails, cards are slotted
+paper work-order tickets, and each lane carries an amber work-in-progress limit.
 
-Preview with `slop dev examples/slops/kanban-board`. Publish with `slop publish examples/slops/kanban-board`.
+```sh
+bun slop dev examples/slops/kanban-board
+bun slop build examples/slops/kanban-board
+```

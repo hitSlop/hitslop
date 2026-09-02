@@ -5,16 +5,16 @@ import { basename, join, resolve } from "node:path";
 import type { SlopManifest } from "@hitslop/schema";
 import { runNative } from "./dev.ts";
 import { buildSlop, loadManifest } from "./project.ts";
-import { validateStaticPng, writeDefaultThumbnail } from "./static-preview.ts";
+import { validateIconPng, validateStaticPng, writeDefaultIcon } from "./static-preview.ts";
 
 export type InstallOptions = {
   force?: boolean;
   preview?: string;
-  thumbnail?: string;
+  icon?: string;
   templatesRoot?: string;
   confirmOverwrite?: (target: string) => Promise<boolean>;
   capturePreview?: (packageDirectory: string, output: string) => Promise<void>;
-  captureCover?: (packageDirectory: string, output: string) => Promise<boolean>;
+  captureIcon?: (packageDirectory: string, output: string) => Promise<boolean>;
 };
 
 export type InstallResult = { directory: string; manifest: SlopManifest; replaced: boolean };
@@ -48,15 +48,16 @@ export async function installTemplate(input: string, options: InstallOptions = {
       await capture(staging, preview);
     }
     await validatePreview(preview);
-    const thumbnail = join(quickLook, "Thumbnail.png");
-    if (options.thumbnail) await cp(resolve(options.thumbnail), thumbnail);
+    const icon = join(quickLook, "Icon.png");
+    if (options.icon) await cp(resolve(options.icon), icon);
     else {
-      await rm(thumbnail, { force: true });
-      const captured = options.captureCover
-        ? await options.captureCover(staging, thumbnail)
-        : await captureOptionalCover(staging, thumbnail);
-      if (!captured || !await exists(thumbnail)) await writeDefaultThumbnail(preview, thumbnail);
+      await rm(icon, { force: true });
+      const captured = options.captureIcon
+        ? await options.captureIcon(staging, icon)
+        : await captureOptionalIcon(staging, icon);
+      if (!captured || !await exists(icon)) await writeDefaultIcon(preview, icon);
     }
+    validateIconPng(await readFile(icon));
     // Rendering can initialize lazy stores. An installed template must remain
     // pristine so every document creates its own first-run state.
     await rm(join(staging, "stores"), { recursive: true, force: true });
@@ -79,8 +80,8 @@ export async function installTemplate(input: string, options: InstallOptions = {
   }
 }
 
-async function captureOptionalCover(packageDirectory: string, output: string): Promise<boolean> {
-  await runNative(["screenshot", packageDirectory, "--target", "cover", "--if-present", "--output", output]);
+async function captureOptionalIcon(packageDirectory: string, output: string): Promise<boolean> {
+  await runNative(["screenshot", packageDirectory, "--target", "icon", "--if-present", "--output", output]);
   return await exists(output);
 }
 
@@ -103,19 +104,19 @@ export async function validateTemplatePackage(path: string, options: { requirePr
 async function validateQuickLook(path: string, requirePreview: boolean): Promise<void> {
   const directory = join(path, "QuickLook");
   if (!await exists(directory)) {
-    if (requirePreview) throw new Error("Template packages must contain QuickLook/Preview.png and QuickLook/Thumbnail.png.");
+    if (requirePreview) throw new Error("Template packages must contain QuickLook/Preview.png and QuickLook/Icon.png.");
     return;
   }
-  const allowed = new Set(["Preview.png", "Thumbnail.png"]);
+  const allowed = new Set(["Preview.png", "Icon.png"]);
   for (const entry of await readdir(directory)) if (!allowed.has(entry)) throw new Error(`Template packages cannot contain QuickLook/${entry}.`);
   const preview = join(directory, "Preview.png");
-  const thumbnail = join(directory, "Thumbnail.png");
-  if (!await exists(preview) || !await exists(thumbnail)) {
-    if (requirePreview) throw new Error("Template packages must contain QuickLook/Preview.png and QuickLook/Thumbnail.png.");
+  const icon = join(directory, "Icon.png");
+  if (!await exists(preview) || !await exists(icon)) {
+    if (requirePreview) throw new Error("Template packages must contain QuickLook/Preview.png and QuickLook/Icon.png.");
     return;
   }
   await validatePreview(preview);
-  await validatePreview(thumbnail);
+  validateIconPng(await readFile(icon));
 }
 
 async function rejectForbiddenRuntimeEntries(directory: string): Promise<void> {

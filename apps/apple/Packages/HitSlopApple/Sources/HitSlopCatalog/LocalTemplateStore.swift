@@ -6,8 +6,12 @@ import HitSlopRuntime
 
 public struct LocalTemplate: Identifiable, Sendable {
     public let packageURL: URL
-    public let thumbnailURL: URL
+    public let iconURL: URL
+    public let previewURL: URL
     public let manifest: SlopManifest
+    public let packageBytes: Int64
+    public let createdAt: Date?
+    public let updatedAt: Date?
     public var id: String { "local:\(manifest.slug)" }
 }
 
@@ -32,7 +36,16 @@ public struct LocalTemplate: Identifiable, Sendable {
                 do {
                     let package = try SlopPackage(rootURL: child); try package.validateAsTemplate()
                     guard child.deletingPathExtension().lastPathComponent == package.manifest.slug else { throw SlopPackageError.invalid("installed filename must match manifest slug") }
-                    next.append(LocalTemplate(packageURL: child, thumbnailURL: package.thumbnailURL, manifest: package.manifest))
+                    let values = try? child.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+                    next.append(LocalTemplate(
+                        packageURL: child,
+                        iconURL: package.iconURL,
+                        previewURL: package.previewURL,
+                        manifest: package.manifest,
+                        packageBytes: slopPackageByteCount(child),
+                        createdAt: values?.creationDate,
+                        updatedAt: values?.contentModificationDate
+                    ))
                     try? SlopDuplicator.makeImmutable(child)
                 } catch { nextIssues.append("\(child.lastPathComponent): \(error.localizedDescription)") }
             }
@@ -46,4 +59,13 @@ public struct LocalTemplate: Identifiable, Sendable {
         source.setEventHandler { [weak self] in self?.refresh() }; source.setCancelHandler { [descriptor] in if descriptor >= 0 { close(descriptor) } }
         watcher = source; source.resume()
     }
+}
+
+func slopPackageByteCount(_ root: URL) -> Int64 {
+    guard let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]) else { return 0 }
+    var total: Int64 = 0
+    for case let url as URL in enumerator {
+        total += Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+    }
+    return total
 }

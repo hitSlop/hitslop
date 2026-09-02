@@ -1,11 +1,13 @@
 <script lang="ts">
   import { Dialog } from "bits-ui";
+  import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
   import Dices from "@lucide/svelte/icons/dices";
   import Plus from "@lucide/svelte/icons/plus";
   import Settings2 from "@lucide/svelte/icons/settings-2";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import X from "@lucide/svelte/icons/x";
+  import Icon from "./Icon.svelte";
   type Option={id:string;label:string};type Pick={id:string;label:string;pickedAt:string};type PickerData={title:string;options:Option[];history:Pick[]};
   const picker=jsonStore<PickerData>({title:"Pick one",options:[],history:[]});
   let editing=$state(false);let draft=$state("");let spinning=$state(false);let display=$state("");let timer:ReturnType<typeof setInterval>|null=null;
@@ -21,3 +23,5 @@
   <footer><div class="option-strip">{#each picker.current.options.slice(0,4) as option}<span>{option.label}</span>{/each}{#if picker.current.options.length>4}<span>+{picker.current.options.length-4}</span>{/if}</div><div class="history"><span>Last</span><strong>{picker.current.history[1]?.label??"—"}</strong></div></footer>
   {#if picker.error}<p class="picker-error">The choices could not be saved.</p>{/if}
 </main>
+
+{#if capture.isRenderer()}<Icon />{/if}

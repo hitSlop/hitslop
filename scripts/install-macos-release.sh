@@ -55,26 +55,6 @@ done
 echo "Installing ${destination}…"
 if [ -e "$install_stage" ]; then /bin/rm -rf "$install_stage"; fi
 /usr/bin/ditto "$app" "$install_stage"
-if [ -d "$destination/Contents/PlugIns" ]; then
-  for extension in "$destination"/Contents/PlugIns/SlopPreview.appex "$destination"/Contents/PlugIns/SlopThumbnail.appex; do
-    if [ -d "$extension" ]; then /usr/bin/pluginkit -r "$extension" >/dev/null 2>&1 || true; fi
-  done
-fi
-for bundle_id in com.hitslop.app.preview com.hitslop.app.thumbnail; do
-  /usr/bin/pluginkit -m -A -D -vv -i "$bundle_id" 2>/dev/null \
-    | /usr/bin/sed -n 's/^[[:space:]]*Path = //p' \
-    | while IFS= read -r path; do
-        /usr/bin/pluginkit -r "$path" >/dev/null 2>&1 || true
-        case "$path" in
-          */Contents/PlugIns/*)
-            parent=${path%/Contents/PlugIns/*}
-            if [ "$parent" != "$destination" ]; then
-              "$lsregister" -u "$parent" >/dev/null 2>&1 || true
-            fi
-            ;;
-        esac
-      done
-done
 if [ -e "$destination" ]; then "$lsregister" -u "$destination" >/dev/null 2>&1 || true; fi
 if [ -e "$destination" ]; then /bin/mv "$destination" "$backup"; fi
 if ! /bin/mv "$install_stage" "$destination"; then

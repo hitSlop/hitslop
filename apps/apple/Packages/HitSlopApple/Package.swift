@@ -45,6 +45,7 @@ let package = Package(
         .target(
             name: "HitSlopCatalog",
             dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRuntime", "HitSlopRegistry"],
+            resources: [.process("Resources")],
             linkerSettings: [.linkedFramework("AppKit")]
         ),
         .executableTarget(

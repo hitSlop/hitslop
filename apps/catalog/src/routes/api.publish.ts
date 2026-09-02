@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PublishEnvelopeSchema, SlopManifestSchema, canonicalPublishEnvelope } from "@hitslop/schema";
 import { unzipSync } from "fflate";
 import { workerEnv } from "../server-env";
-import { validatePackagePath, validateStaticPreviews } from "../publish-package";
+import { validatePackagePath, validateStaticImages } from "../publish-package";
 import { inspectZip, validateSkin } from "../publish-validation";
 
 const MAX_MANIFEST_BYTES = 64 * 1024;
@@ -42,16 +42,19 @@ export const Route = createFileRoute("/api/publish")({ server: { handlers: { POS
     const manifestBytes = unpacked["manifest.json"];
     if (!manifestBytes || !unpacked["app.html"]) throw new Error("Artifact must contain manifest.json and app.html");
     if (manifestBytes.byteLength > MAX_MANIFEST_BYTES) throw new Error("manifest.json exceeds 64 KiB");
-    const preview = validateStaticPreviews(unpacked);
+    const { preview, icon } = validateStaticImages(unpacked);
     const manifest = SlopManifestSchema.parse(JSON.parse(decoder.decode(manifestBytes)));
     validateSkin(unpacked, manifest);
 
     const previewHash = await digest(ownedBuffer(preview));
+    const iconHash = await digest(ownedBuffer(icon));
     const artifactKey = `artifacts/sha256/${artifactHash.hex}.slop.zip`;
     const previewKey = `previews/sha256/${previewHash.hex}.png`;
+    const iconKey = `icons/sha256/${iconHash.hex}.png`;
     await Promise.all([
       env.ARTIFACTS.put(artifactKey, artifactBytes, { sha256: artifactHash.raw, httpMetadata: { contentType: "application/zip", cacheControl: "public, max-age=31536000, immutable" } }),
       env.ARTIFACTS.put(previewKey, ownedBuffer(preview), { sha256: previewHash.raw, httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=31536000, immutable" } }),
+      env.ARTIFACTS.put(iconKey, ownedBuffer(icon), { sha256: iconHash.raw, httpMetadata: { contentType: "image/png", cacheControl: "public, max-age=31536000, immutable" } }),
     ]);
     const finalize = await fetch(`${env.CONVEX_SITE_URL}/internal/publish`, {
       method: "POST",
@@ -59,7 +62,8 @@ export const Route = createFileRoute("/api/publish")({ server: { handlers: { POS
       body: JSON.stringify({
         requestId: envelope.requestId, publisherKeyId: envelope.publisherKeyId, publicKey: envelope.publicKey, displayName: envelope.displayName,
         artifactKey, artifactSha256: artifactHash.hex, artifactBytes: artifactBytes.byteLength,
-        previewKey, previewSha256: previewHash.hex, previewBytes: preview.byteLength, manifest,
+        previewKey, previewSha256: previewHash.hex, previewBytes: preview.byteLength,
+        iconKey, iconSha256: iconHash.hex, iconBytes: icon.byteLength, manifest,
       }),
     });
     if (!finalize.ok) throw new Error(`Convex finalize failed: ${await finalize.text()}`);

@@ -31,17 +31,10 @@ output { display: block; font-size: clamp(70px, 20cqw, 94px); font-weight: 650; 
 button:focus-visible { outline: 3px solid color-mix(in srgb, var(--slop-accent) 34%, transparent); outline-offset: 2px; }
 html[data-slop-capture="static"] [data-slop-export="hide"] { display: none !important; }
 
-/* Cover/icon render targets, revealed only in the hidden renderer pass. */
+/* Icon render target, revealed only in the hidden renderer pass. */
 .counter-render { display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
-html[data-slop-renderer="true"][data-slop-capture="cover"] .counter,
 html[data-slop-renderer="true"][data-slop-capture="icon"] .counter { display: none; }
-html[data-slop-renderer="true"][data-slop-capture="cover"] [data-slop-render="cover"],
 html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
-
-.cover-card { display: grid; align-content: center; justify-items: start; width: 480px; height: 480px; padding: 46px 50px; border: 5px solid var(--slop-ink); border-radius: 28px; background: var(--slop-surface); }
-.cover-eyebrow { margin: 0; color: var(--slop-accent); font-size: 19px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
-.cover-count { display: block; margin-top: 14px; font-size: 200px; font-weight: 650; line-height: .88; letter-spacing: -.07em; font-variant-numeric: tabular-nums; }
-.cover-caption { margin: 22px 0 0; color: var(--slop-muted); font-size: 25px; }
 
 .icon-tile { display: grid; place-items: center; width: 464px; height: 464px; border: 18px solid var(--slop-ink); border-radius: 48px; background: var(--slop-accent); }
 .icon-tile span { margin-top: -18px; color: var(--slop-surface); font-size: 280px; font-weight: 600; line-height: 1; }

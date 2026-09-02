@@ -67,10 +67,10 @@ export const slop = {
 
 export function ready(): void { if (typeof window !== "undefined") window.slop?.ready?.(); }
 
-/// Cover/icon capture support. The native host renders document assets in a
+/// Icon capture support. The native host renders document assets in a
 /// hidden WebView with `<html data-slop-renderer="true">` set before any guest
 /// code runs; use `capture.isRenderer()` to mount the `data-slop-render`
-/// cover/icon targets only in that pass and keep them out of the interactive app.
+/// icon target only in that pass and keep it out of the interactive app.
 export const capture = {
   isRenderer: (): boolean =>
     typeof document !== "undefined" && document.documentElement.dataset.slopRenderer === "true",

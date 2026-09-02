@@ -324,10 +324,6 @@
 </main>
 
 {#if renderTargets}
-  <div class="render-target cover-target" data-slop-render="cover" aria-hidden="true">
-    <div class="cover-player"><i></i><strong>SOMAAMP</strong><span>88:88</span><b>▶</b></div>
-    <div class="cover-bars">{#each [4, 7, 10, 6, 12, 8, 14, 9, 5] as height}<i style:height={`${height * 4}px`}></i>{/each}</div>
-  </div>
   <div class="render-target icon-target" data-slop-render="icon" aria-hidden="true">
     <div class="icon-screen"><span>▶</span><i></i><i></i><i></i><i></i><i></i></div>
   </div>

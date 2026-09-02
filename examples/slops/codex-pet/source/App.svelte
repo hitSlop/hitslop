@@ -32,7 +32,6 @@
   const storedPackage = fileStore("pet-package", { accept: ".zip,.codex-pet.zip,application/zip" });
   const renderTargets = capture.isRenderer();
   let canvas: HTMLCanvasElement;
-  let coverCanvas = $state<HTMLCanvasElement>();
   let iconCanvas = $state<HTMLCanvasElement>();
   let fileInput: HTMLInputElement;
   let activePet = $state<PetMetadata>(STARTER);
@@ -82,32 +81,29 @@
     return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
   }
 
-  function drawRenderTarget(target: HTMLCanvasElement, image: HTMLImageElement, kind: "cover" | "icon"): void {
+  function drawRenderTarget(target: HTMLCanvasElement, image: HTMLImageElement): void {
     target.width = RENDER_SIZE; target.height = RENDER_SIZE;
     const context = target.getContext("2d");
     if (!context) return;
     context.clearRect(0, 0, RENDER_SIZE, RENDER_SIZE);
-    if (kind === "icon") {
-      context.fillStyle = "#fff1d9";
-      context.beginPath(); context.roundRect(24, 24, 464, 464, 52); context.fill();
-      context.strokeStyle = "#4b342b"; context.lineWidth = 10;
-      context.beginPath(); context.roundRect(29, 29, 454, 454, 47); context.stroke();
-    }
+    context.fillStyle = "#fff1d9";
+    context.beginPath(); context.roundRect(24, 24, 464, 464, 52); context.fill();
+    context.strokeStyle = "#4b342b"; context.lineWidth = 10;
+    context.beginPath(); context.roundRect(29, 29, 454, 454, 47); context.stroke();
     const bounds = idleFrameBounds(image);
-    const safe = kind === "icon" ? { x: 56, y: 56, size: 400 } : { x: 36, y: 36, size: 440 };
+    const safe = { x: 56, y: 56, size: 400 };
     const scale = Math.min(safe.size / bounds.width, safe.size / bounds.height);
     const width = Math.round(bounds.width * scale), height = Math.round(bounds.height * scale);
     const x = Math.round(safe.x + (safe.size - width) / 2), y = Math.round(safe.y + (safe.size - height) / 2);
     context.imageSmoothingEnabled = false;
-    context.shadowColor = kind === "icon" ? "rgba(54, 33, 25, .18)" : "rgba(41, 25, 18, .24)";
-    context.shadowBlur = kind === "icon" ? 7 : 14;
-    context.shadowOffsetY = kind === "icon" ? 5 : 10;
+    context.shadowColor = "rgba(54, 33, 25, .18)";
+    context.shadowBlur = 7;
+    context.shadowOffsetY = 5;
     context.drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height, x, y, width, height);
   }
 
   function drawRenderTargets(image: HTMLImageElement): void {
-    if (coverCanvas) drawRenderTarget(coverCanvas, image, "cover");
-    if (iconCanvas) drawRenderTarget(iconCanvas, image, "icon");
+    if (iconCanvas) drawRenderTarget(iconCanvas, image);
   }
 
   function play(next: PetAction, cycles = 1): void {
@@ -281,6 +277,5 @@
 </main>
 
 {#if renderTargets}
-  <canvas bind:this={coverCanvas} class="render-target cover-target" width={RENDER_SIZE} height={RENDER_SIZE} data-slop-render="cover" aria-hidden="true"></canvas>
   <canvas bind:this={iconCanvas} class="render-target icon-target" width={RENDER_SIZE} height={RENDER_SIZE} data-slop-render="icon" aria-hidden="true"></canvas>
 {/if}

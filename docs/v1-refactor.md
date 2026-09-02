@@ -22,13 +22,13 @@ categories, and a small `presentation` object.
 - executable Quick Look extensions and authored Finder resource forks
 
 Template visuals are immutable. One full capture is written as
-`QuickLook/Preview.png`; `QuickLook/Thumbnail.png` is a package-time downscale
+`QuickLook/Preview.png`; `QuickLook/Icon.png` is package-time icon artwork
 or author-supplied static PNG. A document may refresh only its preview. Data
 uses lazy `stores/data.json` and `stores/data.sqlite`.
 
 macOS uses built-in package Quick Look. Finder list rows use a separate custom
 icon path, so the host derives Finder-managed `Icon\r` metadata from the static
-thumbnail when it creates or opens a local document. The metadata is never
+icon when it creates or opens a local document. The metadata is never
 accepted in a template or published artifact.
 
 ## Removed from distribution

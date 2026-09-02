@@ -387,6 +387,13 @@ input::-webkit-outer-spin-button {
 .timer-error {
 	font-size: 10px;
 }
+.timer-render { position: fixed; inset: 0 auto auto 0; display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
+html[data-slop-renderer="true"][data-slop-capture="icon"] .timer-shell { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
+.timer-icon { display: grid; place-items: center; width: 464px; height: 464px; border-radius: 50%; background: var(--timer-shell); box-shadow: inset 0 0 0 18px var(--timer-shell-soft); }
+.timer-icon-ring { position: relative; display: grid; place-items: center; width: 330px; height: 330px; border: 36px solid var(--timer-butter); border-right-color: var(--timer-coral); border-radius: 50%; color: var(--timer-paper); background: var(--timer-shell); transform: rotate(-18deg); }
+.timer-icon-ring span { font: 700 124px/1 var(--timer-display); transform: rotate(18deg); }
+.timer-icon-ring i { position: absolute; right: -47px; width: 58px; height: 58px; border: 9px solid var(--timer-shell); border-radius: 50%; background: var(--timer-coral); }
 .timer-presets > span,
 .timer-presets button,
 .duration-settings label,

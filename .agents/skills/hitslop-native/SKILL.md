@@ -17,11 +17,11 @@ description: Work on hitSlop Apple hosting, local storage, iCloud coordination, 
   stores are lazy and neither is declared by the manifest.
 - Generated Swift manifest models and the bundled validation schema come from
   `bun run schema:generate`; never edit them directly.
-- Capture a full `QuickLook/Preview.png` and derive a static, maximum-512px
-  `QuickLook/Thumbnail.png` unless the author supplies one. Documents may
-  refresh only the preview; keep the thumbnail immutable. Use macOS's built-in
+- Capture a full `QuickLook/Preview.png` and produce an exact 512×512
+  `QuickLook/Icon.png` unless the author supplies one. Documents may
+  refresh only the preview; keep the icon immutable. Use macOS's built-in
   package handling for Quick Look. For Finder list rows, the host derives
-  Finder-managed `Icon\r` metadata from the static thumbnail when it creates or
+  Finder-managed `Icon\r` metadata from the static icon when it creates or
   opens a local document. Accept that exact metadata in local documents but
   never include it in templates or published artifacts. Do not add Quick Look
   extensions.

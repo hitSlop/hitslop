@@ -18,5 +18,20 @@ struct CatalogItem: Identifiable {
     var categories: [String] { switch source { case .hosted(let item): normalized(item.categories); case .local(let item): item.manifest.categories.map(\.rawValue) } }
     var isLocal: Bool { if case .local = source { true } else { false } }
     var creations: Int? { if case .hosted(let item) = source { item.creations } else { nil } }
+    var publisher: String? { if case .hosted(let item) = source { item.publisherDisplayName } else { nil } }
+    var releaseNumber: Int? { if case .hosted(let item) = source { item.currentReleaseNumber } else { nil } }
+    var manifest: SlopManifest? { switch source { case .hosted(let item): item.currentManifest; case .local(let item): item.manifest } }
+    var packageBytes: Int64? {
+        switch source {
+        case .hosted(let item): item.currentArtifactBytes.map { Int64($0) }
+        case .local(let item): item.packageBytes
+        }
+    }
+    var updatedAt: Date? {
+        switch source {
+        case .hosted(let item): Date(timeIntervalSince1970: item.updatedAt / 1_000)
+        case .local(let item): item.updatedAt
+        }
+    }
     var searchableText: String { ([title, description] + categories).joined(separator: " ").localizedLowercase }
 }

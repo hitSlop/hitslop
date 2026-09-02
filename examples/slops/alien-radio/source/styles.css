@@ -67,4 +67,13 @@ button { color: inherit; }
 .soma { position: absolute; top: 322px; left: 246px; width: 228px; color: #27320a; font-size: 7px; font-weight: 700; letter-spacing: .03em; text-align: center; text-decoration: none; }
 .soma:hover { color: #5c267e; }
 
+.radio-render { position: fixed; inset: 0 auto auto 0; display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
+html[data-slop-renderer="true"][data-slop-capture="icon"] .radio { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
+.radio-icon { display: grid; place-items: center; width: 464px; height: 464px; border: 14px solid #28291f; border-radius: 88px; background: radial-gradient(circle at 50% 18%, #dfff8b, #789c16 42%, #242807 76%); box-shadow: inset 0 0 0 8px #a67bda; }
+.radio-icon-screen { position: relative; display: flex; align-items: end; gap: 18px; width: 338px; height: 246px; padding: 50px 42px 42px; border: 12px solid #16190c; border-radius: 34px; background: #090c06; box-shadow: inset 0 0 28px #000; }
+.radio-icon-screen i { width: 32px; border-radius: 5px 5px 0 0; background: #caff42; box-shadow: 0 0 12px #789c16; }
+.radio-icon-screen i:nth-child(1) { height: 58px; }.radio-icon-screen i:nth-child(2) { height: 112px; }.radio-icon-screen i:nth-child(3) { height: 154px; }.radio-icon-screen i:nth-child(4) { height: 92px; }.radio-icon-screen i:nth-child(5) { height: 132px; }
+.radio-icon-screen span { position: absolute; top: 22px; right: 28px; color: #aa7ce0; font-size: 36px; }
+
 @media (prefers-reduced-motion: reduce) { .transport button { transition: none; } }

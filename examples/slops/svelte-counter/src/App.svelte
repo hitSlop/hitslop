@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
+  import Icon from "./Icon.svelte";
 
   const state = jsonStore({ count: 0 });
 </script>
@@ -21,3 +23,5 @@
     </div>
   </section>
 </main>
+
+{#if capture.isRenderer()}<Icon />{/if}

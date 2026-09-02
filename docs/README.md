@@ -5,7 +5,7 @@
 - [Authoring a slop](authoring.md) — scaffold, preview, validate, build, install,
   and publish.
 - [Design and presentation](presentation.md) — Paper/Instrument/Skin, responsive
-  layout, transparent windows, resizing, cover/icon art, and static export.
+  layout, transparent windows, resizing, icon art, and static export.
 - [Package format](package-format.md) — the exact source/runtime boundary.
 - [Storage](storage.md) — JSON, SQLite, named media, concurrency, and iCloud.
 - [Framework packages](packages.md) — CLI, runtime, schema, Svelte, and React.

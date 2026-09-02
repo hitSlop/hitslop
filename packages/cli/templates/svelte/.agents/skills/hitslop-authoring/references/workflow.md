@@ -25,7 +25,7 @@ the manifest viewport in live and `data-slop-capture="static"` states. Mark
 editing controls `data-slop-export="hide"`. Keep output in normal document
 flow so full-height PNG/PDF can see it.
 
-Optional renderer-only cover/icon targets are square 512px DOM elements. Use
+An optional renderer-only icon target is a square 512px DOM element. Use
 `capture.isRenderer()` so they never mount in the interactive app.
 
 ## Identity and publish
@@ -37,5 +37,5 @@ one built/captured artifact; the registry assigns release numbers externally.
 ## Definition of done
 
 Validate keyboard/focus/reduced motion, long and empty content, persistence
-reopen, resize or skin hit testing, static/full-height export, cover/icon
+reopen, resize or skin hit testing, static/full-height export, icon
 legibility, and the contents of the final runtime package.

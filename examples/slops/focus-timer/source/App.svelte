@@ -1,8 +1,10 @@
 <script lang="ts">
   import { Switch, Tabs } from "bits-ui";
+  import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
   import Pause from "@lucide/svelte/icons/pause";
   import Play from "@lucide/svelte/icons/play";
+  import Icon from "./Icon.svelte";
 
   type Kind = "focus" | "rest";
   type Session = { startedAt: string; kind: Kind; seconds: number };
@@ -201,3 +203,5 @@
     <p class="timer-error">The timer history could not be saved. {timer.error}</p>
   {/if}
 </main>
+
+{#if capture.isRenderer()}<Icon />{/if}

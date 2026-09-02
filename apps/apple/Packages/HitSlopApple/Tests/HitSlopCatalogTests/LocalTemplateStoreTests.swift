@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import HitSlopCore
 import HitSlopHost
@@ -13,7 +14,7 @@ import Testing
     let store = LocalTemplateStore(templatesURL: root)
     #expect(store.templates.count == 1)
     #expect(store.templates.first?.manifest.title == "Tiny Counter")
-    #expect(store.templates.first?.thumbnailURL.lastPathComponent == "Thumbnail.png")
+    #expect(store.templates.first?.iconURL.lastPathComponent == "Icon.png")
     #expect(store.issues.isEmpty)
 
     let destination = root.appendingPathComponent("created.slop", isDirectory: true)
@@ -22,14 +23,14 @@ import Testing
     #expect(try Data(contentsOf: package.appendingPathComponent("manifest.json")) == Data(contentsOf: destination.appendingPathComponent("manifest.json")))
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("app.html").path))
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("QuickLook/Preview.png").path))
-    #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("QuickLook/Thumbnail.png").path))
+    #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("QuickLook/Icon.png").path))
     let updatedPreview = Data("updated preview".utf8)
     try SlopPreviewWriter.write(updatedPreview, to: destination)
     #expect(try Data(contentsOf: destination.appendingPathComponent("QuickLook/Preview.png")) == updatedPreview)
-    #expect(try Data(contentsOf: destination.appendingPathComponent("QuickLook/Thumbnail.png")) == png)
+    #expect(try Data(contentsOf: destination.appendingPathComponent("QuickLook/Icon.png")) == iconPNG)
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("Icon\r").path))
-    SlopPreviewWriter.installFinderIcon(png, for: destination)
-    #expect(try Data(contentsOf: destination.appendingPathComponent("QuickLook/Thumbnail.png")) == png)
+    SlopPreviewWriter.installFinderIcon(iconPNG, for: destination)
+    #expect(try Data(contentsOf: destination.appendingPathComponent("QuickLook/Icon.png")) == iconPNG)
     #expect(!FileManager.default.fileExists(atPath: package.appendingPathComponent("Icon\r").path))
     #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores").path))
 }
@@ -46,6 +47,7 @@ import Testing
 }
 
 private let png = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
+private let iconPNG = try! makeIconPNG()
 
 private func writeTemplate(named slug: String, in directory: URL, fileName: String? = nil) throws -> URL {
     let package = directory.appendingPathComponent(fileName ?? "\(slug).slop", isDirectory: true)
@@ -54,6 +56,11 @@ private func writeTemplate(named slug: String, in directory: URL, fileName: Stri
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"\#(slug)","title":"Tiny Counter","description":"Counts a very small thing.","categories":["utilities","personal"],"presentation":{"width":320,"height":240}}"#
     try Data(manifest.utf8).write(to: package.appendingPathComponent("manifest.json"))
     try png.write(to: package.appendingPathComponent("QuickLook/Preview.png"))
-    try png.write(to: package.appendingPathComponent("QuickLook/Thumbnail.png"))
+    try iconPNG.write(to: package.appendingPathComponent("QuickLook/Icon.png"))
     return package
+}
+
+private func makeIconPNG() throws -> Data {
+    let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 512, pixelsHigh: 512, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+    return bitmap.representation(using: .png, properties: [:])!
 }

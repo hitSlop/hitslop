@@ -7,6 +7,10 @@ const catalogTemplateValidator = schema.tables.templates.validator.extend({
   _creationTime: v.number(),
   currentArtifactKey: v.union(v.string(), v.null()),
   currentArtifactSha256: v.union(v.string(), v.null()),
+  currentArtifactBytes: v.union(v.number(), v.null()),
+  currentManifest: v.union(v.any(), v.null()),
+  currentReleaseCreatedAt: v.union(v.number(), v.null()),
+  publisherDisplayName: v.string(),
 });
 const publisherDoc = schema.tables.publishers.validator.extend({ _id: v.id("publishers"), _creationTime: v.number() });
 const releaseDoc = schema.tables.releases.validator.extend({ _id: v.id("releases"), _creationTime: v.number() });
@@ -19,7 +23,16 @@ const templateDetailValidator = schema.tables.templates.validator.extend({
 
 const withCurrentArtifact = async (ctx: { db: any }, item: any) => {
   const release = item.currentReleaseId ? await ctx.db.get(item.currentReleaseId) : null;
-  return { ...item, currentArtifactKey: release?.artifactKey ?? null, currentArtifactSha256: release?.artifactSha256 ?? null };
+  const publisher = await ctx.db.get(item.publisherId);
+  return {
+    ...item,
+    currentArtifactKey: release?.artifactKey ?? null,
+    currentArtifactSha256: release?.artifactSha256 ?? null,
+    currentArtifactBytes: release?.artifactBytes ?? null,
+    currentManifest: release?.manifest ?? null,
+    currentReleaseCreatedAt: release?.createdAt ?? null,
+    publisherDisplayName: publisher?.displayName ?? "Unknown publisher",
+  };
 };
 
 export const popular = query({

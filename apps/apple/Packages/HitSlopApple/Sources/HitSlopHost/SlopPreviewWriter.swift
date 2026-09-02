@@ -33,18 +33,18 @@ public extension Notification.Name {
     }
 
     /// Finder list rows use a document custom icon rather than the package's
-    /// Quick Look thumbnail. Keep that macOS-only metadata derived from the
-    /// immutable author-supplied thumbnail until an authored live icon is
+    /// Quick Look preview. Keep that macOS-only metadata derived from the
+    /// immutable author-supplied icon until an authored live icon is
     /// rendered. Never use the live full-document preview.
     private static func installFinderIcon(for packageURL: URL) {
         let finderMetadataURL = packageURL.appendingPathComponent("Icon\r")
         guard !FileManager.default.fileExists(atPath: finderMetadataURL.path) else { return }
-        let thumbnailURL = packageURL
+        let iconURL = packageURL
             .appendingPathComponent("QuickLook", isDirectory: true)
-            .appendingPathComponent("Thumbnail.png")
-        guard let image = NSImage(contentsOf: thumbnailURL) else { return }
+            .appendingPathComponent("Icon.png")
+        guard let image = NSImage(contentsOf: iconURL) else { return }
         if !NSWorkspace.shared.setIcon(image, forFile: packageURL.path, options: []) {
-            print("[hitSlop preview] Finder rejected thumbnail icon for \(packageURL.lastPathComponent)")
+            print("[hitSlop preview] Finder rejected package icon for \(packageURL.lastPathComponent)")
         }
     }
 

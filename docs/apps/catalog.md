@@ -20,9 +20,9 @@ A publisher submits `envelope`, `signature`, and `artifact`. The gateway:
 3. inspects the ZIP central directory before expansion;
 4. rejects traversal, absolute/backslash/NUL paths, duplicates, symlinks,
    encryption, ZIP64/multi-disk, unsupported compression, and limit violations;
-5. allows only runtime package paths and requires manifest/app/preview/thumbnail;
+5. allows only runtime package paths and requires manifest/app/preview/icon;
 6. validates Zod manifest data, PNG CRCs/size, and exact RGBA skin dimensions;
-7. stores content-addressed artifact and preview objects with immutable caching;
+7. stores content-addressed artifact, preview, and icon objects with immutable caching;
 8. calls the private Convex finalize endpoint with the shared internal secret.
 
 The artifact is the source of truth. Browser-facing manifest/preview metadata is

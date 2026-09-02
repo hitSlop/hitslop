@@ -383,6 +383,13 @@ input:focus-visible {
 .picker-error {
 	font-size: 10px;
 }
+.picker-render { position: fixed; inset: 0 auto auto 0; display: none !important; width: 512px; height: 512px; place-items: center; overflow: hidden; background: transparent; }
+html[data-slop-renderer="true"][data-slop-capture="icon"] .picker-shell { display: none; }
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] { display: grid !important; }
+.picker-icon { display: grid; place-items: center; width: 464px; height: 464px; border: 18px solid var(--picker-shell-deep); border-radius: 116px; background: var(--picker-shell); }
+.picker-die { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; place-items: center; width: 294px; height: 294px; padding: 36px; border: 12px solid var(--picker-ink); border-radius: 70px; background: var(--picker-butter); transform: rotate(-8deg); }
+.picker-die i { width: 48px; height: 48px; border-radius: 50%; background: var(--picker-coral); box-shadow: inset 0 4px 0 rgb(255 255 255 / 28%); }
+.picker-die i:nth-child(3) { grid-column: 1 / -1; }
 .pick-button,
 .history strong,
 .picker-done,

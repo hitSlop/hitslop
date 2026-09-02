@@ -96,26 +96,24 @@ Call `ready()` only after initial data and critical fonts/images are usable.
 Respect reduced motion; capture should not depend on a particular animation
 frame.
 
-## Cover and icon art
+## Icon art
 
-Cover and icon art are compiled DOM, not extra image source files. Mount the
-square targets only in the hidden renderer:
+Icon art is compiled DOM, not an extra image source file. Mount the square
+target only in the hidden renderer:
 
 ```svelte
 {#if capture.isRenderer()}
-  <section data-slop-render="cover">…</section>
   <section data-slop-render="icon">…</section>
 {/if}
 ```
 
-Each target is at most one 512×512 element, revealed by CSS only for its matching
-capture mode. Make the cover explain the object at catalog size. Make the icon
-simpler, with strong silhouette and no tiny text. Finder prefers icon then
-cover; catalog prefers cover then the full preview.
+The target is exactly one 512×512 element, revealed by CSS only for icon capture
+mode. Give it a strong silhouette, safe margins, and no tiny text. Finder and
+compact catalog rows use the icon; catalog detail uses the full preview.
 
 ## Shipping checklist
 
 Test keyboard access, visible focus, contrast, reduced motion, long text, empty
 and error states, manifest dimensions, a resized standard window, static
-capture, full-height PNG/PDF, and 512px cover/icon art. The local
+capture, full-height PNG/PDF, and 512px icon art. The local
 `hitslop-design` skill contains the same reusable design pattern for agents.

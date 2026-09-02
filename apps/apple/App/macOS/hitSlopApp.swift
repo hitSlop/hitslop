@@ -55,7 +55,7 @@ private struct UpdateSettingsView: View {
             let host = NSHostingController(rootView: root)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 720), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
             window.title = ""; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
-            window.minSize = NSSize(width: 760, height: 560); window.contentViewController = host; window.center(); catalog = NSWindowController(window: window)
+            window.minSize = NSSize(width: 900, height: 600); window.contentViewController = host; window.center(); catalog = NSWindowController(window: window)
         }
         catalog?.showWindow(nil); catalog?.window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
     }

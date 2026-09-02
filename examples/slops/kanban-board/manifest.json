@@ -2,7 +2,7 @@
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
   "slug": "kanban-board",
   "title": "Kanban Board",
-  "description": "A compact relational board for moving work from idea to done.",
-  "categories": ["business", "productivity"],
-  "presentation": { "width": 760, "height": 560 }
+  "description": "An anodized job-shop schedule board where work orders slot through lanes with live work-in-progress limits.",
+  "categories": ["productivity", "business"],
+  "presentation": { "width": 880, "height": 620 }
 }

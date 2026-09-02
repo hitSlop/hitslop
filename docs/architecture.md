@@ -100,8 +100,8 @@ paint buffer, then captures. Preview preserves manifest dimensions. PNG and PDF
 exports use current width and full document height; PNG is deterministic 2× and
 PDF retains WebKit text/vector output.
 
-Optional renderer-only `cover` and `icon` targets are 512×512. Finder prefers
-icon then cover; catalog imagery prefers cover then the full preview. See
+An optional renderer-only `icon` target is 512×512. Finder and compact catalog
+rows use the icon; catalog detail uses the full preview. See
 [Design and presentation](presentation.md).
 
 ## Platform topology

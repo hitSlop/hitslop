@@ -8,7 +8,7 @@ import HitSlopHost
 }
 
 struct Screenshot: AsyncParsableCommand {
-    enum Target: String, ExpressibleByArgument { case preview, cover, icon }
+    enum Target: String, ExpressibleByArgument { case preview, icon }
     @Argument(transform: URL.init(fileURLWithPath:)) var package: URL
     @Option(transform: URL.init(fileURLWithPath:)) var output: URL
     @Option var target: Target = .preview
@@ -17,7 +17,6 @@ struct Screenshot: AsyncParsableCommand {
         let data: Data?
         switch target {
         case .preview: data = try await SlopRenderer.previewPNGData(packageURL: package)
-        case .cover: data = try await SlopRenderer.targetPNGData(packageURL: package, target: .cover)
         case .icon: data = try await SlopRenderer.targetPNGData(packageURL: package, target: .icon)
         }
         guard let data else {
