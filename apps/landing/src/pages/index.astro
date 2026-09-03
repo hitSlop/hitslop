@@ -74,10 +74,24 @@ const faqs = [
         <div class="package-anatomy" aria-label="Contents of a slop document">
           <div class="package-tab"><img src="/assets/appicon.png" alt="" /><span>my-work.slop</span><small>on your Mac</small></div>
           <div class="package-files">
-            <div class="file-row immutable"><span>manifest.json</span><small>identity + presentation</small></div><div class="file-row immutable"><span>app.html</span><small>the interface</small></div><div class="file-row immutable"><span>assets/</span><small>immutable app media</small></div>
-            <div class="store-group"><div class="store-label"><span>stores/</span><small>your editable data</small></div><div class="file-row"><span>data.json</span><small>documents + settings</small></div><div class="file-row"><span>data.sqlite</span><small>collections + queries</small></div><div class="file-row"><span>media/</span><small>images + named files</small></div></div>
+            <div class="app-group">
+              <div class="layer-label"><span>app files</span><small>fixed for this release</small></div>
+              <div class="file-row immutable"><span>manifest.json</span><small>identity + presentation</small></div>
+              <div class="file-row immutable"><span>app.html</span><small>generated interface</small></div>
+              <div class="file-row immutable optional"><span>data.schema.json</span><small>data contract</small></div>
+              <div class="file-row immutable optional"><span>assets/</span><small>app-owned media</small></div>
+              <div class="file-row immutable"><span>.agents/skills/</span><small>AI editing guide</small></div>
+              <div class="file-row immutable optional"><span>QuickLook/</span><small>Finder preview + icon</small></div>
+            </div>
+            <div class="store-group">
+              <div class="store-label"><span>stores/</span><small>your editable data</small></div>
+              <div class="file-row optional"><span>data.json</span><small>structured state</small></div>
+              <div class="file-row optional"><span>data.sqlite</span><small>collections + queries</small></div>
+              <div class="file-row optional"><span>theme.css</span><small>visual overrides</small></div>
+              <div class="file-row optional"><span>media/</span><small>images + named files</small></div>
+            </div>
           </div>
-          <p class="package-note">Portable enough for Finder. Legible enough for Git.</p>
+          <p class="package-note"><span>optional</span> where needed · portable in Finder · legible in Git</p>
         </div>
       </section>
 

@@ -10,7 +10,7 @@
   "publishConfig": { "access": "public" },
   "type": "module",
   "bin": {
-    "slop": "./dist/cli.js"
+    "slop": "dist/cli.js"
   },
   "files": ["dist", "templates"],
   "scripts": {
