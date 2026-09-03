@@ -1,0 +1,27 @@
+{
+  "name": "@hitslop/api",
+  "private": true,
+  "license": "MIT",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json",
+    "test": "bun test tests",
+    "deploy": "wrangler deploy --env production",
+    "cf-typegen": "wrangler types --include-runtime=false --env-interface=CloudflareEnv"
+  },
+  "dependencies": {
+    "@hitslop/schema": "workspace:*",
+    "convex": "^1.45.0",
+    "fast-png": "^8.0.0",
+    "fflate": "^0.8.3",
+    "zod": "^4.5.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260829.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.127.1"
+  }
+}

@@ -121,9 +121,9 @@ async function main(): Promise<void> {
   await Promise.all([
     checkIgnored("AuthKey_FAKE123.p8", true),
     checkIgnored(".env.production", true),
-    checkIgnored("apps/catalog/.dev.vars", true),
+    checkIgnored("apps/api/.dev.vars", true),
     checkIgnored("apps/registry/.env.local", true),
-    checkIgnored("apps/catalog/.dev.vars.example", false),
+    checkIgnored("apps/api/.dev.vars.example", false),
     checkIgnored("_vibe/reference.png", true),
     checkIgnored("archive/templates/unlisted-private/manifest.json", true),
     assertDocumentationLinks(files),

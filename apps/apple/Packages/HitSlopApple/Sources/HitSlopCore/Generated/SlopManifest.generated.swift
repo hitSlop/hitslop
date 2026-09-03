@@ -84,5 +84,5 @@ public enum Shape: String, Codable, Sendable, CaseIterable {
 }
 
 public enum Schema: String, Codable, Sendable, CaseIterable {
-    case httpsHitslopAppSchemasV1ManifestSchemaJSON = "https://hitslop.app/schemas/v1/manifest.schema.json"
+    case httpsAPIHitslopCOMSchemasV1ManifestSchemaJSON = "https://api.hitslop.com/schemas/v1/manifest.schema.json"
 }

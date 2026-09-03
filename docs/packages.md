@@ -67,7 +67,7 @@ Codable model, and bundled Swift validation schema. Change Zod first, run
 ## Dependency direction
 
 ```text
-schema  ◀── cli, catalog, registry
+schema  ◀── cli, api, registry
 runtime ◀── svelte, react
 schema-generated JSON/Swift ◀── Apple Core
 ```

@@ -18,7 +18,7 @@ await generate({
   zodSchema: SlopManifestSchema,
   schemaName: "manifest.schema.json",
   swiftName: "SlopManifest.generated.swift",
-  id: "https://hitslop.app/schemas/v1/manifest.schema.json",
+  id: "https://api.hitslop.com/schemas/v1/manifest.schema.json",
   title: "SlopManifest",
   description: "The framework-neutral manifest for hitSlop web documents.",
   transformSwift: addSendable,
@@ -41,14 +41,14 @@ async function generate(options: {
   const schemaPath = resolve(generated, options.schemaName);
   const swiftOutput = resolve(repositoryRoot, "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Generated", options.swiftName);
   const swiftSchema = resolve(repositoryRoot, "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/manifest.schema.json");
-  const catalogSchema = resolve(repositoryRoot, "apps/catalog/public/schemas/v1/manifest.schema.json");
+  const publicSchema = resolve(repositoryRoot, "apps/api/public/schemas/v1/manifest.schema.json");
   await mkdir(resolve(swiftOutput, ".."), { recursive: true });
   await mkdir(resolve(swiftSchema, ".."), { recursive: true });
-  await mkdir(resolve(catalogSchema, ".."), { recursive: true });
+  await mkdir(resolve(publicSchema, ".."), { recursive: true });
   const serialized = `${JSON.stringify(schema, null, 2)}\n`;
   await writeFile(schemaPath, serialized);
   await writeFile(swiftSchema, serialized);
-  await writeFile(catalogSchema, serialized);
+  await writeFile(publicSchema, serialized);
   await $`bunx quicktype --src-lang schema --lang swift --top-level ${options.title} --access-level public --src ${schemaPath} --out ${swiftOutput}`;
   const generatedSwift = stripQuicktypeHelpers(await Bun.file(swiftOutput).text());
   await Bun.write(swiftOutput, options.transformSwift ? options.transformSwift(generatedSwift) : generatedSwift);

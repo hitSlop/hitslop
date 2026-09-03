@@ -7,7 +7,7 @@ import Testing
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-template-boundary-\(UUID().uuidString)", isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     let templates = root.appendingPathComponent("templates", isDirectory: true)
-    let factory = DocumentFactory(catalogURL: URL(string: "https://hitslop.app")!, templatesRoot: templates)
+    let factory = DocumentFactory(catalogURL: URL(string: "https://api.hitslop.com")!, templatesRoot: templates)
 
     #expect(factory.isManagedTemplatePackage(templates.appendingPathComponent("soma-amp.slop")))
     #expect(factory.isManagedTemplatePackage(templates.appendingPathComponent("cache/publisher/soma-amp/1.slop")))
@@ -63,7 +63,7 @@ private func makePackage(in root: URL) throws -> URL {
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try Data("<main>Hello</main>".utf8).write(to: root.appendingPathComponent("app.html"))
     let manifest = """
-    {"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"cloud-fixture","title":"Cloud Fixture","description":"Working copy fixture.","categories":["utilities"],"presentation":{"width":320,"height":240}}
+    {"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","slug":"cloud-fixture","title":"Cloud Fixture","description":"Working copy fixture.","categories":["utilities"],"presentation":{"width":320,"height":240}}
     """
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")

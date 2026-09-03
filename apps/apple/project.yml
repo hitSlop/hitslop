@@ -48,10 +48,10 @@ targets:
         "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
       configs:
         Debug:
-          HITSLOP_CATALOG_URL: https://hitslop.app
+          HITSLOP_CATALOG_URL: https://api.hitslop.com
           HITSLOP_CONVEX_URL: https://fastidious-malamute-777.convex.cloud
         Release:
-          HITSLOP_CATALOG_URL: https://hitslop.app
+          HITSLOP_CATALOG_URL: https://api.hitslop.com
           HITSLOP_CONVEX_URL: https://fastidious-malamute-777.convex.cloud
   hitSlop-macOS:
     type: application
@@ -101,7 +101,7 @@ targets:
           HITSLOP_CATALOG_URL: http://localhost:3000
           HITSLOP_CONVEX_URL: https://giddy-opossum-593.convex.cloud
         Release:
-          HITSLOP_CATALOG_URL: https://hitslop.app
+          HITSLOP_CATALOG_URL: https://api.hitslop.com
           HITSLOP_CONVEX_URL: https://fastidious-malamute-777.convex.cloud
 schemes:
   hitSlop-iOS:

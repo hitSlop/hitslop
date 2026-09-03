@@ -62,7 +62,7 @@ A minimal v1 manifest:
 
 ```json
 {
-  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
   "slug": "tiny-counter",
   "title": "Tiny Counter",
   "description": "Counts one small thing.",

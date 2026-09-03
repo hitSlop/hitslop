@@ -1,6 +1,6 @@
 {
   "name": "@hitslop/schema",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Canonical hitSlop schemas and publish protocol.",
   "license": "MIT",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "git+https://github.com/hitslop/hitslop.git",
     "directory": "packages/schema"
   },
-  "homepage": "https://hitslop.app",
+  "homepage": "https://hitslop.com",
   "bugs": {
     "url": "https://github.com/hitslop/hitslop/issues"
   },

@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "bun@1.4.0",
   "workspaces": [
-    "apps/catalog",
+    "apps/api",
     "apps/landing",
     "apps/registry",
     "packages/*",
@@ -13,16 +13,16 @@
     "Prototypes/*"
   ],
   "scripts": {
-    "build": "bun run schema:generate && bun run --cwd packages/schema build && bun run --cwd packages/runtime build && bun run --cwd packages/svelte build && bun run --cwd packages/react build && bun run --cwd packages/cli build && bun run --cwd apps/registry build && bun run --cwd apps/catalog build && bun run --cwd examples/slops build",
+    "build": "bun run schema:generate && bun run --cwd packages/schema build && bun run --cwd packages/runtime build && bun run --cwd packages/svelte build && bun run --cwd packages/react build && bun run --cwd packages/cli build && bun run --cwd apps/registry build && bun run --cwd apps/api build && bun run --cwd apps/landing build && bun run --cwd examples/slops build",
     "check": "bun run schema:check && bun run --filter '@hitslop/*' check",
-    "test": "bun run --cwd packages/schema test && bun run --cwd packages/runtime test && bun run --cwd packages/svelte test && bun run --cwd packages/react test && bun run --cwd packages/cli test && bun run --cwd apps/registry test && bun run --cwd apps/catalog test && bun run --cwd examples/slops test",
+    "test": "bun run --cwd packages/schema test && bun run --cwd packages/runtime test && bun run --cwd packages/svelte test && bun run --cwd packages/react test && bun run --cwd packages/cli test && bun run --cwd apps/registry test && bun run --cwd apps/api test && bun run --cwd examples/slops test",
     "release:check": "bun scripts/release-check.ts",
     "release:npm:check": "bun scripts/npm-release-check.ts",
     "examples:check": "bun run --cwd examples/slops check && bun run --cwd examples/slops test && bun run --cwd examples/slops build",
     "schema:generate": "bun run --cwd packages/schema generate",
     "schema:check": "bun run --cwd packages/schema check:generated",
     "slop": "bun packages/cli/src/cli.ts",
-    "catalog:dev": "bun run --cwd apps/catalog dev",
+    "api:dev": "bun run --cwd apps/api dev",
     "landing:dev": "bun run --cwd apps/landing dev",
     "convex:dev": "bun run --cwd apps/registry dev",
     "swift:build": "swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native"

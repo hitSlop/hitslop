@@ -18,7 +18,7 @@ import Testing
     #expect(store.issues.isEmpty)
 
     let destination = root.appendingPathComponent("created.slop", isDirectory: true)
-    try DocumentFactory(catalogURL: URL(string: "https://hitslop.app")!).create(fromLocalPackage: store.templates[0].packageURL, at: destination)
+    try DocumentFactory(catalogURL: URL(string: "https://api.hitslop.com")!).create(fromLocalPackage: store.templates[0].packageURL, at: destination)
     SlopPreviewWriter.installExistingPreview(for: destination)
     #expect(try Data(contentsOf: package.appendingPathComponent("manifest.json")) == Data(contentsOf: destination.appendingPathComponent("manifest.json")))
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("app.html").path))
@@ -53,7 +53,7 @@ private func writeTemplate(named slug: String, in directory: URL, fileName: Stri
     let package = directory.appendingPathComponent(fileName ?? "\(slug).slop", isDirectory: true)
     try FileManager.default.createDirectory(at: package.appendingPathComponent("QuickLook"), withIntermediateDirectories: true)
     try Data("<main>Hello</main>".utf8).write(to: package.appendingPathComponent("app.html"))
-    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"\#(slug)","title":"Tiny Counter","description":"Counts a very small thing.","categories":["utilities","personal"],"presentation":{"width":320,"height":240}}"#
+    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","slug":"\#(slug)","title":"Tiny Counter","description":"Counts a very small thing.","categories":["utilities","personal"],"presentation":{"width":320,"height":240}}"#
     try Data(manifest.utf8).write(to: package.appendingPathComponent("manifest.json"))
     let skill = package.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
     try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)

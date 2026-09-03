@@ -201,7 +201,7 @@ private func webViewPackage(skinned: Bool, transparent: Bool = false) throws -> 
     let presentation = skinned
         ? #"{"width":320,"height":240,"skin":"assets/skin.png"}"#
         : transparent ? #"{"width":320,"height":240,"resizable":false,"background":"transparent"}"# : #"{"width":320,"height":240}"#
-    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"webview-fixture","title":"WebView Fixture","description":"Runtime opacity fixture.","categories":["utilities"],"presentation":\#(presentation)}"#
+    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","slug":"webview-fixture","title":"WebView Fixture","description":"Runtime opacity fixture.","categories":["utilities"],"presentation":\#(presentation)}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try writeCanonicalDocumentSkill(to: root)
     if skinned {

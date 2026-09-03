@@ -123,6 +123,6 @@ rows use the icon; catalog detail uses the full preview. See
 ## Platform topology
 
 - [Apple apps](apps/apple.md) own documents and native presentation.
-- [Catalog gateway](apps/catalog.md) owns hostile artifact ingress and R2 egress.
+- [API gateway](apps/api.md) owns hostile artifact ingress and R2 egress.
 - [Registry](apps/registry.md) owns searchable metadata and release numbering.
 - [Packages](packages.md) provide authoring and browser APIs.

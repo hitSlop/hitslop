@@ -65,11 +65,14 @@ transparent backgrounds, resizing, icon art, and export-safe layouts.
 tiny-app.slop/
 ├── manifest.json
 ├── app.html
+├── data.schema.json            optional, generated
 ├── assets/                    optional, immutable
+├── .agents/skills/hitslop-document/
 ├── stores/                    optional, host-owned document data
 │   ├── data.json
 │   ├── data.sqlite
-│   └── media/
+│   ├── media/
+│   └── theme.css
 └── QuickLook/
     ├── Preview.png
     └── Icon.png
@@ -85,8 +88,8 @@ any combination, or none. See [Package format](docs/package-format.md) and
 
 - `apps/apple` — the macOS/iOS document host, catalog UI, Quick Look, export,
   local/iCloud coordination, and the native capture CLI.
-- `apps/catalog` — the public TanStack Start site and hardened Cloudflare R2
-  publish/download gateway.
+- `apps/landing` — the static Astro site served at `hitslop.com`.
+- `apps/api` — the hardened Cloudflare publish/download and R2 gateway.
 - `apps/registry` — Convex metadata for publishers, templates, releases, and
   aggregate creation counts.
 - `packages/cli` — create, validate, preview, build, register, sign, and publish.
@@ -108,7 +111,7 @@ bun run release:check
 ```
 
 That first-launch gate checks generated schemas, the public TypeScript/Svelte
-packages, clean-room npm tarballs, catalog package ingestion, documentation and
+packages, clean-room npm tarballs, API package ingestion, documentation and
 tracked-file hygiene, and the Swift package. Older examples have the separate
 `bun run examples:check` gate while they are intentionally converted to v1. If
 you are changing Zod, run `bun run schema:generate` first.

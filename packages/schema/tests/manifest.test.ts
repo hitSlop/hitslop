@@ -31,7 +31,7 @@ describe("SlopManifest", () => {
     expect(() => parseManifest({ ...valid, presentation: { width: 480, height: 360, skin: "../skin.png" } })).toThrow();
     expect(() => parseManifest({ ...valid, presentation: { width: 480, height: 360, skin: "assets/skin.jpg" } })).toThrow();
   });
-  test("requires the versioned schema URL", () => expect(() => parseManifest({ ...valid, $schema: "https://hitslop.app/schemas/manifest.schema.json" })).toThrow());
+  test("requires the versioned schema URL", () => expect(() => parseManifest({ ...valid, $schema: "https://api.hitslop.com/schemas/manifest.schema.json" })).toThrow());
   test("rejects removed manifest fields", () => {
     for (const extra of ["author", "stores", "window", "tags", "document"]) expect(() => parseManifest({ ...valid, [extra]: {} })).toThrow();
   });

@@ -6,7 +6,8 @@
 | --- | --- |
 | `apps/apple` | Thin iOS and macOS targets plus project/release configuration |
 | `apps/apple/Packages/HitSlopApple` | Shared Swift Core, Runtime, Registry, Host, Catalog, and native CLI |
-| `apps/catalog` | TanStack Start catalog and Cloudflare R2 gateway |
+| `apps/api` | Framework-free Cloudflare publish and R2 gateway |
+| `apps/landing` | Static Astro site for `hitslop.com` |
 | `apps/registry` | Convex publishers, templates, releases, and creation counts |
 | `packages/cli` | Authoring, browser preview fake, build, capture, identity, register, publish |
 | `packages/runtime` | Framework-neutral host API and adapter building blocks |

@@ -47,7 +47,7 @@ export async function publishSlop(root: string, flags: { registry?: string; prev
   form.set("envelope", JSON.stringify(envelope));
   form.set("signature", signature);
   form.set("artifact", new Blob([blobPart(packed.bytes)], { type: "application/zip" }), `${built.manifest.slug}.slop.zip`);
-  const endpoint = flags.registry ?? process.env.HITSLOP_REGISTRY_URL ?? "https://hitslop.app/api/publish";
+  const endpoint = flags.registry ?? process.env.HITSLOP_REGISTRY_URL ?? "https://api.hitslop.com/api/publish";
   const response = await fetch(endpoint, { method: "POST", body: form });
   const body = await response.text();
   if (!response.ok) throw new Error(`Publish failed (${response.status}): ${body}`);

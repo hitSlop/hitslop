@@ -1,15 +1,16 @@
-# Catalog and artifact gateway
+# API and artifact gateway
 
-`apps/catalog` is a TanStack Start React application deployed to Cloudflare.
-It has two roles: render the public catalog and act as the security boundary
-between publisher uploads, Convex metadata, and immutable R2 objects.
+`apps/api` is a framework-free Cloudflare Worker deployed at
+`https://api.hitslop.com`. It is the security boundary between publisher
+uploads, Convex metadata, and immutable R2 objects. Convex remains an
+implementation detail behind the gateway.
 
 ## Read path
 
-The browser subscribes to public Convex catalog data. Artifact and preview
-requests pass through gateway routes that resolve an allowed registry key and
-stream immutable R2 bytes. Catalog selection in the Apple app still verifies
-the artifact SHA-256 before caching.
+The Apple app subscribes directly to public Convex catalog data. Artifact,
+preview, and icon requests pass through the gateway and may resolve only exact
+content-addressed R2 keys. Catalog selection still verifies the artifact
+SHA-256 before caching.
 
 ## Publish path
 
@@ -30,22 +31,23 @@ derived from the verified signed bytes.
 
 ## Environment safety
 
-Public browser config lives in `.env.local` from `.env.example`. Server-only
-values live in an uncommitted `.dev.vars` based on `.dev.vars.example`:
+Server-only local values live in an uncommitted `.dev.vars` based on
+`.dev.vars.example`:
 
 - `CONVEX_URL`
 - `CONVEX_SITE_URL`
 - `HITSLOP_INTERNAL_SECRET`
 
-The build wrapper always removes `dist/server/.dev.vars`, even after a failed
-build, and rejects configured secret values if they appear in emitted files.
-
 ## Commands
 
 ```sh
-bun run --cwd apps/catalog dev
-bun run --cwd apps/catalog check
-bun run --cwd apps/catalog test
-bun run --cwd apps/catalog build
-bun run --cwd apps/catalog deploy
+bun run --cwd apps/api dev
+bun run --cwd apps/api check
+bun run --cwd apps/api test
+bun run --cwd apps/api cf-typegen
+bun run --cwd apps/api deploy
 ```
+
+The deploy command always selects Wrangler's production environment, including
+the production Convex deployment, R2 bucket, and `api.hitslop.com` custom
+domain.

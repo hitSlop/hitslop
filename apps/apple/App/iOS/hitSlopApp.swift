@@ -13,7 +13,7 @@ import WebKit
 }
 
 private struct AppEnvironment {
-    static var catalogURL: URL { URL(string: Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://hitslop.app")! }
+    static var catalogURL: URL { URL(string: Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")! }
     static var deploymentURL: String { Bundle.main.object(forInfoDictionaryKey: "ConvexDeploymentURL") as? String ?? "https://fastidious-malamute-777.convex.cloud" }
 }
 

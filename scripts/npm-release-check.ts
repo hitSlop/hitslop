@@ -35,10 +35,10 @@ async function main(): Promise<void> {
   for (const name of packageNames) await command(["bun", "run", "test"], join(root, "packages", name));
   for (const name of packageNames) await command(["bun", "run", "build"], join(root, "packages", name));
 
-  // The catalog is the untrusted package-ingress boundary, so its validator is
-  // part of the npm foundation even though the app itself is not published.
-  await command(["bun", "run", "check"], join(root, "apps/catalog"));
-  await command(["bun", "run", "test"], join(root, "apps/catalog"));
+  // The API Worker is the untrusted package-ingress boundary, so its validator
+  // is part of the npm foundation even though the app itself is not published.
+  await command(["bun", "run", "check"], join(root, "apps/api"));
+  await command(["bun", "run", "test"], join(root, "apps/api"));
 
   // Pack and install the artifacts outside the monorepo. This catches missing
   // files, bad bin metadata, and workspace dependencies that a source-level

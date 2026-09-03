@@ -16,7 +16,7 @@ never stores a user's local document.
 
 ## Finalization
 
-The HTTP finalizer accepts only the catalog gateway's bearer secret. It
+The HTTP finalizer accepts only the API gateway's bearer secret. It
 re-validates request data, verifies publisher-key continuity and idempotency,
 creates the next release, and updates the template's current release fields.
 R2 holds bytes; Convex holds references and public discovery data.
@@ -36,5 +36,5 @@ server secret directly in Convex, not in an env file:
 bunx convex env set HITSLOP_INTERNAL_SECRET <long-random-value>
 ```
 
-Use the same value in the catalog's local `.dev.vars` or Cloudflare secret
+Use the same value in the API's local `.dev.vars` or Cloudflare secret
 store. Rotate both sides together.

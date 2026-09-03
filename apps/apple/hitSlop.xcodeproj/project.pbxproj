@@ -337,7 +337,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
-				HITSLOP_CATALOG_URL = "https://hitslop.app";
+				HITSLOP_CATALOG_URL = "https://api.hitslop.com";
 				HITSLOP_CONVEX_URL = "https://fastidious-malamute-777.convex.cloud";
 				INFOPLIST_FILE = App/iOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -362,7 +362,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
-				HITSLOP_CATALOG_URL = "https://hitslop.app";
+				HITSLOP_CATALOG_URL = "https://api.hitslop.com";
 				HITSLOP_CONVEX_URL = "https://fastidious-malamute-777.convex.cloud";
 				INFOPLIST_FILE = App/iOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -387,7 +387,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 18;
 				ENABLE_HARDENED_RUNTIME = YES;
-				HITSLOP_CATALOG_URL = "https://hitslop.app";
+				HITSLOP_CATALOG_URL = "https://api.hitslop.com";
 				HITSLOP_CONVEX_URL = "https://fastidious-malamute-777.convex.cloud";
 				INFOPLIST_FILE = App/macOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (

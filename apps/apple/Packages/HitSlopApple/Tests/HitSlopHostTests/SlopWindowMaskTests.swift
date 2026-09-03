@@ -31,7 +31,7 @@ import Testing
     defer { try? FileManager.default.removeItem(at: parent) }
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
-    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"transparent","title":"Transparent","description":"Tests transparent geometry.","categories":["utilities"],"presentation":{"width":240,"height":180,"background":"transparent"}}"#
+    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","slug":"transparent","title":"Transparent","description":"Tests transparent geometry.","categories":["utilities"],"presentation":{"width":240,"height":180,"background":"transparent"}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try writeCanonicalDocumentSkill(to: root)
     let mask = try SlopWindowMask(package: SlopPackage(rootURL: root))
@@ -45,7 +45,7 @@ private func maskedFixture() throws -> URL {
     let root = directory.appendingPathComponent("asymmetric.slop", isDirectory: true)
     try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
     try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
-    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","categories":["utilities"],"presentation":{"width":240,"height":180,"skin":"assets/window-mask.png"}}"#
+    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","categories":["utilities"],"presentation":{"width":240,"height":180,"skin":"assets/window-mask.png"}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try writeCanonicalDocumentSkill(to: root)
 

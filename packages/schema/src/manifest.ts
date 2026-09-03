@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const manifestSchemaURL = "https://hitslop.app/schemas/v1/manifest.schema.json" as const;
+export const manifestSchemaURL = "https://api.hitslop.com/schemas/v1/manifest.schema.json" as const;
 
 export const SlopCategorySchema = z.enum([
   "productivity",

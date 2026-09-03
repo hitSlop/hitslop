@@ -1,10 +1,10 @@
 {
   "name": "@hitslop/svelte",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Svelte 5 state adapters for the hitSlop runtime.",
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/svelte" },
-  "homepage": "https://hitslop.app",
+  "homepage": "https://hitslop.com",
   "bugs": { "url": "https://github.com/hitslop/hitslop/issues" },
   "keywords": ["hitslop", "svelte", "local-first", "mini-apps"],
   "publishConfig": { "access": "public" },

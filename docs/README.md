@@ -14,7 +14,7 @@
 
 - [Architecture](architecture.md) — trust boundaries and end-to-end data flow.
 - [Apple apps](apps/apple.md) — Core, Runtime, Host, Catalog, Registry, and CLI.
-- [Catalog gateway](apps/catalog.md) — web catalog, artifact validation, and R2.
+- [API gateway](apps/api.md) — signed artifact validation and R2 delivery.
 - [Registry](apps/registry.md) — Convex schema and publishing finalization.
 - [Self-hosting](self-hosting.md) — replace the official hosted services.
 - [Repository guide](repository.md) — workspace map and change discipline.

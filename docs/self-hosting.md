@@ -1,9 +1,8 @@
 # Self-hosting
 
-The official hosted catalog is the default, but the publish protocol and all
+The official hosted registry is the default, but the publish protocol and all
 services are open source. A compatible deployment needs Convex for metadata,
-Cloudflare Workers/TanStack Start for the gateway/site, and an R2 binding named
-`ARTIFACTS`.
+a Cloudflare Worker for the API gateway, and an R2 binding named `ARTIFACTS`.
 
 ## Deploy the registry
 
@@ -17,18 +16,18 @@ bun run deploy
 
 Record the generated `.convex.cloud` and `.convex.site` URLs.
 
-## Configure and deploy the catalog
+## Configure and deploy the API
 
-Copy `.env.example` to `.env.local` for the public `VITE_CONVEX_URL`. Copy
-`.dev.vars.example` to `.dev.vars` for local server values. For production,
-configure Cloudflare bindings/secrets rather than committing files:
+Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars` for local server
+values. For production, configure Cloudflare bindings/secrets rather than
+committing files:
 
 - `ARTIFACTS`: R2 bucket binding
 - `CONVEX_URL`: public Convex client URL
 - `CONVEX_SITE_URL`: Convex HTTP actions URL
 - `HITSLOP_INTERNAL_SECRET`: same random value stored in Convex
 
-Then run `bun run --cwd apps/catalog deploy`.
+Then run `bun run --cwd apps/api deploy`.
 
 ## Publish to it
 

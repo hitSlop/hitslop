@@ -153,7 +153,7 @@ private func fixture(skin: Bool = false) throws -> URL {
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try Data("<html><head></head><body></body></html>".utf8).write(to: root.appendingPathComponent("app.html"))
     let presentation = skin ? #"{"width":320,"height":240,"skin":"assets/skin.png"}"# : #"{"width":320,"height":240}"#
-    let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","categories":["utilities"],"presentation":\#(presentation)}"#
+    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","categories":["utilities"],"presentation":\#(presentation)}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try writeCanonicalDocumentSkill(to: root)
     if skin { try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true); try writeSkin(to: root.appendingPathComponent("assets/skin.png"), width: 320, height: 240) }

@@ -37,7 +37,7 @@
     },
     "__schema0": {
       "type": "string",
-      "const": "https://hitslop.app/schemas/v1/manifest.schema.json"
+      "const": "https://api.hitslop.com/schemas/v1/manifest.schema.json"
     },
     "__schema1": {
       "type": "string",
@@ -171,7 +171,7 @@
       "pattern": "^assets\\/(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[A-Za-z0-9._/-]+\\.png$"
     }
   },
-  "$id": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "$id": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
   "title": "SlopManifest",
   "description": "The framework-neutral manifest for hitSlop web documents."
 }

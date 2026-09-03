@@ -3,7 +3,7 @@ name: Release macOS
 on:
   push:
     tags:
-      - "v*"
+      - "macos-v*"
 
 concurrency:
   group: macos-release-${{ github.ref_name }}
@@ -59,7 +59,7 @@ jobs:
       - name: Verify Gatekeeper
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${GITHUB_REF_NAME#macos-v}"
           APP="$RUNNER_TEMP/verify/hitSlop.app"
           mkdir -p "$RUNNER_TEMP/verify"
           hdiutil attach "dist/macos/hitSlop-${VERSION}.dmg" -nobrowse -mountpoint "$RUNNER_TEMP/dmg"
@@ -73,7 +73,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${GITHUB_REF_NAME#macos-v}"
           NOTES="$RUNNER_TEMP/release-notes.md"
           cat > "$NOTES" <<EOF
           hitSlop $VERSION for macOS.
