@@ -9,9 +9,13 @@ public struct RegistryTemplate: Decodable, Identifiable {
     public let currentReleaseId: String?; @ConvexInt public var currentReleaseNumber: Int
     public let currentArtifactKey: String?; public let currentArtifactSha256: String?; public let currentArtifactBytes: Double?
     public let currentPreviewKey: String; public let currentIconKey: String
-    public let currentManifest: SlopManifest?; public let currentReleaseCreatedAt: Double?; public let updatedAt: Double
+    public let currentManifestJson: String?; public let currentReleaseCreatedAt: Double?; public let updatedAt: Double
     @ConvexInt public var creations: Int
     public var id: String { _id }
+    public var currentManifest: SlopManifest? {
+        guard let currentManifestJson, let data = currentManifestJson.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(SlopManifest.self, from: data)
+    }
 
     public func remoteTemplate() -> SlopRemoteTemplate? {
         guard let artifactKey = currentArtifactKey, let sha = currentArtifactSha256 else { return nil }

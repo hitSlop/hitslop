@@ -47,7 +47,7 @@ const schema = defineSchema({
     iconKey: v.string(),
     iconSha256: v.string(),
     iconBytes: v.number(),
-    manifest: v.any(),
+    manifestJson: v.string(),
     createdAt: v.number(),
   })
     .index("by_templateId_and_number", ["templateId", "number"])

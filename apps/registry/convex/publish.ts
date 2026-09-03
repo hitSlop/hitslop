@@ -7,7 +7,7 @@ export const finalize = internalMutation({
     requestId: v.string(), publisherKeyId: v.string(), publicKey: v.string(), displayName: v.string(),
     artifactKey: v.string(), artifactSha256: v.string(), artifactBytes: v.number(),
     previewKey: v.string(), previewSha256: v.string(), previewBytes: v.number(),
-    iconKey: v.string(), iconSha256: v.string(), iconBytes: v.number(), manifest: v.any(),
+    iconKey: v.string(), iconSha256: v.string(), iconBytes: v.number(), manifestJson: v.string(),
   },
   returns: v.object({ templateId: v.id("templates"), releaseId: v.id("releases"), releaseNumber: v.number() }),
   handler: async (ctx, args) => {
@@ -18,7 +18,7 @@ export const finalize = internalMutation({
       return { templateId: release.templateId, releaseId: release._id, releaseNumber: release.number };
     }
 
-    const manifest = parseManifest(args.manifest);
+    const manifest = parseManifest(JSON.parse(args.manifestJson));
     let publisher = await ctx.db.query("publishers").withIndex("by_keyId", (q) => q.eq("keyId", args.publisherKeyId)).first();
     if (publisher && publisher.publicKey !== args.publicKey) throw new Error("Publisher key does not match its key id");
     const now = Date.now();
@@ -48,7 +48,7 @@ export const finalize = internalMutation({
       artifactKey: args.artifactKey, artifactSha256: args.artifactSha256, artifactBytes: args.artifactBytes,
       previewKey: args.previewKey, previewSha256: args.previewSha256, previewBytes: args.previewBytes,
       iconKey: args.iconKey, iconSha256: args.iconSha256, iconBytes: args.iconBytes,
-      manifest: args.manifest, createdAt: now,
+      manifestJson: args.manifestJson, createdAt: now,
     });
     await ctx.db.patch(template._id, {
       title: manifest.title, description: manifest.description, categories: manifest.categories, searchText,

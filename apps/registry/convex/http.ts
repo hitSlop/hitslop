@@ -11,7 +11,7 @@ http.route({ path: "/internal/publish", method: "POST", handler: httpAction(asyn
   for (const key of ["requestId", "publisherKeyId", "publicKey", "displayName", "artifactKey", "artifactSha256", "previewKey", "previewSha256", "iconKey", "iconSha256"]) {
     if (typeof value[key] !== "string") return Response.json({ error: `Invalid ${key}` }, { status: 400 });
   }
-  if (typeof value.artifactBytes !== "number" || typeof value.previewBytes !== "number" || typeof value.iconBytes !== "number" || typeof value.manifest !== "object") {
+  if (typeof value.artifactBytes !== "number" || typeof value.previewBytes !== "number" || typeof value.iconBytes !== "number" || typeof value.manifestJson !== "string") {
     return Response.json({ error: "Invalid release metadata" }, { status: 400 });
   }
   const result = await ctx.runMutation(internal.publish.finalize, value as never); return Response.json(result);

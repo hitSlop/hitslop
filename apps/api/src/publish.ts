@@ -78,7 +78,10 @@ export async function handlePublish(request: Request, env: APIEnvironment): Prom
         iconKey,
         iconSha256: iconHash.hex,
         iconBytes: icon.byteLength,
-        manifest,
+        // Convex reserves object keys beginning with "$", while a hitSlop
+        // manifest intentionally contains "$schema". Preserve the canonical
+        // manifest across that boundary as JSON text.
+        manifestJson: JSON.stringify(manifest),
       }),
     });
     if (!finalize.ok) throw new Error(`Convex finalize failed: ${await finalize.text()}`);

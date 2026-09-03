@@ -8,7 +8,7 @@ const catalogTemplateValidator = schema.tables.templates.validator.extend({
   currentArtifactKey: v.union(v.string(), v.null()),
   currentArtifactSha256: v.union(v.string(), v.null()),
   currentArtifactBytes: v.union(v.number(), v.null()),
-  currentManifest: v.union(v.any(), v.null()),
+  currentManifestJson: v.union(v.string(), v.null()),
   currentReleaseCreatedAt: v.union(v.number(), v.null()),
   publisherDisplayName: v.string(),
 });
@@ -29,7 +29,7 @@ const withCurrentArtifact = async (ctx: { db: any }, item: any) => {
     currentArtifactKey: release?.artifactKey ?? null,
     currentArtifactSha256: release?.artifactSha256 ?? null,
     currentArtifactBytes: release?.artifactBytes ?? null,
-    currentManifest: release?.manifest ?? null,
+    currentManifestJson: release?.manifestJson ?? null,
     currentReleaseCreatedAt: release?.createdAt ?? null,
     publisherDisplayName: publisher?.displayName ?? "Unknown publisher",
   };
@@ -55,7 +55,7 @@ export const newest = query({
 
 export const list = query({
   args: {
-    category: v.optional(v.string()),
+    category: v.optional(v.union(v.string(), v.null())),
     sort: v.optional(v.union(v.literal("popular"), v.literal("newest"))),
     limit: v.optional(v.number()),
   },
@@ -73,7 +73,7 @@ export const list = query({
 });
 
 export const search = query({
-  args: { term: v.string(), category: v.optional(v.string()), limit: v.optional(v.number()) },
+  args: { term: v.string(), category: v.optional(v.union(v.string(), v.null())), limit: v.optional(v.number()) },
   returns: v.array(catalogTemplateValidator),
   handler: async (ctx, args) => {
     const term = args.term.trim();
