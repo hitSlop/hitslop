@@ -31,9 +31,12 @@ async function main(): Promise<void> {
   await command(["bun", "run", "schema:generate"]);
   await command(["bun", "run", "schema:check"]);
 
+  // Build dependency packages before TypeScript resolves workspace exports from
+  // their published dist paths. A developer checkout may already have these
+  // files, but CI intentionally starts without them.
+  for (const name of packageNames) await command(["bun", "run", "build"], join(root, "packages", name));
   for (const name of packageNames) await command(["bun", "run", "check"], join(root, "packages", name));
   for (const name of packageNames) await command(["bun", "run", "test"], join(root, "packages", name));
-  for (const name of packageNames) await command(["bun", "run", "build"], join(root, "packages", name));
 
   // The API Worker is the untrusted package-ingress boundary, so its validator
   // is part of the npm foundation even though the app itself is not published.

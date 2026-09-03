@@ -674,7 +674,7 @@ private func artifactURL(catalogURL: URL, key: String) -> URL? {
     return components?.url
 }
 
-private func loadCatalogImage(_ url: URL) async -> NSImage? {
+@MainActor private func loadCatalogImage(_ url: URL) async -> NSImage? {
     if url.isFileURL { return NSImage(contentsOf: url) }
     guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
     return NSImage(data: data)
