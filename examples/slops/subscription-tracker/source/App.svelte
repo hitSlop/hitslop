@@ -8,6 +8,7 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import X from "@lucide/svelte/icons/x";
+  import { Dialog, Tabs } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Currency = "USD" | "CAD" | "EUR" | "GBP" | "AUD" | "JPY";
@@ -20,7 +21,7 @@
   const categories: Category[] = ["Entertainment", "Work", "Home", "Health", "Other"];
   const tracker = jsonStore<Tracker>({ currency: "USD", subscriptions: [] });
   let view = $state<"active" | "all">("active");
-  let dialog = $state<HTMLDialogElement>();
+  let showDialog = $state(false);
   let editingId = $state<string | null>(null);
   let draft = $state<Subscription>(blankSubscription());
 
@@ -54,14 +55,14 @@
   function beginAdd(): void {
     editingId = null;
     draft = blankSubscription();
-    dialog?.showModal();
+    showDialog = true;
   }
   function beginEdit(item: Subscription): void {
     editingId = item.id;
     draft = { ...item };
-    dialog?.showModal();
+    showDialog = true;
   }
-  function closeDialog(): void { dialog?.close(); }
+  function closeDialog(): void { showDialog = false; }
   function save(): void {
     const name = draft.name.trim();
     const amountMinor = Math.round(Number(draft.amountMinor));
@@ -99,10 +100,12 @@
 
     <section class="services" aria-labelledby="services-title">
       <div class="list-head">
-        <div class="view-tabs" data-slop-export="hide" aria-label="Subscription view">
-          <button class:chosen={view === "active"} onclick={() => view = "active"}>Active</button>
-          <button class:chosen={view === "all"} onclick={() => view = "all"}>All</button>
-        </div>
+        <Tabs.Root value={view} onValueChange={(v) => { if (v === "active" || v === "all") view = v; }}>
+          <Tabs.List class="view-tabs" data-slop-export="hide" aria-label="Subscription view">
+            <Tabs.Trigger value="active" class="view-tab">Active</Tabs.Trigger>
+            <Tabs.Trigger value="all" class="view-tab">All</Tabs.Trigger>
+          </Tabs.List>
+        </Tabs.Root>
         <h2 id="services-title">{view === "active" ? "Active services" : "All services"}</h2>
         <button class="add-service" data-slop-export="hide" onclick={beginAdd}><Plus /> Add service</button>
       </div>
@@ -137,16 +140,27 @@
     {#if tracker.error}<p class="save-error">Changes could not be saved. {tracker.error}</p>{/if}
   </article>
 
-  <dialog bind:this={dialog} class="editor" aria-label={editingId ? "Edit subscription" : "Add subscription"}>
-    <form onsubmit={(event) => { event.preventDefault(); save(); }}>
-      <header><div><p>{editingId ? "Edit service" : "New service"}</p><h2>{editingId ? "Keep the ledger current" : "Track a recurring cost"}</h2></div><button class="dialog-close" type="button" onclick={closeDialog} aria-label="Close"><X /></button></header>
-      <label>Name<input required placeholder="Service name" bind:value={draft.name} /></label>
-      <div class="form-grid"><label>Amount<input required type="number" min="0.01" step="0.01" value={draft.amountMinor ? (draft.amountMinor / 100).toFixed(2) : ""} oninput={(event) => draft.amountMinor = Math.round(Number(event.currentTarget.value) * 100)} /></label><label>Renews<input required type="date" bind:value={draft.nextRenewal} /></label></div>
-      <div class="form-grid"><label>Billing<select bind:value={draft.cadence}><option value="monthly">Monthly</option><option value="annual">Annual</option></select></label><label>Category<select bind:value={draft.category}>{#each categories as category}<option value={category}>{category}</option>{/each}</select></label></div>
-      <label>Note <span class="optional">optional</span><input placeholder="Plan or detail" bind:value={draft.note} /></label>
-      <footer>{#if editingId}<button class="delete" type="button" onclick={remove}><Trash2 /> Delete</button>{/if}<span></span><button class="cancel" type="button" onclick={closeDialog}>Cancel</button><button class="save" type="submit">{editingId ? "Save changes" : "Add service"}</button></footer>
-    </form>
-  </dialog>
+  <Dialog.Root bind:open={showDialog}>
+    <Dialog.Portal>
+      <Dialog.Overlay class="editor-backdrop" data-slop-export="hide" />
+      <Dialog.Content class="editor" aria-label={editingId ? "Edit subscription" : "Add subscription"} data-slop-export="hide">
+        <form onsubmit={(event) => { event.preventDefault(); save(); }}>
+          <header>
+            <div>
+              <p>{editingId ? "Edit service" : "New service"}</p>
+              <Dialog.Title><h2>{editingId ? "Keep the ledger current" : "Track a recurring cost"}</h2></Dialog.Title>
+            </div>
+            <Dialog.Close class="dialog-close" type="button" aria-label="Close"><X /></Dialog.Close>
+          </header>
+          <label>Name<input required placeholder="Service name" bind:value={draft.name} /></label>
+          <div class="form-grid"><label>Amount<input required type="number" min="0.01" step="0.01" value={draft.amountMinor ? (draft.amountMinor / 100).toFixed(2) : ""} oninput={(event) => draft.amountMinor = Math.round(Number(event.currentTarget.value) * 100)} /></label><label>Renews<input required type="date" bind:value={draft.nextRenewal} /></label></div>
+          <div class="form-grid"><label>Billing<select bind:value={draft.cadence}><option value="monthly">Monthly</option><option value="annual">Annual</option></select></label><label>Category<select bind:value={draft.category}>{#each categories as category}<option value={category}>{category}</option>{/each}</select></label></div>
+          <label>Note <span class="optional">optional</span><input placeholder="Plan or detail" bind:value={draft.note} /></label>
+          <footer>{#if editingId}<button class="delete" type="button" onclick={remove}><Trash2 /> Delete</button>{/if}<span></span><button class="cancel" type="button" onclick={closeDialog}>Cancel</button><button class="save" type="submit">{editingId ? "Save changes" : "Add service"}</button></footer>
+        </form>
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
 </main>
 
 {#if capture.isRenderer()}<Icon />{/if}

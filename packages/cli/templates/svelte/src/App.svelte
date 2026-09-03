@@ -1,29 +1,32 @@
 <script lang="ts">
   import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
+  import { Button } from "bits-ui";
+  import counterSchema from "../schema";
+  import * as styles from "./styles.css.ts";
 
   const title = __SLOP_TITLE_LITERAL__;
-  const state = jsonStore({ count: 0 });
+  const state = jsonStore({ schema: counterSchema, initial: { count: 0 } });
 </script>
 
-<main data-slop-selection="none">
-  <section class="counter" aria-labelledby="counter-title">
+<main class={styles.main} data-slop-selection="none">
+  <section class={styles.counter} aria-labelledby="counter-title">
     <header>
-      <span>Quick counter</span>
-      <h1 id="counter-title">{title}</h1>
+      <span class={styles.eyebrow}>Quick counter</span>
+      <h1 class={styles.heading} id="counter-title">{title}</h1>
     </header>
-    <div class="readout"><output aria-live="polite">{state.current.count}</output><span>things counted</span></div>
-    <div class="controls" data-slop-export="hide">
-      <button onclick={() => state.current.count -= 1} aria-label="Decrease count">−</button>
-      <button class="primary" onclick={() => state.current.count += 1} aria-label="Increase count">+</button>
-      <button class="reset" onclick={() => state.current.count = 0}>Reset</button>
+    <div class={styles.readout}><output class={styles.output} aria-live="polite">{state.current.count}</output><span class={styles.readoutLabel}>things counted</span></div>
+    <div class={styles.controls} data-slop-export="hide">
+      <Button.Root class={styles.controlButton} onclick={() => state.current.count -= 1} aria-label="Decrease count">−</Button.Root>
+      <Button.Root class={`${styles.controlButton} ${styles.primaryButton}`} onclick={() => state.current.count += 1} aria-label="Increase count">+</Button.Root>
+      <Button.Root class={`${styles.controlButton} ${styles.resetButton}`} onclick={() => state.current.count = 0}>Reset</Button.Root>
     </div>
-    {#if state.error}<p class="error" data-slop-export="hide">Your latest change couldn’t be saved.</p>{/if}
+    {#if state.error}<p class={styles.error} data-slop-export="hide">Your latest change couldn’t be saved.</p>{/if}
   </section>
 </main>
 
 {#if capture.isRenderer()}
-  <section class="render-target" data-slop-render="icon" aria-hidden="true">
-    <span>#</span>
+  <section class={styles.renderTarget} data-slop-render="icon" aria-hidden="true">
+    <span class={styles.iconTile}>#</span>
   </section>
 {/if}

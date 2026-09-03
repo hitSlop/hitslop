@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
+  import { Slider } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Playlist = { url: string; format: string; quality: string };
@@ -265,7 +266,25 @@
 
   <section class="gain" aria-label="Volume">
     <button onclick={toggleMute}>{radio.current.muted ? "MUTED" : "GAIN"}</button>
-    <input type="range" min="0" max="1" step="0.01" value={radio.current.volume} oninput={(event) => setVolume(Number(event.currentTarget.value))} />
+    <Slider.Root
+      type="single"
+      value={radio.current.volume}
+      onValueChange={(v) => setVolume(v)}
+      min={0}
+      max={1}
+      step={0.01}
+      class="gain-slider"
+      aria-label="Gain volume"
+    >
+      {#snippet children({ thumbs })}
+        <span class="gain-track">
+          <Slider.Range class="gain-range" />
+        </span>
+        {#each thumbs as index}
+          <Slider.Thumb {index} class="gain-thumb" aria-label="Volume" />
+        {/each}
+      {/snippet}
+    </Slider.Root>
     <output>{Math.round(radio.current.volume * 100)}</output>
   </section>
 

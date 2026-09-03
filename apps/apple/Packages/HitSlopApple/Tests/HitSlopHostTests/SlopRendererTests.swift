@@ -155,6 +155,9 @@ private func rendererPackage(includeTargets: Bool = true, duplicateIcon: Bool = 
     try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"renderer-test","title":"Renderer Test","description":"Static capture fixture.","categories":["developer-tools"],"presentation":{"width":320,"height":240}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
+    let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
+    try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
     return root
 }
 

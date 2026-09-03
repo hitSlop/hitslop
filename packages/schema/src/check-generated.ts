@@ -7,6 +7,7 @@ const generatedFiles = [
   "packages/schema/generated/manifest.schema.json",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Generated/SlopManifest.generated.swift",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/manifest.schema.json",
+  "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/hitslop-document.SKILL.md",
   "apps/catalog/public/schemas/v1/manifest.schema.json",
 ].map((path) => resolve(root, path));
 const before = await Promise.all(generatedFiles.map((path) => readFile(path, "utf8")));

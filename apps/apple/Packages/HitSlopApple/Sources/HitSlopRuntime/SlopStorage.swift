@@ -52,6 +52,17 @@ final class SlopJSONStore {
     private static func revision(_ data: Data) -> String { "sha256:" + SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
 }
 
+final class SlopThemeStore {
+    let url: URL
+    init(url: URL) { self.url = url }
+
+    func revision() throws -> String? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        let data = try Data(contentsOf: url)
+        return "sha256:" + SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+}
+
 final class SlopDatabase {
     private var handle: OpaquePointer?
     init(url: URL) throws {

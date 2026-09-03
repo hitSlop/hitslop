@@ -7,6 +7,9 @@
   import Wind from "@lucide/svelte/icons/wind";
   import Bird from "@lucide/svelte/icons/bird";
   import Moon from "@lucide/svelte/icons/moon";
+  import ChevronDown from "@lucide/svelte/icons/chevron-down";
+  import Check from "@lucide/svelte/icons/check";
+  import { Select, Slider } from "bits-ui";
   import Icon from "./Icon.svelte";
   import { onDestroy, onMount } from "svelte";
 
@@ -215,28 +218,56 @@
   <article class="mixer-chassis">
     <!-- Header -->
     <header class="mixer-header">
-      <select
-        class="preset-select"
-        aria-label="Mixer preset"
+      <Select.Root
+        type="single"
         value={doc.current.preset}
-        onchange={(e) => applyPreset(e.currentTarget.value)}
+        onValueChange={(val) => {
+          if (val) applyPreset(val);
+        }}
       >
-        {#each PRESETS as p}
-          <option value={p.name}>{p.name}</option>
-        {/each}
-      </select>
+        <Select.Trigger class="preset-trigger" aria-label="Mixer preset">
+          <Select.Value placeholder="Mixer preset" />
+          <ChevronDown class="preset-chevron" size={13} />
+        </Select.Trigger>
+        <Select.Portal>
+          <Select.Content class="preset-content" sideOffset={6}>
+            <Select.Viewport>
+              {#each PRESETS as p}
+                <Select.Item class="preset-item" value={p.name} label={p.name}>
+                  {#snippet children({ selected })}
+                    <span>{p.name}</span>
+                    {#if selected}
+                      <Check size={13} class="preset-check" />
+                    {/if}
+                  {/snippet}
+                </Select.Item>
+              {/each}
+            </Select.Viewport>
+          </Select.Content>
+        </Select.Portal>
+      </Select.Root>
 
       <div class="header-right">
         <div class="master-dial" data-slop-export="hide">
           <label for="master-vol">Master</label>
-          <input
-            id="master-vol"
-            class="master-slider"
-            type="range"
-            min="0"
-            max="100"
+          <Slider.Root
+            type="single"
             bind:value={doc.current.master}
-          />
+            min={0}
+            max={100}
+            step={1}
+            class="master-slider-root"
+            aria-label="Master volume"
+          >
+            {#snippet children({ thumbs })}
+              <span class="master-track">
+                <Slider.Range class="master-range" />
+              </span>
+              {#each thumbs as index}
+                <Slider.Thumb {index} class="master-thumb" aria-label="Master volume" />
+              {/each}
+            {/snippet}
+          </Slider.Root>
         </div>
 
         <button
@@ -264,21 +295,27 @@
           </div>
 
           <div class="fader-well">
-            <div class="fader-groove"></div>
-            <div
-              class="fader-cap-thumb"
-              style="bottom: {level}%;"
-            >
-              <span class="fader-cap-line"></span>
-            </div>
-            <input
-              type="range"
-              class="vertical-range"
-              min="0"
-              max="100"
-              aria-label="{ch.label} volume"
+            <Slider.Root
+              type="single"
               bind:value={doc.current.channels[ch.id]}
-            />
+              min={0}
+              max={100}
+              step={1}
+              orientation="vertical"
+              class="channel-slider"
+              aria-label="{ch.label} volume"
+            >
+              {#snippet children({ thumbs })}
+                <span class="fader-groove">
+                  <Slider.Range class="fader-range" />
+                </span>
+                {#each thumbs as index}
+                  <Slider.Thumb {index} class="fader-cap-thumb" aria-label="{ch.label} level">
+                    <span class="fader-cap-line"></span>
+                  </Slider.Thumb>
+                {/each}
+              {/snippet}
+            </Slider.Root>
           </div>
 
           <div class="channel-bottom">

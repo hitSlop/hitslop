@@ -13,14 +13,16 @@ bun install
 bun run dev
 ```
 
-The generated scripts wrap `slop dev`, `build`, `install`, and `publish`.
+The generated scripts wrap `slop dev`, `validate`, `build`, `register`, and
+`publish`. New projects start with Svelte 5, Bits UI, a Zod-backed JSON store,
+and Vanilla Extract for structural styles.
 Use `--template svelte` for a blank base or `--template svelte-counter` for
 the teaching example. Edit `manifest.json` before the interface: it fixes the
 job, title, categories, and initial viewport.
 
-Development uses `.hitslop/dev/stores/`, never runtime package data. Use
-`slop dev --reset` when a schema/default change requires fresh development
-state, and `--native` to open the dev URL in the installed host.
+Development uses a disposable in-memory host fake. State lasts until the page
+reloads; SQLite and named media are forgiving UI-only stubs. Register a local
+master and open a writable document to test persistence, external edits, or native window behavior.
 
 ## Choose data deliberately
 
@@ -32,6 +34,18 @@ state, and `--native` to open the dev URL in the installed host.
 Storage is implicit; do not add declarations to the manifest. See
 [Storage](storage.md) for concurrency and copy semantics.
 
+Svelte JSON stores require a root `schema.ts` that default-exports a Zod 4
+schema. Import and attach that schema where the store is created:
+
+```ts
+import dataSchema from "../schema";
+
+const document = jsonStore({
+  schema: dataSchema,
+  initial: { count: 0 },
+});
+```
+
 ## Build
 
 ```sh
@@ -40,12 +54,21 @@ bun run build
 ```
 
 The build bundles the web app into generated `app.html`, copies allowed
-immutable assets, validates the manifest and package boundary, and writes
-`dist/<slug>.slop`. Inspect the result: it must be source-free and store-free.
+immutable assets, generates `data.schema.json` when `schema.ts` is present,
+and embeds the canonical `hitslop-document` Agent Skill. If root
+`document-guide.md` exists, the builder validates it as UTF-8 Markdown no larger
+than 32 KiB and includes it as the skill's one app-specific reference. The
+result is written to `dist/<slug>.slop`; it must be source-free and store-free.
+
+Keep stable public theme defaults in `assets/theme.css` as one `:root` block of
+`--slop-*` variables. Vanilla Extract consumes those variables through a global
+theme contract and emits ordinary structural CSS into `app.html`. This gives
+authors type-checked token names while keeping document overrides plain CSS and
+framework-neutral.
 
 ## Preview and icon
 
-`install` and `publish` use the native renderer to capture a full preview and
+`register` and `publish` use the native renderer to capture a full preview and
 produce an exact 512×512 icon. A dedicated icon DOM target gives the best
 result; see [Design and presentation](presentation.md).
 
@@ -56,7 +79,7 @@ or package validation.
 ## Install and test a real document
 
 ```sh
-bun run install
+bun run register
 ```
 
 This writes the immutable master to
@@ -64,6 +87,14 @@ This writes the immutable master to
 Templates** or open the master and choose a destination. Test persistence in the
 copy, then confirm reopening, duplicating, preview, PNG/PDF export, and Finder
 icon behavior.
+
+Validate or export a built document directly:
+
+```sh
+slop validate path/to/document.slop
+slop export path/to/document.slop --format png --output document.png
+slop screenshot path/to/document.slop --target preview --output Preview.png
+```
 
 ## Publish
 
@@ -83,7 +114,7 @@ The default endpoint is the official catalog. Use `--registry` or
 ## Definition of done
 
 The app has one obvious purpose; keyboard/focus/reduced-motion behavior works;
-persistent defaults and migrations are safe; standard resizing or skin
+persistent defaults conform to the app's Zod schema; standard resizing or skin
 hit-testing is tested; static capture has no editing controls; generated output
 contains only allowed runtime files; and `bun run release:check` passes in this
 repository.

@@ -1,7 +1,7 @@
 {
   "name": "@hitslop/cli",
   "version": "0.1.0",
-  "description": "Create, develop, build, install, and publish hitSlop apps.",
+  "description": "Create, develop, build, register, and publish hitSlop apps.",
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/cli" },
   "homepage": "https://hitslop.app",
@@ -24,8 +24,9 @@
     "@noble/ed25519": "^3.2.0",
     "fast-png": "^8.0.0",
     "fflate": "^0.8.3",
+    "postcss": "^8.5.6",
     "vite": "^8.2.2",
-    "vite-plugin-singlefile": "^2.3.3"
+    "zod": "^4.5.2"
   },
   "devDependencies": {
     "@types/bun": "latest",

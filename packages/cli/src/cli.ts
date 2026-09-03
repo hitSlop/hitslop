@@ -1,14 +1,16 @@
 #!/usr/bin/env bun
 import { Crust } from "@crustjs/core";
-import { dirname, join } from "node:path";
-import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { stat } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
 import { SlopCategorySchema, type SlopCategory } from "@hitslop/schema";
-import { buildSlop, loadManifest, scaffold } from "./project.ts";
+import { buildSlop, scaffold, validateAuthoringProject } from "./project.ts";
 import { runDev } from "./dev.ts";
 import { publishSlop } from "./publish.ts";
 import { installTemplate } from "./install.ts";
 import { exportIdentity, getIdentity, importIdentity, setIdentityName } from "./identity.ts";
+import { validateRuntimePackage } from "./runtime-package.ts";
+import { exportDocument, screenshotDocument } from "./render.ts";
 
 const titleFor = (directory: string): string => directory.split("/").filter(Boolean).at(-1)?.split(/[-_ ]+/).map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" ") || "My Slop";
 
@@ -41,10 +43,14 @@ app = app.command("init", (command) => command.meta({ description: "Create a Sve
   title: { type: "string", description: "Manifest title." }, description: { type: "string", description: "Manifest description." },
   category: { type: "string", multiple: true, description: "Manifest category; pass once or twice." }, yes: { type: "boolean", description: "Accept manifest defaults without prompting." },
 }).run(async ({ args, flags }) => { const metadata = await initMetadata(args.directory, flags); await scaffold(args.directory, { template: flags.template ?? "svelte-counter", ...metadata }); console.log(`Created ${args.directory}`); }));
-app = app.command("validate", (command) => command.args([{ name: "path", type: "path", default: "." }] as const).run(async ({ args }) => { const manifest = await loadManifest(args.path); console.log(`valid\t${manifest.slug}`); }));
-app = app.command("dev", (command) => command.args([{ name: "path", type: "path", default: "." }] as const).flags({ reset: { type: "boolean", description: "Reset isolated development stores." }, native: { type: "boolean", description: "Open the dev URL in hitSlop." } }).run(({ args, flags }) => runDev(args.path, { reset: flags.reset ?? false, native: flags.native ?? false })));
+app = app.command("validate", (command) => command.meta({ description: "Validate an authoring project or built .slop document." }).args([{ name: "path", type: "path", default: "." }] as const).run(async ({ args }) => {
+  const runtime = await stat(join(args.path, "app.html")).then((value) => value.isFile()).catch(() => false);
+  const manifest = runtime ? await validateRuntimePackage(args.path) : await validateAuthoringProject(args.path);
+  console.log(`valid\t${manifest.slug}`);
+}));
+app = app.command("dev", (command) => command.meta({ description: "Preview the UI in a browser with disposable fake stores." }).args([{ name: "path", type: "path", default: "." }] as const).run(({ args }) => runDev(args.path)));
 app = app.command("build", (command) => command.args([{ name: "path", type: "path", default: "." }] as const).run(async ({ args }) => { const result = await buildSlop(args.path); console.log(result.directory); }));
-app = app.command("install", (command) => command.meta({ description: "Build and install a template into the local hitSlop catalog." }).args([{ name: "path", type: "path", default: "." }] as const).flags({
+app = app.command("register", (command) => command.meta({ description: "Build and register a template in the local hitSlop catalog." }).args([{ name: "path", type: "path", default: "." }] as const).flags({
   force: { type: "boolean", description: "Replace an existing local template without prompting." },
   preview: { type: "path", description: "Use this PNG instead of capturing a fresh native preview." },
   icon: { type: "path", description: "Use this 512x512 PNG as the catalog and Finder icon." },
@@ -54,6 +60,24 @@ app = app.command("install", (command) => command.meta({ description: "Build and
 }));
 app = app.command("publish", (command) => command.args([{ name: "path", type: "path", default: "." }] as const).flags({ registry: { type: "string", description: "Catalog publish endpoint. Defaults to https://hitslop.app/api/publish. Set HITSLOP_REGISTRY_URL=http://localhost:3000/api/publish for a local catalog." }, preview: { type: "path" }, icon: { type: "path", description: "Use this 512x512 PNG as the catalog and Finder icon." } }).run(async ({ args, flags }) => {
   console.log(await publishSlop(args.path, { ...(flags.registry ? { registry: flags.registry } : {}), ...(flags.preview ? { preview: flags.preview } : {}), ...(flags.icon ? { icon: flags.icon } : {}) }));
+}));
+app = app.command("export", (command) => command.meta({ description: "Export a built .slop document as a full-height PNG or PDF." }).args([{ name: "path", type: "path", default: "." }] as const).flags({
+  format: { type: "string", description: "Required output format: png or pdf." },
+  output: { type: "path", description: "Required destination path." },
+}).run(async ({ args, flags }) => {
+  if (flags.format !== "png" && flags.format !== "pdf") throw new Error("--format must be png or pdf.");
+  if (!flags.output) throw new Error("--output is required.");
+  await exportDocument(args.path, { format: flags.format, output: flags.output });
+}));
+app = app.command("screenshot", (command) => command.meta({ description: "Capture a built .slop preview or icon render target." }).args([{ name: "path", type: "path", default: "." }] as const).flags({
+  target: { type: "string", description: "Render target: preview (default) or icon." },
+  output: { type: "path", description: "Required destination path." },
+  "if-present": { type: "boolean", description: "Succeed without output when the target is absent." },
+}).run(async ({ args, flags }) => {
+  const target = flags.target ?? "preview";
+  if (target !== "preview" && target !== "icon") throw new Error("--target must be preview or icon.");
+  if (!flags.output) throw new Error("--output is required.");
+  await screenshotDocument(args.path, { target, output: flags.output, ifPresent: flags["if-present"] ?? false });
 }));
 
 async function secret(prompt: string): Promise<string> {

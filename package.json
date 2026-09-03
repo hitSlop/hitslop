@@ -9,13 +9,16 @@
     "apps/landing",
     "apps/registry",
     "packages/*",
-    "examples/slops"
+    "examples/slops",
+    "Prototypes/*"
   ],
   "scripts": {
     "build": "bun run schema:generate && bun run --cwd packages/schema build && bun run --cwd packages/runtime build && bun run --cwd packages/svelte build && bun run --cwd packages/react build && bun run --cwd packages/cli build && bun run --cwd apps/registry build && bun run --cwd apps/catalog build && bun run --cwd examples/slops build",
     "check": "bun run schema:check && bun run --filter '@hitslop/*' check",
     "test": "bun run --cwd packages/schema test && bun run --cwd packages/runtime test && bun run --cwd packages/svelte test && bun run --cwd packages/react test && bun run --cwd packages/cli test && bun run --cwd apps/registry test && bun run --cwd apps/catalog test && bun run --cwd examples/slops test",
     "release:check": "bun scripts/release-check.ts",
+    "release:npm:check": "bun scripts/npm-release-check.ts",
+    "examples:check": "bun run --cwd examples/slops check && bun run --cwd examples/slops test && bun run --cwd examples/slops build",
     "schema:generate": "bun run --cwd packages/schema generate",
     "schema:check": "bun run --cwd packages/schema check:generated",
     "slop": "bun packages/cli/src/cli.ts",

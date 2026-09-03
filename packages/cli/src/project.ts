@@ -1,13 +1,16 @@
 import { cp, lstat, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { zipSync, type Zippable } from "fflate";
 import { decode as decodePng } from "fast-png";
 import { build as viteBuild } from "vite";
-import { viteSingleFile } from "vite-plugin-singlefile";
+import * as z from "zod";
 import { manifestSchemaURL, parseManifest, type SlopCategory, type SlopManifest } from "@hitslop/schema";
 import cliPackage from "../package.json" with { type: "json" };
+import { emitDocumentSkill, readDocumentGuideSource } from "./document-skill.ts";
+import { readThemeContract, validateThemeReferences } from "./theme.ts";
+import { hitSlopBuildPlugin } from "./vite-build-plugin.ts";
 
 export const manifestPath = (root: string): string => join(root, "manifest.json");
 export async function loadManifest(root: string): Promise<SlopManifest> {
@@ -58,11 +61,11 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
       dev: "slop dev",
       validate: "slop validate",
       build: "slop build",
-      install: "slop install",
+      register: "slop register",
       publish: "slop publish",
     },
-    dependencies: { "@hitslop/runtime": `^${cliPackage.version}`, "@hitslop/svelte": `^${cliPackage.version}`, "bits-ui": "^2.19.0", "svelte": "^5.0.0" },
-    devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.0.0", "vite": "^8.0.0" },
+    dependencies: { "@hitslop/runtime": `^${cliPackage.version}`, "@hitslop/svelte": `^${cliPackage.version}`, "bits-ui": "^2.19.0", "svelte": "^5.0.0", "zod": "^4.5.2" },
+    devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.0.0", "@vanilla-extract/css": "^1.17.4", "@vanilla-extract/vite-plugin": "^5.1.1", "vite": "^8.0.0" },
   }, null, 2) + "\n");
   await writeFile(join(destination, "manifest.json"), JSON.stringify({
     $schema: manifestSchemaURL, slug,
@@ -76,18 +79,49 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
 
 export async function buildSlop(root: string): Promise<{ directory: string; manifest: SlopManifest }> {
   const manifest = await loadManifest(root);
+  const dataSchema = await generateDataSchema(root);
+  await readDocumentGuideSource(root);
   const distRoot = join(root, "dist"); const output = join(distRoot, `${manifest.slug}.slop`); const viteOut = join(root, ".hitslop", "vite-build");
+  const themeContract = await readThemeContract(root);
+  const hasTheme = themeContract !== undefined;
   await rm(output, { recursive: true, force: true }); await rm(viteOut, { recursive: true, force: true });
   await mkdir(output, { recursive: true });
-  await viteBuild({ root, plugins: [viteSingleFile()], build: { outDir: viteOut, emptyOutDir: true } });
+  await viteBuild({ root, plugins: [hitSlopBuildPlugin({ hasTheme })], build: { outDir: viteOut, emptyOutDir: true } });
   const html = join(viteOut, "index.html"); if (!await exists(html)) throw new Error("Vite did not produce index.html");
+  validateThemeReferences(await readFile(html, "utf8"), themeContract, "generated app.html");
   await cp(html, join(output, "app.html"));
   await writeFile(join(output, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   for (const name of ["assets"]) {
     const source = join(root, name);
     if (await exists(source)) await copyRuntimeTree(source, join(output, name));
   }
+  if (dataSchema) await writeFile(join(output, "data.schema.json"), `${JSON.stringify(dataSchema, null, 2)}\n`);
+  await emitDocumentSkill(root, output);
   await rm(viteOut, { recursive: true, force: true }); return { directory: output, manifest };
+}
+
+type JSONSchema = Record<string, unknown>;
+
+async function generateDataSchema(root: string): Promise<JSONSchema | undefined> {
+  const source = join(root, "schema.ts");
+  if (!await exists(source)) return undefined;
+  const imported = await import(`${pathToFileURL(source).href}?hitslop=${Date.now()}`) as { default?: unknown };
+  if (!imported.default) throw new Error("schema.ts must default-export a Zod 4 schema");
+  let schema: JSONSchema;
+  try {
+    schema = z.toJSONSchema(imported.default as Parameters<typeof z.toJSONSchema>[0], { target: "draft-2020-12", io: "input" }) as JSONSchema;
+  } catch (error) {
+    throw new Error(`Could not generate data.schema.json from schema.ts: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return schema;
+}
+
+export async function validateAuthoringProject(root: string): Promise<SlopManifest> {
+  const manifest = await loadManifest(root);
+  await readThemeContract(root);
+  await generateDataSchema(root);
+  await readDocumentGuideSource(root);
+  return manifest;
 }
 
 async function walk(root: string, directory = root): Promise<string[]> {

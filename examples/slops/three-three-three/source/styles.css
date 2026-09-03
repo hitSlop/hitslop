@@ -349,6 +349,7 @@ body {
   flex-shrink: 0;
 }
 
+.check-btn[data-state="checked"],
 .check-btn.checked {
   background: var(--text-main);
   border-color: var(--text-main);

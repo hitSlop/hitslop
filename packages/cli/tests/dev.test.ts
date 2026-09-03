@@ -1,105 +1,81 @@
-import { afterEach, expect, test } from "bun:test";
-import { EventEmitter } from "node:events";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { Readable } from "node:stream";
-import type { IncomingMessage, ServerResponse } from "node:http";
-import type { ViteDevServer } from "vite";
+import { expect, test } from "bun:test";
+import { devHostJavaScript } from "../src/dev-bridge.ts";
 import { mockHostPlugin } from "../src/dev.ts";
 
-let root: string | undefined;
-let closeEmitter: EventEmitter | undefined;
+type Change = { kind: string; source: string; revision?: string | null };
+type PreviewSlop = {
+  json: {
+    open: <T>(value: T) => Promise<{ value: T; revision: string }>;
+    read: <T>() => Promise<{ value: T; revision: string }>;
+    write: <T>(value: T, expectedRevision?: string) => Promise<{ revision: string }>;
+    onChange: (callback: (event: Change) => void) => () => void;
+  };
+  db: {
+    query: (sql: string) => Promise<unknown[]>;
+    execute: (sql: string) => Promise<number>;
+    transaction: (statements: Array<{ sql: string }>) => Promise<number>;
+  };
+  media: {
+    open: (name: string) => Promise<{ exists: boolean; revision: string | null }>;
+    write: (name: string, data: string, mimeType: string) => Promise<{ revision: string }>;
+    remove: (name: string) => Promise<{ revision: null }>;
+  };
+  window: { resize: (size: { width: number; height: number }) => Promise<{ width: number; height: number }>; drag: () => Promise<void> };
+  ready: () => void;
+};
+type PreviewWindow = { slop?: PreviewSlop; dispatched: string[]; dispatchEvent: (event: { type: string }) => void };
 
-afterEach(async () => {
-  closeEmitter?.emit("close"); closeEmitter = undefined;
-  if (root) await rm(root, { recursive: true, force: true }); root = undefined;
-});
+function previewHost(): { window: PreviewWindow; document: { documentElement: { dataset: Record<string, string> } } } {
+  const window: PreviewWindow = { dispatched: [], dispatchEvent(event) { this.dispatched.push(event.type); } };
+  const document = { documentElement: { dataset: {} as Record<string, string> } };
+  class PreviewEvent { constructor(public type: string) {} }
+  new Function("window", "document", "Event", devHostJavaScript)(window, document, PreviewEvent);
+  return { window, document };
+}
 
-test("mock host preserves the document shell and hides scrollbar chrome", () => {
-  const transform = mockHostPlugin("/tmp/hitslop-unused").transformIndexHtml;
-  if (!transform || typeof transform === "function") throw new Error("mock host plugin is missing its HTML transform");
+test("browser preview injects a disposable host and optional default theme", () => {
+  const transform = mockHostPlugin({ themeHref: "/assets/theme.css" }).transformIndexHtml;
+  if (!transform || typeof transform === "function") throw new Error("browser preview plugin is missing its HTML transform");
   const html = "<!doctype html><html><head><title>Fixture</title></head><body></body></html>";
   const result = (transform.handler as (value: string) => string)(html);
   expect(result.startsWith("<!doctype html><html><head>")).toBe(true);
   expect(result).toContain("data-hitslop-host");
-  expect(result).toContain("scrollbar-width:none");
-  expect(result).toContain("::-webkit-scrollbar");
-  expect(result.indexOf("data-hitslop-host")).toBeLessThan(result.indexOf("<title>"));
-
-  const fragment = '<div id="app"></div><script type="module" src="/source/main.ts"></script>';
-  const fragmentResult = (transform.handler as (value: string) => string)(fragment);
-  expect(fragmentResult).toContain("window.slop = {");
-  expect(fragmentResult).toContain("window: { resize, drag }");
-  expect(fragmentResult).toContain("action: 'drag'");
-  expect(fragmentResult).toContain("hitslopDevWindow");
-  expect(fragmentResult).toContain("new Event('slop:ready')");
-  expect(fragmentResult.indexOf("window.slop = {")).toBeLessThan(fragmentResult.indexOf('type="module"'));
+  expect(result).toContain("data-hitslop-theme-default");
+  expect(result).toContain("window.slop = Object.freeze");
+  expect(result).not.toContain("fetch(");
+  expect(result).not.toContain("setInterval");
+  expect(result.indexOf("window.slop = Object.freeze")).toBeLessThan(result.indexOf("<title>"));
 });
 
-test("mounted mock bridge opens and persists canonical stores and named media", async () => {
-  root = await mkdtemp(join(tmpdir(), "hitslop-dev-bridge-"));
-  closeEmitter = new EventEmitter();
-  let mountedAt = "";
-  let middleware: ((request: IncomingMessage, response: ServerResponse) => Promise<void>) | undefined;
-  const plugin = mockHostPlugin(root);
-  const configure = plugin.configureServer;
-  if (typeof configure !== "function") throw new Error("mock host plugin is missing its server hook");
-  const configureServer = configure as unknown as (server: ViteDevServer) => void;
-  configureServer({
-    httpServer: closeEmitter,
-    middlewares: {
-      use(path: string, handler: typeof middleware) {
-        mountedAt = path;
-        middleware = handler;
-      },
-    },
-  } as unknown as ViteDevServer);
-  expect(mountedAt).toBe("/__hitslop");
+test("browser preview keeps JSON in memory and emits local changes", async () => {
+  const host = previewHost();
+  const slop = host.window.slop!;
+  const changes: Change[] = [];
+  const stop = slop.json.onChange((event) => changes.push(event));
+  const opened = await slop.json.open({ count: 1 });
+  expect(opened).toEqual({ value: { count: 1 }, revision: "dev:0" });
+  opened.value.count = 99;
+  expect(await slop.json.read()).toEqual({ value: { count: 1 }, revision: "dev:0" });
+  expect(await slop.json.write({ count: 2 }, opened.revision)).toEqual({ revision: "dev:1" });
+  expect(changes).toEqual([{ kind: "json", source: "app", revision: "dev:1" }]);
+  await expect(slop.json.write({ count: 3 }, "dev:0")).rejects.toThrow("revision_conflict");
+  stop();
+  await slop.json.write({ count: 4 }, "dev:1");
+  expect(changes).toHaveLength(1);
+});
 
-  async function call(path: string, body: Record<string, unknown> = {}) {
-    if (!middleware) throw new Error("mock host middleware was not installed");
-    const request = Readable.from([JSON.stringify(body)]) as IncomingMessage;
-    request.url = path;
-    let status = 200;
-    let payload = "";
-    const response = {
-      get statusCode() { return status; },
-      set statusCode(value: number) { status = value; },
-      setHeader() {},
-      end(value: string) { payload = value; },
-    } as unknown as ServerResponse;
-    await middleware(request, response);
-    return { status, value: JSON.parse(payload) as unknown };
-  }
-
-  // Connect strips the mount prefix before invoking middleware. This was the
-  // path shape that previously fell through to the bridge's Not found branch.
-  const opened = await call("/json/open", { value: { count: 1 } });
-  expect(opened.status).toBe(200);
-  const first = opened.value as { value: { count: number }; revision: string };
-  expect(first.value.count).toBe(1);
-
-  const written = await call("/json/write", { value: { count: 2 }, expectedRevision: first.revision });
-  expect(written.status).toBe(200);
-  const read = await call("/json/read");
-  expect((read.value as { value: { count: number } }).value.count).toBe(2);
-
-  expect((await call("/sqlite/execute", { sql: "CREATE TABLE note (value TEXT NOT NULL)" })).status).toBe(200);
-  expect((await call("/sqlite/execute", { sql: "INSERT INTO note (value) VALUES (?)", parameters: ["saved"] })).status).toBe(200);
-  const query = await call("/sqlite/query", { sql: "SELECT value FROM note" });
-  expect(query.value).toEqual([{ value: "saved" }]);
-
-  const image = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
-  const mediaWrite = await call("/media/write", { name: "hero", data: image, mimeType: "image/png" });
-  expect(mediaWrite.status).toBe(200);
-  expect((await call("/media/open", { name: "hero" })).value).toMatchObject({ exists: true });
-  expect((await call("/media/remove", { name: "hero" })).status).toBe(200);
-  expect((await call("/media/open", { name: "hero" })).value).toEqual({ exists: false, revision: null });
-
-  const zip = "UEsDBBQAAAAIAG1VIV3uQOUFCQAAAAcAAAAIAAAATUFJTi5CTVBLy6woKS1KBQBQSwECFAAUAAAACABtVSFd7kDlBQkAAAAHAAAACAAAAAAAAAAAAAAAAAAAAAAATUFJTi5CTVBQSwUGAAAAAAEAAQA2AAAALwAAAAAA";
-  const zipWrite = await call("/media/write", { name: "skin", data: zip, mimeType: "application/zip" });
-  expect(zipWrite.status).toBe(200);
-  expect((await call("/media/open", { name: "skin" })).value).toMatchObject({ exists: true });
-  expect((await call("/media/write", { name: "bad", data: Buffer.from("not media").toString("base64"), mimeType: "application/zip" })).status).toBe(400);
-}, 15_000);
+test("browser preview supplies forgiving SQLite, media, window, and readiness stubs", async () => {
+  const host = previewHost();
+  const slop = host.window.slop!;
+  expect(await slop.db.query("select 1")).toEqual([]);
+  expect(await slop.db.execute("create table ignored (id integer)")).toBe(0);
+  expect(await slop.db.transaction([{ sql: "insert into ignored values (1)" }])).toBe(0);
+  expect(await slop.media.open("hero")).toEqual({ exists: false, revision: null });
+  expect((await slop.media.write("hero", "", "image/png")).revision).toBe("dev-media:1");
+  expect(await slop.media.remove("hero")).toEqual({ revision: null });
+  expect(await slop.window.resize({ width: 500, height: 400 })).toEqual({ width: 500, height: 400 });
+  expect(await slop.window.drag()).toBeUndefined();
+  slop.ready();
+  expect(host.document.documentElement.dataset.hitslopReady).toBe("true");
+  expect(host.window.dispatched).toEqual(["slop:ready"]);
+});

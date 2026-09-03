@@ -6,6 +6,7 @@
   import ArrowDown from "@lucide/svelte/icons/arrow-down";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import Zap from "@lucide/svelte/icons/zap";
+  import { Checkbox, Progress } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Task = { id: string; text: string; done: boolean };
@@ -106,11 +107,16 @@
         <span class="progress-text">{completedCount} of 6 finished</span>
         <span class="completion-pct">{Math.round((completedCount / 6) * 100)}%</span>
       </div>
-      <div class="progress-track">
+      <Progress.Root
+        value={completedCount}
+        max={6}
+        class="progress-track"
+        aria-label="Ivy Lee daily progress"
+      >
         {#each { length: 6 } as _, i}
           <div class="progress-step" class:step-filled={i < completedCount}></div>
         {/each}
-      </div>
+      </Progress.Root>
     </div>
   </header>
 
@@ -134,17 +140,18 @@
         </div>
 
         <!-- Task Completion Toggle -->
-        <button
-          type="button"
+        <Checkbox.Root
+          checked={task.done}
+          onCheckedChange={() => toggleDone(index)}
           class="toggle-btn"
-          class:checked={task.done}
-          onclick={() => toggleDone(index)}
           aria-label={task.done ? "Mark slot {index + 1} incomplete" : "Mark slot {index + 1} complete"}
         >
-          {#if task.done}
-            <Check size={13} strokeWidth={3} />
-          {/if}
-        </button>
+          {#snippet children({ checked })}
+            {#if checked}
+              <Check size={13} strokeWidth={3} />
+            {/if}
+          {/snippet}
+        </Checkbox.Root>
 
         <!-- Task Description Input -->
         <input

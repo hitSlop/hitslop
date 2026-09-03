@@ -7,6 +7,11 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Sparkles from "@lucide/svelte/icons/sparkles";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import Check from "@lucide/svelte/icons/check";
+  import ChevronLeft from "@lucide/svelte/icons/chevron-left";
+  import ChevronRight from "@lucide/svelte/icons/chevron-right";
+  import { Calendar as CalendarPrimitive, Popover, Select } from "bits-ui";
+  import { CalendarDate, getLocalTimeZone, today as getTodayDate, type DateValue } from "@internationalized/date";
   import Icon from "./Icon.svelte";
   import type { CourseTag, Milestone, MilestoneType, SemesterData } from "./types";
 
@@ -66,6 +71,21 @@
   let draftTitle = $state("");
   let draftCourse = $state("BIO");
   let draftType = $state<MilestoneType>("Exam");
+  let datePopoverOpen = $state(false);
+  const draftCalendarValue = $derived.by(() => {
+    try {
+      const [y, m, d] = draftDate.split("-").map(Number);
+      return new CalendarDate(y, m, d);
+    } catch {
+      return getTodayDate(getLocalTimeZone());
+    }
+  });
+
+  function onDraftDateSelect(date: DateValue | undefined): void {
+    if (!date) return;
+    draftDate = `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+    datePopoverOpen = false;
+  }
 
   function pad(n: number): string {
     return String(n).padStart(2, "0");
@@ -157,14 +177,36 @@
 
       <!-- Course Filter -->
       <div class="course-filter-wrap" data-slop-export="hide">
-        <select class="filter-select" bind:value={filterCourse}>
-          <option value="ALL">All Courses ({store.current.milestones.length})</option>
-          {#each store.current.courses as c}
-            {#if c.code !== "ALL"}
-              <option value={c.code}>{c.code} · {c.name}</option>
-            {/if}
-          {/each}
-        </select>
+        <Select.Root
+          type="single"
+          bind:value={filterCourse}
+        >
+          <Select.Trigger class="filter-select" aria-label="Course filter">
+            <span>{filterCourse === "ALL" ? `All Courses (${store.current.milestones.length})` : filterCourse}</span>
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content class="planner-select-content" data-slop-export="hide">
+              <Select.Viewport>
+                <Select.Item value="ALL" label="All Courses" class="planner-select-item">
+                  {#snippet children({ selected })}
+                    <span>All Courses ({store.current.milestones.length})</span>
+                    {#if selected}<Check size={12} />{/if}
+                  {/snippet}
+                </Select.Item>
+                {#each store.current.courses as c}
+                  {#if c.code !== "ALL"}
+                    <Select.Item value={c.code} label="{c.code} · {c.name}" class="planner-select-item">
+                      {#snippet children({ selected })}
+                        <span>{c.code} · {c.name}</span>
+                        {#if selected}<Check size={12} />{/if}
+                      {/snippet}
+                    </Select.Item>
+                  {/if}
+                {/each}
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
       </div>
     </header>
 
@@ -213,17 +255,99 @@
     <section class="bottom-section">
       <!-- Quick Add Bar -->
       <form class="quick-add-form" onsubmit={(e) => { e.preventDefault(); addMilestone(); }} data-slop-export="hide">
-        <input class="date-input" type="date" bind:value={draftDate} />
-        <select class="type-select" bind:value={draftType}>
-          {#each MILESTONE_TYPES as mt}
-            <option value={mt.type}>{mt.label}</option>
-          {/each}
-        </select>
-        <select class="course-select" bind:value={draftCourse}>
-          {#each store.current.courses as c}
-            <option value={c.code}>{c.code}</option>
-          {/each}
-        </select>
+        <Popover.Root bind:open={datePopoverOpen}>
+          <Popover.Trigger class="date-trigger-btn" aria-label="Select date">
+            <Calendar size={12} />
+            <span>{draftDate || "Select Date"}</span>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content class="planner-calendar-popover" side="top" align="start" sideOffset={6} data-slop-export="hide">
+              <CalendarPrimitive.Root
+                type="single"
+                value={draftCalendarValue}
+                onValueChange={onDraftDateSelect}
+              >
+                {#snippet children({ months, weekdays })}
+                  <CalendarPrimitive.Header class="slop-cal-header">
+                    <CalendarPrimitive.PrevButton class="slop-cal-nav" aria-label="Previous month">
+                      <ChevronLeft size={13} />
+                    </CalendarPrimitive.PrevButton>
+                    <CalendarPrimitive.Heading class="slop-cal-title" />
+                    <CalendarPrimitive.NextButton class="slop-cal-nav" aria-label="Next month">
+                      <ChevronRight size={13} />
+                    </CalendarPrimitive.NextButton>
+                  </CalendarPrimitive.Header>
+                  {#each months as month}
+                    <CalendarPrimitive.Grid class="slop-cal-grid">
+                      <CalendarPrimitive.GridHead>
+                        <CalendarPrimitive.GridRow class="slop-cal-row">
+                          {#each weekdays as day}
+                            <CalendarPrimitive.HeadCell class="slop-cal-head-cell">{day.slice(0, 2)}</CalendarPrimitive.HeadCell>
+                          {/each}
+                        </CalendarPrimitive.GridRow>
+                      </CalendarPrimitive.GridHead>
+                      <CalendarPrimitive.GridBody>
+                        {#each month.weeks as weekDates}
+                          <CalendarPrimitive.GridRow class="slop-cal-row">
+                            {#each weekDates as date}
+                              <CalendarPrimitive.Cell {date} month={month.value} class="slop-cal-cell">
+                                <CalendarPrimitive.Day class="slop-cal-day" />
+                              </CalendarPrimitive.Cell>
+                            {/each}
+                          </CalendarPrimitive.GridRow>
+                        {/each}
+                      </CalendarPrimitive.GridBody>
+                    </CalendarPrimitive.Grid>
+                  {/each}
+                {/snippet}
+              </CalendarPrimitive.Root>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+        <Select.Root
+          type="single"
+          bind:value={draftType}
+        >
+          <Select.Trigger class="type-select" aria-label="Milestone type">
+            <span>{draftType}</span>
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content class="planner-select-content" data-slop-export="hide">
+              <Select.Viewport>
+                {#each MILESTONE_TYPES as mt}
+                  <Select.Item value={mt.type} label={mt.label} class="planner-select-item">
+                    {#snippet children({ selected })}
+                      <span>{mt.label}</span>
+                      {#if selected}<Check size={12} />{/if}
+                    {/snippet}
+                  </Select.Item>
+                {/each}
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
+        <Select.Root
+          type="single"
+          bind:value={draftCourse}
+        >
+          <Select.Trigger class="course-select" aria-label="Course">
+            <span>{draftCourse}</span>
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content class="planner-select-content" data-slop-export="hide">
+              <Select.Viewport>
+                {#each store.current.courses as c}
+                  <Select.Item value={c.code} label={c.code} class="planner-select-item">
+                    {#snippet children({ selected })}
+                      <span>{c.code}</span>
+                      {#if selected}<Check size={12} />{/if}
+                    {/snippet}
+                  </Select.Item>
+                {/each}
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
         <input class="title-input" bind:value={draftTitle} placeholder="Milestone / Exam / Project title..." />
         <button type="submit" class="add-btn" title="Add milestone">
           <Plus size={13} />
@@ -426,7 +550,7 @@
   .next-title { font-weight: 600; color: #2563eb; }
   .next-countdown { font-size: 9.5px; color: var(--ink-muted); }
 
-  .filter-select {
+  :global(.filter-select) {
     font-size: 11px;
     font-weight: 600;
     background: #ffffff;
@@ -435,6 +559,35 @@
     padding: 3px 6px;
     outline: none;
     color: var(--ink);
+    cursor: pointer;
+  }
+
+  :global(.planner-select-content) {
+    background: #ffffff;
+    border: 1px solid var(--pad-border);
+    border-radius: 6px;
+    padding: 4px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    outline: none;
+  }
+
+  :global(.planner-select-item) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    outline: none;
+    color: var(--ink);
+  }
+
+  :global(.planner-select-item:hover),
+  :global(.planner-select-item[data-highlighted]) {
+    background: #f1f5f9;
   }
 
   /* 4-Month Rail */
@@ -554,17 +707,110 @@
     padding: 5px 8px;
   }
 
-  .date-input, .type-select, .course-select {
+  :global(.date-trigger-btn),
+  :global(.type-select),
+  :global(.course-select) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 11px;
+    font-family: monospace;
     background: #ffffff;
     border: 1px solid var(--pad-border);
     border-radius: 5px;
-    padding: 3px 5px;
+    padding: 3px 6px;
     outline: none;
     color: var(--ink);
+    cursor: pointer;
   }
 
-  .date-input { font-family: monospace; font-size: 10px; }
+  :global(.planner-calendar-popover) {
+    z-index: 1000;
+    background: #fffdf8;
+    border: 1.5px solid var(--pad-border);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    width: 236px;
+    outline: none;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+  }
+
+  :global(.planner-calendar-popover .slop-cal-header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e5dfd3;
+  }
+  :global(.planner-calendar-popover .slop-cal-title) {
+    font-size: 11px;
+    font-weight: 700;
+    color: #232220;
+  }
+  :global(.planner-calendar-popover .slop-cal-nav) {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  :global(.planner-calendar-popover .slop-cal-nav:hover) {
+    background: rgba(0, 0, 0, 0.06);
+  }
+  :global(.planner-calendar-popover .slop-cal-grid) {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  :global(.planner-calendar-popover .slop-cal-row) {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+  }
+  :global(.planner-calendar-popover .slop-cal-head-cell) {
+    font-size: 8px;
+    font-weight: 800;
+    text-align: center;
+    color: #777;
+    padding: 2px 0;
+    text-transform: uppercase;
+  }
+  :global(.planner-calendar-popover .slop-cal-cell) {
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+  :global(.planner-calendar-popover .slop-cal-day) {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #232220;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  :global(.planner-calendar-popover .slop-cal-day:hover) {
+    background: rgba(0, 0, 0, 0.06);
+  }
+  :global(.planner-calendar-popover .slop-cal-day[data-selected]) {
+    background: #4f46e5;
+    color: #ffffff;
+    font-weight: 800;
+  }
+  :global(.planner-calendar-popover .slop-cal-day[data-today]:not([data-selected])) {
+    outline: 1.5px solid #4f46e5;
+  }
+  :global(.planner-calendar-popover .slop-cal-day[data-outside-month]) {
+    opacity: 0.25;
+  }
   .title-input {
     flex: 1;
     font-size: 11px;

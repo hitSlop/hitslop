@@ -55,6 +55,9 @@ private func writeTemplate(named slug: String, in directory: URL, fileName: Stri
     try Data("<main>Hello</main>".utf8).write(to: package.appendingPathComponent("app.html"))
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"\#(slug)","title":"Tiny Counter","description":"Counts a very small thing.","categories":["utilities","personal"],"presentation":{"width":320,"height":240}}"#
     try Data(manifest.utf8).write(to: package.appendingPathComponent("manifest.json"))
+    let skill = package.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
+    try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
     try png.write(to: package.appendingPathComponent("QuickLook/Preview.png"))
     try iconPNG.write(to: package.appendingPathComponent("QuickLook/Icon.png"))
     return package

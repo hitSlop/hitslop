@@ -6,6 +6,7 @@
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import Shuffle from "@lucide/svelte/icons/shuffle";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Select, Tabs } from "bits-ui";
   import { onDestroy, onMount } from "svelte";
   import Icon from "./Icon.svelte";
 
@@ -216,16 +217,29 @@
           <input bind:value={draftDeck} placeholder="Deck name" aria-label="New deck name" />
         </form>
       {:else}
-        <select
-          class="deck-select"
+        <Select.Root
+          type="single"
           value={activeDeck?.id}
-          onchange={(event) => selectDeck(event.currentTarget.value)}
-          aria-label="Study deck"
+          onValueChange={(val) => { if (val) selectDeck(val); }}
         >
-          {#each store.current.decks as deck (deck.id)}
-            <option value={deck.id}>{deck.name}</option>
-          {/each}
-        </select>
+          <Select.Trigger class="deck-select" aria-label="Study deck">
+            <span>{activeDeck?.name ?? "Select Deck"}</span>
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content class="deck-select-content" data-slop-export="hide">
+              <Select.Viewport>
+                {#each store.current.decks as deck (deck.id)}
+                  <Select.Item value={deck.id} label={deck.name} class="deck-select-item">
+                    {#snippet children({ selected })}
+                      <span>{deck.name}</span>
+                      {#if selected}<Check size={12} />{/if}
+                    {/snippet}
+                  </Select.Item>
+                {/each}
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
       {/if}
     </div>
     <button
@@ -239,23 +253,26 @@
     </button>
   </header>
 
-  <nav class="box-rail" aria-label="Leitner boxes">
-    <button type="button" class="box-tab" class:active={store.current.selectedBox === 0} onclick={() => selectBox(0)}>
-      All
-      <strong>{activeDeck?.cards.length ?? 0}</strong>
-    </button>
-    {#each BOXES as box}
-      <button
-        type="button"
-        class="box-tab"
-        class:active={store.current.selectedBox === box.id}
-        onclick={() => selectBox(box.id)}
-      >
-        {box.label}
-        <strong>{boxCounts[box.id]}</strong>
-      </button>
-    {/each}
-  </nav>
+  <Tabs.Root
+    value={String(store.current.selectedBox)}
+    onValueChange={(v) => { if (v !== undefined) selectBox(Number(v) as 0 | LeitnerBox); }}
+  >
+    <Tabs.List class="box-rail" aria-label="Leitner boxes">
+      <Tabs.Trigger value="0" class="box-tab {store.current.selectedBox === 0 ? 'active' : ''}">
+        All
+        <strong>{activeDeck?.cards.length ?? 0}</strong>
+      </Tabs.Trigger>
+      {#each BOXES as box}
+        <Tabs.Trigger
+          value={String(box.id)}
+          class="box-tab {store.current.selectedBox === box.id ? 'active' : ''}"
+        >
+          {box.label}
+          <strong>{boxCounts[box.id]}</strong>
+        </Tabs.Trigger>
+      {/each}
+    </Tabs.List>
+  </Tabs.Root>
 
   <section class="study-well">
     {#if currentCard}

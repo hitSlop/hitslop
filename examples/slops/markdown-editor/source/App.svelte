@@ -12,6 +12,7 @@
   import Moon from "@lucide/svelte/icons/moon";
   import Quote from "@lucide/svelte/icons/quote";
   import Sun from "@lucide/svelte/icons/sun";
+  import { Tabs } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type MarkdownDoc = {
@@ -143,32 +144,31 @@ Try editing this document now!`,
 
       <div class="header-actions" data-slop-export="hide">
         <!-- View Mode Switcher -->
-        <nav class="mode-pills" aria-label="Editor modes">
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={doc.current.mode === "inplace"}
-            onclick={() => (doc.current.mode = "inplace")}
-          >
-            In-Place
-          </button>
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={doc.current.mode === "split"}
-            onclick={() => (doc.current.mode = "split")}
-          >
-            Split
-          </button>
-          <button
-            type="button"
-            class="mode-btn"
-            class:active={doc.current.mode === "preview"}
-            onclick={() => (doc.current.mode = "preview")}
-          >
-            Preview
-          </button>
-        </nav>
+        <Tabs.Root
+          value={doc.current.mode}
+          onValueChange={(v) => { if (v) doc.current.mode = v as "inplace" | "split" | "preview"; }}
+        >
+          <Tabs.List class="mode-pills" aria-label="Editor modes">
+            <Tabs.Trigger
+              value="inplace"
+              class="mode-btn {doc.current.mode === 'inplace' ? 'active' : ''}"
+            >
+              In-Place
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="split"
+              class="mode-btn {doc.current.mode === 'split' ? 'active' : ''}"
+            >
+              Split
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="preview"
+              class="mode-btn {doc.current.mode === 'preview' ? 'active' : ''}"
+            >
+              Preview
+            </Tabs.Trigger>
+          </Tabs.List>
+        </Tabs.Root>
 
         <!-- Theme Toggle -->
         <button

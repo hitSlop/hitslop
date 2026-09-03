@@ -10,7 +10,7 @@ bun slop dev examples/slops/soma-amp --native
 bun slop build examples/slops/soma-amp
 ```
 
-After `bun slop install examples/slops/soma-amp`, create a writable SomaAmp
+After `bun slop register examples/slops/soma-amp`, create a writable SomaAmp
 from **My Templates**. The installed catalog master intentionally has no
 stores; each created document owns its selected station and uploaded skin.
 

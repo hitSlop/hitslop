@@ -17,7 +17,7 @@ import Testing
     #expect(!factory.isManagedTemplatePackage(root.appendingPathComponent("documents/soma-amp.slop")))
 }
 
-@Test func workingCopyFlushesJSONSQLiteAndMediaStores() throws {
+@Test func workingCopyFlushesJSONSQLiteMediaAndThemeStores() throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     let presented = try makePackage(in: root.appendingPathComponent("presented.slop", isDirectory: true))
@@ -38,6 +38,8 @@ import Testing
     try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
     let image = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
     try image.write(to: media.appendingPathComponent("hero"))
+    let theme = working.appendingPathComponent("stores/theme.css")
+    try Data(":root { --slop-accent: tomato; }\n".utf8).write(to: theme)
 
     try SlopWorkingCopy.pushStores(from: working, to: presented)
 
@@ -45,11 +47,16 @@ import Testing
     #expect(String(data: json, encoding: .utf8)?.contains("7") == true)
     #expect(!FileManager.default.fileExists(atPath: presented.appendingPathComponent("stores/data.sqlite").path + "-wal"))
     #expect(try Data(contentsOf: presented.appendingPathComponent("stores/media/hero")) == image)
+    #expect(try Data(contentsOf: presented.appendingPathComponent("stores/theme.css")) == Data(":root { --slop-accent: tomato; }\n".utf8))
 
     let flushed = try SlopDatabase(url: presented.appendingPathComponent("stores/data.sqlite"))
     defer { flushed.close() }
     let rows = try flushed.query("SELECT title FROM items", parameters: [])
     #expect(rows.first?["title"] as? String == "cloud")
+
+    try FileManager.default.removeItem(at: theme)
+    try SlopWorkingCopy.pushStores(from: working, to: presented)
+    #expect(!FileManager.default.fileExists(atPath: presented.appendingPathComponent("stores/theme.css").path))
 }
 
 private func makePackage(in root: URL) throws -> URL {
@@ -59,5 +66,8 @@ private func makePackage(in root: URL) throws -> URL {
     {"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"cloud-fixture","title":"Cloud Fixture","description":"Working copy fixture.","categories":["utilities"],"presentation":{"width":320,"height":240}}
     """
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
+    let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
+    try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
     return root
 }

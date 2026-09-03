@@ -15,14 +15,27 @@ bun install --frozen-lockfile
 bun run release:check
 ```
 
-The gate checks generated schema drift, TypeScript/Svelte types, Bun tests,
-public builds and package tarball contents, documentation links, tracked secret/
-artifact hygiene, and Swift tests/build. CI runs the same boundary.
+The gate checks repository hygiene, generated schema drift, the public npm
+packages, the catalog's hostile-package boundary, a clean-room tarball install,
+and Swift tests/build. CI runs the same first-launch boundary.
+
+Older examples are deliberately outside this gate until they are converted to
+the v1 API. Run `bun run examples:check` when working on that collection; it is
+allowed to remain red during the initial package launch.
 
 Inspect `git status --short` afterward. Generated package `dist/` directories
 are cleaned before every build so stale deleted exports cannot enter npm.
 
 ## npm packages
+
+Run the focused npm foundation gate before publishing. It validates and packs
+the five public packages, installs their real tarballs outside the monorepo,
+tests the catalog's package-ingress boundary, and creates a fresh Svelte project
+through the complete init/build/validate path:
+
+```sh
+bun run release:npm:check
+```
 
 Publish in dependency order:
 

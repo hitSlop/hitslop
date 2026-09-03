@@ -128,9 +128,44 @@ html, body {
   color: var(--ink-muted);
 }
 
-.energy-slider {
+.energy-slider-root {
+  position: relative;
+  display: flex;
+  align-items: center;
   width: 65px;
-  accent-color: var(--ink);
+  height: 16px;
+  touch-action: none;
+  user-select: none;
+}
+
+.energy-slider-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.energy-slider-range {
+  position: absolute;
+  height: 100%;
+  background: var(--ink);
+}
+
+.energy-slider-thumb {
+  display: block;
+  width: 12px;
+  height: 12px;
+  background: var(--ink);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  outline: none;
+}
+
+.energy-slider-thumb:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus);
 }
 
 .note-input-row {

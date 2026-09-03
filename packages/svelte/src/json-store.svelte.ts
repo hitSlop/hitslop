@@ -1,6 +1,18 @@
 import { slop } from "@hitslop/runtime";
 import { JsonPersister, type JsonSnapshot } from "@hitslop/runtime/adapter";
 import { untrack } from "svelte";
+import type * as z from "zod";
+
+export type JsonStoreOptions<Schema extends z.ZodType> = {
+  schema: Schema;
+  initial: z.input<Schema>;
+};
+
+type JsonSchema<T> = {
+  safeParse(value: unknown):
+    | { success: true; data: T }
+    | { success: false; error: { issues: ReadonlyArray<{ path: PropertyKey[]; message: string }> } };
+};
 
 const snapshot = <T>(value: T): JsonSnapshot<T> => {
   const json = JSON.stringify($state.snapshot(value));
@@ -15,20 +27,28 @@ export class JsonStore<T> {
   revision = $state<string | null>(null);
   lastChangeSource = $state("package");
   private persister: JsonPersister<T>;
+  readonly schema: JsonSchema<T>;
   private unwatch: (() => void) | null = null;
   private stopEffect: (() => void) | null = null;
 
-  constructor(fallback: T) {
-    const fallbackSnapshot = snapshot(fallback);
+  constructor(options: { schema: JsonSchema<T>; initial: unknown }) {
+    this.schema = options.schema;
+    const fallbackSnapshot = snapshot(this.parse(options.initial));
     this.current = fallbackSnapshot.value;
     this.persister = new JsonPersister<T>({
       fallback: fallbackSnapshot,
       io: {
-        open: (initial) => slop.json.open(initial),
-        read: () => slop.json.read<T>(),
-        write: (value, revision) => slop.json.write(value, revision),
+        open: async (initial) => {
+          const result = await slop.json.open(initial);
+          return { ...result, value: this.parse(result.value) };
+        },
+        read: async () => {
+          const result = await slop.json.read<unknown>();
+          return { ...result, value: this.parse(result.value) };
+        },
+        write: (value, revision) => slop.json.write(this.parse(value), revision),
       },
-      getLocal: () => snapshot(this.current),
+      getLocal: () => snapshot(this.parse(this.current)),
       onAdopt: (value, source) => { this.current = value; this.lastChangeSource = source; },
       onRevision: (revision) => { this.revision = revision; },
       onSource: (source) => { this.lastChangeSource = source; },
@@ -42,7 +62,7 @@ export class JsonStore<T> {
       $effect(() => {
         let local: JsonSnapshot<T>;
         try {
-          local = snapshot(this.current);
+          local = snapshot(this.parse(this.current));
         } catch (error) {
           untrack(() => { this.error = error instanceof Error ? error.message : String(error); });
           return;
@@ -72,6 +92,17 @@ export class JsonStore<T> {
     this.stopEffect?.();
     this.stopEffect = null;
   }
+
+  private parse(value: unknown): T {
+    const result = this.schema.safeParse(value);
+    if (result.success) return result.data;
+    const detail = result.error.issues.map((issue) => {
+      const path = issue.path.length ? issue.path.join(".") : "value";
+      return `${path}: ${issue.message}`;
+    }).join("; ");
+    throw new Error(`JSON schema validation failed: ${detail}`);
+  }
 }
 
-export const jsonStore = <T>(initialValue: T): JsonStore<T> => new JsonStore(initialValue);
+export const jsonStore = <Schema extends z.ZodType>(options: JsonStoreOptions<Schema>): JsonStore<z.output<Schema>> =>
+  new JsonStore<z.output<Schema>>(options);

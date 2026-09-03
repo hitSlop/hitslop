@@ -9,9 +9,9 @@ The `slop` executable owns project lifecycle:
 
 - `init` scaffolds the supported Svelte project and portable agent skills.
 - `validate` parses the authoritative manifest.
-- `dev` runs Vite with an isolated host-compatible storage bridge.
-- `build` emits a source/store-free runtime directory.
-- `install` captures and installs an immutable local catalog master.
+- `dev` runs Vite with a disposable in-memory host fake for UI work.
+- `build` emits a source/store-free runtime directory and optional schema metadata.
+- `register` captures and adds an immutable local catalog master.
 - `publish` signs and uploads an immutable ZIP.
 - `identity` manages the local Ed25519 publisher identity.
 
@@ -40,8 +40,9 @@ Svelte 5 rune-aware classes/functions:
 - `fileStore` / `FileStore`
 
 These expose reactive value/loading/error/persistence state while delegating all
-durability to the runtime host. The CLI template is the canonical v1 authoring
-example.
+durability to the runtime host. `jsonStore` requires a Zod schema alongside its
+initial value and validates data at the persistence boundary. The CLI template
+is the canonical v1 authoring example.
 
 ## @hitslop/react
 

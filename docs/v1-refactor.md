@@ -43,4 +43,5 @@ from it. Convex keeps only publisher/template/release data and successful
 creation counts. Shared Apple code is one package with three products.
 
 No migrations are provided because this contract replaces unpublished example
-formats. The maintained examples are the compatibility target.
+formats. The new scaffold is the compatibility target while older examples are
+converted intentionally.

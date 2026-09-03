@@ -7,6 +7,7 @@
   import Wrench from "@lucide/svelte/icons/wrench";
   import Plus from "@lucide/svelte/icons/plus";
   import Minus from "@lucide/svelte/icons/minus";
+  import { Checkbox } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type TaskItem = { text: string; done: boolean };
@@ -196,17 +197,18 @@
     <ul class="task-list">
       {#each store.current.shortTasks as task, idx (idx)}
         <li class="task-item" class:is-done={task.done}>
-          <button
-            type="button"
+          <Checkbox.Root
+            checked={task.done}
+            onCheckedChange={() => toggleShort(idx)}
             class="check-btn"
-            class:checked={task.done}
-            onclick={() => toggleShort(idx)}
             aria-label={task.done ? "Mark task incomplete" : "Mark task complete"}
           >
-            {#if task.done}
-              <Check size={12} strokeWidth={3} />
-            {/if}
-          </button>
+            {#snippet children({ checked })}
+              {#if checked}
+                <Check size={12} strokeWidth={3} />
+              {/if}
+            {/snippet}
+          </Checkbox.Root>
           <span class="item-index">#{idx + 1}</span>
           <input
             type="text"
@@ -235,17 +237,18 @@
     <ul class="task-list">
       {#each store.current.maintenance as item, idx (idx)}
         <li class="task-item" class:is-done={item.done}>
-          <button
-            type="button"
+          <Checkbox.Root
+            checked={item.done}
+            onCheckedChange={() => toggleMaint(idx)}
             class="check-btn"
-            class:checked={item.done}
-            onclick={() => toggleMaint(idx)}
             aria-label={item.done ? "Mark activity incomplete" : "Mark activity complete"}
           >
-            {#if item.done}
-              <Check size={12} strokeWidth={3} />
-            {/if}
-          </button>
+            {#snippet children({ checked })}
+              {#if checked}
+                <Check size={12} strokeWidth={3} />
+              {/if}
+            {/snippet}
+          </Checkbox.Root>
           <span class="item-index">#{idx + 1}</span>
           <input
             type="text"

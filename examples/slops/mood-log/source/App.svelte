@@ -2,6 +2,7 @@
   import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Slider } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type MoodEntry = {
@@ -94,14 +95,24 @@
 
         <label class="energy-row">
           <span>Energy</span>
-          <input
-            type="range"
-            min="1"
-            max="5"
-            class="energy-slider"
-            aria-label="Energy level 1 to 5"
+          <Slider.Root
+            type="single"
             bind:value={draftEnergy}
-          />
+            min={1}
+            max={5}
+            step={1}
+            class="energy-slider-root"
+            aria-label="Energy level 1 to 5"
+          >
+            {#snippet children({ thumbs })}
+              <span class="energy-slider-track">
+                <Slider.Range class="energy-slider-range" />
+              </span>
+              {#each thumbs as index}
+                <Slider.Thumb {index} class="energy-slider-thumb" aria-label="Energy level" />
+              {/each}
+            {/snippet}
+          </Slider.Root>
         </label>
       </div>
 

@@ -25,7 +25,8 @@
     "fast-png": "^8.0.0",
     "fflate": "^0.8.3",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "zod": "^4.5.2"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.54.2",

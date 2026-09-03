@@ -6,7 +6,12 @@ document.
 ```svelte
 <script lang="ts">
   import { jsonStore } from "@hitslop/svelte";
-  const document = jsonStore({ count: 0 });
+  import counterSchema from "../schema";
+
+  const document = jsonStore({
+    schema: counterSchema,
+    initial: { count: 0 },
+  });
 </script>
 
 <button onclick={() => document.current.count += 1}>
@@ -15,8 +20,9 @@ document.
 ```
 
 Exports: `jsonStore`, `sqliteQuery`, `imageStore`, `fileStore`, and their
-class/type counterparts. Persistence is performed by `@hitslop/runtime`; the
-adapter does not write browser storage.
+class/type counterparts. JSON stores require a Zod 4 schema. The adapter checks
+initial, loaded, externally changed, and outgoing values at the persistence
+boundary; it does not write browser storage.
 
 See the [Svelte authoring examples](https://github.com/hitslop/hitslop/tree/main/examples/slops).
 

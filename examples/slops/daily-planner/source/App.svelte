@@ -1,9 +1,14 @@
 <script lang="ts">
   import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
+  import CalendarIcon from "@lucide/svelte/icons/calendar";
   import Check from "@lucide/svelte/icons/check";
+  import ChevronLeft from "@lucide/svelte/icons/chevron-left";
+  import ChevronRight from "@lucide/svelte/icons/chevron-right";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { CalendarDate, getLocalTimeZone, today as getTodayDate, Time, type DateValue } from "@internationalized/date";
+  import { Calendar, Popover, Select, TimeField } from "bits-ui";
   import { onDestroy, tick } from "svelte";
   import Icon from "./Icon.svelte";
 
@@ -206,7 +211,26 @@
     void createBlock(start, start + 60);
   }
   function removeBlock(id: string): void { planner.current.blocks = planner.current.blocks.filter((block) => block.id !== id); }
-  function goToToday(): void { planner.current.date = today(); }
+  let calendarOpen = $state(false);
+  const calendarValue = $derived.by(() => {
+    try {
+      const [y, m, d] = planner.current.date.split("-").map(Number);
+      return new CalendarDate(y, m, d);
+    } catch {
+      return getTodayDate(getLocalTimeZone());
+    }
+  });
+
+  function onDateSelect(date: DateValue | undefined): void {
+    if (!date) return;
+    planner.current.date = `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+    calendarOpen = false;
+  }
+
+  function toTimeVal(str: string): Time {
+    const [h, m] = (str || "09:00").split(":").map(Number);
+    return new Time(isNaN(h) ? 9 : h, isNaN(m) ? 0 : m);
+  }
 
   onDestroy(() => { clearInterval(clock); planner.destroy(); });
 </script>
@@ -220,10 +244,55 @@
         <p class="longdate">{longDate}</p>
       </div>
       <div class="masthead-side">
-        <label class="date-field" data-slop-export="hide">
-          <span>Date</span>
-          <input type="date" aria-label="Planner date" bind:value={planner.current.date} />
-        </label>
+        <Popover.Root bind:open={calendarOpen}>
+          <Popover.Trigger class="date-field-trigger" aria-label="Planner date" data-slop-export="hide">
+            <CalendarIcon size={11} />
+            <span>{planner.current.date}</span>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content class="slop-calendar-popover" side="bottom" align="end" sideOffset={6} data-slop-export="hide">
+              <Calendar.Root
+                type="single"
+                value={calendarValue}
+                onValueChange={onDateSelect}
+              >
+                {#snippet children({ months, weekdays })}
+                  <Calendar.Header class="slop-cal-header">
+                    <Calendar.PrevButton class="slop-cal-nav" aria-label="Previous month">
+                      <ChevronLeft size={13} />
+                    </Calendar.PrevButton>
+                    <Calendar.Heading class="slop-cal-title" />
+                    <Calendar.NextButton class="slop-cal-nav" aria-label="Next month">
+                      <ChevronRight size={13} />
+                    </Calendar.NextButton>
+                  </Calendar.Header>
+                  {#each months as month}
+                    <Calendar.Grid class="slop-cal-grid">
+                      <Calendar.GridHead>
+                        <Calendar.GridRow class="slop-cal-row">
+                          {#each weekdays as day}
+                            <Calendar.HeadCell class="slop-cal-head-cell">{day.slice(0, 2)}</Calendar.HeadCell>
+                          {/each}
+                        </Calendar.GridRow>
+                      </Calendar.GridHead>
+                      <Calendar.GridBody>
+                        {#each month.weeks as weekDates}
+                          <Calendar.GridRow class="slop-cal-row">
+                            {#each weekDates as date}
+                              <Calendar.Cell {date} month={month.value} class="slop-cal-cell">
+                                <Calendar.Day class="slop-cal-day" />
+                              </Calendar.Cell>
+                            {/each}
+                          </Calendar.GridRow>
+                        {/each}
+                      </Calendar.GridBody>
+                    </Calendar.Grid>
+                  {/each}
+                {/snippet}
+              </Calendar.Root>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
         <div class="masthead-meters">
           <p class="booked"><b>{Math.floor(bookedMinutes / 60)}</b><small>h</small><b>{String(bookedMinutes % 60).padStart(2, "0")}</b><small>m</small></p>
           <p class="booked-label">Blocked out</p>
@@ -326,12 +395,57 @@
                 onkeydown={(event) => nudge(event, item.block, "end")}
               ></button>
               <div class="block-tools" data-slop-export="hide">
-                <input type="time" aria-label="{item.block.title} start time" bind:value={item.block.start} />
+                <TimeField.Root
+                  value={toTimeVal(item.block.start)}
+                  onValueChange={(t) => { if (t) item.block.start = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`; }}
+                >
+                  <TimeField.Input class="time-field-input" aria-label="{item.block.title} start time">
+                    {#snippet children({ segments })}
+                      {#each segments as { part, value }}
+                        <TimeField.Segment {part} class="time-field-seg">
+                          {value}
+                        </TimeField.Segment>
+                      {/each}
+                    {/snippet}
+                  </TimeField.Input>
+                </TimeField.Root>
                 <span aria-hidden="true">–</span>
-                <input type="time" aria-label="{item.block.title} end time" bind:value={item.block.end} />
-                <select aria-label="{item.block.title} kind" bind:value={item.block.kind}>
-                  {#each KINDS as kind (kind)}<option value={kind}>{kind}</option>{/each}
-                </select>
+                <TimeField.Root
+                  value={toTimeVal(item.block.end)}
+                  onValueChange={(t) => { if (t) item.block.end = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`; }}
+                >
+                  <TimeField.Input class="time-field-input" aria-label="{item.block.title} end time">
+                    {#snippet children({ segments })}
+                      {#each segments as { part, value }}
+                        <TimeField.Segment {part} class="time-field-seg">
+                          {value}
+                        </TimeField.Segment>
+                      {/each}
+                    {/snippet}
+                  </TimeField.Input>
+                </TimeField.Root>
+                <Select.Root
+                  type="single"
+                  bind:value={item.block.kind}
+                >
+                  <Select.Trigger class="kind-select" aria-label="{item.block.title} kind">
+                    <span>{item.block.kind}</span>
+                  </Select.Trigger>
+                  <Select.Portal>
+                    <Select.Content class="kind-select-content" data-slop-export="hide">
+                      <Select.Viewport>
+                        {#each KINDS as kind (kind)}
+                          <Select.Item value={kind} label={kind} class="kind-select-item">
+                            {#snippet children({ selected })}
+                              <span>{kind}</span>
+                              {#if selected}<Check size={11} />{/if}
+                            {/snippet}
+                          </Select.Item>
+                        {/each}
+                      </Select.Viewport>
+                    </Select.Content>
+                  </Select.Portal>
+                </Select.Root>
                 <button type="button" aria-label="Remove {item.block.title}" onclick={() => removeBlock(item.block.id)}><Trash2 /></button>
               </div>
             </article>

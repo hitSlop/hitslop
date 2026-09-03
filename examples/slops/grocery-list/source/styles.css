@@ -197,6 +197,7 @@ html, body {
   transition: all 0.15s;
 }
 
+.filter-tab[data-state="active"],
 .filter-tab.active {
   background: var(--paper-ink);
   color: #ffffff;
@@ -278,10 +279,12 @@ html, body {
   flex-shrink: 0;
 }
 
+.item-check[data-state="checked"],
 .item-check:checked {
   background: var(--paper-ink);
 }
 
+.item-check[data-state="checked"]::before,
 .item-check:checked::before {
   content: "";
   width: 7px;

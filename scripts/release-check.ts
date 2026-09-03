@@ -133,15 +133,8 @@ async function main(): Promise<void> {
   ]);
   process.stdout.write("✓ repository hygiene, documentation, and skills\n");
 
-  await command(["bun", "run", "check"]);
-  await command(["bun", "run", "test"]);
-  await command(["bun", "run", "build"]);
+  await command(["bun", "run", "release:npm:check"]);
   assertNoGeneratedSource(await gitFiles());
-
-  for (const name of ["schema", "runtime", "svelte", "react", "cli"]) {
-    await command(["bun", "pm", "pack", "--dry-run"], resolve(root, "packages", name), true);
-    process.stdout.write(`✓ @hitslop/${name} package contents\n`);
-  }
 
   if (process.platform === "darwin" && process.env.HITSLOP_SKIP_SWIFT !== "1") {
     const moduleCache = resolve(root, ".hitslop/release-cache/clang");
@@ -153,7 +146,7 @@ async function main(): Promise<void> {
     process.stdout.write("↷ Swift checks run on macOS CI (or set HITSLOP_SKIP_SWIFT=0 on macOS)\n");
   }
 
-  process.stdout.write("\n✓ hitSlop is ready for release\n");
+  process.stdout.write("\n✓ the hitSlop first-launch foundation is ready for release\n");
 }
 
 await main();

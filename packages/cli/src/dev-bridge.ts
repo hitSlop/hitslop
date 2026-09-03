@@ -1,105 +1,80 @@
-// The browser half of `slop dev`: a window.slop implementation backed by the
-// mock host HTTP bridge in dev.ts. Injected verbatim into the served HTML.
-
-export const POLL_INTERVAL_MS = 750;
+// Browser-only half of `slop dev`. This disposable window.slop fake exists to
+// keep authored UI renderable; it deliberately does not model durable storage.
 
 export const hostStyle = `<style data-hitslop-host>*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}</style>`;
 
-export const bridgeScript = `<script>
-(() => {
-  const POLL_INTERVAL_MS = ${POLL_INTERVAL_MS};
+export const devHostJavaScript = `(() => {
   const listeners = { json: new Set(), sqlite: new Set(), media: new Set() };
-  const pollers = {};
+  let jsonValue;
+  let jsonRevision = 0;
+  let jsonOpened = false;
+  let mediaRevision = 0;
 
-  const call = async (path, body = {}) => {
-    const response = await fetch('/__hitslop/' + path, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const value = await response.json();
-    if (!response.ok) throw new Error(value.error || response.statusText);
-    return value;
-  };
-
+  const clone = (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   const emit = (kind, event) => listeners[kind].forEach((callback) => callback({ kind, ...event }));
-
-  // One shared poller per store kind, alive only while it has subscribers.
-  const ensurePoller = (kind) => {
-    if (pollers[kind]) return;
-    let revision;
-    pollers[kind] = setInterval(async () => {
-      try {
-        const value = await call(kind + '/revision');
-        if (revision !== undefined && revision !== value.revision) {
-          emit(kind, { source: 'external', revision: value.revision });
-        }
-        revision = value.revision;
-      } catch {}
-    }, POLL_INTERVAL_MS);
-  };
-
   const watch = (kind, callback) => {
     listeners[kind].add(callback);
-    ensurePoller(kind);
-    return () => {
-      listeners[kind].delete(callback);
-      if (listeners[kind].size === 0) {
-        clearInterval(pollers[kind]);
-        delete pollers[kind];
-      }
-    };
+    return () => listeners[kind].delete(callback);
   };
+  const revision = () => 'dev:' + jsonRevision;
 
-  const resize = async (size) => {
-    const native = window.webkit?.messageHandlers?.hitslopDevWindow;
-    if (native) return native.postMessage({ action: 'resize', ...size });
-    return size;
-  };
+  const resize = async (size) => size;
+  const drag = async () => undefined;
 
-  const drag = async () => {
-    const native = window.webkit?.messageHandlers?.hitslopDevWindow;
-    if (native) return native.postMessage({ action: 'drag' });
-    return undefined;
-  };
-
-  window.slop = {
-    json: {
-      open: (value) => call('json/open', { value }),
-      read: () => call('json/read'),
-      write: (value, expectedRevision) => call('json/write', { value, expectedRevision })
-        .then((result) => (emit('json', { source: 'app', revision: result.revision }), result)),
+  window.slop = Object.freeze({
+    json: Object.freeze({
+      open: async (value) => {
+        if (!jsonOpened) { jsonValue = clone(value); jsonOpened = true; }
+        return { value: clone(jsonValue), revision: revision() };
+      },
+      read: async () => {
+        if (!jsonOpened) throw new Error('JSON preview store has not been opened');
+        return { value: clone(jsonValue), revision: revision() };
+      },
+      write: async (value, expectedRevision) => {
+        if (expectedRevision && expectedRevision !== revision()) throw new Error('revision_conflict');
+        jsonValue = clone(value); jsonOpened = true; jsonRevision += 1;
+        const result = { revision: revision() };
+        emit('json', { source: 'app', revision: result.revision });
+        return result;
+      },
       onChange: (callback) => watch('json', callback)
-    },
-    db: {
-      query: (sql, parameters = []) => call('sqlite/query', { sql, parameters }),
-      execute: (sql, parameters = []) => call('sqlite/execute', { sql, parameters })
-        .then((result) => (emit('sqlite', { source: 'app' }), result)),
-      transaction: (statements) => call('sqlite/transaction', { statements })
-        .then((result) => (emit('sqlite', { source: 'app' }), result)),
+    }),
+    db: Object.freeze({
+      query: async () => [],
+      execute: async () => { emit('sqlite', { source: 'app' }); return 0; },
+      transaction: async () => { emit('sqlite', { source: 'app' }); return 0; },
       onChange: (callback) => watch('sqlite', callback)
-    },
-    media: {
-      open: (name) => call('media/open', { name }),
-      write: (name, data, mimeType) => call('media/write', { name, data, mimeType })
-        .then((result) => (emit('media', { source: 'app', revision: result.revision }), result)),
-      remove: (name) => call('media/remove', { name })
-        .then((result) => (emit('media', { source: 'app', revision: null }), result)),
+    }),
+    media: Object.freeze({
+      open: async () => ({ exists: false, revision: null }),
+      write: async () => {
+        mediaRevision += 1;
+        const result = { revision: 'dev-media:' + mediaRevision };
+        emit('media', { source: 'app', revision: result.revision });
+        return result;
+      },
+      remove: async () => {
+        emit('media', { source: 'app', revision: null });
+        return { revision: null };
+      },
       onChange: (callback) => watch('media', callback)
-    },
-    window: { resize, drag },
-    // Mirror the native host (SlopWebView.swift): flag readiness on <html> and
-    // announce it as a window event so guests behave identically in dev.
+    }),
+    window: Object.freeze({ resize, drag }),
     ready: () => {
       document.documentElement.dataset.hitslopReady = 'true';
       window.dispatchEvent(new Event('slop:ready'));
     }
-  };
-})();
-</script>`;
+  });
+})();`;
 
-export const injectHost = (html: string): string => {
-  const payload = hostStyle + bridgeScript;
+export const bridgeScript = `<script>${devHostJavaScript}</script>`;
+
+export const injectHost = (html: string, options: { themeHref?: string } = {}): string => {
+  const theme = options.themeHref
+    ? `<link rel="stylesheet" href="${options.themeHref}" data-hitslop-theme-default>`
+    : "";
+  const payload = hostStyle + theme + bridgeScript;
   return /<head(?:\s[^>]*)?>/i.test(html)
     ? html.replace(/<head(?:\s[^>]*)?>/i, (tag) => tag + payload)
     : payload + html;

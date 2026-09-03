@@ -174,9 +174,25 @@ html, body {
 }
 
 .task-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
   margin-top: 2px;
+  border-radius: 3px;
+  border: 1.5px solid var(--ink-dim);
+  background: #ffffff;
+  color: #ffffff;
   cursor: pointer;
-  accent-color: var(--red-margin);
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.task-check[data-state="checked"] {
+  background: var(--red-margin);
+  border-color: var(--red-margin);
 }
 
 .task-content {

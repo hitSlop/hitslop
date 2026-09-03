@@ -7,16 +7,21 @@ bunx @hitslop/cli init my-slop
 bun run dev
 bun run validate
 bun run build
-bun run install
+bun run register
 bun run publish
 ```
 
-`dev` uses isolated `.hitslop/dev/stores/`. Use `slop dev --reset` after an
-intentional default/schema reset and `--native` for real host window behavior.
+`dev` is a disposable browser UI preview with in-memory JSON and forgiving
+SQLite/media stubs. A reload clears preview state. Register a local master and
+open a writable copy for real persistence, external-file, and native-window behavior.
 
-`build` emits `dist/<slug>.slop`. Inspect the result. `install` adds an
+`build` emits `dist/<slug>.slop`. Inspect the result. `register` adds an
 immutable master under `~/.hitslop/templates`; open it to create a writable
 copy and test persistence there.
+
+New builds include the canonical document skill. Add optional app-specific
+instructions only in root `document-guide.md`; the build copies it to the
+skill's single reference after validating its encoding and size.
 
 ## Capture
 

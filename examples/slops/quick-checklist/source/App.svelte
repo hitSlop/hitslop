@@ -7,6 +7,7 @@
   import Check from "@lucide/svelte/icons/check";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Checkbox } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Task = { id: string; text: string; done: boolean; archived: boolean };
@@ -62,7 +63,17 @@
       <ol class="task-list">
         {#each visibleTasks as task, index (task.id)}
           <li class:done={task.done}>
-            <button class="complete" onclick={() => task.done = !task.done} aria-label={task.done ? `Mark ${task.text} incomplete` : `Mark ${task.text} complete`}><Check /></button>
+            <Checkbox.Root
+              bind:checked={task.done}
+              class="complete"
+              aria-label={task.done ? `Mark ${task.text} incomplete` : `Mark ${task.text} complete`}
+            >
+              {#snippet children({ checked })}
+                {#if checked}
+                  <Check />
+                {/if}
+              {/snippet}
+            </Checkbox.Root>
             <input aria-label="Task {index + 1}" bind:value={task.text} onkeydown={(event) => { if (event.key === "Enter") { event.preventDefault(); composer?.focus(); } }} />
             <div class="task-actions" data-slop-export="hide">
               <button onclick={() => move(task.id, -1)} aria-label={`Move ${task.text} up`} disabled={index === 0}><ArrowUp /></button>

@@ -2,7 +2,7 @@
 
 ## Build with hitSlop
 
-- [Authoring a slop](authoring.md) — scaffold, preview, validate, build, install,
+- [Authoring a slop](authoring.md) — scaffold, preview, validate, build, register,
   and publish.
 - [Design and presentation](presentation.md) — Paper/Instrument/Skin, responsive
   layout, transparent windows, resizing, icon art, and static export.

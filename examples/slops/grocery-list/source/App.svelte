@@ -3,6 +3,7 @@
   import { jsonStore } from "@hitslop/svelte";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Tabs, Checkbox } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type GroceryItem = {
@@ -97,22 +98,17 @@
       </div>
 
       <!-- Category Filter Tabs -->
-      <div class="filter-tabs" data-slop-export="hide">
-        <button
-          type="button"
-          class="filter-tab"
-          class:active={activeFilter === "All"}
-          onclick={() => (activeFilter = "All")}
-        >All</button>
-        {#each CATEGORIES as cat}
-          <button
-            type="button"
-            class="filter-tab"
-            class:active={activeFilter === cat}
-            onclick={() => (activeFilter = cat)}
-          >{cat}</button>
-        {/each}
-      </div>
+      <Tabs.Root
+        value={activeFilter}
+        onValueChange={(v) => { if (v) activeFilter = v; }}
+      >
+        <Tabs.List class="filter-tabs" data-slop-export="hide" aria-label="Category filters">
+          <Tabs.Trigger value="All" class="filter-tab">All</Tabs.Trigger>
+          {#each CATEGORIES as cat}
+            <Tabs.Trigger value={cat} class="filter-tab">{cat}</Tabs.Trigger>
+          {/each}
+        </Tabs.List>
+      </Tabs.Root>
 
       <!-- Quick Add Row -->
       <form
@@ -144,11 +140,10 @@
       <ul class="items-list">
         {#each filteredItems as item (item.id)}
           <li class="item-row" class:done={item.done}>
-            <input
-              type="checkbox"
+            <Checkbox.Root
+              bind:checked={item.done}
               class="item-check"
               aria-label="Mark {item.text} done"
-              bind:checked={item.done}
             />
             <input
               class="item-title-input"

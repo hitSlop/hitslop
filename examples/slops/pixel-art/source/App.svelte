@@ -6,6 +6,7 @@
   import PaintBucket from "@lucide/svelte/icons/paint-bucket";
   import Pencil from "@lucide/svelte/icons/pencil";
   import Undo2 from "@lucide/svelte/icons/undo-2";
+  import { Tabs, ToggleGroup } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Tool = "pencil" | "eraser" | "fill";
@@ -221,15 +222,23 @@
   </section>
 
   <section class="tool-row" data-slop-export="hide">
-    <button type="button" class="tool" class:active={tool === "pencil"} onclick={() => { tool = "pencil"; }} aria-label="Pencil">
-      <Pencil size={16} />
-    </button>
-    <button type="button" class="tool" class:active={tool === "eraser"} onclick={() => { tool = "eraser"; }} aria-label="Eraser">
-      <Eraser size={16} />
-    </button>
-    <button type="button" class="tool" class:active={tool === "fill"} onclick={() => { tool = "fill"; }} aria-label="Fill">
-      <PaintBucket size={16} />
-    </button>
+    <ToggleGroup.Root
+      type="single"
+      value={tool}
+      onValueChange={(v) => { if (v) tool = v as Tool; }}
+      class="tool-group"
+      aria-label="Drawing tools"
+    >
+      <ToggleGroup.Item value="pencil" class="tool {tool === 'pencil' ? 'active' : ''}" aria-label="Pencil">
+        <Pencil size={16} />
+      </ToggleGroup.Item>
+      <ToggleGroup.Item value="eraser" class="tool {tool === 'eraser' ? 'active' : ''}" aria-label="Eraser">
+        <Eraser size={16} />
+      </ToggleGroup.Item>
+      <ToggleGroup.Item value="fill" class="tool {tool === 'fill' ? 'active' : ''}" aria-label="Fill">
+        <PaintBucket size={16} />
+      </ToggleGroup.Item>
+    </ToggleGroup.Root>
     <button type="button" class="tool" onclick={undo} disabled={undoStack.length === 0} aria-label="Undo">
       <Undo2 size={16} />
     </button>
@@ -239,20 +248,22 @@
   </section>
 
   <section class="palette-block">
-    <div class="palette-tabs" data-slop-export="hide" role="radiogroup" aria-label="Palette">
-      {#each Object.entries(PALETTES) as [id, spec]}
-        <button
-          type="button"
-          class="palette-tab"
-          class:active={store.current.paletteId === id}
-          onclick={() => setPalette(id as PaletteId)}
-          role="radio"
-          aria-checked={store.current.paletteId === id}
-        >
-          {spec.label}
-        </button>
-      {/each}
-    </div>
+    <Tabs.Root
+      value={store.current.paletteId}
+      onValueChange={(v) => { if (v) setPalette(v as PaletteId); }}
+      data-slop-export="hide"
+    >
+      <Tabs.List class="palette-tabs" aria-label="Palette">
+        {#each Object.entries(PALETTES) as [id, spec]}
+          <Tabs.Trigger
+            value={id}
+            class="palette-tab {store.current.paletteId === id ? 'active' : ''}"
+          >
+            {spec.label}
+          </Tabs.Trigger>
+        {/each}
+      </Tabs.List>
+    </Tabs.Root>
     <div class="swatches" role="radiogroup" aria-label="Colors">
       {#each palette.colors as color}
         <button

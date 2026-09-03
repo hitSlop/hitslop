@@ -87,9 +87,41 @@ import Testing
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
     try Data("{}\n".utf8).write(to: root.appendingPathComponent("stores/data.json"))
+    try Data(":root { --slop-accent: tomato; }\n".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
+    try Data(#"{"type":"object"}"#.utf8).write(to: root.appendingPathComponent("data.schema.json"))
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
     #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: false) }
     try Data("{}\n".utf8).write(to: root.appendingPathComponent("stores/state.json"))
+    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+}
+
+@Test func rejectsInvalidSchemaMetadataAndThemeEncoding() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try Data("not json".utf8).write(to: root.appendingPathComponent("data.schema.json"))
+    #expect(throws: (any Error).self) { _ = try SlopPackage(rootURL: root) }
+    try FileManager.default.removeItem(at: root.appendingPathComponent("data.schema.json"))
+    try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
+    try Data([0xff]).write(to: root.appendingPathComponent("stores/theme.css"))
+    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+}
+
+@Test func rejectsNoncanonicalSchemaMetadataNames() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try Data(#"{"type":"object"}"#.utf8).write(to: root.appendingPathComponent("schema.json"))
+    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+}
+
+@Test func validatesCanonicalEmbeddedDocumentSkill() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    try Data("changed".utf8).write(to: skill)
+    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+}
+
+@Test func rejectsPackageWithoutDocumentSkill() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try FileManager.default.removeItem(at: root.appendingPathComponent(".agents"))
     #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
 }
 
@@ -123,8 +155,15 @@ private func fixture(skin: Bool = false) throws -> URL {
     let presentation = skin ? #"{"width":320,"height":240,"skin":"assets/skin.png"}"# : #"{"width":320,"height":240}"#
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","categories":["utilities"],"presentation":\#(presentation)}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
+    try writeCanonicalDocumentSkill(to: root)
     if skin { try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true); try writeSkin(to: root.appendingPathComponent("assets/skin.png"), width: 320, height: 240) }
     return root
+}
+
+private func writeCanonicalDocumentSkill(to root: URL) throws {
+    let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
+    try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
 }
 
 private func writeSkin(to url: URL, width: Int, height: Int) throws {

@@ -12,7 +12,7 @@ author source ──CLI build──> immutable .slop template
                                   ▼
                          writable .slop document
                                   │
-             WebView bridge ◀──── host ────▶ JSON / SQLite / media
+             WebView bridge ◀──── host ────▶ JSON / SQLite / media / theme
                                   │
                            preview and export
 
@@ -24,9 +24,10 @@ publish ──signed ZIP──> Catalog gateway ──artifact──> R2
 ## Trust boundaries
 
 The guest WebView is untrusted package code. It runs in an ephemeral WebKit data
-store behind the `slop://` scheme, which serves only `app.html` and
-`assets/`. It cannot resolve the manifest, stores, SQLite sidecars, Quick Look
-images, or arbitrary file URLs.
+store behind the `slop://` scheme, which serves `app.html`, immutable `assets/`,
+named media, and the dedicated writable theme override endpoint. It cannot
+resolve the manifest, arbitrary stores, SQLite sidecars, Quick Look images, or
+arbitrary file URLs.
 
 The native host validates the manifest before loading, exposes a narrow message
 bridge, validates media by content, and owns every filesystem mutation. JSON is
@@ -80,9 +81,14 @@ slop.window.drag()
 `@hitslop/runtime` exposes this contract. Svelte and React packages adapt it
 to their reactive models; they do not define a second persistence system.
 
+Browser `slop dev` injects a disposable in-memory implementation of this
+contract for UI work. It has no disk-backed bridge or polling. On macOS, built
+documents use FSEvents to wake revision checks after external file changes.
+
 ## Schema pipeline
 
-Zod under `packages/schema/src` is authoritative:
+Zod under `packages/schema/src` is authoritative for the shared manifest and
+publish protocol:
 
 ```text
 Zod → JSON Schema draft 2020-12 → Swift Codable models
@@ -91,6 +97,16 @@ Zod → JSON Schema draft 2020-12 → Swift Codable models
 
 Run `bun run schema:generate` after schema changes. Generated output is
 committed and CI rejects drift.
+
+Each Svelte app with a JSON store also default-exports its data schema from root
+`schema.ts` and attaches it to `jsonStore({ schema, initial })`. The CLI emits
+that app-specific contract as `data.schema.json` during build.
+
+Every new build also embeds one immutable, canonical Agent Skill at
+`.agents/skills/hitslop-document`. It teaches compatible agents the package
+boundary and safe direct-file workflows. A publisher may add only one bounded
+Markdown reference through source `document-guide.md`; scripts, extra skills,
+and arbitrary resources are rejected.
 
 ## Capture and export
 

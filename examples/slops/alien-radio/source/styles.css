@@ -58,8 +58,10 @@ button { color: inherit; }
 
 .gain { position: absolute; top: 447px; left: 296px; width: 128px; display: grid; grid-template-columns: 31px 1fr 22px; align-items: center; gap: 6px; color: #bfff39; font-size: 7px; font-weight: 700; }
 .gain button { padding: 0; border: 0; color: inherit; background: none; cursor: pointer; }
-.gain input { width: 100%; height: 5px; appearance: none; border: 0; border-radius: 0; background: #10120b; box-shadow: inset 0 0 0 1px #586617; }
-.gain input::-webkit-slider-thumb { width: 8px; height: 15px; appearance: none; border: 1px solid #16160d; border-radius: 1px; background: #caff42; box-shadow: 0 0 4px rgba(202,255,66,.55); }
+.gain-slider { position: relative; display: flex; align-items: center; width: 100%; height: 15px; touch-action: none; user-select: none; }
+.gain-track { position: relative; width: 100%; height: 5px; background: #10120b; box-shadow: inset 0 0 0 1px #586617; }
+.gain-range { position: absolute; height: 100%; background: #586617; }
+.gain-thumb { display: block; width: 8px; height: 15px; border: 1px solid #16160d; border-radius: 1px; background: #caff42; box-shadow: 0 0 4px rgba(202,255,66,.55); cursor: grab; outline: none; }
 .gain output { color: #342b3f; text-align: right; }
 
 .error { position: absolute; top: 315px; left: 213px; z-index: 5; width: 294px; padding: 5px 7px; border: 1px solid #6e264c; color: #ffd6e9; background: #381124; font-size: 8px; cursor: pointer; }

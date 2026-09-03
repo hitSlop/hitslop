@@ -1,8 +1,10 @@
 <script lang="ts">
   import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
+  import Check from "@lucide/svelte/icons/check";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Select } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Book = {
@@ -168,17 +170,31 @@
                 </div>
               </td>
               <td>
-                <select
-                  class="status-pill"
-                  class:read={book.status === "Read"}
-                  class:reading={book.status === "Reading"}
-                  aria-label="Status for {book.title}"
+                <Select.Root
+                  type="single"
                   bind:value={book.status}
                 >
-                  {#each STATUS_OPTIONS as opt}
-                    <option value={opt}>{opt}</option>
-                  {/each}
-                </select>
+                  <Select.Trigger
+                    class="status-pill {book.status === 'Read' ? 'read' : book.status === 'Reading' ? 'reading' : ''}"
+                    aria-label="Status for {book.title}"
+                  >
+                    <span>{book.status}</span>
+                  </Select.Trigger>
+                  <Select.Portal>
+                    <Select.Content class="status-select-content" data-slop-export="hide">
+                      <Select.Viewport>
+                        {#each STATUS_OPTIONS as opt}
+                          <Select.Item value={opt} label={opt} class="status-select-item">
+                            {#snippet children({ selected })}
+                              <span>{opt}</span>
+                              {#if selected}<Check size={12} />{/if}
+                            {/snippet}
+                          </Select.Item>
+                        {/each}
+                      </Select.Viewport>
+                    </Select.Content>
+                  </Select.Portal>
+                </Select.Root>
               </td>
               <td data-slop-export="hide">
                 <button

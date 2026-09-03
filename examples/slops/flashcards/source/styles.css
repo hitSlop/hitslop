@@ -86,9 +86,39 @@ button { cursor: pointer; border: 0; background: transparent; padding: 0; }
   letter-spacing: 0.02em;
 }
 .box-tab strong { font-size: 14px; }
+.box-tab[data-state="active"],
 .box-tab.active {
   background: var(--card);
   color: var(--ink);
+}
+
+.deck-select-content {
+  background: var(--card, #fffdf8);
+  border: 1px solid var(--card-line, #c8bead);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+  outline: none;
+}
+
+.deck-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  color: var(--ink, #2d241e);
+}
+
+.deck-select-item:hover,
+.deck-select-item[data-highlighted] {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .study-well { min-height: 0; }

@@ -39,12 +39,24 @@ and PDF behavior.
   reflow to simply hiding features.
 - Keep focus visible, labels concise, numbers tabular, contrast accessible, and
   motion respectful of `prefers-reduced-motion`.
-- Prefer direct editing and progressive disclosure. Use native HTML or Bits UI
-  only when its interaction matches the job.
+- Prefer direct editing and progressive disclosure. When interactive controls are
+  needed (dialogs, dropdowns, selects, sliders, segmented tabs, checkboxes, calendars,
+  popovers, tooltips), always use Bits UI headless primitives (`bits-ui`). Never home-make
+  custom modal overlays, focus traps, or range hacks. Read [references/bits-ui-styling.md](references/bits-ui-styling.md).
+- Style Bits UI primitives via data attributes (`[data-dialog-overlay]`, `[data-select-trigger]`,
+  `[data-slider-track]`, `[data-state="checked"]`) and CSS custom properties
+  (`--slop-surface`, `--slop-accent`, `--slop-ink`). This ensures each slop retains its
+  authentic physical personality (Paper, Instrument, Skin) while remaining effortless
+  to restyle or re-theme at runtime.
+- In new Svelte projects, keep structural styles in Vanilla Extract `.css.ts`
+  files and bind public `--slop-*` variables with `createGlobalThemeContract`.
+  Keep the plain default values in `assets/theme.css`; do not compile the owner-editable
+  theme surface into generated class names.
 - Mark editing-only UI with `data-slop-export="hide"`; keep exportable content
   in normal flow.
 - Make each slop purpose-specific. Shared SDK patterns must not make unrelated
   objects look like one reskinned dashboard.
 
-Runtime packages remain source-free: never ship skills, editable CSS,
-dependencies, build caches, or seed stores inside a `.slop`.
+Runtime packages remain source-free: never ship authoring skills, editable CSS,
+dependencies, build caches, or seed stores inside a `.slop`. The builder alone
+adds the canonical document skill.

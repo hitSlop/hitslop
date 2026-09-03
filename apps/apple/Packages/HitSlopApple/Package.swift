@@ -25,13 +25,13 @@ let package = Package(
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
                 .product(name: "DynamicJSON", package: "swift-dynamicjson"),
             ],
-            resources: [.copy("Resources/manifest.schema.json")],
+            resources: [.copy("Resources/manifest.schema.json"), .copy("Resources/hitslop-document.SKILL.md")],
             linkerSettings: [.linkedLibrary("sqlite3"), .linkedFramework("ImageIO")]
         ),
         .target(
             name: "HitSlopRuntime",
             dependencies: ["HitSlopCore"],
-            linkerSettings: [.linkedFramework("WebKit"), .linkedLibrary("sqlite3")]
+            linkerSettings: [.linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS])), .linkedLibrary("sqlite3")]
         ),
         .target(
             name: "HitSlopRegistry",

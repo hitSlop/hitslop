@@ -7,6 +7,11 @@
   import Clock from "@lucide/svelte/icons/clock";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import ChevronLeft from "@lucide/svelte/icons/chevron-left";
+  import ChevronRight from "@lucide/svelte/icons/chevron-right";
+  import CalendarIcon from "@lucide/svelte/icons/calendar";
+  import { CalendarDate, getLocalTimeZone, today as getTodayDate, type DateValue } from "@internationalized/date";
+  import { Tabs, Checkbox, Select, Popover, Calendar as CalendarPrimitive } from "bits-ui";
   import Icon from "./Icon.svelte";
   import type { Assignment, AssignmentCategory, AssignmentTrackerData, Course } from "./types";
 
@@ -117,6 +122,21 @@
   let draftCategory = $state<AssignmentCategory>("Homework");
   let draftDueDate = $state<string>(todayISO());
   let draftPoints = $state<number>(20);
+  let duePopoverOpen = $state(false);
+  const draftCalendarValue = $derived.by(() => {
+    try {
+      const [y, m, d] = draftDueDate.split("-").map(Number);
+      return new CalendarDate(y, m, d);
+    } catch {
+      return getTodayDate(getLocalTimeZone());
+    }
+  });
+
+  function onDraftDateSelect(date: DateValue | undefined): void {
+    if (!date) return;
+    draftDueDate = `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`;
+    duePopoverOpen = false;
+  }
 
   function getCourse(code: string): Course | undefined {
     return store.current.courses.find(c => c.code === code);
@@ -230,48 +250,47 @@
     </header>
 
     <!-- Filter Tabs -->
-    <nav class="filter-tabs" data-slop-export="hide">
-      <button
-        type="button"
-        class="tab-btn"
-        class:active={filterTab === "all"}
-        onclick={() => { filterTab = "all"; }}
-      >
-        All Active ({activeAssignments.length})
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        class:active={filterTab === "today"}
-        onclick={() => { filterTab = "today"; }}
-      >
-        Due Today ({dueTodayCount})
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        class:active={filterTab === "week"}
-        onclick={() => { filterTab = "week"; }}
-      >
-        This Week ({dueWeekCount})
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        class:active={filterTab === "done"}
-        onclick={() => { filterTab = "done"; }}
-      >
-        Completed ({completedAssignments.length})
-      </button>
-    </nav>
+    <Tabs.Root value={filterTab} onValueChange={(v) => { if (v) filterTab = v as any; }}>
+      <Tabs.List class="filter-tabs" data-slop-export="hide" aria-label="Filter assignments">
+        <Tabs.Trigger value="all" class="tab-btn {filterTab === 'all' ? 'active' : ''}">
+          All Active ({activeAssignments.length})
+        </Tabs.Trigger>
+        <Tabs.Trigger value="today" class="tab-btn {filterTab === 'today' ? 'active' : ''}">
+          Due Today ({dueTodayCount})
+        </Tabs.Trigger>
+        <Tabs.Trigger value="week" class="tab-btn {filterTab === 'week' ? 'active' : ''}">
+          This Week ({dueWeekCount})
+        </Tabs.Trigger>
+        <Tabs.Trigger value="done" class="tab-btn {filterTab === 'done' ? 'active' : ''}">
+          Completed ({completedAssignments.length})
+        </Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
 
     <!-- Quick Add Bar -->
     <form class="quick-add-bar" onsubmit={(e) => { e.preventDefault(); addAssignment(); }} data-slop-export="hide">
-      <select class="course-select" bind:value={draftCourse}>
-        {#each store.current.courses as c}
-          <option value={c.code}>{c.code} · {c.name}</option>
-        {/each}
-      </select>
+      <Select.Root
+        type="single"
+        bind:value={draftCourse}
+      >
+        <Select.Trigger class="course-select-trigger" aria-label="Course">
+          <span>{draftCourse}</span>
+        </Select.Trigger>
+        <Select.Portal>
+          <Select.Content class="assign-select-content" data-slop-export="hide">
+            <Select.Viewport>
+              {#each store.current.courses as c}
+                <Select.Item value={c.code} label={`${c.code} · ${c.name}`} class="assign-select-item">
+                  {#snippet children({ selected })}
+                    <span>{c.code} · {c.name}</span>
+                    {#if selected}<Check size={11} />{/if}
+                  {/snippet}
+                </Select.Item>
+              {/each}
+            </Select.Viewport>
+          </Select.Content>
+        </Select.Portal>
+      </Select.Root>
 
       <input
         class="title-input"
@@ -279,13 +298,78 @@
         bind:value={draftTitle}
       />
 
-      <select class="cat-select" bind:value={draftCategory}>
-        {#each CATEGORIES as cat}
-          <option value={cat}>{cat}</option>
-        {/each}
-      </select>
+      <Select.Root
+        type="single"
+        bind:value={draftCategory}
+      >
+        <Select.Trigger class="cat-select-trigger" aria-label="Category">
+          <span>{draftCategory}</span>
+        </Select.Trigger>
+        <Select.Portal>
+          <Select.Content class="assign-select-content" data-slop-export="hide">
+            <Select.Viewport>
+              {#each CATEGORIES as cat}
+                <Select.Item value={cat} label={cat} class="assign-select-item">
+                  {#snippet children({ selected })}
+                    <span>{cat}</span>
+                    {#if selected}<Check size={11} />{/if}
+                  {/snippet}
+                </Select.Item>
+              {/each}
+            </Select.Viewport>
+          </Select.Content>
+        </Select.Portal>
+      </Select.Root>
 
-      <input class="date-input" type="date" bind:value={draftDueDate} />
+      <Popover.Root bind:open={duePopoverOpen}>
+        <Popover.Trigger class="date-select-trigger" aria-label="Due date">
+          <CalendarIcon size={12} />
+          <span>{draftDueDate || "Due date"}</span>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content class="assign-calendar-popover" side="top" align="start" sideOffset={6} data-slop-export="hide">
+            <CalendarPrimitive.Root
+              type="single"
+              value={draftCalendarValue}
+              onValueChange={onDraftDateSelect}
+            >
+              {#snippet children({ months, weekdays })}
+                <CalendarPrimitive.Header class="slop-cal-header">
+                  <CalendarPrimitive.PrevButton class="slop-cal-nav" aria-label="Previous month">
+                    <ChevronLeft size={13} />
+                  </CalendarPrimitive.PrevButton>
+                  <CalendarPrimitive.Heading class="slop-cal-title" />
+                  <CalendarPrimitive.NextButton class="slop-cal-nav" aria-label="Next month">
+                    <ChevronRight size={13} />
+                  </CalendarPrimitive.NextButton>
+                </CalendarPrimitive.Header>
+                {#each months as month}
+                  <CalendarPrimitive.Grid class="slop-cal-grid">
+                    <CalendarPrimitive.GridHead>
+                      <CalendarPrimitive.GridRow class="slop-cal-row">
+                        {#each weekdays as day}
+                          <CalendarPrimitive.HeadCell class="slop-cal-head-cell">{day.slice(0, 2)}</CalendarPrimitive.HeadCell>
+                        {/each}
+                      </CalendarPrimitive.GridRow>
+                    </CalendarPrimitive.GridHead>
+                    <CalendarPrimitive.GridBody>
+                      {#each month.weeks as weekDates}
+                        <CalendarPrimitive.GridRow class="slop-cal-row">
+                          {#each weekDates as date}
+                            <CalendarPrimitive.Cell {date} month={month.value} class="slop-cal-cell">
+                              <CalendarPrimitive.Day class="slop-cal-day" />
+                            </CalendarPrimitive.Cell>
+                          {/each}
+                        </CalendarPrimitive.GridRow>
+                      {/each}
+                    </CalendarPrimitive.GridBody>
+                  </CalendarPrimitive.Grid>
+                {/each}
+              {/snippet}
+            </CalendarPrimitive.Root>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
 
       <div class="pts-wrapper">
         <input class="pts-input" type="number" bind:value={draftPoints} min="0" max="500" />
@@ -310,16 +394,16 @@
             {@const course = getCourse(item.courseCode)}
             {@const due = getRelativeDueInfo(item.dueDate)}
             <li class="assignment-item" class:done={item.completed}>
-              <button
-                type="button"
+              <Checkbox.Root
+                checked={item.completed}
+                onCheckedChange={() => toggleComplete(item.id)}
                 class="check-btn"
-                onclick={() => toggleComplete(item.id)}
-                title={item.completed ? "Mark incomplete" : "Mark completed"}
+                aria-label={item.completed ? "Mark incomplete" : "Mark completed"}
               >
                 <div class="check-box" class:checked={item.completed}>
                   {#if item.completed}<Check size={12} />{/if}
                 </div>
-              </button>
+              </Checkbox.Root>
 
               <div class="item-body">
                 <div class="item-top">

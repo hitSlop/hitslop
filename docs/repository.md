@@ -8,7 +8,7 @@
 | `apps/apple/Packages/HitSlopApple` | Shared Swift Core, Runtime, Registry, Host, Catalog, and native CLI |
 | `apps/catalog` | TanStack Start catalog and Cloudflare R2 gateway |
 | `apps/registry` | Convex publishers, templates, releases, and creation counts |
-| `packages/cli` | Authoring, development bridge, build, capture, identity, install, publish |
+| `packages/cli` | Authoring, browser preview fake, build, capture, identity, register, publish |
 | `packages/runtime` | Framework-neutral host API and adapter building blocks |
 | `packages/svelte` | Svelte 5 state adapters |
 | `packages/react` | React hooks |
@@ -38,6 +38,7 @@ bun run check
 bun run test
 bun run build
 bun run release:check
+ bun run examples:check
 
 bun slop dev examples/slops/invoice
 bun slop build examples/slops/invoice

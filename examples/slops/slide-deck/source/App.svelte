@@ -7,6 +7,7 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import X from "@lucide/svelte/icons/x";
+  import { Dialog } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type SlideLayout = "title" | "split" | "metric" | "quote" | "cards";
@@ -455,93 +456,95 @@
   </article>
 
   <!-- Presenter Mode Fullscreen Overlay -->
-  {#if isPresenting}
-    <div class="presenter-overlay" data-theme={doc.current.theme} aria-modal="true">
-      <div class="presenter-slide-scaler">
-        <div class="slide-canvas-frame" style="max-width: 100%; height: 100%;">
-          {#if currentSlide?.layout === "title"}
-            <div class="layout-title-view">
-              <span class="title-tag-input">{currentSlide.tag}</span>
-              <h1 class="title-hero-input">{currentSlide.title}</h1>
-              <p class="title-sub-input">{currentSlide.subtitle}</p>
-            </div>
-          {:else if currentSlide?.layout === "split"}
-            <div class="layout-split-view">
-              <h2 class="slide-heading-input">{currentSlide.title}</h2>
-              <div class="split-columns">
-                <div class="bullets-list">
-                  {#each currentSlide.points || [] as pt}
-                    <div class="bullet-item-input">{pt}</div>
+  <Dialog.Root bind:open={isPresenting}>
+    <Dialog.Portal>
+      <Dialog.Content class="presenter-overlay" data-theme={doc.current.theme} aria-label="Presenter Mode">
+        <Dialog.Title class="sr-only">Presenter Mode</Dialog.Title>
+        <div class="presenter-slide-scaler">
+          <div class="slide-canvas-frame" style="max-width: 100%; height: 100%;">
+            {#if currentSlide?.layout === "title"}
+              <div class="layout-title-view">
+                <span class="title-tag-input">{currentSlide.tag}</span>
+                <h1 class="title-hero-input">{currentSlide.title}</h1>
+                <p class="title-sub-input">{currentSlide.subtitle}</p>
+              </div>
+            {:else if currentSlide?.layout === "split"}
+              <div class="layout-split-view">
+                <h2 class="slide-heading-input">{currentSlide.title}</h2>
+                <div class="split-columns">
+                  <div class="bullets-list">
+                    {#each currentSlide.points || [] as pt}
+                      <div class="bullet-item-input">{pt}</div>
+                    {/each}
+                  </div>
+                  <div class="highlight-card">
+                    <span class="highlight-tag">{currentSlide.highlightLabel}</span>
+                    <div class="highlight-number">{currentSlide.highlightValue}</div>
+                    <div class="highlight-text">{currentSlide.highlightDesc}</div>
+                  </div>
+                </div>
+              </div>
+            {:else if currentSlide?.layout === "metric"}
+              <div class="layout-metric-view">
+                <span class="title-tag-input">{currentSlide.tag}</span>
+                <div class="giant-metric-input">{currentSlide.metricValue}</div>
+                <div class="metric-label-input">{currentSlide.metricLabel}</div>
+                <p class="title-sub-input" style="text-align: center;">{currentSlide.subtitle}</p>
+              </div>
+            {:else if currentSlide?.layout === "quote"}
+              <div class="layout-quote-view">
+                <blockquote class="quote-textarea">{currentSlide.quoteText}</blockquote>
+                <div class="quote-author-input">— {currentSlide.author}</div>
+              </div>
+            {:else if currentSlide?.layout === "cards"}
+              <div class="layout-cards-view">
+                <h2 class="slide-heading-input">{currentSlide.title}</h2>
+                <div class="cards-grid">
+                  {#each currentSlide.cards || [] as card}
+                    <div class="pillar-card">
+                      <h3 class="pillar-title-input">{card.title}</h3>
+                      <p class="pillar-desc-textarea">{card.desc}</p>
+                    </div>
                   {/each}
                 </div>
-                <div class="highlight-card">
-                  <span class="highlight-tag">{currentSlide.highlightLabel}</span>
-                  <div class="highlight-number">{currentSlide.highlightValue}</div>
-                  <div class="highlight-text">{currentSlide.highlightDesc}</div>
-                </div>
               </div>
-            </div>
-          {:else if currentSlide?.layout === "metric"}
-            <div class="layout-metric-view">
-              <span class="title-tag-input">{currentSlide.tag}</span>
-              <div class="giant-metric-input">{currentSlide.metricValue}</div>
-              <div class="metric-label-input">{currentSlide.metricLabel}</div>
-              <p class="title-sub-input" style="text-align: center;">{currentSlide.subtitle}</p>
-            </div>
-          {:else if currentSlide?.layout === "quote"}
-            <div class="layout-quote-view">
-              <blockquote class="quote-textarea">{currentSlide.quoteText}</blockquote>
-              <div class="quote-author-input">— {currentSlide.author}</div>
-            </div>
-          {:else if currentSlide?.layout === "cards"}
-            <div class="layout-cards-view">
-              <h2 class="slide-heading-input">{currentSlide.title}</h2>
-              <div class="cards-grid">
-                {#each currentSlide.cards || [] as card}
-                  <div class="pillar-card">
-                    <h3 class="pillar-title-input">{card.title}</h3>
-                    <p class="pillar-desc-textarea">{card.desc}</p>
-                  </div>
-                {/each}
-              </div>
-            </div>
-          {/if}
+            {/if}
+          </div>
         </div>
-      </div>
 
-      <!-- Floating Presenter HUD -->
-      <nav class="presenter-hud" aria-label="Presenter Controls">
-        <button
-          type="button"
-          class="hud-btn"
-          onclick={prevSlide}
-          disabled={doc.current.activeSlideIndex === 0}
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <span>{doc.current.activeSlideIndex + 1} / {doc.current.slides.length}</span>
-        <button
-          type="button"
-          class="hud-btn"
-          onclick={nextSlide}
-          disabled={doc.current.activeSlideIndex === doc.current.slides.length - 1}
-        >
-          <ChevronRight size={16} />
-        </button>
-        <span style="opacity: 0.4;">|</span>
-        <span>⏱ {formattedTimer}</span>
-        <span style="opacity: 0.4;">|</span>
-        <button
-          type="button"
-          class="hud-btn"
-          title="Exit Presenter (Esc)"
-          onclick={stopPresenting}
-        >
-          <X size={16} />
-        </button>
-      </nav>
-    </div>
-  {/if}
+        <!-- Floating Presenter HUD -->
+        <nav class="presenter-hud" aria-label="Presenter Controls">
+          <button
+            type="button"
+            class="hud-btn"
+            onclick={prevSlide}
+            disabled={doc.current.activeSlideIndex === 0}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span>{doc.current.activeSlideIndex + 1} / {doc.current.slides.length}</span>
+          <button
+            type="button"
+            class="hud-btn"
+            onclick={nextSlide}
+            disabled={doc.current.activeSlideIndex === doc.current.slides.length - 1}
+          >
+            <ChevronRight size={16} />
+          </button>
+          <span style="opacity: 0.4;">|</span>
+          <span>⏱ {formattedTimer}</span>
+          <span style="opacity: 0.4;">|</span>
+          <Dialog.Close
+            class="hud-btn"
+            title="Exit Presenter (Esc)"
+            onclick={stopPresenting}
+          >
+            <X size={16} />
+          </Dialog.Close>
+        </nav>
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
 </main>
 
 {#if capture.isRenderer()}

@@ -34,7 +34,7 @@ public struct SlopPackage: Sendable {
         guard fileManager.fileExists(atPath: entryURL.path) else { throw SlopPackageError.missing("app.html") }
         guard String(data: try Data(contentsOf: entryURL), encoding: .utf8) != nil else { throw SlopPackageError.invalid("app.html must be UTF-8") }
         let topLevel = try fileManager.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
-        let allowedTopLevel = Set(["manifest.json", "app.html", "assets", "stores", "QuickLook", "Icon\r"])
+        let allowedTopLevel = Set(["manifest.json", "app.html", "assets", "stores", "QuickLook", ".agents", "Icon\r", "data.schema.json"])
         if let unknown = topLevel.first(where: { !allowedTopLevel.contains($0.lastPathComponent) }) { throw SlopPackageError.invalid("unexpected runtime entry \(unknown.lastPathComponent)") }
         let forbidden = Set(["package.json", "bun.lock", "bun.lockb", "node_modules", "source", "src", "build", "document.json", ".build", ".hitslop", "style.css"])
         if let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: [.isSymbolicLinkKey]) {
@@ -44,6 +44,8 @@ public struct SlopPackage: Sendable {
             }
         }
         try validateStores()
+        try validateSchemaMetadata()
+        try validateDocumentSkill()
         try validateQuickLook()
         _ = try skinURL()
     }
@@ -55,6 +57,7 @@ public struct SlopPackage: Sendable {
     public var jsonStoreURL: URL { storesURL.appendingPathComponent("data.json") }
     public var sqliteStoreURL: URL { storesURL.appendingPathComponent("data.sqlite") }
     public var mediaStoresURL: URL { storesURL.appendingPathComponent("media", isDirectory: true) }
+    public var themeOverrideURL: URL { storesURL.appendingPathComponent("theme.css") }
     public var isSkinned: Bool { manifest.presentation.skin != nil }
     public var usesTransparentBackground: Bool { isSkinned || manifest.presentation.background == .transparent }
     public var isResizable: Bool { isSkinned ? false : manifest.presentation.resizable ?? true }
@@ -110,6 +113,13 @@ public struct SlopPackage: Sendable {
         return url
     }
 
+    public static func canonicalDocumentSkillData() throws -> Data {
+        guard let url = Bundle.module.url(forResource: "hitslop-document.SKILL", withExtension: "md") else {
+            throw SlopPackageError.invalid("bundled document skill is missing")
+        }
+        return try Data(contentsOf: url)
+    }
+
     public func assetURL(path: String) throws -> URL {
         let relative = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard relative.hasPrefix("assets/") else { throw SlopPackageError.invalid("resource is not guest-readable: \(path)") }
@@ -129,7 +139,7 @@ public struct SlopPackage: Sendable {
     private func validateStores() throws {
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: storesURL.path) else { return }
-        let allowed = Set(["data.json", "data.sqlite", "data.sqlite-wal", "data.sqlite-shm", "media"])
+        let allowed = Set(["data.json", "data.sqlite", "data.sqlite-wal", "data.sqlite-shm", "media", "theme.css"])
         for url in try fileManager.contentsOfDirectory(at: storesURL, includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey]) {
             guard allowed.contains(url.lastPathComponent) else { throw SlopPackageError.invalid("unexpected store file \(url.lastPathComponent)") }
             let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
@@ -141,6 +151,57 @@ public struct SlopPackage: Sendable {
             }
         }
         if fileManager.fileExists(atPath: jsonStoreURL.path) { _ = try JSONSerialization.jsonObject(with: Data(contentsOf: jsonStoreURL), options: [.fragmentsAllowed]) }
+        if fileManager.fileExists(atPath: themeOverrideURL.path), String(data: try Data(contentsOf: themeOverrideURL), encoding: .utf8) == nil {
+            throw SlopPackageError.invalid("stores/theme.css must be UTF-8")
+        }
+    }
+
+    private func validateSchemaMetadata() throws {
+        let fileManager = FileManager.default
+        for name in ["data.schema.json"] {
+            let url = rootURL.appendingPathComponent(name)
+            guard fileManager.fileExists(atPath: url.path) else { continue }
+            let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("\(name) must be a regular file") }
+            let data = try Data(contentsOf: url)
+            guard String(data: data, encoding: .utf8) != nil else { throw SlopPackageError.invalid("\(name) must be UTF-8") }
+            _ = try JSONSerialization.jsonObject(with: data)
+        }
+    }
+
+    private func validateDocumentSkill() throws {
+        let fileManager = FileManager.default
+        let agents = rootURL.appendingPathComponent(".agents", isDirectory: true)
+        guard fileManager.fileExists(atPath: agents.path) else { throw SlopPackageError.missing(".agents/skills/hitslop-document/SKILL.md") }
+        let skills = agents.appendingPathComponent("skills", isDirectory: true)
+        let folder = skills.appendingPathComponent("hitslop-document", isDirectory: true)
+        let skill = folder.appendingPathComponent("SKILL.md")
+        try requireDirectory(agents, allowed: ["skills"], label: ".agents")
+        try requireDirectory(skills, allowed: ["hitslop-document"], label: ".agents/skills")
+        try requireDirectory(folder, allowed: ["SKILL.md", "references"], label: ".agents/skills/hitslop-document")
+        let values = try skill.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard values.isRegularFile == true, values.isSymbolicLink != true,
+              try Data(contentsOf: skill) == Self.canonicalDocumentSkillData() else {
+            throw SlopPackageError.invalid(".agents/skills/hitslop-document/SKILL.md is not a recognized canonical document skill")
+        }
+        let references = folder.appendingPathComponent("references", isDirectory: true)
+        guard fileManager.fileExists(atPath: references.path) else { return }
+        try requireDirectory(references, allowed: ["app-guide.md"], label: ".agents/skills/hitslop-document/references")
+        let guide = references.appendingPathComponent("app-guide.md")
+        let guideValues = try guide.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        guard guideValues.isRegularFile == true, guideValues.isSymbolicLink != true,
+              (guideValues.fileSize ?? 0) <= 32 * 1024,
+              String(data: try Data(contentsOf: guide), encoding: .utf8) != nil else {
+            throw SlopPackageError.invalid("document app guide must be a UTF-8 Markdown file no larger than 32 KiB")
+        }
+    }
+
+    private func requireDirectory(_ url: URL, allowed: Set<String>, label: String) throws {
+        let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+        guard values.isDirectory == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("\(label) must be a directory") }
+        for child in try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) where !allowed.contains(child.lastPathComponent) {
+            throw SlopPackageError.invalid("\(label) cannot contain \(child.lastPathComponent)")
+        }
     }
 
     private func validateQuickLook() throws {

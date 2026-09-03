@@ -349,7 +349,7 @@ button:focus-visible {
 
 /* Stats Modal / Sheet */
 .modal-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(10, 12, 16, 0.85);
   backdrop-filter: blur(4px);
@@ -361,7 +361,11 @@ button:focus-visible {
 }
 
 .stats-card {
-  width: 100%;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 32px);
   max-width: 380px;
   background: #1a202c;
   border: 1px solid var(--chassis-border);
@@ -371,6 +375,8 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  z-index: 101;
+  outline: none;
 }
 
 .stats-header {
@@ -379,7 +385,8 @@ button:focus-visible {
   justify-content: space-between;
 }
 
-.stats-header h2 {
+.stats-header h2,
+.stats-header [data-dialog-title] {
   margin: 0;
   font-size: 16px;
   font-weight: 800;

@@ -8,6 +8,7 @@
   import Sparkles from "@lucide/svelte/icons/sparkles";
   import Target from "@lucide/svelte/icons/target";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Slider, Tabs } from "bits-ui";
   import Icon from "./Icon.svelte";
   import type { CategoryWeight, CourseGrade, GradeCalculatorData } from "./types";
 
@@ -247,28 +248,31 @@
           </button>
         </div>
 
-        <div class="courses-nav">
-          {#each store.current.courses as course (course.id)}
-            {@const m = calculateCourseMetrics(course)}
-            <button
-              type="button"
-              class="course-nav-item"
-              class:active={course.id === selectedCourseId}
-              onclick={() => { selectedCourseId = course.id; }}
-            >
-              <div class="course-nav-left">
-                <span class="course-code">{course.code}</span>
-                <span class="course-title">{course.name}</span>
-              </div>
-              <div class="course-nav-right">
-                <span class="grade-badge" style="background-color: {m.currentGrade.color};">
-                  {m.currentGrade.letter}
-                </span>
-                <span class="avg-pct">{m.currentAverage.toFixed(1)}%</span>
-              </div>
-            </button>
-          {/each}
-        </div>
+        <Tabs.Root
+          value={selectedCourseId}
+          onValueChange={(v) => { if (v) selectedCourseId = v; }}
+        >
+          <Tabs.List class="courses-nav" aria-label="Courses">
+            {#each store.current.courses as course (course.id)}
+              {@const m = calculateCourseMetrics(course)}
+              <Tabs.Trigger
+                value={course.id}
+                class="course-nav-item {course.id === selectedCourseId ? 'active' : ''}"
+              >
+                <div class="course-nav-left">
+                  <span class="course-code">{course.code}</span>
+                  <span class="course-title">{course.name}</span>
+                </div>
+                <div class="course-nav-right">
+                  <span class="grade-badge" style="background-color: {m.currentGrade.color};">
+                    {m.currentGrade.letter}
+                  </span>
+                  <span class="avg-pct">{m.currentAverage.toFixed(1)}%</span>
+                </div>
+              </Tabs.Trigger>
+            {/each}
+          </Tabs.List>
+        </Tabs.Root>
       </aside>
 
       <!-- Course Detail & Target Solver -->
@@ -389,14 +393,24 @@
               <!-- Target Slider -->
               <div class="target-controller">
                 <span class="target-lbl">Target Grade:</span>
-                <input
-                  type="range"
-                  min="70"
-                  max="98"
-                  step="1"
+                <Slider.Root
+                  type="single"
                   bind:value={selectedCourse.targetPercent}
-                  class="target-slider"
-                />
+                  min={70}
+                  max={98}
+                  step={1}
+                  class="target-slider-root"
+                  aria-label="Target Grade"
+                >
+                  {#snippet children({ thumbs })}
+                    <span class="target-slider-track">
+                      <Slider.Range class="target-slider-range" />
+                    </span>
+                    {#each thumbs as index}
+                      <Slider.Thumb {index} class="target-slider-thumb" aria-label="Target percent" />
+                    {/each}
+                  {/snippet}
+                </Slider.Root>
                 <span class="target-val">{selectedCourse.targetPercent}% ({percentToGradeLetter(selectedCourse.targetPercent).letter})</span>
               </div>
             </div>
@@ -626,7 +640,7 @@
 
   .add-course-btn:hover { color: #2b593f; }
 
-  .courses-nav {
+  :global(.courses-nav) {
     flex: 1;
     overflow-y: auto;
     display: flex;
@@ -634,7 +648,7 @@
     gap: 4px;
   }
 
-  .course-nav-item {
+  :global(.course-nav-item) {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -647,7 +661,8 @@
     transition: all 0.15s ease;
   }
 
-  .course-nav-item.active {
+  :global(.course-nav-item.active),
+  :global(.course-nav-item[data-state="active"]) {
     border-color: var(--ink);
     background: #f5ede0;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -928,7 +943,38 @@
   }
 
   .target-lbl { color: var(--ink-muted); }
-  .target-slider { width: 90px; cursor: pointer; }
+  :global(.target-slider-root) {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 90px;
+    height: 16px;
+    touch-action: none;
+    user-select: none;
+  }
+  :global(.target-slider-track) {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  :global(.target-slider-range) {
+    position: absolute;
+    height: 100%;
+    background: var(--blue-accent);
+  }
+  :global(.target-slider-thumb) {
+    display: block;
+    width: 12px;
+    height: 12px;
+    background: var(--blue-accent);
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    cursor: grab;
+    outline: none;
+  }
   .target-val { font-weight: 800; font-family: monospace; color: var(--ink); }
 
   .solver-result-banner {

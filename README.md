@@ -10,7 +10,6 @@ durable JSON, SQLite, named media, previews, export, and native window behavior.
 <p align="center">
   <img src="examples/slops/invoice/screenshots/preview.png" width="30%" alt="Invoice slop">
   <img src="examples/slops/focus-timer/screenshots/preview.png" width="30%" alt="Focus Timer slop">
-  <img src="examples/slops/random-picker/screenshots/preview.png" width="30%" alt="Random Picker slop">
 </p>
 
 A slop can feel like **paper** (invoice, recipe, résumé), an **instrument**
@@ -46,7 +45,7 @@ cd my-tiny-app
 bun install
 bun run dev
 bun run build
-bun run install
+bun run register
 # when it is ready for the public catalog:
 bun run publish
 ```
@@ -90,7 +89,7 @@ any combination, or none. See [Package format](docs/package-format.md) and
   publish/download gateway.
 - `apps/registry` — Convex metadata for publishers, templates, releases, and
   aggregate creation counts.
-- `packages/cli` — create, validate, preview, build, install, sign, and publish.
+- `packages/cli` — create, validate, preview, build, register, sign, and publish.
 - `packages/runtime` — the framework-neutral browser bridge.
 - `packages/svelte` and `packages/react` — reactive adapters.
 - `packages/schema` — authoritative Zod schemas and generated Swift/JSON
@@ -108,9 +107,11 @@ bun install
 bun run release:check
 ```
 
-That release gate checks generated schemas, TypeScript/Svelte, tests, builds,
-package contents, documentation links, tracked-file hygiene, and the Swift
-package. If you are changing Zod, run `bun run schema:generate` first.
+That first-launch gate checks generated schemas, the public TypeScript/Svelte
+packages, clean-room npm tarballs, catalog package ingestion, documentation and
+tracked-file hygiene, and the Swift package. Older examples have the separate
+`bun run examples:check` gate while they are intentionally converted to v1. If
+you are changing Zod, run `bun run schema:generate` first.
 
 Start with the [documentation map](docs/README.md), then read
 [Architecture](docs/architecture.md), [Repository guide](docs/repository.md),

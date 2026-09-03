@@ -3,6 +3,7 @@
   import { jsonStore } from "@hitslop/svelte";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Checkbox, Progress } from "bits-ui";
   import Icon from "./Icon.svelte";
   import { onDestroy } from "svelte";
 
@@ -137,11 +138,11 @@
       <ul class="milestones-list">
         {#each doc.current.milestones as item (item.id)}
           <li class="milestone-item" class:done={item.done}>
-            <input
-              type="checkbox"
+            <Checkbox.Root
+              checked={item.done}
+              onCheckedChange={(c) => { item.done = !!c; }}
               class="milestone-check"
               aria-label="Mark milestone complete"
-              bind:checked={item.done}
             />
             <div class="milestone-info">
               <input
@@ -171,9 +172,14 @@
     <!-- Progress Footer -->
     <footer class="capsule-footer">
       <span>{completedCount} of {totalCount} completed</span>
-      <div class="progress-track">
+      <Progress.Root
+        value={percentComplete}
+        max={100}
+        class="progress-track"
+        aria-label="Milestone completion"
+      >
         <div class="progress-bar" style="width: {percentComplete}%;"></div>
-      </div>
+      </Progress.Root>
       <span>{percentComplete}%</span>
     </footer>
   </article>

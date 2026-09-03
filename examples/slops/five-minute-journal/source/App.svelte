@@ -6,6 +6,7 @@
   import Check from "@lucide/svelte/icons/check";
   import Sparkles from "@lucide/svelte/icons/sparkles";
   import BookOpen from "@lucide/svelte/icons/book-open";
+  import { Tabs, Checkbox } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type FiveMinuteData = {
@@ -59,32 +60,16 @@
   <header class="journal-header">
     <div class="header-stamp-row">
       <span class="heritage-text">THE FIVE MINUTE JOURNAL • DAILY RECORD</span>
-      <div class="view-toggles" data-slop-export="hide">
-        <button
-          type="button"
-          class="toggle-btn"
-          class:active={activeView === "all"}
-          onclick={() => { activeView = "all"; }}
-        >
-          Full Day
-        </button>
-        <button
-          type="button"
-          class="toggle-btn"
-          class:active={activeView === "am"}
-          onclick={() => { activeView = "am"; }}
-        >
-          <Sun size={11} /> AM
-        </button>
-        <button
-          type="button"
-          class="toggle-btn"
-          class:active={activeView === "pm"}
-          onclick={() => { activeView = "pm"; }}
-        >
-          <Moon size={11} /> PM
-        </button>
-      </div>
+      <Tabs.Root
+        value={activeView}
+        onValueChange={(v) => { if (v === "all" || v === "am" || v === "pm") activeView = v; }}
+      >
+        <Tabs.List class="view-toggles" data-slop-export="hide" aria-label="Journal View">
+          <Tabs.Trigger value="all" class="toggle-btn">Full Day</Tabs.Trigger>
+          <Tabs.Trigger value="am" class="toggle-btn"><Sun size={11} /> AM</Tabs.Trigger>
+          <Tabs.Trigger value="pm" class="toggle-btn"><Moon size={11} /> PM</Tabs.Trigger>
+        </Tabs.List>
+      </Tabs.Root>
     </div>
 
     <!-- Daily Date -->
@@ -112,19 +97,21 @@
           <Sun size={15} class="section-icon sun-icon" />
           <h2 class="section-heading">Morning Routine</h2>
         </div>
-        <button
-          type="button"
+        <Checkbox.Root
+          checked={store.current.morningDone}
+          onCheckedChange={(c) => { store.current.morningDone = !!c; }}
           class="complete-pill"
-          class:is-checked={store.current.morningDone}
-          onclick={() => { store.current.morningDone = !store.current.morningDone; }}
           data-slop-export="hide"
+          aria-label="Toggle morning routine completion"
         >
-          {#if store.current.morningDone}
-            <Check size={11} strokeWidth={3} /> Morning Complete
-          {:else}
-            Mark AM Complete
-          {/if}
-        </button>
+          {#snippet children({ checked })}
+            {#if checked}
+              <Check size={11} strokeWidth={3} /> Morning Complete
+            {:else}
+              Mark AM Complete
+            {/if}
+          {/snippet}
+        </Checkbox.Root>
       </div>
 
       <!-- Question 1: Gratitudes -->
@@ -190,19 +177,21 @@
           <Moon size={15} class="section-icon moon-icon" />
           <h2 class="section-heading">Evening Reflection</h2>
         </div>
-        <button
-          type="button"
+        <Checkbox.Root
+          checked={store.current.eveningDone}
+          onCheckedChange={(c) => { store.current.eveningDone = !!c; }}
           class="complete-pill"
-          class:is-checked={store.current.eveningDone}
-          onclick={() => { store.current.eveningDone = !store.current.eveningDone; }}
           data-slop-export="hide"
+          aria-label="Toggle evening reflection completion"
         >
-          {#if store.current.eveningDone}
-            <Check size={11} strokeWidth={3} /> Evening Complete
-          {:else}
-            Mark PM Complete
-          {/if}
-        </button>
+          {#snippet children({ checked })}
+            {#if checked}
+              <Check size={11} strokeWidth={3} /> Evening Complete
+            {:else}
+              Mark PM Complete
+            {/if}
+          {/snippet}
+        </Checkbox.Root>
       </div>
 
       <!-- Question 4: 3 Amazing things that happened today -->

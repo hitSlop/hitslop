@@ -102,14 +102,16 @@ public extension SlopRuntimeSessionDelegate {
     private let package: SlopPackage
     private let jsonStore: SlopJSONStore
     private let mediaStore: SlopMediaStore
+    private let themeStore: SlopThemeStore
     private var sqliteStore: SlopDatabase?
 
-    init(package: SlopPackage) { self.package = package; jsonStore = SlopJSONStore(url: package.jsonStoreURL); mediaStore = SlopMediaStore(directoryURL: package.mediaStoresURL) }
+    init(package: SlopPackage) { self.package = package; jsonStore = SlopJSONStore(url: package.jsonStoreURL); mediaStore = SlopMediaStore(directoryURL: package.mediaStoresURL); themeStore = SlopThemeStore(url: package.themeOverrideURL) }
     func close() { sqliteStore?.close() }
     func checkpoint() { sqliteStore?.checkpoint() }
     func sqliteVersion() -> Int64? { try? sqliteStore?.dataVersion() }
     func jsonRevision() -> String? { try? jsonStore.revision() }
     func mediaRevision() -> String? { try? mediaStore.directoryRevision() }
+    func themeRevision() -> String? { try? themeStore.revision() }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
         guard let body = message.body as? [String: Any], let method = body["method"] as? String else { replyHandler(nil, "Malformed host request"); return }
@@ -205,6 +207,10 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
     private func resource(for url: URL) throws -> (data: Data, mime: String) {
         if ["", "/", "/index.html"].contains(url.path) { return (try Data(contentsOf: package.entryURL), "text/html; charset=utf-8") }
+        if url.path == "/theme.css" {
+            guard FileManager.default.fileExists(atPath: package.themeOverrideURL.path) else { return (Data(), "text/css; charset=utf-8") }
+            return (try Data(contentsOf: package.themeOverrideURL), "text/css; charset=utf-8")
+        }
         if url.path.hasPrefix("/media/") {
             let name = String(url.path.dropFirst("/media/".count)).removingPercentEncoding ?? ""
             let resource = try package.mediaURL(name: name)
@@ -230,7 +236,11 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     public private(set) var isReady = false
     private let bridge: SlopBridge
     private let schemeHandler: SlopSchemeHandler
-    private var timer: Timer?, sqliteVersion: Int64?, jsonRevision: String?, mediaRevision: String?, sequence = 0, retryCount = 0, closed = false, lastError: Error?
+    private var timer: Timer?, sqliteVersion: Int64?, jsonRevision: String?, mediaRevision: String?, themeRevision: String?, sequence = 0, retryCount = 0, closed = false, lastError: Error?
+    private var refreshTask: Task<Void, Never>?
+    #if os(macOS)
+    private var packageWatcher: SlopPackageWatcher?
+    #endif
 
     public init(packageURL: URL, renderTargetsEnabled: Bool = false) throws {
         let package = try SlopPackage(rootURL: packageURL); self.package = package
@@ -259,18 +269,32 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         if #available(iOS 16.4, *) { webView.isInspectable = true }
         #endif
-        sqliteVersion = bridge.sqliteVersion(); jsonRevision = bridge.jsonRevision(); mediaRevision = bridge.mediaRevision()
+        sqliteVersion = bridge.sqliteVersion(); jsonRevision = bridge.jsonRevision(); mediaRevision = bridge.mediaRevision(); themeRevision = bridge.themeRevision()
         super.init(); bridge.session = self; webView.navigationDelegate = self
         #if os(macOS)
         webView.uiDelegate = self
+        packageWatcher = SlopPackageWatcher(packageURL: package.rootURL) { [weak self] in
+            Task { @MainActor [weak self] in self?.scheduleExternalRefresh() }
+        }
+        #else
+        timer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.refreshExternalState() } }
         #endif
-        timer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.poll() } }
     }
 
     public func load() { isReady = false; webView.load(URLRequest(url: URL(string: "slop://app/")!)) }
     public func reload() { isReady = false; webView.reload() }
     public func checkpoint() { bridge.checkpoint() }
-    public func close() { guard !closed else { return }; closed = true; timer?.invalidate(); timer = nil; bridge.close(); webView.configuration.userContentController.removeScriptMessageHandler(forName: "hitslop", contentWorld: .page) }
+    public func close() {
+        guard !closed else { return }
+        closed = true
+        refreshTask?.cancel(); refreshTask = nil
+        timer?.invalidate(); timer = nil
+        #if os(macOS)
+        packageWatcher?.stop(); packageWatcher = nil
+        #endif
+        bridge.close()
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "hitslop", contentWorld: .page)
+    }
     public func waitUntilReady(timeout: Duration = .seconds(15)) async throws {
         if isReady { return }
         let clock = ContinuousClock(), deadline = clock.now.advanced(by: timeout)
@@ -282,7 +306,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     }
     fileprivate func bridgeDidBecomeReady() { guard !isReady else { return }; isReady = true; retryCount = 0; delegate?.runtimeSessionDidBecomeReady(self) }
     fileprivate func bridgeDidCommit(kind: SlopStoreKind, revision: String?) {
-        sqliteVersion = bridge.sqliteVersion(); jsonRevision = bridge.jsonRevision(); mediaRevision = bridge.mediaRevision(); emit(kind: kind, revision: revision, source: "app"); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
+        sqliteVersion = bridge.sqliteVersion(); jsonRevision = bridge.jsonRevision(); mediaRevision = bridge.mediaRevision(); themeRevision = bridge.themeRevision(); emit(kind: kind, revision: revision, source: "app"); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
     }
     fileprivate func bridgeDidRequestResize(_ size: CGSize) throws -> CGSize {
         guard let delegate else { throw SlopPackageError.invalid("the host does not support dynamic window sizing") }
@@ -301,10 +325,31 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         window.performDrag(with: event)
     }
     #endif
-    private func poll() {
+    private func scheduleExternalRefresh() {
+        refreshTask?.cancel()
+        refreshTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
+            self?.refreshExternalState()
+        }
+    }
+    private func refreshExternalState() {
         let nextJSON = bridge.jsonRevision(); if nextJSON != jsonRevision { jsonRevision = nextJSON; if nextJSON != nil { emit(kind: .json, revision: nextJSON, source: "external") } }
         let nextSQLite = bridge.sqliteVersion(); if nextSQLite != sqliteVersion { sqliteVersion = nextSQLite; if nextSQLite != nil { emit(kind: .sqlite, revision: nil, source: "external") } }
         let nextMedia = bridge.mediaRevision(); if nextMedia != mediaRevision { mediaRevision = nextMedia; emit(kind: .media, revision: nextMedia, source: "external") }
+        let nextTheme = bridge.themeRevision(); if nextTheme != themeRevision { themeRevision = nextTheme; reloadTheme(); onStoreCommit?() }
+    }
+    private func reloadTheme() {
+        let value = themeRevision ?? "default-\(Date().timeIntervalSince1970)"
+        webView.callAsyncJavaScript(#"""
+        const current = document.querySelector('link[data-hitslop-theme]');
+        if (!current) return;
+        const next = current.cloneNode();
+        next.href = 'theme.css?revision=' + encodeURIComponent(revision);
+        next.onload = () => current.remove();
+        next.onerror = () => next.remove();
+        current.after(next);
+        """#, arguments: ["revision": value], in: nil, in: .page) { _ in }
     }
     private func emit(kind: SlopStoreKind, revision: String?, source: String) {
         sequence += 1

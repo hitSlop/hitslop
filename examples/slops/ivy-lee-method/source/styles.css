@@ -223,6 +223,7 @@ body {
   flex-shrink: 0;
 }
 
+.toggle-btn[data-state="checked"],
 .toggle-btn.checked {
   background: var(--text-main);
   border-color: var(--text-main);

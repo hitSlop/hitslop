@@ -6,6 +6,7 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ArrowRight from "@lucide/svelte/icons/arrow-right";
   import CornerDownRight from "@lucide/svelte/icons/corner-down-right";
+  import { Checkbox } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Task = { id: string; text: string; done: boolean };
@@ -161,17 +162,18 @@
         <ul class="task-list" aria-label="{q.title} tasks">
           {#each store.current[q.key] as task (task.id)}
             <li class="task-item" class:is-done={task.done}>
-              <button
-                type="button"
+              <Checkbox.Root
+                checked={task.done}
+                onCheckedChange={() => toggleTask(q.key, task.id)}
                 class="check-button"
-                class:checked={task.done}
-                onclick={() => toggleTask(q.key, task.id)}
                 aria-label={task.done ? "Mark incomplete" : "Mark complete"}
               >
-                {#if task.done}
-                  <Check size={12} strokeWidth={3} />
-                {/if}
-              </button>
+                {#snippet children({ checked })}
+                  {#if checked}
+                    <Check size={12} strokeWidth={3} />
+                  {/if}
+                {/snippet}
+              </Checkbox.Root>
 
               <input
                 type="text"

@@ -5,6 +5,7 @@
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import Share2 from "@lucide/svelte/icons/share-2";
   import X from "@lucide/svelte/icons/x";
+  import { Dialog, Progress } from "bits-ui";
   import Icon from "./Icon.svelte";
   import {
     evaluateGuess,
@@ -370,19 +371,15 @@
   </footer>
 
   <!-- Stats Modal -->
-  {#if showStatsModal}
-    <div class="modal-overlay" data-slop-export="hide">
-      <div class="stats-card" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+  <Dialog.Root bind:open={showStatsModal}>
+    <Dialog.Portal>
+      <Dialog.Overlay class="modal-overlay" data-slop-export="hide" />
+      <Dialog.Content class="stats-card" aria-labelledby="stats-title" data-slop-export="hide">
         <div class="stats-header">
-          <h2 id="stats-title">STATISTICS</h2>
-          <button
-            type="button"
-            class="icon-btn"
-            aria-label="Close statistics"
-            onclick={() => (showStatsModal = false)}
-          >
+          <Dialog.Title id="stats-title">STATISTICS</Dialog.Title>
+          <Dialog.Close class="icon-btn" aria-label="Close statistics">
             <X size={16} />
-          </button>
+          </Dialog.Close>
         </div>
 
         <div class="stats-grid">
@@ -417,7 +414,11 @@
 
               <div class="dist-row">
                 <span class="dist-idx">{guessNum}</span>
-                <div class="dist-bar-track">
+                <Progress.Root
+                  class="dist-bar-track"
+                  value={count}
+                  max={maxCount}
+                >
                   <div
                     class="dist-bar"
                     class:highlight={isCurrentWinGuess}
@@ -425,7 +426,7 @@
                   >
                     {count}
                   </div>
-                </div>
+                </Progress.Root>
               </div>
             {/each}
           </div>
@@ -445,9 +446,9 @@
             </button>
           {/if}
         </div>
-      </div>
-    </div>
-  {/if}
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
 </main>
 
 {#if capture.isRenderer()}

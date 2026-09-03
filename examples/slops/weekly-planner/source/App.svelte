@@ -1,8 +1,10 @@
 <script lang="ts">
   import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
+  import Check from "@lucide/svelte/icons/check";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Checkbox } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Task = {
@@ -108,12 +110,18 @@
           <ul class="tasks-list">
             {#each doc.current.days[day] as task (task.id)}
               <li class="task-card" class:done={task.done}>
-                <input
-                  type="checkbox"
+                <Checkbox.Root
+                  checked={task.done}
+                  onCheckedChange={(c) => { task.done = !!c; }}
                   class="task-check"
                   aria-label="Mark {task.title} complete"
-                  bind:checked={task.done}
-                />
+                >
+                  {#snippet children({ checked })}
+                    {#if checked}
+                      <Check size={10} strokeWidth={3} />
+                    {/if}
+                  {/snippet}
+                </Checkbox.Root>
                 <div class="task-content">
                   <input
                     class="task-time-input"

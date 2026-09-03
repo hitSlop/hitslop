@@ -4,7 +4,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, useEffect, useRef, useState } from "react";
 import focusTimerPreview from "../../../../examples/slops/focus-timer/screenshots/preview.png";
 import invoicePreview from "../../../../examples/slops/invoice/screenshots/preview.png";
-import randomPickerPreview from "../../../../examples/slops/random-picker/screenshots/preview.png";
 import { api } from "../convex";
 
 const DOWNLOAD_URL = "https://github.com/hitslop/hitslop/releases/latest";
@@ -35,7 +34,6 @@ const categoryLabel = (id: string): string => categories.find(([value]) => value
 const featuredSlops = [
   { id: "focus", title: "Pomodoro", family: "Instrument", description: "A focused timer with local session history.", image: focusTimerPreview, alt: "Circular Pomodoro slop showing a 25 minute focus timer" },
   { id: "invoice", title: "Invoice", family: "Paper", description: "A precise document for line items, tax, and status.", image: invoicePreview, alt: "Invoice slop showing an invoice for Northwind Studio" },
-  { id: "picker", title: "Random Picker", family: "Instrument", description: "A playful capsule for making one small decision.", image: randomPickerPreview, alt: "Blue capsule-shaped Random Picker slop" },
 ] as const;
 
 const faqs = [
@@ -43,7 +41,7 @@ const faqs = [
   { question: "Where does my data live?", answer: "In the writable document on your Mac. A slop can create JSON, SQLite, and named media stores as it needs them. Published templates never include your personal stores." },
   { question: "Can an AI update a slop?", answer: "Yes. External tools can work with the same ordinary local JSON or SQLite data. The host watches for revisions so an open slop can follow external changes without sending the document to a hitSlop account." },
   { question: "Do slops work offline?", answer: "Local interfaces and stores do. A particular slop may still use the network when its purpose calls for it, such as streaming audio or fetching a public service." },
-  { question: "How do I make and share one?", answer: "The supported v1 authoring path is Bun and Svelte 5. The CLI creates, previews, validates, builds, installs, signs, and publishes a source-free runtime package." },
+  { question: "How do I make and share one?", answer: "The supported v1 authoring path is Bun and Svelte 5. The CLI creates, previews, validates, builds, registers, signs, and publishes a source-free runtime package." },
 ] as const;
 
 export const Route = createFileRoute("/")({ component: Catalog });

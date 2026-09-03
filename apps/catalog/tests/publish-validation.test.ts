@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { encode } from "fast-png";
 import { zipSync } from "fflate";
-import { manifestSchemaURL, parseManifest } from "@hitslop/schema";
+import { documentSkillContent, documentSkillPath, manifestSchemaURL, parseManifest } from "@hitslop/schema";
 import { inspectZip, safeArchivePath, validateSkin } from "../src/publish-validation";
 
 const bytes = (value: string): Uint8Array => new TextEncoder().encode(value);
@@ -14,7 +14,7 @@ test("archive path validation rejects traversal and platform-specific escapes", 
 });
 
 test("ZIP inspection accepts runtime paths and rejects unsafe or source paths", () => {
-  expect(() => inspectZip(zipSync({ "manifest.json": bytes("{}"), "app.html": bytes("ok"), "assets/icon.txt": bytes("ok") }))).not.toThrow();
+  expect(() => inspectZip(zipSync({ "manifest.json": bytes("{}"), "app.html": bytes("ok"), "data.schema.json": bytes("{}"), [documentSkillPath]: bytes(documentSkillContent), "assets/icon.txt": bytes("ok") }))).not.toThrow();
   expect(() => inspectZip(zipSync({ "../secret": bytes("no") }))).toThrow("Unsafe archive entry");
   expect(() => inspectZip(zipSync({ "source/App.svelte": bytes("no") }))).toThrow("Template packages cannot contain");
   expect(() => inspectZip(bytes("not a zip"))).toThrow("valid ZIP");

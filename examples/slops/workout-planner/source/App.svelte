@@ -3,6 +3,7 @@
   import { jsonStore } from "@hitslop/svelte";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import { Toggle, Progress } from "bits-ui";
   import Icon from "./Icon.svelte";
   import { onDestroy } from "svelte";
 
@@ -183,15 +184,14 @@
             <div class="sets-bubbles-row">
               <div class="bubbles-group" aria-label="Set bubbles">
                 {#each Array(ex.totalSets) as _, setIndex}
-                  <button
-                    type="button"
+                  <Toggle.Root
+                    pressed={setIndex < ex.completedSets}
+                    onPressedChange={() => toggleSet(ex, setIndex)}
                     class="set-bubble"
-                    class:done={setIndex < ex.completedSets}
                     aria-label="Set {setIndex + 1}"
-                    onclick={() => toggleSet(ex, setIndex)}
                   >
                     {setIndex + 1}
-                  </button>
+                  </Toggle.Root>
                 {/each}
               </div>
               <input
@@ -205,9 +205,14 @@
       </ul>
 
       <!-- LCD Progress Bar -->
-      <div class="lcd-progress-track">
+      <Progress.Root
+        value={percentComplete}
+        max={100}
+        class="lcd-progress-track"
+        aria-label="Workout completion"
+      >
         <div class="lcd-progress-fill" style="width: {percentComplete}%;"></div>
-      </div>
+      </Progress.Root>
     </section>
 
     <!-- Rest Timer Bar -->

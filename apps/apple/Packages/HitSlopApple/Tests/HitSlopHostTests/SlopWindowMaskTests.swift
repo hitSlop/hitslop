@@ -33,6 +33,7 @@ import Testing
     try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"transparent","title":"Transparent","description":"Tests transparent geometry.","categories":["utilities"],"presentation":{"width":240,"height":180,"background":"transparent"}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
+    try writeCanonicalDocumentSkill(to: root)
     let mask = try SlopWindowMask(package: SlopPackage(rootURL: root))
     let layer = CALayer()
     mask.installBacking(on: layer)
@@ -46,6 +47,7 @@ private func maskedFixture() throws -> URL {
     try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","categories":["utilities"],"presentation":{"width":240,"height":180,"skin":"assets/window-mask.png"}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
+    try writeCanonicalDocumentSkill(to: root)
 
     let width = 240, height = 180
     var pixels = [UInt8](repeating: 255, count: width * height * 4)
@@ -61,4 +63,10 @@ private func maskedFixture() throws -> URL {
     CGImageDestinationAddImage(destination, image, nil)
     guard CGImageDestinationFinalize(destination) else { throw SlopPackageError.invalid("could not write asymmetric test mask") }
     return root
+}
+
+private func writeCanonicalDocumentSkill(to root: URL) throws {
+    let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
+    try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
 }

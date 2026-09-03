@@ -101,6 +101,14 @@ enum SlopWorkingCopy {
                     try Data(contentsOf: source).write(to: target, options: .atomic)
                 }
             }
+            let sourceTheme = package.themeOverrideURL
+            let targetTheme = destination.appendingPathComponent("stores/theme.css")
+            if FileManager.default.fileExists(atPath: sourceTheme.path) {
+                try FileManager.default.createDirectory(at: targetTheme.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try Data(contentsOf: sourceTheme).write(to: targetTheme, options: .atomic)
+            } else if FileManager.default.fileExists(atPath: targetTheme.path) {
+                try FileManager.default.removeItem(at: targetTheme)
+            }
             let sourceMedia = package.mediaStoresURL
             if FileManager.default.fileExists(atPath: sourceMedia.path) {
                 let targetMedia = destination.appendingPathComponent("stores/media", isDirectory: true)

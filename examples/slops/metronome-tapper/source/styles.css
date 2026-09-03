@@ -192,10 +192,50 @@ button { cursor: pointer; border: 0; background: transparent; padding: 0; }
 }
 .preset-save { color: var(--brass); }
 .tempo-nudge-row { display: flex; align-items: center; gap: 4px; }
-.bpm-slider { flex: 1; height: 6px; accent-color: var(--brass); min-width: 60px; }
+.bpm-slider-root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  height: 20px;
+  min-width: 60px;
+  touch-action: none;
+  user-select: none;
+}
+.bpm-slider-track {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: #251e19;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bpm-slider-range {
+  position: absolute;
+  height: 100%;
+  background: var(--brass);
+}
+.bpm-slider-thumb {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: var(--brass);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  cursor: grab;
+  outline: none;
+}
+.bpm-slider-thumb:focus-visible {
+  box-shadow: 0 0 0 2px var(--brass-light);
+}
 .settings-row { display: flex; align-items: center; gap: 6px; }
 .time-sig-selector { display: flex; gap: 3px; }
 .sig-btn { padding: 4px 6px; color: var(--ink-muted); }
+.sig-btn[data-state="checked"] {
+  background: #3a2f26;
+  border-color: var(--brass);
+  color: var(--brass);
+}
 .volume-field {
   display: flex;
   align-items: center;
@@ -204,9 +244,43 @@ button { cursor: pointer; border: 0; background: transparent; padding: 0; }
   flex: 1;
   color: var(--brass);
 }
-.volume-field input { flex: 1; accent-color: var(--brass); min-width: 40px; }
+.volume-slider-root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  height: 20px;
+  min-width: 40px;
+  touch-action: none;
+  user-select: none;
+}
+.volume-slider-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: #251e19;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.volume-slider-range {
+  position: absolute;
+  height: 100%;
+  background: var(--brass);
+}
+.volume-slider-thumb {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: var(--brass);
+  border-radius: 50%;
+  cursor: grab;
+  outline: none;
+}
+.volume-slider-thumb:focus-visible {
+  box-shadow: 0 0 0 2px var(--brass-light);
+}
 .mute-toggle { padding: 5px 6px; letter-spacing: 0.06em; font-size: 10px; }
-.mute-toggle.muted { color: var(--glow-red); }
+.mute-toggle.muted, .mute-toggle[data-state="on"] { color: var(--glow-red); }
 
 .primary-actions { display: grid; grid-template-columns: 1fr 70px; gap: 8px; }
 .tap-tempo-btn {

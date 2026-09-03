@@ -7,6 +7,7 @@
   import Bookmark from "@lucide/svelte/icons/bookmark";
   import Calendar from "@lucide/svelte/icons/calendar";
   import List from "@lucide/svelte/icons/list";
+  import { Tabs, Toggle } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Signifier = "task" | "complete" | "migrated" | "scheduled" | "event" | "note";
@@ -115,24 +116,19 @@
 <main class="bujo-container">
   <!-- Bookmark Tab Ribbon Header -->
   <header class="bujo-header">
-    <div class="ribbon-strip" data-slop-export="hide">
-      <button
-        type="button"
-        class="tab-btn"
-        class:active={activeTab === "daily"}
-        onclick={() => { activeTab = "daily"; }}
-      >
-        <List size={12} /> Daily Rapid Log
-      </button>
-      <button
-        type="button"
-        class="tab-btn"
-        class:active={activeTab === "monthly"}
-        onclick={() => { activeTab = "monthly"; }}
-      >
-        <Calendar size={12} /> Monthly Index
-      </button>
-    </div>
+    <Tabs.Root
+      value={activeTab}
+      onValueChange={(v) => { if (v === "daily" || v === "monthly") activeTab = v; }}
+    >
+      <Tabs.List class="ribbon-strip" data-slop-export="hide" aria-label="Journal View">
+        <Tabs.Trigger value="daily" class="tab-btn">
+          <List size={12} /> Daily Rapid Log
+        </Tabs.Trigger>
+        <Tabs.Trigger value="monthly" class="tab-btn">
+          <Calendar size={12} /> Monthly Index
+        </Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
 
     <!-- Signifier Legend Pill -->
     <div class="signifier-legend" data-slop-export="hide">
@@ -217,15 +213,15 @@
           onsubmit={(e) => { e.preventDefault(); addEntry(); }}
         >
           <!-- Star Toggle for new item -->
-          <button
-            type="button"
+          <Toggle.Root
+            pressed={newEntryStar}
+            onPressedChange={(p) => { newEntryStar = p; }}
             class="star-toggle-btn"
-            class:active={newEntryStar}
-            onclick={() => { newEntryStar = !newEntryStar; }}
             title="Mark as Priority (*)"
+            aria-label="Mark as Priority"
           >
             <Star size={12} fill={newEntryStar ? "currentColor" : "none"} />
-          </button>
+          </Toggle.Root>
 
           <!-- Type Selector for new item -->
           <select class="type-select" bind:value={newEntryType} aria-label="Signifier type">

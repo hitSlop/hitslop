@@ -283,6 +283,35 @@ html, body {
   background: rgba(180, 83, 9, 0.08);
 }
 
+.status-select-content {
+  background: var(--card-bg, #fdfbf7);
+  border: 1px solid var(--card-rule-strong);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  outline: none;
+}
+
+.status-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+  outline: none;
+  color: var(--card-ink);
+}
+
+.status-select-item:hover,
+.status-select-item[data-highlighted] {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .delete-row-btn {
   background: transparent;
   border: none;

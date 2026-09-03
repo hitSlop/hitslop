@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PublishEnvelopeSchema, SlopManifestSchema, canonicalPublishEnvelope } from "@hitslop/schema";
 import { unzipSync } from "fflate";
 import { workerEnv } from "../server-env";
-import { validatePackagePath, validateStaticImages } from "../publish-package";
+import { validatePackageMetadata, validateStaticImages } from "../publish-package";
 import { inspectZip, validateSkin } from "../publish-validation";
 
 const MAX_MANIFEST_BYTES = 64 * 1024;
@@ -39,6 +39,7 @@ export const Route = createFileRoute("/api/publish")({ server: { handlers: { POS
     const zipped = new Uint8Array(artifactBytes);
     inspectZip(zipped);
     const unpacked = unzipSync(zipped);
+    validatePackageMetadata(unpacked);
     const manifestBytes = unpacked["manifest.json"];
     if (!manifestBytes || !unpacked["app.html"]) throw new Error("Artifact must contain manifest.json and app.html");
     if (manifestBytes.byteLength > MAX_MANIFEST_BYTES) throw new Error("manifest.json exceeds 64 KiB");

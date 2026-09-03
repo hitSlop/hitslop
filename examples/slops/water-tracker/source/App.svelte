@@ -2,6 +2,7 @@
   import { capture } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
+  import { Progress } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type DrinkLog = {
@@ -138,10 +139,11 @@
     </header>
 
     <!-- Liquid Vessel Chamber -->
-    <section
-      class="liquid-chamber"
-      class:celebration={percent >= 100}
-      aria-label="Liquid reservoir"
+    <Progress.Root
+      value={Math.min(percent, 100)}
+      max={100}
+      class="liquid-chamber {percent >= 100 ? 'celebration' : ''}"
+      aria-label="Liquid reservoir hydration progress"
     >
       <div
         class="liquid-body"
@@ -181,7 +183,7 @@
         <span class="intake-unit">{doc.current.unit}</span>
         <span class="intake-percent">{percent}% of daily goal</span>
       </div>
-    </section>
+    </Progress.Root>
 
     <!-- Quick Log Action Buttons -->
     <section class="quick-tap-grid" data-slop-export="hide" aria-label="Quick log drinks">

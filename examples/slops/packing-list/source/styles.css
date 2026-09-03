@@ -666,6 +666,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   transition: all 0.12s;
 }
 
+.custom-check[data-state="checked"],
 .item-row.packed .custom-check {
   background: #059669;
   border-color: #047857;
@@ -798,7 +799,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .presets-card {
-  width: 100%;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 32px);
   max-width: 440px;
   background: #ffffff;
   border-radius: 12px;
@@ -807,6 +812,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  z-index: 101;
+  outline: none;
 }
 
 .presets-header {
@@ -815,7 +822,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   justify-content: space-between;
 }
 
-.presets-header h3 {
+.presets-header h3,
+.presets-header [data-dialog-title] {
   margin: 0;
   font-size: 15px;
   font-weight: 800;

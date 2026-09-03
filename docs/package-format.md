@@ -11,10 +11,12 @@ A source project normally contains:
 my-app/
 ├── manifest.json
 ├── package.json
+├── schema.ts                    required when using Svelte jsonStore
+├── document-guide.md            optional app-specific agent guidance
 ├── index.html
 ├── vite.config.ts
 ├── src/
-└── public/assets/              optional immutable files
+└── assets/                      optional immutable runtime files
 ```
 
 It may also contain an `Icon.svelte` component and local
@@ -26,9 +28,15 @@ screenshots. It must not contain real document stores.
 my-app.slop/
 ├── manifest.json              immutable
 ├── app.html                   generated and immutable
+├── data.schema.json           optional generated data contract
 ├── assets/                    optional and immutable
+│   └── theme.css              optional public --slop-* defaults
+├── .agents/skills/hitslop-document/
+│   ├── SKILL.md               canonical, immutable document instructions
+│   └── references/
+│       └── app-guide.md       optional publisher guide, maximum 32 KiB
 └── QuickLook/
-    ├── Preview.png            required for install/publish
+    ├── Preview.png            mutable host snapshot; required to publish
     └── Icon.png               immutable Finder/catalog artwork
 ```
 
@@ -40,6 +48,7 @@ stores/data.sqlite
 stores/data.sqlite-wal         transient while SQLite is open
 stores/data.sqlite-shm         transient while SQLite is open
 stores/media/<safe-name>
+stores/theme.css               optional owner theme overrides
 Icon\r                         Finder-managed local metadata on macOS
 ```
 
@@ -73,6 +82,7 @@ manifest byte-for-byte.
 
 ## Immutability rule
 
-In a document, treat `manifest.json`, `app.html`, `assets/`, and
-`QuickLook/Icon.png` as immutable. The host may atomically update stores,
-refresh `QuickLook/Preview.png`, and manage local filesystem metadata.
+In a document, treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`,
+`.agents/`, and `QuickLook/Icon.png` as immutable. The host may atomically
+update stores, refresh `QuickLook/Preview.png`, and manage local filesystem
+metadata.

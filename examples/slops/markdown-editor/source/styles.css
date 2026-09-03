@@ -132,6 +132,7 @@ html, body {
   transition: all 0.12s;
 }
 
+.mode-btn[data-state="active"],
 .mode-btn.active {
   background: var(--bg-sheet);
   color: var(--ink);

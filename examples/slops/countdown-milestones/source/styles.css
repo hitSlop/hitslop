@@ -271,11 +271,13 @@ html, body {
   flex-shrink: 0;
 }
 
+.milestone-check[data-state="checked"],
 .milestone-check:checked {
   background: var(--amber);
   border-color: var(--amber);
 }
 
+.milestone-check[data-state="checked"]::before,
 .milestone-check:checked::before {
   content: "";
   width: 8px;

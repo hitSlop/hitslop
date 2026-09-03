@@ -18,18 +18,20 @@
   "scripts": {
     "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
     "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
-    "test": "echo 'no unit tests: pure logic lives in @hitslop/runtime; rune adapters are covered by svelte-check and the examples'"
+    "test": "bun run --cwd ../runtime build && bun test"
   },
   "dependencies": {
     "@hitslop/runtime": "workspace:*"
   },
   "peerDependencies": {
-    "svelte": "^5.0.0"
+    "svelte": "^5.0.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "svelte": "^5.57.0",
     "svelte-check": "^4.7.6",
     "@typescript/native": "npm:typescript@^7.0.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "zod": "^4.5.2"
   }
 }

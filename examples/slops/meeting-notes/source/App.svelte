@@ -4,6 +4,7 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import X from "@lucide/svelte/icons/x";
+  import { Checkbox } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type AgendaItem = { id: string; text: string; done: boolean };
@@ -180,11 +181,11 @@
           <ul class="agenda-list">
             {#each doc.current.agenda as item (item.id)}
               <li class="agenda-item" class:done={item.done}>
-                <input
-                  type="checkbox"
+                <Checkbox.Root
+                  checked={item.done}
+                  onCheckedChange={(c) => { item.done = !!c; }}
                   class="agenda-check"
                   aria-label="Mark agenda topic done"
-                  bind:checked={item.done}
                 />
                 <input
                   class="agenda-text-input"
@@ -274,11 +275,11 @@
           <ul class="actions-list">
             {#each doc.current.actions as action (action.id)}
               <li class="action-item" class:done={action.done}>
-                <input
-                  type="checkbox"
+                <Checkbox.Root
+                  checked={action.done}
+                  onCheckedChange={(c) => { action.done = !!c; }}
                   class="agenda-check"
                   aria-label="Mark action complete"
-                  bind:checked={action.done}
                 />
                 <input
                   class="action-text-input"

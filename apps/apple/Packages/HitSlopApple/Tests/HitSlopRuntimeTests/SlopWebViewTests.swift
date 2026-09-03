@@ -160,6 +160,39 @@ import Testing
     #expect(try await session.webView.evaluateJavaScript("window.wasmResult") as? String == "ok")
 }
 
+@Test @MainActor func runtimeReloadsExternalThemeChangesWithoutReloadingThePage() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let stores = root.appendingPathComponent("stores", isDirectory: true)
+    try FileManager.default.createDirectory(at: stores, withIntermediateDirectories: true)
+    let theme = stores.appendingPathComponent("theme.css")
+    try Data(":root { --slop-test-color: rgb(1, 2, 3); }".utf8).write(to: theme)
+    let html = #"""
+    <link rel="stylesheet" href="theme.css" data-hitslop-theme>
+    <style>body { color: var(--slop-test-color); }</style>
+    <script>window.pageMarker = 7; window.slop.ready();</script>
+    """#
+    try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+
+    session.load()
+    try await session.waitUntilReady()
+    #expect(try await session.webView.evaluateJavaScript("getComputedStyle(document.body).color") as? String == "rgb(1, 2, 3)")
+
+    try Data(":root { --slop-test-color: rgb(4, 5, 6); }".utf8).write(to: theme, options: .atomic)
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: .seconds(3))
+    var color: String?
+    while clock.now < deadline {
+        color = try await session.webView.evaluateJavaScript("getComputedStyle(document.body).color") as? String
+        if color == "rgb(4, 5, 6)" { break }
+        try await Task.sleep(for: .milliseconds(50))
+    }
+    #expect(color == "rgb(4, 5, 6)")
+    #expect(try await session.webView.evaluateJavaScript("window.pageMarker") as? Int == 7)
+}
+
 private func webViewPackage(skinned: Bool, transparent: Bool = false) throws -> URL {
     let parent = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-webview-\(UUID().uuidString)", isDirectory: true)
     let root = parent.appendingPathComponent("fixture.slop", isDirectory: true)
@@ -170,12 +203,19 @@ private func webViewPackage(skinned: Bool, transparent: Bool = false) throws -> 
         : transparent ? #"{"width":320,"height":240,"resizable":false,"background":"transparent"}"# : #"{"width":320,"height":240}"#
     let manifest = #"{"$schema":"https://hitslop.app/schemas/v1/manifest.schema.json","slug":"webview-fixture","title":"WebView Fixture","description":"Runtime opacity fixture.","categories":["utilities"],"presentation":\#(presentation)}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
+    try writeCanonicalDocumentSkill(to: root)
     if skinned {
         let assets = root.appendingPathComponent("assets", isDirectory: true)
         try FileManager.default.createDirectory(at: assets, withIntermediateDirectories: true)
         try writeRGBA(to: assets.appendingPathComponent("skin.png"), width: 320, height: 240)
     }
     return root
+}
+
+private func writeCanonicalDocumentSkill(to root: URL) throws {
+    let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
+    try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
 }
 
 private func writeRGBA(to url: URL, width: Int, height: Int) throws {

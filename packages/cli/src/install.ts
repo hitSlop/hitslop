@@ -1,10 +1,11 @@
 import { chmod, cp, lstat, mkdir, readFile, readdir, rename, rm, stat } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import type { SlopManifest } from "@hitslop/schema";
 import { runNative } from "./dev.ts";
 import { buildSlop, loadManifest } from "./project.ts";
+import { validateRuntimePackage } from "./runtime-package.ts";
 import { validateIconPng, validateStaticPng, writeDefaultIcon } from "./static-preview.ts";
 
 export type InstallOptions = {
@@ -94,11 +95,7 @@ async function isRuntimePackage(path: string): Promise<boolean> {
 }
 
 export async function validateTemplatePackage(path: string, options: { requirePreview?: boolean } = {}): Promise<void> {
-  if (basename(path).startsWith(".")) throw new Error("Runtime package path is not valid for installation.");
-  await rejectForbiddenRuntimeEntries(path);
-  const allowed = new Set(["manifest.json", "app.html", "assets", "QuickLook"]);
-  for (const entry of await readdir(path)) if (!allowed.has(entry)) throw new Error(`Template packages cannot contain ${entry}.`);
-  await validateQuickLook(path, options.requirePreview ?? false);
+  await validateRuntimePackage(path, { template: true, requirePreview: options.requirePreview ?? false });
 }
 
 async function validateQuickLook(path: string, requirePreview: boolean): Promise<void> {
@@ -117,17 +114,6 @@ async function validateQuickLook(path: string, requirePreview: boolean): Promise
   }
   await validatePreview(preview);
   validateIconPng(await readFile(icon));
-}
-
-async function rejectForbiddenRuntimeEntries(directory: string): Promise<void> {
-  // "icon\r" (lowercased "Icon\r") is macOS Finder's custom-icon metadata file;
-  // the host derives it locally after install, so packages must not ship one.
-  const forbidden = new Set(["package.json", "bun.lock", "bun.lockb", "node_modules", "source", "src", "build", "document.json", ".build", ".hitslop", "style.css", "stores", "icon\r"]);
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (entry.isSymbolicLink()) throw new Error(`Runtime packages cannot contain symlinks: ${entry.name}.`);
-    if (forbidden.has(entry.name.toLowerCase())) throw new Error(`Runtime packages cannot contain ${entry.name}.`);
-    if (entry.isDirectory()) await rejectForbiddenRuntimeEntries(join(directory, entry.name));
-  }
 }
 
 export async function makePackageWritable(root: string): Promise<void> {

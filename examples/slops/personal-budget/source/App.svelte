@@ -4,6 +4,7 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ArrowRight from "@lucide/svelte/icons/arrow-right";
+  import { Progress } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type Category = {
@@ -294,13 +295,18 @@
                 </div>
               </div>
 
-              <div class="category-progress-track">
+              <Progress.Root
+                value={Math.min(percent, 100)}
+                max={100}
+                class="category-progress-track"
+                aria-label="{cat.name} budget spent"
+              >
                 <div
                   class="category-progress-fill"
                   class:overbudget={isOver}
                   style="width: {percent}%;"
                 ></div>
-              </div>
+              </Progress.Root>
             </li>
           {/each}
         </ul>

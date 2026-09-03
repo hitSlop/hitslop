@@ -5,6 +5,8 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import Plane from "@lucide/svelte/icons/plane";
+  import { Checkbox, Select, Tabs, TimeField } from "bits-ui";
+  import { Time } from "@internationalized/date";
   import Icon from "./Icon.svelte";
 
   type EventTag = "flight" | "hotel" | "dining" | "train" | "explore";
@@ -164,6 +166,11 @@
   function tagCode(id: EventTag): string {
     return TAGS.find((tag) => tag.id === id)?.code ?? id.toUpperCase();
   }
+
+  function toTimeVal(str: string): Time {
+    const [h, m] = (str || "09:00").split(":").map(Number);
+    return new Time(isNaN(h) ? 9 : h, isNaN(m) ? 0 : m);
+  }
 </script>
 
 <main class="itinerary-shell" data-slop-selection="none">
@@ -218,22 +225,25 @@
         </div>
       </header>
 
-      <nav class="day-tabs" aria-label="Trip days">
-        {#each store.current.days as day (day.id)}
-          <button
-            type="button"
-            class="day-tab"
-            class:active={activeDay?.id === day.id}
-            onclick={() => { store.current.selectedDayId = day.id; }}
-          >
-            <strong>{day.title}</strong>
-            <span>{day.events.length}</span>
+      <Tabs.Root
+        value={store.current.selectedDayId}
+        onValueChange={(v) => { if (v) store.current.selectedDayId = v; }}
+      >
+        <Tabs.List class="day-tabs" aria-label="Trip days">
+          {#each store.current.days as day (day.id)}
+            <Tabs.Trigger
+              value={day.id}
+              class="day-tab"
+            >
+              <strong>{day.title}</strong>
+              <span>{day.events.length}</span>
+            </Tabs.Trigger>
+          {/each}
+          <button type="button" class="add-day-btn" data-slop-export="hide" onclick={addDay} aria-label="Add day">
+            <Plus size={14} />
           </button>
-        {/each}
-        <button type="button" class="add-day-btn" data-slop-export="hide" onclick={addDay} aria-label="Add day">
-          <Plus size={14} />
-        </button>
-      </nav>
+        </Tabs.List>
+      </Tabs.Root>
 
       {#if activeDay}
         <section class="timeline-area" aria-label={`Events for ${activeDay.title}`}>
@@ -243,14 +253,44 @@
           </div>
 
           <form class="event-composer" data-slop-export="hide" onsubmit={(event) => { event.preventDefault(); addEvent(); }}>
-            <input type="time" bind:value={newTime} class="comp-time" required />
+            <TimeField.Root
+              value={toTimeVal(newTime)}
+              onValueChange={(t) => { if (t) newTime = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`; }}
+            >
+              <TimeField.Input class="comp-time-field" aria-label="Stop time">
+                {#snippet children({ segments })}
+                  {#each segments as { part, value }}
+                    <TimeField.Segment {part} class="comp-time-seg">
+                      {value}
+                    </TimeField.Segment>
+                  {/each}
+                {/snippet}
+              </TimeField.Input>
+            </TimeField.Root>
             <input type="text" bind:value={newTitle} placeholder="Stop title" class="comp-title" required />
             <input type="text" bind:value={newLocation} placeholder="Place or note" class="comp-loc" />
-            <select bind:value={newTag} class="comp-tag" aria-label="Stop type">
-              {#each TAGS as tag}
-                <option value={tag.id}>{tag.code}</option>
-              {/each}
-            </select>
+            <Select.Root
+              type="single"
+              bind:value={newTag}
+            >
+              <Select.Trigger class="comp-tag-select" aria-label="Stop type">
+                <span>{tagCode(newTag)}</span>
+              </Select.Trigger>
+              <Select.Portal>
+                <Select.Content class="tag-select-content" data-slop-export="hide">
+                  <Select.Viewport>
+                    {#each TAGS as tag}
+                      <Select.Item value={tag.id} label={tag.code} class="tag-select-item">
+                        {#snippet children({ selected })}
+                          <span>{tag.code}</span>
+                          {#if selected}<Check size={11} />{/if}
+                        {/snippet}
+                      </Select.Item>
+                    {/each}
+                  </Select.Viewport>
+                </Select.Content>
+              </Select.Portal>
+            </Select.Root>
             <button type="submit" class="comp-add-btn" aria-label="Add stop"><Plus size={14} /></button>
           </form>
 
@@ -261,17 +301,32 @@
           <ul class="stops-list">
             {#each activeDay.events as event (event.id)}
               <li class="stop-row" class:done={event.done}>
-                <button
-                  type="button"
+                <Checkbox.Root
+                  checked={event.done}
+                  onCheckedChange={(c) => { event.done = !!c; }}
                   class="stop-check"
-                  onclick={() => { event.done = !event.done; }}
                   aria-label={event.done ? "Mark incomplete" : "Mark complete"}
                 >
-                  {#if event.done}
-                    <Check size={12} strokeWidth={3.5} />
-                  {/if}
-                </button>
-                <input class="stop-time" type="time" bind:value={event.time} aria-label="Stop time" />
+                  {#snippet children({ checked })}
+                    {#if checked}
+                      <Check size={12} strokeWidth={3.5} />
+                    {/if}
+                  {/snippet}
+                </Checkbox.Root>
+                <TimeField.Root
+                  value={toTimeVal(event.time)}
+                  onValueChange={(t) => { if (t) event.time = `${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`; }}
+                >
+                  <TimeField.Input class="stop-time-field" aria-label="Stop time">
+                    {#snippet children({ segments })}
+                      {#each segments as { part, value }}
+                        <TimeField.Segment {part} class="stop-time-seg">
+                          {value}
+                        </TimeField.Segment>
+                      {/each}
+                    {/snippet}
+                  </TimeField.Input>
+                </TimeField.Root>
                 <span class="stop-tag" data-tag={event.tag}>{tagCode(event.tag)}</span>
                 <div class="stop-desc">
                   <input class="stop-title" bind:value={event.title} aria-label="Stop title" />
@@ -318,15 +373,18 @@
         <ul class="stub-items">
           {#each store.current.stubItems as stub (stub.id)}
             <li class="stub-row">
-              <button
-                type="button"
+              <Checkbox.Root
+                checked={stub.done}
+                onCheckedChange={(c) => { stub.done = !!c; }}
                 class="stub-box"
-                class:done={stub.done}
-                onclick={() => { stub.done = !stub.done; }}
                 aria-label={stub.text}
               >
-                {#if stub.done}<Check size={10} strokeWidth={3} />{/if}
-              </button>
+                {#snippet children({ checked })}
+                  {#if checked}
+                    <Check size={10} strokeWidth={3} />
+                  {/if}
+                {/snippet}
+              </Checkbox.Root>
               <input class="stub-text" class:crossed={stub.done} bind:value={stub.text} aria-label="Checklist item" />
               <button
                 type="button"

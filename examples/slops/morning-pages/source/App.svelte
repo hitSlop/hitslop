@@ -7,6 +7,7 @@
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ChevronRight from "@lucide/svelte/icons/chevron-right";
   import Award from "@lucide/svelte/icons/award";
+  import { Progress } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type DayEntry = {
@@ -144,7 +145,12 @@ Today I want to keep my attention undivided. No multitasking, no phantom phone c
     </div>
 
     <!-- Live Word Odometer & 3-Page Gauge -->
-    <div class="progress-bar-card">
+    <Progress.Root
+      value={wordsCount}
+      max={TARGET_WORDS}
+      class="progress-bar-card"
+      aria-label="Morning Pages word progress"
+    >
       <div class="odometer-row">
         <span class="odometer-label">Word Count:</span>
         <span class="odometer-val">{wordsCount} / {TARGET_WORDS} words</span>
@@ -162,7 +168,7 @@ Today I want to keep my attention undivided. No multitasking, no phantom phone c
           <span class="segment-label">Page 3 (750w)</span>
         </div>
       </div>
-    </div>
+    </Progress.Root>
   </header>
 
   <!-- Distraction-free Writing Paper -->

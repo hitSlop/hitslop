@@ -314,10 +314,12 @@ html, body {
   flex-shrink: 0;
 }
 
+.agenda-check[data-state="checked"],
 .agenda-check:checked {
   background: var(--memo-case);
 }
 
+.agenda-check[data-state="checked"]::before,
 .agenda-check:checked::before {
   content: "";
   width: 8px;

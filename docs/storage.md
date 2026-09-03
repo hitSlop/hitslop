@@ -10,9 +10,10 @@ Use JSON for small object graphs and settings. `open(initial)` creates
 whole value atomically; pass the last revision to avoid silently overwriting a
 newer external change.
 
-Svelte's `jsonStore` and React's `useJsonStore` debounce persistence,
-surface pending/error state, and subscribe to host changes. Design a JSON value
-with explicit defaults and keep it backward-readable when adding fields.
+Svelte's `jsonStore` requires an attached Zod schema, validates values at the
+persistence boundary, surfaces loading/error state, and subscribes to host
+changes. React's `useJsonStore` retains its current API. Design a JSON value with
+explicit defaults and keep it backward-readable when adding fields.
 
 ## SQLite
 
@@ -37,16 +38,29 @@ blob URLs. Re-open media through the adapter after host change notifications.
 
 ## Development and copies
 
-`slop dev` uses isolated stores under `.hitslop/dev/stores/`; `--reset`
-clears that development state. A build never copies those stores.
+`slop dev` supplies disposable in-memory JSON and forgiving SQLite/media stubs
+for UI iteration. It performs no storage I/O, and a full page reload resets its
+state. A build never copies authoring data.
 
 Installing writes an immutable local catalog master. Opening or selecting it
 creates a writable copy at a user-selected path. Personal state always belongs
 to the copy, never the master.
 
+## Theme overrides
+
+An app may ship immutable theme defaults in `assets/theme.css`. A writable
+document may add `stores/theme.css` containing partial `--slop-*` overrides.
+The host loads it after the default, watches it with the other stores on macOS,
+and replaces the stylesheet without reloading the page.
+
+Both files contain exactly one `:root` declaration block. The default defines
+the complete public contract; the override may only use a subset of those
+names. Structural selectors remain compiled into `app.html` and are not part of
+the editable theme surface.
+
 ## iCloud
 
 On iOS, documents live in the user's iCloud container. The runtime operates on
-a coordinated working copy and explicitly flushes canonical stores back to
-iCloud. Coordination errors are user-visible and must not be treated as a
-successful save.
+a coordinated working copy and explicitly flushes canonical JSON, SQLite,
+media, and theme stores back to iCloud. Coordination errors are user-visible
+and must not be treated as a successful save.

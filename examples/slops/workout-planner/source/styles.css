@@ -277,6 +277,7 @@ input::placeholder {
   transition: all 0.12s;
 }
 
+.set-bubble[data-state="on"],
 .set-bubble.done {
   background: var(--lcd-ink);
   color: var(--lcd-bg);

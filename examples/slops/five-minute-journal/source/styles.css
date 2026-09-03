@@ -111,6 +111,7 @@ body {
   gap: 4px;
 }
 
+.toggle-btn[data-state="active"],
 .toggle-btn.active {
   background: var(--text-main);
   color: var(--paper);
@@ -214,6 +215,7 @@ body {
   gap: 4px;
 }
 
+.complete-pill[data-state="checked"],
 .complete-pill.is-checked {
   background: #ecfdf5;
   border-color: #a7f3d0;
@@ -222,6 +224,7 @@ body {
 }
 
 @media (prefers-color-scheme: dark) {
+  .complete-pill[data-state="checked"],
   .complete-pill.is-checked {
     background: #064e3b;
     border-color: #047857;

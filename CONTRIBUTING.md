@@ -23,5 +23,3 @@ authored template.
 - Keep generated schema output in sync by running `bun run schema:generate`
   after Zod schema changes.
 - Do not include secrets, signing keys, local documents, or private paths.
-
-By participating, you agree to follow our [Code of Conduct](CODE_OF_CONDUCT.md).

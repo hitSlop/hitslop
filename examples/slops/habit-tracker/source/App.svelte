@@ -8,6 +8,7 @@
   import Trophy from "@lucide/svelte/icons/trophy";
   import Sparkles from "@lucide/svelte/icons/sparkles";
   import X from "@lucide/svelte/icons/x";
+  import { Dialog } from "bits-ui";
   import Icon from "./Icon.svelte";
 
   type ColorTone =
@@ -493,13 +494,13 @@
   </footer>
 
   <!-- Modal / Dialog for Adding a Habit -->
-  {#if isAdding}
-    <div class="modal-backdrop">
-      <button type="button" class="backdrop-dismiss" aria-label="Close dialog" onclick={() => { isAdding = false; }}></button>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="add-modal-title">
+  <Dialog.Root bind:open={isAdding}>
+    <Dialog.Portal>
+      <Dialog.Overlay class="modal-backdrop" data-slop-export="hide" />
+      <Dialog.Content class="modal-card" aria-labelledby="add-modal-title" data-slop-export="hide">
         <div class="modal-head">
-          <h2 id="add-modal-title">New Habit Track</h2>
-          <button type="button" class="modal-close" onclick={() => { isAdding = false; }} aria-label="Close dialog"><X size={16} /></button>
+          <Dialog.Title id="add-modal-title"><h2>New Habit Track</h2></Dialog.Title>
+          <Dialog.Close class="modal-close" aria-label="Close dialog"><X size={16} /></Dialog.Close>
         </div>
         <form onsubmit={(e) => { e.preventDefault(); saveNewHabit(); }}>
           <label class="form-field">
@@ -526,18 +527,18 @@
             <button type="submit" class="btn-primary">Add Habit</button>
           </div>
         </form>
-      </div>
-    </div>
-  {/if}
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
 
   <!-- Modal / Dialog for Editing Habit -->
-  {#if isEditing && activeHabit}
-    <div class="modal-backdrop">
-      <button type="button" class="backdrop-dismiss" aria-label="Close dialog" onclick={() => { isEditing = false; }}></button>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+  <Dialog.Root open={isEditing && !!activeHabit} onOpenChange={(open) => { if (!open) isEditing = false; }}>
+    <Dialog.Portal>
+      <Dialog.Overlay class="modal-backdrop" data-slop-export="hide" />
+      <Dialog.Content class="modal-card" aria-labelledby="edit-modal-title" data-slop-export="hide">
         <div class="modal-head">
-          <h2 id="edit-modal-title">Edit Habit Settings</h2>
-          <button type="button" class="modal-close" onclick={() => { isEditing = false; }} aria-label="Close dialog"><X size={16} /></button>
+          <Dialog.Title id="edit-modal-title"><h2>Edit Habit Settings</h2></Dialog.Title>
+          <Dialog.Close class="modal-close" aria-label="Close dialog"><X size={16} /></Dialog.Close>
         </div>
         <form onsubmit={(e) => { e.preventDefault(); saveEdit(); }}>
           <label class="form-field">
@@ -570,9 +571,9 @@
             <button type="submit" class="btn-primary">Save Changes</button>
           </div>
         </form>
-      </div>
-    </div>
-  {/if}
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
 </main>
 
 {#if capture.isRenderer()}

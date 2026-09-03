@@ -42,9 +42,122 @@ button { cursor: pointer; }
 .masthead h1 { margin: 5px 0 0; color: var(--navy); font-family: Georgia, "Times New Roman", serif; font-size: 36px; font-weight: 500; letter-spacing: -.035em; line-height: .95; }
 .longdate { margin: 4px 0 0; color: var(--ink-soft); font-size: 12px; letter-spacing: .02em; }
 .masthead-side { display: grid; justify-items: end; gap: 7px; }
-.date-field { display: grid; justify-items: end; gap: 2px; }
-.date-field span { color: var(--ink-soft); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 7px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
-.date-field input { border: 0; border-bottom: 1px solid var(--rule-strong); padding: 2px 0; color: var(--navy); background: transparent; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 11px; font-weight: 700; }
+.date-field-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  padding: 3px 7px;
+  color: var(--navy);
+  background: rgb(255 255 255 / 65%);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+.date-field-trigger:hover,
+.date-field-trigger[data-state="open"] {
+  border-color: var(--navy);
+  background: rgb(255 255 255 / 90%);
+}
+.date-field-trigger span {
+  color: var(--ink-soft);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.slop-calendar-popover {
+  z-index: 1000;
+  background: var(--paper, #fffdf8);
+  border: 1.5px solid var(--rule-strong, #ccc);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 10px 30px rgba(30, 47, 78, 0.18);
+  width: 236px;
+  outline: none;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.slop-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--rule, #e5dfd3);
+}
+.slop-cal-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy, #1e2f4e);
+}
+.slop-cal-nav {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--navy-soft, #52637f);
+  cursor: pointer;
+}
+.slop-cal-nav:hover {
+  background: rgba(30, 47, 78, 0.08);
+  color: var(--navy, #1e2f4e);
+}
+.slop-cal-grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+.slop-cal-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+.slop-cal-head-cell {
+  font-size: 8px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--ink-soft, #888);
+  padding: 2px 0;
+  text-transform: uppercase;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+.slop-cal-cell {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.slop-cal-day {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--navy, #1e2f4e);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.slop-cal-day:hover {
+  background: rgba(30, 47, 78, 0.08);
+}
+.slop-cal-day[data-selected] {
+  background: var(--vermilion, #dc4426);
+  color: #ffffff;
+  font-weight: 800;
+}
+.slop-cal-day[data-today]:not([data-selected]) {
+  outline: 1.5px solid var(--vermilion, #dc4426);
+}
+.slop-cal-day[data-outside-month] {
+  opacity: 0.25;
+}
 .masthead-meters { display: grid; justify-items: end; gap: 1px; margin-top: 2px; }
 .booked { display: flex; align-items: baseline; gap: 1px; margin: 0; color: var(--navy); font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-variant-numeric: tabular-nums; }
 .booked b { font-size: 19px; font-weight: 700; }
@@ -157,8 +270,74 @@ h2 { margin: 0; color: var(--navy); font-family: ui-monospace, "SFMono-Regular",
 .block:hover .block-tools, .block-tools:focus-within { opacity: 1; }
 .block:hover, .block:focus-within { overflow: visible; }
 .block-tools > span { color: var(--navy-soft); font-size: 9px; }
-.block-tools input[type="time"] { width: 68px; border: 0; padding: 0; color: var(--navy); background: transparent; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 9px; font-weight: 700; }
-.block-tools select { border: 0; border-radius: 3px; padding: 1px 2px; color: var(--kind); background: color-mix(in srgb, var(--kind) 12%, transparent); font-size: 8px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.time-field-input {
+  display: inline-flex;
+  align-items: center;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--navy);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  outline: none;
+}
+.time-field-seg {
+  padding: 0 1px;
+  border-radius: 2px;
+  outline: none;
+  cursor: text;
+}
+.time-field-seg:focus,
+.time-field-seg[data-focused] {
+  background: var(--navy);
+  color: var(--paper);
+}
+.kind-select,
+.block-tools select {
+  border: 0;
+  border-radius: 3px;
+  padding: 1px 3px;
+  color: var(--kind);
+  background: color-mix(in srgb, var(--kind) 12%, transparent);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.kind-select-content {
+  background: var(--paper, #fffdf8);
+  border: 1px solid var(--rule-strong, #ddd);
+  border-radius: 6px;
+  padding: 3px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  z-index: 1000;
+  outline: none;
+}
+
+.kind-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 6px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+  color: var(--navy);
+}
+
+.kind-select-item:hover,
+.kind-select-item[data-highlighted] {
+  background: rgba(0, 0, 0, 0.07);
+}
+
 .block-tools button { display: grid; place-items: center; width: 18px; height: 18px; border: 0; border-radius: 4px; padding: 0; color: var(--ink-soft); background: transparent; }
 .block-tools button:hover { color: var(--vermilion); background: rgb(220 68 38 / 12%); }
 .block-tools svg { width: 11px; }

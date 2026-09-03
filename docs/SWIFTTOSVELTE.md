@@ -7,11 +7,13 @@ authoring SDK, not part of the `.slop` format.
 
 ```text
 App.svelte
-    │  jsonStore(initial) / sqliteQuery(sql)
+    │  jsonStore({ schema, initial }) / sqliteQuery(sql)
     ▼
 @hitslop/svelte → @hitslop/runtime → window.slop → native host
                                       ├── stores/data.json
-                                      └── stores/data.sqlite
+                                      ├── stores/data.sqlite
+                                      ├── stores/media/*
+                                      └── stores/theme.css
 ```
 
 The switch removed a guest compiler and language-specific runtime without

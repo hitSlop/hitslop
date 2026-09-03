@@ -5,6 +5,7 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import Sparkles from "@lucide/svelte/icons/sparkles";
   import X from "@lucide/svelte/icons/x";
+  import { Dialog, Progress, Checkbox } from "bits-ui";
   import Icon from "./Icon.svelte";
   import { DEFAULT_CATEGORIES, PRESETS, type Preset } from "./presets";
   import type { LuggageCategory, PackingDoc, PackingItem } from "./types";
@@ -315,13 +316,13 @@
       </div>
     </div>
 
-    <div class="readiness-bar-track" aria-hidden="true">
+    <Progress.Root class="readiness-bar-track" value={packedItems} max={totalItems || 1} aria-label="Packing readiness">
       <div
         class="readiness-bar-fill"
         class:complete={isFullyPacked}
         style="width: {packedPercent}%;"
       ></div>
-    </div>
+    </Progress.Root>
   </section>
 
   <!-- Filter Toolbar -->
@@ -414,16 +415,18 @@
           <ul class="item-list">
             {#each items as item (item.id)}
               <li class="item-row" class:packed={item.packed}>
-                <button
-                  type="button"
+                <Checkbox.Root
+                  checked={item.packed}
+                  onCheckedChange={() => togglePacked(item)}
                   class="custom-check"
                   aria-label="Toggle packed status for {item.text}"
-                  onclick={() => togglePacked(item)}
                 >
-                  {#if item.packed}
-                    <span class="check-icon">✓</span>
-                  {/if}
-                </button>
+                  {#snippet children({ checked })}
+                    {#if checked}
+                      <span class="check-icon">✓</span>
+                    {/if}
+                  {/snippet}
+                </Checkbox.Root>
 
                 <button
                   type="button"
@@ -480,19 +483,18 @@
   </footer>
 
   <!-- Presets Modal -->
-  {#if showPresetsModal}
-    <div class="presets-overlay" data-slop-export="hide">
-      <div class="presets-card" role="dialog" aria-modal="true" aria-labelledby="preset-modal-title">
+  <Dialog.Root bind:open={showPresetsModal}>
+    <Dialog.Portal>
+      <Dialog.Overlay class="presets-overlay" data-slop-export="hide" />
+      <Dialog.Content class="presets-card" aria-labelledby="preset-modal-title" data-slop-export="hide">
         <div class="presets-header">
-          <h3 id="preset-modal-title">TRAVEL PACKING PRESETS</h3>
-          <button
-            type="button"
+          <Dialog.Title id="preset-modal-title">TRAVEL PACKING PRESETS</Dialog.Title>
+          <Dialog.Close
             class="action-pill-btn"
             aria-label="Close presets"
-            onclick={() => (showPresetsModal = false)}
           >
             <X size={14} />
-          </button>
+          </Dialog.Close>
         </div>
 
         <div class="preset-list">
@@ -512,9 +514,9 @@
             </div>
           {/each}
         </div>
-      </div>
-    </div>
-  {/if}
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>
 </main>
 
 {#if capture.isRenderer()}

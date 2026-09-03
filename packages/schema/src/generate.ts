@@ -3,11 +3,16 @@ import { resolve } from "node:path";
 import { $ } from "bun";
 import { z } from "zod";
 import { SlopManifestSchema } from "./manifest.ts";
+import { documentSkillContent } from "./document-skill.ts";
 
 const packageRoot = resolve(import.meta.dir, "..");
 const repositoryRoot = resolve(packageRoot, "../..");
 const generated = resolve(packageRoot, "generated");
 await mkdir(generated, { recursive: true });
+
+const swiftDocumentSkill = resolve(repositoryRoot, "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/hitslop-document.SKILL.md");
+await mkdir(resolve(swiftDocumentSkill, ".."), { recursive: true });
+await writeFile(swiftDocumentSkill, documentSkillContent);
 
 await generate({
   zodSchema: SlopManifestSchema,

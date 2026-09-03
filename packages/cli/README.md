@@ -1,6 +1,6 @@
 # @hitslop/cli
 
-Create, preview, validate, build, install, and publish local-first `.slop`
+Create, preview, validate, build, register, and publish local-first `.slop`
 apps.
 
 ```sh
@@ -12,7 +12,7 @@ bun run dev
 
 The supported v1 scaffold uses Svelte 5 and includes portable
 `hitslop-authoring` and `hitslop-design` skills. `slop build` emits a
-source-free runtime package; `slop install` adds an immutable local template;
+source-free runtime package; `slop register` adds an immutable local template;
 `slop publish` captures and signs one artifact for the catalog.
 
 Documentation: [Authoring](https://github.com/hitslop/hitslop/blob/main/docs/authoring.md) ·

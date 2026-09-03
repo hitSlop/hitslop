@@ -5,6 +5,7 @@
   import Square from "@lucide/svelte/icons/square";
   import Volume2 from "@lucide/svelte/icons/volume-2";
   import VolumeX from "@lucide/svelte/icons/volume-x";
+  import { Slider, RadioGroup, Toggle } from "bits-ui";
   import { onDestroy, onMount } from "svelte";
   import Icon from "./Icon.svelte";
 
@@ -279,43 +280,77 @@
     <div class="tempo-nudge-row" data-slop-export="hide">
       <button type="button" class="nudge-btn" onclick={() => nudgeBpm(-5)} aria-label="Subtract 5 BPM">-5</button>
       <button type="button" class="nudge-btn" onclick={() => nudgeBpm(-1)} aria-label="Subtract 1 BPM">-1</button>
-      <input type="range" min="40" max="240" bind:value={store.current.bpm} class="bpm-slider" aria-label="Tempo" />
+      <Slider.Root
+        type="single"
+        bind:value={store.current.bpm}
+        min={40}
+        max={240}
+        step={1}
+        class="bpm-slider-root"
+        aria-label="Tempo"
+      >
+        {#snippet children({ thumbs })}
+          <span class="bpm-slider-track">
+            <Slider.Range class="bpm-slider-range" />
+          </span>
+          {#each thumbs as index}
+            <Slider.Thumb {index} class="bpm-slider-thumb" aria-label="Tempo" />
+          {/each}
+        {/snippet}
+      </Slider.Root>
       <button type="button" class="nudge-btn" onclick={() => nudgeBpm(1)} aria-label="Add 1 BPM">+1</button>
       <button type="button" class="nudge-btn" onclick={() => nudgeBpm(5)} aria-label="Add 5 BPM">+5</button>
     </div>
 
     <div class="settings-row">
-      <div class="time-sig-selector" role="radiogroup" aria-label="Time signature">
+      <RadioGroup.Root
+        value={store.current.signature}
+        onValueChange={(v) => { if (v) { store.current.signature = v as TimeSignature; currentBeat = 0; nextBeatNumber = 0; } }}
+        class="time-sig-selector"
+        aria-label="Time signature"
+      >
         {#each SIGNATURES as signature}
-          <button
-            type="button"
+          <RadioGroup.Item
+            value={signature}
             class="sig-btn"
-            class:selected={store.current.signature === signature}
-            onclick={() => { store.current.signature = signature; currentBeat = 0; nextBeatNumber = 0; }}
-            role="radio"
-            aria-checked={store.current.signature === signature}
           >
             {signature}
-          </button>
+          </RadioGroup.Item>
         {/each}
-      </div>
+      </RadioGroup.Root>
       <label class="volume-field" data-slop-export="hide">
         {#if store.current.muted}
           <VolumeX size={15} />
         {:else}
           <Volume2 size={15} />
         {/if}
-        <input type="range" min="0" max="1" step="0.01" bind:value={store.current.volume} aria-label="Click volume" />
+        <Slider.Root
+          type="single"
+          bind:value={store.current.volume}
+          min={0}
+          max={1}
+          step={0.01}
+          class="volume-slider-root"
+          aria-label="Click volume"
+        >
+          {#snippet children({ thumbs })}
+            <span class="volume-slider-track">
+              <Slider.Range class="volume-slider-range" />
+            </span>
+            {#each thumbs as index}
+              <Slider.Thumb {index} class="volume-slider-thumb" aria-label="Click volume" />
+            {/each}
+          {/snippet}
+        </Slider.Root>
       </label>
-      <button
-        type="button"
+      <Toggle.Root
+        pressed={store.current.muted}
+        onPressedChange={(p) => { store.current.muted = p; }}
         class="mute-toggle"
-        class:muted={store.current.muted}
-        onclick={() => { store.current.muted = !store.current.muted; }}
         aria-label={store.current.muted ? "Unmute click" : "Mute click"}
       >
         {store.current.muted ? "MUTE" : "CLICK"}
-      </button>
+      </Toggle.Root>
     </div>
 
     <div class="primary-actions" data-slop-export="hide">

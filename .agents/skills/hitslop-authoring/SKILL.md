@@ -1,6 +1,6 @@
 ---
 name: hitslop-authoring
-description: Create, preview, validate, build, install, or publish hitSlop authoring projects with the TypeScript CLI. Use for manifests, storage choices, package boundaries, capture, identity, and release workflow.
+description: Create, preview, validate, build, register, or publish hitSlop authoring projects with the TypeScript CLI. Use for manifests, storage choices, package boundaries, capture, identity, and release workflow.
 ---
 
 # hitSlop authoring
@@ -12,9 +12,9 @@ runtime document.
 
 1. Fix the single job, categories, and initial window size in the manifest.
 2. Choose no storage, JSON, SQLite, named media, or a deliberate combination.
-3. Develop with isolated stores and test live plus static capture states.
+3. Develop against the disposable browser fake and test live plus static capture states.
 4. Validate and build a source-free, store-free runtime package.
-5. Install a master, create a writable copy, and test reopen/export.
+5. Register a local master, create a writable copy, and test reopen/export.
 6. Publish one signed immutable artifact.
 
 Use `bun slop <command> <path>` inside the hitSlop repository. In a scaffolded
@@ -28,8 +28,10 @@ adding persistence or changing the runtime boundary.
 ## Non-negotiable package rules
 
 - Runtime packages contain `manifest.json`, generated `app.html`, optional
-  immutable `assets/`, optional host-owned `stores/` in writable documents,
-  and optional `QuickLook/` images.
+  `data.schema.json`, the canonical document Agent Skill, optional immutable `assets/`, optional host-owned
+  `stores/` in writable documents, and optional `QuickLook/` images.
+- Svelte JSON stores require `{ schema, initial }`; default-export the Zod 4
+  schema from root `schema.ts` and attach that same export to the store.
 - Authored templates and published artifacts contain no stores, source,
   dependencies, build caches, editable stylesheets, SQLite sidecars, or
   Finder-managed `Icon\r`.
