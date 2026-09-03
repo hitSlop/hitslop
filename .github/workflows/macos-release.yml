@@ -86,5 +86,7 @@ jobs:
             --notes-file "$NOTES" \
             "dist/macos/hitSlop-${VERSION}.dmg" \
             "dist/macos/hitSlop-${VERSION}.zip" \
+            dist/macos/hitSlop.dmg \
+            dist/macos/hitSlop.zip \
             dist/macos/appcast.xml \
             dist/macos/SHA256SUMS

@@ -37,7 +37,7 @@ if [ -z "$marketing_version" ] || [ -z "$build_version" ]; then
 fi
 
 if [ -n "${GITHUB_REF_NAME:-}" ]; then
-  expected="v$marketing_version"
+  expected="macos-v$marketing_version"
   if [ "$GITHUB_REF_NAME" != "$expected" ]; then
     echo "Git tag $GITHUB_REF_NAME does not match MARKETING_VERSION $marketing_version (expected $expected)" >&2
     exit 78
@@ -45,7 +45,7 @@ if [ -n "${GITHUB_REF_NAME:-}" ]; then
 fi
 
 if [ -z "$feed_prefix" ]; then
-  feed_prefix="https://github.com/hitSlop/hitslop/releases/download/v${marketing_version}/"
+  feed_prefix="https://github.com/hitSlop/hitslop/releases/download/macos-v${marketing_version}/"
 fi
 
 if ! /usr/bin/security find-identity -v -p codesigning | /usr/bin/grep -F "$identity" >/dev/null; then
@@ -180,6 +180,11 @@ dmg_root="$stage_dir/dmg"
 submit_notarization "$dmg"
 staple "$dmg"
 
+# Stable aliases power the landing page's direct download link. Versioned
+# artifacts remain available for reproducibility and Sparkle updates.
+/bin/cp "$dmg" "$output_dir/hitSlop.dmg"
+/bin/cp "$app_zip" "$output_dir/hitSlop.zip"
+
 /bin/cp "$dmg" "$appcast_dir/${versioned}.dmg"
 sparkle_private=${SPARKLE_PRIVATE_KEY_FILE:-}
 if [ -z "$sparkle_private" ] && [ -n "${SPARKLE_PRIVATE_KEY:-}" ]; then
@@ -214,7 +219,7 @@ fi
 
 (
   cd "$output_dir"
-  /usr/bin/shasum -a 256 "${versioned}.dmg" "${versioned}.zip" appcast.xml > SHA256SUMS
+  /usr/bin/shasum -a 256 "${versioned}.dmg" "${versioned}.zip" hitSlop.dmg hitSlop.zip appcast.xml > SHA256SUMS
 )
 
 echo "Packaged $marketing_version ($build_version)"
