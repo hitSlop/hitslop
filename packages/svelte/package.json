@@ -1,6 +1,6 @@
 {
   "name": "@hitslop/svelte",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Svelte 5 state adapters for the hitSlop runtime.",
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/svelte" },
@@ -21,7 +21,7 @@
     "test": "bun run --cwd ../runtime build && bun test"
   },
   "dependencies": {
-    "@hitslop/runtime": "workspace:*"
+    "@hitslop/runtime": "^0.1.2"
   },
   "peerDependencies": {
     "svelte": "^5.0.0",

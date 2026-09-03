@@ -1,6 +1,6 @@
 {
   "name": "@hitslop/runtime",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Framework-neutral browser bridge for hitSlop documents.",
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/runtime" },

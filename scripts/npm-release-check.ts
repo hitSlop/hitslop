@@ -28,6 +28,20 @@ async function command(argv: string[], cwd = root, quiet = false, extraEnv: Reco
 }
 
 async function main(): Promise<void> {
+  for (const name of packageNames) {
+    const packagePath = join(root, "packages", name, "package.json");
+    const packageManifest = JSON.parse(await readFile(packagePath, "utf8")) as Record<string, unknown>;
+    for (const group of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const) {
+      const dependencies = packageManifest[group];
+      if (!dependencies || typeof dependencies !== "object") continue;
+      for (const [dependency, reference] of Object.entries(dependencies as Record<string, unknown>)) {
+        if (typeof reference === "string" && reference.startsWith("workspace:")) {
+          throw new Error(`${packagePath}: ${group}.${dependency} must use a publishable semver range, not ${reference}`);
+        }
+      }
+    }
+  }
+
   await command(["bun", "run", "schema:generate"]);
   await command(["bun", "run", "schema:check"]);
 
