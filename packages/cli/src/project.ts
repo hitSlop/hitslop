@@ -64,7 +64,7 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
       register: "slop register",
       publish: "slop publish",
     },
-    dependencies: { "@hitslop/runtime": `^${cliPackage.version}`, "@hitslop/svelte": `^${cliPackage.version}`, "bits-ui": "^2.19.0", "svelte": "^5.0.0", "zod": "^4.5.2" },
+    dependencies: { "@hitslop/runtime": "^0.1.2", "@hitslop/svelte": "^0.1.2", "bits-ui": "^2.19.0", "svelte": "^5.0.0", "zod": "^4.5.2" },
     devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.0.0", "@vanilla-extract/css": "^1.17.4", "@vanilla-extract/vite-plugin": "^5.1.1", "vite": "^8.0.0" },
   }, null, 2) + "\n");
   await writeFile(join(destination, "manifest.json"), JSON.stringify({

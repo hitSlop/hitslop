@@ -117,6 +117,9 @@ describe("authoring scaffold", () => {
     const root = await mkdtemp(join(tmpdir(), "hitslop-scaffold-")); roots.push(root);
     await scaffold(root, { title: "Tiny Tally", description: "Counts a tiny thing.", categories: ["utilities"] });
     const packageJSON = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string>; devDependencies: Record<string, string>; scripts: Record<string, string> };
+    expect(packageJSON.dependencies["@hitslop/runtime"]).toBe("^0.1.2");
+    expect(packageJSON.dependencies["@hitslop/svelte"]).toBe("^0.1.2");
+    expect(packageJSON.devDependencies["@hitslop/cli"]).toBe("^0.1.3");
     expect(packageJSON.dependencies["bits-ui"]).toBe("^2.19.0");
     expect(packageJSON.dependencies.zod).toBe("^4.5.2");
     expect(packageJSON.devDependencies["@vanilla-extract/css"]).toBe("^1.17.4");
