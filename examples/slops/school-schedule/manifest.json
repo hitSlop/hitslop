@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "school-schedule",
+  "title": "School Schedule",
+  "description": "A student timetable with period bells, room numbers, after-school sports, and a live active-period marker.",
+  "categories": ["education", "productivity"],
+  "presentation": { "width": 820, "height": 580, "shape": "rounded" }
+}

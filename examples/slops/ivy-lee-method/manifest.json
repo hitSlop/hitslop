@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "ivy-lee-method",
+  "title": "Ivy Lee Method",
+  "description": "A strict six-item single-tasking ledger: work item 1 until finished, never touch item 2 prematurely, and roll over incomplete work at sundown.",
+  "categories": ["productivity", "personal"],
+  "presentation": { "width": 460, "height": 680 }
+}

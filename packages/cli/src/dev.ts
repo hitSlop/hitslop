@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { mkdir, readFile, rename, rm, stat, unlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import type { Plugin } from "vite";
 import { createServer } from "vite";
@@ -203,7 +203,10 @@ export async function runDev(root: string, options: { reset: boolean; native: bo
 
 export async function runNative(arguments_: string[]): Promise<void> {
   const override = process.env.HITSLOP_NATIVE_CLI;
-  const candidates = [override, "/Applications/hitSlop.app/Contents/Helpers/hitslop-native", `${process.env.HOME}/Applications/hitSlop.app/Contents/Helpers/hitslop-native`, "hitslop-native"].filter(Boolean) as string[];
+  const arch = process.arch === "arm64" ? "arm64-apple-macosx" : "x86_64-apple-macosx";
+  const repoDebugBin = resolve(import.meta.dir, `../../../apps/apple/Packages/HitSlopApple/.build/${arch}/debug/hitslop-native`);
+  const repoReleaseBin = resolve(import.meta.dir, `../../../apps/apple/Packages/HitSlopApple/.build/${arch}/release/hitslop-native`);
+  const candidates = [override, "/Applications/hitSlop.app/Contents/Helpers/hitslop-native", `${process.env.HOME}/Applications/hitSlop.app/Contents/Helpers/hitslop-native`, repoDebugBin, repoReleaseBin, "hitslop-native"].filter(Boolean) as string[];
   for (const executable of candidates) {
     try {
       const processResult = Bun.spawn([executable, ...arguments_], { stdin: "inherit", stdout: "inherit", stderr: "inherit" });

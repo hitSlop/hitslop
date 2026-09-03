@@ -22,9 +22,22 @@ bun slop dev examples/slops/trip-itinerary
 bun slop dev examples/slops/metronome-tapper
 bun slop dev examples/slops/flashcards
 bun slop dev examples/slops/pixel-art
+bun slop dev examples/slops/school-schedule
+bun slop dev examples/slops/assignment-tracker
+bun slop dev examples/slops/semester-planner
+bun slop dev examples/slops/grade-calculator
+bun slop dev examples/slops/cornell-notes
+bun slop dev examples/slops/eisenhower-matrix
+bun slop dev examples/slops/ivy-lee-method
+bun slop dev examples/slops/three-three-three
+bun slop dev examples/slops/pros-cons-sheet
+bun slop dev examples/slops/five-minute-journal
+bun slop dev examples/slops/morning-pages
+bun slop dev examples/slops/choice-point
+bun slop dev examples/slops/bullet-journal
 ```
 
-Recent product templates: `expense-log` is a thermal receipt for purchases and category totals; `trip-itinerary` is a boarding-pass day planner with a packing stub; `metronome-tapper` is a studio pendulum with tap tempo and woodblock clicks; `flashcards` is an index-card Leitner box; `pixel-art` is a 16×16 handheld sprite desk.
+Recent product templates: `eisenhower-matrix` is an urgent-vs-important priority desk blotter with a triage holding pen; `ivy-lee-method` is a strict 6-slot single-tasking ledger strip; `three-three-three` is Oliver Burkeman’s finite work docket (3h deep work + 3 urgent + 3 maintenance); `pros-cons-sheet` is Benjamin Franklin’s prudential algebra with a live balance scale; `five-minute-journal` is a mindful morning and evening linen bookend; `morning-pages` is a 750-word stream-of-consciousness feed with live odometer; `choice-point` is Dr. Russ Harris’s ACT fork diagram; `bullet-journal` is Ryder Carroll’s analog rapid logging on cream dot-grid paper; `cornell-notes` is a classic lecture pad with an active-recall study mask; `school-schedule` is a student timetable with period bells; `assignment-tracker` is a homework urgency pad; `semester-planner` is a macro term syllabus roadmap; `grade-calculator` is an academic gradebook; `expense-log` is a thermal receipt for purchases; `flashcards` is an index-card Leitner box; `pixel-art` is a 16×16 handheld sprite desk.
 
 `alien-radio` demonstrates a fixed exact-size RGBA skin. `kanban-board` uses
 the canonical SQLite store. Recipe combines JSON with a named image store; the

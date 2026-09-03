@@ -1,0 +1,8 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "slug": "five-minute-journal",
+  "title": "Five Minute Journal",
+  "description": "A mindful morning-and-evening bookend journal: three gratitudes, daily intentions, affirmations, and dusk reflections.",
+  "categories": ["personal", "productivity"],
+  "presentation": { "width": 560, "height": 780 }
+}
