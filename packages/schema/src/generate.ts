@@ -41,7 +41,7 @@ async function generate(options: {
   const schemaPath = resolve(generated, options.schemaName);
   const swiftOutput = resolve(repositoryRoot, "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Generated", options.swiftName);
   const swiftSchema = resolve(repositoryRoot, "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/manifest.schema.json");
-  const publicSchema = resolve(repositoryRoot, "apps/api/public/schemas/v1/manifest.schema.json");
+  const publicSchema = resolve(repositoryRoot, "apps/firebase/public/schemas/v1/manifest.schema.json");
   await mkdir(resolve(swiftOutput, ".."), { recursive: true });
   await mkdir(resolve(swiftSchema, ".."), { recursive: true });
   await mkdir(resolve(publicSchema, ".."), { recursive: true });

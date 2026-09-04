@@ -23,7 +23,7 @@ fi
 archs=${HITSLOP_NATIVE_ARCHS:-}
 if [ -z "$archs" ]; then
   case "$(/usr/bin/uname -m)" in
-    arm64) archs="arm64 x86_64" ;;
+    arm64) archs="arm64" ;;
     x86_64) archs="x86_64" ;;
     *) echo "Unsupported macOS architecture: $(/usr/bin/uname -m)" >&2; exit 69 ;;
   esac
@@ -35,6 +35,11 @@ for arch in $archs; do
     arm64|x86_64) arch_flags="$arch_flags --arch $arch" ;;
   esac
 done
+
+if [ -z "$arch_flags" ]; then
+  echo "No supported architectures were requested: $archs" >&2
+  exit 69
+fi
 
 echo "Building hitslop-native ($archs)…"
 # shellcheck disable=SC2086

@@ -2,7 +2,7 @@
 
 ## Version policy
 
-The macOS app is stable at `1.0.0`. The iOS app and npm packages remain in the
+The macOS app is stable at `1.0.1`. The iOS app and npm packages remain in the
 `0.1.x` line until their public interfaces settle. Do not force every workspace to
 share one version.
 
@@ -16,7 +16,7 @@ bun run release:check
 ```
 
 The gate checks repository hygiene, generated schema drift, the public npm
-packages, the API's hostile-package boundary, a clean-room tarball install,
+packages, the Firebase Function's hostile-package boundary, a clean-room tarball install,
 and Swift tests/build. CI runs the same first-launch boundary.
 
 Older examples are deliberately outside this gate until they are converted to
@@ -30,7 +30,7 @@ are cleaned before every build so stale deleted exports cannot enter npm.
 
 Run the focused npm foundation gate before publishing. It validates and packs
 the five public packages, installs their real tarballs outside the monorepo,
-tests the API's package-ingress boundary, and creates a fresh Svelte project
+tests the Firebase package-ingress boundary, and creates a fresh Svelte project
 through the complete init/build/validate path:
 
 ```sh
@@ -54,11 +54,17 @@ starting the signed macOS release workflow.
 
 ## Hosted services
 
-Deploy Convex schema/functions before the API gateway. The API Worker targets
-`api.hitslop.com`; the static Astro Worker targets `hitslop.com`. Configure
-production values in provider secret stores and keep `.dev.vars` local.
+Deploy Firebase Functions, Firestore and Storage rules, generated schemas, and
+Hosting together from `apps/firebase`. Firebase Hosting targets
+`api.hitslop.com`; the static Astro Worker remains at `hitslop.com`.
 
 ## macOS
+
+The initial desktop release is Apple silicon only (arm64) and requires macOS
+14 or newer. The release script rejects a main executable or embedded native
+helper containing any other architecture. Do not advertise an Intel download;
+if Intel support becomes a product requirement, add and test it as a separate
+artifact rather than silently changing the shipped binary.
 
 Versioning lives under the macOS target in `apps/apple/project.yml`:
 `MARKETING_VERSION` is user-facing semver and `CURRENT_PROJECT_VERSION` is a

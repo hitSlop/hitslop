@@ -1,6 +1,7 @@
 import AppKit
 import HitSlopCatalog
 import HitSlopCore
+import HitSlopFirebase
 import HitSlopHost
 import HitSlopRuntime
 import Sparkle
@@ -37,8 +38,11 @@ private struct UpdateSettingsView: View {
     private var recentMenu: NSMenu?
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     var updater: SPUUpdater { updaterController.updater }
-    private var deploymentURL: String { Bundle.main.object(forInfoDictionaryKey: "ConvexDeploymentURL") as? String ?? "https://giddy-opossum-593.convex.cloud" }
     private var catalogURL: URL { URL(string: Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")! }
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        HitSlopFirebase.configure()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular); installMenus()
@@ -51,7 +55,7 @@ private struct UpdateSettingsView: View {
 
     @objc func showCatalog() {
         if catalog == nil {
-            let root = CatalogView(deploymentURL: deploymentURL, catalogURL: catalogURL, openDocument: { [weak self] in self?.openDocument($0) })
+            let root = CatalogView(catalogURL: catalogURL, openDocument: { [weak self] in self?.openDocument($0) })
             let host = NSHostingController(rootView: root)
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 720), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
             window.title = ""; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
@@ -76,6 +80,7 @@ private struct UpdateSettingsView: View {
                 controller.onOpenDocument = { [weak self] in self?.openDocument($0) }
                 documents[key] = controller; controller.showWindow(nil); controller.window?.makeKeyAndOrderFront(nil)
                 catalog?.window?.orderOut(nil); NSDocumentController.shared.noteNewRecentDocumentURL(url); NSApp.activate(ignoringOtherApps: true)
+                HitSlopFirebase.log("document_opened")
             } catch { let alert = NSAlert(error: error); alert.messageText = "Could not open slop"; alert.runModal() }
         }
     }

@@ -16,9 +16,9 @@ author source ──CLI build──> immutable .slop template
                                   │
                            preview and export
 
-publish ──signed ZIP──> Catalog gateway ──artifact──> R2
+publish ──signed ZIP──> Firebase Function ──artifact──> Cloud Storage
                               │
-                              └──metadata──> Convex registry
+                              └──metadata──> Firestore
 ```
 
 ## Trust boundaries
@@ -51,8 +51,12 @@ These three things must never be confused:
 - A **document** is a copy at a user-selected path. Only the copy may create or
   change `stores/`, refresh `QuickLook/Preview.png`, or gain Finder metadata.
 
-Convex stores catalog metadata, never a local document. A new release does not
-mutate existing documents.
+Firebase stores public catalog metadata and immutable published artifacts,
+never a local document. A new release does not mutate existing documents.
+The public `templates` collection carries a nested current-release projection so
+native clients never join against private release history. Successful document
+copies increment a lifetime popularity counter; release updates preserve that
+counter and the template's original publication time.
 
 ## Browser bridge
 
@@ -123,6 +127,6 @@ rows use the icon; catalog detail uses the full preview. See
 ## Platform topology
 
 - [Apple apps](apps/apple.md) own documents and native presentation.
-- [API gateway](apps/api.md) owns hostile artifact ingress and R2 egress.
-- [Registry](apps/registry.md) owns searchable metadata and release numbering.
+- [Firebase backend](apps/firebase.md) owns hostile artifact ingress, immutable
+  Storage objects, public catalog metadata, and release numbering.
 - [Packages](packages.md) provide authoring and browser APIs.

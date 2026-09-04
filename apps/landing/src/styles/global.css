@@ -41,6 +41,7 @@ code { font-family: "SFMono-Regular", "Cascadia Code", ui-monospace, monospace; 
 .brand-mark { width: 31px; height: 31px; display: grid; place-items: center; overflow: hidden; border-radius: 8px; box-shadow: 0 4px 10px oklch(58% .16 83 / .22); }
 .brand-mark img { width: 100%; height: 100%; display: block; }
 .nav-download { min-height: 42px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; color: var(--raised); background: var(--ink); font-size: .82rem; font-weight: 650; transition: transform 180ms var(--ease-out), background-color 180ms var(--ease-out); }
+.apple-icon { width: 16px; height: 16px; flex: 0 0 auto; }
 .nav-download:active { transform: translateY(1px); }
 
 .eyebrow { margin: 0 0 16px; color: oklch(48% .14 45); font-size: .7rem; font-weight: 700; letter-spacing: .115em; text-transform: uppercase; }
@@ -54,6 +55,7 @@ h2 { font-size: clamp(2.65rem, 10.5vw, 5rem); font-weight: 650; line-height: .98
 .hero-lede { max-width: 39rem; margin: 28px 0 0; color: var(--muted); font-size: 1.05rem; line-height: 1.62; }
 .hero-lede code { padding: 1px 5px; border: 1px solid var(--rule); border-radius: 4px; color: var(--ink); background: var(--raised); font-size: .88em; }
 .hero-actions { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 10px; }
+.download-meta { margin: 10px 0 0; color: var(--faint); font-size: .68rem; font-weight: 600; letter-spacing: .01em; }
 .button { min-height: 50px; padding: 0 19px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid var(--ink); border-radius: 8px; font-size: .88rem; font-weight: 650; transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), background-color 180ms var(--ease-out); }
 .button-primary { color: var(--raised); background: var(--ink); }
 .button-secondary { border-color: var(--rule); background: var(--raised); }
@@ -180,9 +182,10 @@ h2 { font-size: clamp(2.65rem, 10.5vw, 5rem); font-weight: 650; line-height: .98
 .faq-list details p { max-width: 48rem; margin: -5px 0 25px; color: var(--muted); font-size: .88rem; line-height: 1.7; }
 
 .final-cta { position: relative; width: min(1500px, calc(100% - 24px)); min-height: 570px; margin: 0 auto 12px; padding: clamp(70px, 10vw, 120px) clamp(20px, 6vw, 88px); display: grid; align-content: center; gap: 34px; overflow: hidden; border-radius: 32px; background: oklch(91% .07 27); }
-.final-cta > div:first-child, .final-cta > a { position: relative; z-index: 2; }
+.final-cta > div:first-child, .final-cta > a, .final-cta > .download-meta { position: relative; z-index: 2; }
 .final-cta h2 { max-width: 12ch; }
 .final-cta > a { width: max-content; }
+.final-cta > .download-meta { margin-top: -25px; }
 .cta-art { position: absolute; right: -65px; bottom: -90px; width: min(48vw, 570px); aspect-ratio: 1; display: grid; place-items: center; border: 1px solid oklch(69% .09 29); border-radius: 50%; background: oklch(86% .1 29); }
 .cta-art span { position: absolute; inset: 15%; border: 1px solid oklch(69% .09 29); border-radius: 50%; }
 .cta-art span:nth-child(2) { inset: 29%; }

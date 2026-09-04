@@ -5,12 +5,13 @@ import Invoice from "../components/Invoice.svelte";
 import PromptMaker from "../components/PromptMaker.svelte";
 import RandomPicker from "../components/RandomPicker.svelte";
 import TemplateBrowser from "../components/TemplateBrowser.svelte";
+import AppleIcon from "../components/AppleIcon.astro";
 import { SITE_LINKS } from "../constants";
 import "../styles/global.css";
 
 const faqs = [
   { question: "What is a .slop?", answer: "A .slop is a tiny app or living document you can open, move, duplicate, share, commit, and keep. Its interface and local data travel together as one package." },
-  { question: "Where does my data live?", answer: "In the writable document on your Mac. A slop can use JSON, SQLite, named media, or no persistence at all. Convex never stores your local document." },
+  { question: "Where does my data live?", answer: "In the writable document on your Mac. A slop can use JSON, SQLite, named media, or no persistence at all. The public catalog never stores your local document." },
   { question: "Can an AI edit it?", answer: "Yes. Your AI can work with the same ordinary local data you do. Edit the UI and the file changes; edit the file and an open slop updates in real time." },
   { question: "Do I need to host anything?", answer: "No. A published slop is a signed, source-free artifact people can download and run. You do not need to deploy a web app, provision a database, or build user accounts just to share a useful little tool." },
   { question: "Can I share the result without sharing the app?", answer: "Yes. Export the current document as a high-resolution PNG or a PDF with selectable text and vector output—handy for invoices, recipes, plans, and anything meant to leave your desktop." },
@@ -35,7 +36,7 @@ const faqs = [
         <a href={SITE_LINKS.repository} target="_blank" rel="noreferrer">GitHub</a>
         {SITE_LINKS.discord && <a href={SITE_LINKS.discord} target="_blank" rel="noreferrer">Discord</a>}
       </nav>
-      <a class="nav-download" href={SITE_LINKS.download}>Download <span aria-hidden="true">↓</span></a>
+      <a class="nav-download" href={SITE_LINKS.download}><AppleIcon /> Download</a>
     </header>
 
     <main id="main-content">
@@ -45,9 +46,10 @@ const faqs = [
           <h1 id="hero-title">Tiny apps &amp; docs that live on your desktop.</h1>
           <p class="hero-lede">Each <code>.slop</code> is one local-first file you can open, move, duplicate, share, commit, and keep. Its interface, data, and media stay together on your Mac—no account required.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href={SITE_LINKS.download}><span aria-hidden="true">↓</span> Download for Apple silicon</a>
+            <a class="button button-primary" href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon</a>
             <a class="button button-secondary" href="#objects">Try the slops <span aria-hidden="true">↘</span></a>
           </div>
+          <p class="download-meta">Apple silicon · macOS 14 or newer</p>
           <ul class="hero-facts" aria-label="Key hitSlop features"><li>Open, move &amp; share</li><li>Local JSON, SQLite &amp; media</li><li>Export PNG &amp; PDF</li></ul>
         </div>
         <figure class="desktop-still">
@@ -129,7 +131,7 @@ const faqs = [
         <TemplateBrowser client:visible />
       </section>
       <section class="faq-section" aria-labelledby="faq-title"><div><p class="eyebrow">Questions, answered</p><h2 id="faq-title">The small print, in plain English.</h2></div><div class="faq-list">{faqs.map((faq) => <details><summary>{faq.question}<span aria-hidden="true">+</span></summary><p>{faq.answer}</p></details>)}</div></section>
-      <section class="final-cta" aria-labelledby="cta-title"><div><p class="eyebrow">Small files. Big ideas.</p><h2 id="cta-title">Put your next tiny tool on your desktop.</h2></div><a class="button button-primary" href={SITE_LINKS.download}>Download for Apple silicon <span aria-hidden="true">↓</span></a><div class="cta-art" aria-hidden="true"><span></span><span></span><img src="/assets/appicon.png" alt="" /></div></section>
+      <section class="final-cta" aria-labelledby="cta-title"><div><p class="eyebrow">Small files. Big ideas.</p><h2 id="cta-title">Put your next tiny tool on your desktop.</h2></div><a class="button button-primary" href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon</a><p class="download-meta">Apple silicon · macOS 14 or newer</p><div class="cta-art" aria-hidden="true"><span></span><span></span><img src="/assets/appicon.png" alt="" /></div></section>
     </main>
 
     <footer class="site-footer" id="community">

@@ -1,8 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Archive, Developer ID-sign, notarize, and wrap an Apple Silicon hitSlop DMG.
-# ConvexMobile's distributed binary currently provides an arm64 macOS slice.
+# Archive, Developer ID-sign, notarize, and wrap an Apple-silicon hitSlop DMG.
 # Optional env:
 #   HITSLOP_CODESIGN_IDENTITY   Developer ID identity (name or hash)
 #   ASC_API_KEY_P8 / ASC_API_KEY_P8_FILE, ASC_API_KEY_ID, ASC_API_ISSUER_ID
@@ -85,7 +84,7 @@ archive_path="$stage_dir/hitSlop.xcarchive"
 export_dir="$stage_dir/export"
 /bin/mkdir -p "$export_dir"
 
-echo "Archiving Apple Silicon Release…"
+echo "Archiving Apple-silicon Release…"
 # shellcheck disable=SC2086
 /usr/bin/xcodebuild \
   -quiet \
@@ -95,7 +94,7 @@ echo "Archiving Apple Silicon Release…"
   -destination "generic/platform=macOS" \
   -archivePath "$archive_path" \
   ARCHS="arm64" \
-  ONLY_ACTIVE_ARCH=NO \
+  ONLY_ACTIVE_ARCH=YES \
   DEVELOPMENT_TEAM="$team_id" \
   $auth_args \
   archive
@@ -116,6 +115,18 @@ if [ ! -d "$app" ]; then
   /usr/bin/find "$export_dir" -maxdepth 2 -print >&2
   exit 70
 fi
+
+assert_arm64_only() {
+  binary=$1
+  architectures=$(/usr/bin/lipo -archs "$binary")
+  if [ "$architectures" != "arm64" ]; then
+    echo "$binary must contain only arm64; found: $architectures" >&2
+    exit 70
+  fi
+}
+
+assert_arm64_only "$app/Contents/MacOS/hitSlop"
+assert_arm64_only "$app/Contents/Helpers/hitslop-native"
 
 echo "Signing nested helper and app…"
 /usr/bin/codesign --force --timestamp --sign "$identity" "$app/Contents/Helpers/HitSlopApple_HitSlopCore.bundle"

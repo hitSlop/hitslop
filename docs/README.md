@@ -14,8 +14,8 @@
 
 - [Architecture](architecture.md) — trust boundaries and end-to-end data flow.
 - [Apple apps](apps/apple.md) — Core, Runtime, Host, Catalog, Registry, and CLI.
-- [API gateway](apps/api.md) — signed artifact validation and R2 delivery.
-- [Registry](apps/registry.md) — Convex schema and publishing finalization.
+- [Firebase backend](apps/firebase.md) — signed publishing, catalog metadata,
+  immutable artifacts, and API hosting.
 - [Self-hosting](self-hosting.md) — replace the official hosted services.
 - [Repository guide](repository.md) — workspace map and change discipline.
 - [Releasing](releasing.md) — versions, checks, npm, services, and macOS.

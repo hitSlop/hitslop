@@ -14,7 +14,6 @@ import WebKit
 
 private struct AppEnvironment {
     static var catalogURL: URL { URL(string: Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")! }
-    static var deploymentURL: String { Bundle.main.object(forInfoDictionaryKey: "ConvexDeploymentURL") as? String ?? "https://fastidious-malamute-777.convex.cloud" }
 }
 
 struct LibraryView: View {
@@ -66,7 +65,7 @@ struct LibraryView: View {
 
 struct CatalogScreen: View {
     let onCreated: () -> Void
-    @StateObject private var model = RegistryModel(deploymentURL: AppEnvironment.deploymentURL, catalogURL: AppEnvironment.catalogURL)
+    @StateObject private var model = RegistryModel(catalogURL: AppEnvironment.catalogURL)
     @State private var creating: String?
     @State private var failure: String?
 
@@ -108,9 +107,8 @@ struct CatalogScreen: View {
         creating = template.title
         Task { @MainActor in
             do {
-                guard let remote = template.remoteTemplate() else { throw SlopPackageError.invalid("template has no current artifact") }
                 let url = SlopCloud.uniqueDocumentURL(slug: template.slug)
-                _ = try await DocumentFactory(catalogURL: model.catalogURL).create(from: remote, at: url)
+                _ = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template.remoteTemplate(), at: url)
                 await model.recordCreation(template: template)
                 creating = nil
                 onCreated()

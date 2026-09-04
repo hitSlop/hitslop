@@ -49,7 +49,7 @@
     return categoryMatches && searchMatches;
   }));
 
-  const heading = $derived(query.trim() ? `Results for “${query.trim()}”` : category === "all" ? "Popular slops" : categories.find((item) => item.id === category)?.label ?? "Slops");
+  const heading = $derived(query.trim() ? `Results for “${query.trim()}”` : category === "all" ? "Featured slops" : categories.find((item) => item.id === category)?.label ?? "Slops");
 
   function reset(): void {
     query = "";

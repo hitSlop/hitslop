@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
         .library(name: "HitSlopCore", targets: ["HitSlopCore"]),
+        .library(name: "HitSlopFirebase", targets: ["HitSlopFirebase"]),
         .library(name: "HitSlopRuntime", targets: ["HitSlopRuntime"]),
         .library(name: "HitSlopRegistry", targets: ["HitSlopRegistry"]),
         .library(name: "HitSlopHost", targets: ["HitSlopHost"]),
@@ -14,7 +15,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20"),
-        .package(url: "https://github.com/get-convex/convex-swift.git", from: "0.8.1"),
+        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", exact: "12.18.0"),
         .package(url: "https://github.com/objecthub/swift-dynamicjson.git", from: "1.0.2"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2"),
     ],
@@ -29,13 +30,28 @@ let package = Package(
             linkerSettings: [.linkedLibrary("sqlite3"), .linkedFramework("ImageIO")]
         ),
         .target(
+            name: "HitSlopFirebase",
+            dependencies: [
+                .product(name: "FirebaseCore", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseAnalytics", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseCrashlytics", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseAppCheck", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseAI", package: "firebase-ios-sdk"),
+            ]
+        ),
+        .target(
             name: "HitSlopRuntime",
             dependencies: ["HitSlopCore"],
             linkerSettings: [.linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS])), .linkedLibrary("sqlite3")]
         ),
         .target(
             name: "HitSlopRegistry",
-            dependencies: ["HitSlopCore", .product(name: "ConvexMobile", package: "convex-swift")]
+            dependencies: [
+                "HitSlopCore",
+                "HitSlopFirebase",
+                .product(name: "FirebaseFirestore", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseFunctions", package: "firebase-ios-sdk"),
+            ]
         ),
         .target(
             name: "HitSlopHost",

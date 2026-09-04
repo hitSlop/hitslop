@@ -12,13 +12,15 @@
 		0B3F815DB54B804FE2ABE529 /* HitSlopRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = 187A94C4DB35D5420C579E3E /* HitSlopRuntime */; };
 		3100D7B7E3D59CF3DA13D845 /* HitSlopCore in Frameworks */ = {isa = PBXBuildFile; productRef = 65BB990F9591043453C7B220 /* HitSlopCore */; };
 		3F91EC9FC8A44F9B3E911B79 /* HitSlopRuntime in Frameworks */ = {isa = PBXBuildFile; productRef = DFB3D40C542474608A48F2A0 /* HitSlopRuntime */; };
+		50DBB59DA083F780B4FAAE62 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C419462A556663F0047EE34C /* GoogleService-Info.plist */; };
 		55C6D9FAB7F5735305B6FECC /* hitSlopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75719DC5D67261F7EA46EC82 /* hitSlopApp.swift */; };
 		64E30A32DC9F12DA8E8DB6E9 /* hitSlopApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 581CEEB49B3FCB2898E086F8 /* hitSlopApp.swift */; };
 		7C84ACC32DEE5720E387AF18 /* HitSlopRegistry in Frameworks */ = {isa = PBXBuildFile; productRef = 27C19B5D676A65DA61C0E14C /* HitSlopRegistry */; };
 		A7BA3F995003EF8564A72C2C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D7F4FFEA3E5F1F8855A530E /* Assets.xcassets */; };
 		B890C72C6C42DAEF9CE89A89 /* HitSlopCore in Frameworks */ = {isa = PBXBuildFile; productRef = 39ACE8CB8475940A02C89F85 /* HitSlopCore */; };
 		C21FAEA050B4277B93C9321B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3D7F4FFEA3E5F1F8855A530E /* Assets.xcassets */; };
-		D06DA365A1BAD746AA5643F6 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 91BD7843075E7E977199C386 /* Sparkle */; };
+		D06DA365A1BAD746AA5643F6 /* HitSlopFirebase in Frameworks */ = {isa = PBXBuildFile; productRef = 800A8F087445A9E33DCEEDEC /* HitSlopFirebase */; };
+		DC322D92933E047AECD219B7 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 91BD7843075E7E977199C386 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +30,7 @@
 		6DF839B510740E924F7BB7F7 /* hitSlop-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hitSlop-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		75719DC5D67261F7EA46EC82 /* hitSlopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = hitSlopApp.swift; sourceTree = "<group>"; };
 		8F3E8ABA833EC14B3909EFD3 /* hitSlop-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hitSlop-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C419462A556663F0047EE34C /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,7 +42,8 @@
 				05E731AEF1C06E492D5D7D18 /* HitSlopCatalog in Frameworks */,
 				3F91EC9FC8A44F9B3E911B79 /* HitSlopRuntime in Frameworks */,
 				B890C72C6C42DAEF9CE89A89 /* HitSlopCore in Frameworks */,
-				D06DA365A1BAD746AA5643F6 /* Sparkle in Frameworks */,
+				D06DA365A1BAD746AA5643F6 /* HitSlopFirebase in Frameworks */,
+				DC322D92933E047AECD219B7 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -111,6 +115,7 @@
 		9AAFE75F36C080EB5AF3DEF6 /* macOS */ = {
 			isa = PBXGroup;
 			children = (
+				C419462A556663F0047EE34C /* GoogleService-Info.plist */,
 				75719DC5D67261F7EA46EC82 /* hitSlopApp.swift */,
 			);
 			path = macOS;
@@ -149,6 +154,7 @@
 				2DB7E9D05D6BE55DAEF42F9D /* Embed hitslop-native */,
 				BD8949865138D172D8661AFF /* Resources */,
 				1DA3D296F3B487247A81E12C /* Frameworks */,
+				0EF0622F0EDD719F2355D085 /* Upload Crashlytics symbols */,
 			);
 			buildRules = (
 			);
@@ -160,6 +166,7 @@
 				F47B3662C054655C373D2A3F /* HitSlopCatalog */,
 				DFB3D40C542474608A48F2A0 /* HitSlopRuntime */,
 				39ACE8CB8475940A02C89F85 /* HitSlopCore */,
+				800A8F087445A9E33DCEEDEC /* HitSlopFirebase */,
 				91BD7843075E7E977199C386 /* Sparkle */,
 			);
 			productName = "hitSlop-macOS";
@@ -215,6 +222,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A7BA3F995003EF8564A72C2C /* Assets.xcassets in Resources */,
+				50DBB59DA083F780B4FAAE62 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -229,6 +237,30 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		0EF0622F0EDD719F2355D085 /* Upload Crashlytics symbols */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(DWARF_DSYM_FOLDER_PATH)/$(DWARF_DSYM_FILE_NAME)",
+				"$(DWARF_DSYM_FOLDER_PATH)/$(DWARF_DSYM_FILE_NAME)/Contents/Resources/DWARF/$(PRODUCT_NAME)",
+				"$(DWARF_DSYM_FOLDER_PATH)/$(DWARF_DSYM_FILE_NAME)/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = "Upload Crashlytics symbols";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -euo pipefail\ncase \"${CONFIGURATION:-}\" in\n  Release) ;;\n  *) exit 0 ;;\nesac\nif [ \"${CODE_SIGNING_ALLOWED:-YES}\" = \"NO\" ]; then\n  exit 0\nfi\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+		};
 		2DB7E9D05D6BE55DAEF42F9D /* Embed hitslop-native */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -338,7 +370,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				HITSLOP_CATALOG_URL = "https://api.hitslop.com";
-				HITSLOP_CONVEX_URL = "https://fastidious-malamute-777.convex.cloud";
 				INFOPLIST_FILE = App/iOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -363,7 +394,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				HITSLOP_CATALOG_URL = "https://api.hitslop.com";
-				HITSLOP_CONVEX_URL = "https://fastidious-malamute-777.convex.cloud";
 				INFOPLIST_FILE = App/iOS/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -385,17 +415,17 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Shared/hitSlop.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				ENABLE_HARDENED_RUNTIME = YES;
 				HITSLOP_CATALOG_URL = "https://api.hitslop.com";
-				HITSLOP_CONVEX_URL = "https://fastidious-malamute-777.convex.cloud";
 				INFOPLIST_FILE = App/macOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
+				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.hitslop.app;
 				PRODUCT_NAME = hitSlop;
 				SDKROOT = macosx;
@@ -475,17 +505,17 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Shared/hitSlop.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 18;
+				CURRENT_PROJECT_VERSION = 19;
 				ENABLE_HARDENED_RUNTIME = YES;
-				HITSLOP_CATALOG_URL = "http://localhost:3000";
-				HITSLOP_CONVEX_URL = "https://giddy-opossum-593.convex.cloud";
+				HITSLOP_CATALOG_URL = "http://127.0.0.1:5002";
 				INFOPLIST_FILE = App/macOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.1;
+				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.hitslop.app;
 				PRODUCT_NAME = hitSlop;
 				SDKROOT = macosx;
@@ -559,6 +589,10 @@
 		65BB990F9591043453C7B220 /* HitSlopCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = HitSlopCore;
+		};
+		800A8F087445A9E33DCEEDEC /* HitSlopFirebase */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HitSlopFirebase;
 		};
 		91BD7843075E7E977199C386 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -26,8 +26,6 @@
 	<true/>
 	<key>CatalogURL</key>
 	<string>$(HITSLOP_CATALOG_URL)</string>
-	<key>ConvexDeploymentURL</key>
-	<string>$(HITSLOP_CONVEX_URL)</string>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSUbiquitousContainers</key>

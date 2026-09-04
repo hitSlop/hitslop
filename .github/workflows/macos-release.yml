@@ -74,6 +74,8 @@ jobs:
           hdiutil attach "dist/macos/hitSlop-${VERSION}.dmg" -nobrowse -mountpoint "$RUNNER_TEMP/dmg"
           ditto "$RUNNER_TEMP/dmg/hitSlop.app" "$APP"
           hdiutil detach "$RUNNER_TEMP/dmg"
+          test "$(lipo -archs "$APP/Contents/MacOS/hitSlop")" = "arm64"
+          test "$(lipo -archs "$APP/Contents/Helpers/hitslop-native")" = "arm64"
           codesign --verify --deep --strict --verbose=2 "$APP"
           spctl --assess --type execute --verbose=2 "$APP"
           stapler validate "dist/macos/hitSlop-${VERSION}.dmg"

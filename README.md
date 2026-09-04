@@ -89,9 +89,8 @@ any combination, or none. See [Package format](docs/package-format.md) and
 - `apps/apple` — the macOS/iOS document host, catalog UI, Quick Look, export,
   local/iCloud coordination, and the native capture CLI.
 - `apps/landing` — the static Astro site served at `hitslop.com`.
-- `apps/api` — the hardened Cloudflare publish/download and R2 gateway.
-- `apps/registry` — Convex metadata for publishers, templates, releases, and
-  aggregate creation counts.
+- `apps/firebase` — Firebase Functions, Firestore, Storage, Hosting, and catalog
+  rules for publishing and discovery.
 - `packages/cli` — create, validate, preview, build, register, sign, and publish.
 - `packages/runtime` — the framework-neutral browser bridge.
 - `packages/svelte` and `packages/react` — reactive adapters.
@@ -111,7 +110,7 @@ bun run release:check
 ```
 
 That first-launch gate checks generated schemas, the public TypeScript/Svelte
-packages, clean-room npm tarballs, API package ingestion, documentation and
+packages, clean-room npm tarballs, Firebase package ingestion, documentation and
 tracked-file hygiene, and the Swift package. Older examples have the separate
 `bun run examples:check` gate while they are intentionally converted to v1. If
 you are changing Zod, run `bun run schema:generate` first.
@@ -120,7 +119,7 @@ Start with the [documentation map](docs/README.md), then read
 [Architecture](docs/architecture.md), [Repository guide](docs/repository.md),
 and [Contributing](CONTRIBUTING.md).
 
-The macOS app is at `1.0.0`. The iOS app and public npm packages are at
+The macOS app is at `1.0.1`. The iOS app and public npm packages are at
 `0.1.0` while their APIs settle.
 
 ## License

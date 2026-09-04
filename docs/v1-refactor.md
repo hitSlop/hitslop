@@ -39,8 +39,9 @@ accepted in a template or published artifact.
 - three separate shared Swift packages
 
 Publishing now signs one artifact; the gateway extracts trusted catalog data
-from it. Convex keeps only publisher/template/release data and successful
-creation counts. Shared Apple code is one package with three products.
+from it. The initial implementation used Convex for catalog metadata before the
+first-launch Firebase consolidation. Shared Apple code is one package with
+focused products.
 
 No migrations are provided because this contract replaces unpublished example
 formats. The new scaffold is the compatibility target while older examples are

@@ -24,6 +24,9 @@ sparkle_eddsa*
 
 # Generated service, Apple, and editor state.
 .wrangler/
+.firebase/
+apps/firebase/lib/
+firebase-debug.log
 _docs/
 **/.build/
 **/.swiftpm/

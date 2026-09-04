@@ -1,5 +1,5 @@
 import { lstat, mkdir, readFile } from "node:fs/promises";
-import { basename, dirname, extname, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
 async function command(argv: string[], cwd = root, quiet = false, extraEnv: Record<string, string> = {}): Promise<string> {
@@ -121,9 +121,8 @@ async function main(): Promise<void> {
   await Promise.all([
     checkIgnored("AuthKey_FAKE123.p8", true),
     checkIgnored(".env.production", true),
-    checkIgnored("apps/api/.dev.vars", true),
-    checkIgnored("apps/registry/.env.local", true),
-    checkIgnored("apps/api/.dev.vars.example", false),
+    checkIgnored("apps/firebase/.env.local", true),
+    checkIgnored("apps/firebase/firebase-debug.log", true),
     checkIgnored("_vibe/reference.png", true),
     checkIgnored("archive/templates/unlisted-private/manifest.json", true),
     assertDocumentationLinks(files),
@@ -135,6 +134,7 @@ async function main(): Promise<void> {
 
   await command(["bun", "run", "release:npm:check"]);
   assertNoGeneratedSource(await gitFiles());
+  await command(["bun", "run", "test:emulator"], join(root, "apps/firebase"));
 
   if (process.platform === "darwin" && process.env.HITSLOP_SKIP_SWIFT !== "1") {
     const moduleCache = resolve(root, ".hitslop/release-cache/clang");

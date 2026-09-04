@@ -55,8 +55,6 @@
 	</dict>
 	<key>CatalogURL</key>
 	<string>$(HITSLOP_CATALOG_URL)</string>
-	<key>ConvexDeploymentURL</key>
-	<string>$(HITSLOP_CONVEX_URL)</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

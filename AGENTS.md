@@ -38,6 +38,7 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
   SHA-256, and copies one to the user-selected path. Local `slop register`
   writes `~/.hitslop/templates/<slug>.slop`. Anything under
   `~/.hitslop/templates` is a catalog master, never a writable document.
-  Convex never stores a local document.
+  Firebase stores only public catalog metadata and immutable published artifacts;
+  it never stores a local document.
 - Zod is authoritative. Run `bun run schema:generate` after schema changes;
   JSON Schema then generates the Swift types and validates Swift manifests.

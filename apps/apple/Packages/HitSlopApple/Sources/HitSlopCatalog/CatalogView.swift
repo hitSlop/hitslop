@@ -65,6 +65,7 @@ public struct CatalogView: View {
     @StateObject private var localStore: LocalTemplateStore
     @State private var query = ""
     @State private var filter: CatalogFilter = .all
+    @State private var catalogSort: RegistrySort = .popular
     @State private var selectedID: String?
     @State private var searchTask: Task<Void, Never>?
     @State private var creatingTemplateTitle: String?
@@ -74,8 +75,8 @@ public struct CatalogView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let openDocumentAction: (URL) -> Void
 
-    public init(deploymentURL: String, catalogURL: URL, templatesURL: URL = DocumentFactory.defaultTemplatesRoot, openDocument: @escaping (URL) -> Void) {
-        _model = StateObject(wrappedValue: RegistryModel(deploymentURL: deploymentURL, catalogURL: catalogURL))
+    public init(catalogURL: URL, templatesURL: URL = DocumentFactory.defaultTemplatesRoot, openDocument: @escaping (URL) -> Void) {
+        _model = StateObject(wrappedValue: RegistryModel(catalogURL: catalogURL))
         _localStore = StateObject(wrappedValue: LocalTemplateStore(templatesURL: templatesURL))
         openDocumentAction = openDocument
     }
@@ -103,6 +104,9 @@ public struct CatalogView: View {
     }
     private var selectedEntry: CatalogEntry? { visibleEntries.first { $0.id == selectedID } }
     private var visibleIDs: [String] { visibleEntries.map(\.id) }
+    private var showsCatalogSort: Bool {
+        switch filter { case .all, .category: true; case .myTemplates, .recents: false }
+    }
 
     public var body: some View {
         NavigationSplitView {
@@ -122,8 +126,10 @@ public struct CatalogView: View {
                 query: $query,
                 searchFocused: $searchFocused,
                 catalogURL: model.catalogURL,
-                errorMessage: model.errorMessage,
-                localIssues: localStore.issues
+                errorMessage: showsCatalogSort ? model.errorMessage : nil,
+                localIssues: filter == .myTemplates ? localStore.issues : [],
+                sort: $catalogSort,
+                showsSort: showsCatalogSort
             )
             .navigationSplitViewColumnWidth(min: 236, ideal: 264, max: 304)
             .ignoresSafeArea(.container, edges: .top)
@@ -147,6 +153,13 @@ public struct CatalogView: View {
         .onAppear { synchronizeSelection() }
         .onChange(of: visibleIDs) { _, _ in synchronizeSelection() }
         .onChange(of: query) { _, value in scheduleSearch(value) }
+        .onChange(of: catalogSort) { _, value in
+            switch filter {
+            case .all: model.list(sort: value)
+            case .category(let category): model.list(category: category, sort: value)
+            case .myTemplates, .recents: break
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 localStore.refresh()
@@ -174,8 +187,8 @@ public struct CatalogView: View {
             return
         }
         switch next {
-        case .all: model.list()
-        case .category(let category): model.list(category: category)
+        case .all: model.list(sort: catalogSort)
+        case .category(let category): model.list(category: category, sort: catalogSort)
         case .myTemplates, .recents: break
         }
     }
@@ -188,9 +201,9 @@ public struct CatalogView: View {
             guard !Task.isCancelled else { return }
             switch filter {
             case .all:
-                trimmed.isEmpty ? model.list() : model.search(trimmed)
+                trimmed.isEmpty ? model.list(sort: catalogSort) : model.search(trimmed)
             case .category(let category):
-                trimmed.isEmpty ? model.list(category: category) : model.search(trimmed, category: category)
+                trimmed.isEmpty ? model.list(category: category, sort: catalogSort) : model.search(trimmed, category: category)
             case .myTemplates, .recents:
                 synchronizeSelection()
             }
@@ -219,8 +232,7 @@ public struct CatalogView: View {
             do {
                 switch item.source {
                 case .hosted(let template):
-                    guard let remote = template.remoteTemplate() else { throw SlopPackageError.invalid("template has no current artifact") }
-                    _ = try await DocumentFactory(catalogURL: model.catalogURL).create(from: remote, at: url)
+                    _ = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template.remoteTemplate(), at: url)
                     SlopPreviewWriter.installExistingPreview(for: url)
                     await model.recordCreation(template: template)
                 case .local(let template):
@@ -359,14 +371,26 @@ private struct CatalogRail: View {
     let catalogURL: URL
     let errorMessage: String?
     let localIssues: [String]
+    @Binding var sort: RegistrySort
+    let showsSort: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             CatalogSearchBar(query: $query, focused: searchFocused)
-            HStack(alignment: .firstTextBaseline) {
-                Text(title).font(.headline.weight(.semibold))
-                Spacer()
-                Text("\(entries.count)").font(.caption.monospacedDigit()).foregroundStyle(.tertiary)
+            VStack(alignment: .leading, spacing: showsSort ? 9 : 0) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title).font(.headline.weight(.semibold))
+                    Spacer()
+                    Text("\(entries.count)").font(.caption.monospacedDigit()).foregroundStyle(.tertiary)
+                }
+                if showsSort {
+                    Picker("Catalog order", selection: $sort) {
+                        ForEach(RegistrySort.allCases) { option in Text(option.title).tag(option) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .accessibilityLabel("Catalog order")
+                }
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
 
@@ -456,7 +480,7 @@ private struct CatalogRow: View {
         case .template(let item):
             switch item.source {
             case .local(let template): [template.iconURL, template.previewURL]
-            case .hosted(let template): [artifactURL(catalogURL: catalogURL, key: template.currentIconKey), artifactURL(catalogURL: catalogURL, key: template.currentPreviewKey)].compactMap { $0 }
+            case .hosted(let template): [artifactURL(catalogURL: catalogURL, key: template.currentRelease.icon.key), artifactURL(catalogURL: catalogURL, key: template.currentRelease.preview.key)].compactMap { $0 }
             }
         }
     }
@@ -547,7 +571,7 @@ private struct CatalogDetail: View {
         case .template(let item):
             switch item.source {
             case .local(let template): [template.previewURL, template.iconURL]
-            case .hosted(let template): [artifactURL(catalogURL: catalogURL, key: template.currentPreviewKey), artifactURL(catalogURL: catalogURL, key: template.currentIconKey)].compactMap { $0 }
+            case .hosted(let template): [artifactURL(catalogURL: catalogURL, key: template.currentRelease.preview.key), artifactURL(catalogURL: catalogURL, key: template.currentRelease.icon.key)].compactMap { $0 }
             }
         }
     }
@@ -566,7 +590,7 @@ private struct CatalogDetail: View {
             var extra: [CatalogFact] = []
             if let publisher = item.publisher { extra.append(CatalogFact(icon: "person.crop.circle", title: "Publisher", value: publisher)) }
             if let release = item.releaseNumber { extra.append(CatalogFact(icon: "shippingbox", title: "Release", value: "Release \(release)")) }
-            if let creations = item.creations { extra.append(CatalogFact(icon: "doc.on.doc", title: "Created from", value: "\(creations) times")) }
+            if let creationCount = item.creationCount { extra.append(CatalogFact(icon: "doc.on.doc", title: "Creations", value: "\(creationCount)")) }
             return commonFacts(
                 source: item.isLocal ? "Installed locally" : "Online catalog",
                 manifest: item.manifest,

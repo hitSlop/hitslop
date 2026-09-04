@@ -12,7 +12,9 @@ iOS 17.
   system image/SQLite facilities.
 - **HitSlopRuntime** hosts the WebKit scheme/bridge, JSON and SQLite stores,
   working-copy/cloud coordination, document creation, and guest readiness.
-- **HitSlopRegistry** is the Convex Swift client and remote template model.
+- **HitSlopFirebase** configures Analytics, Crashlytics, App Check, and the
+  Firebase AI Logic foundation.
+- **HitSlopRegistry** is the Firestore catalog and Functions client.
 - **HitSlopHost** is macOS AppKit: windows, masks, hidden rendering, Quick Look
   images, PNG/PDF export, and Finder custom icons.
 - **HitSlopCatalog** is the macOS catalog UI and immutable local/hosted template
@@ -52,6 +54,6 @@ swift test --package-path apps/apple/Packages/HitSlopApple
 swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native
 ```
 
-The macOS app is version `1.0.0`; iOS remains `0.1.0`. Release signing,
+The macOS app is version `1.0.1`; iOS remains `0.1.0`. Release signing,
 notarization, Sparkle, and App Store credentials are local/CI secrets, never
 repository files.

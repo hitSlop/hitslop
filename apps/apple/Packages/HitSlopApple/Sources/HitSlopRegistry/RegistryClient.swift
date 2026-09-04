@@ -1,43 +1,158 @@
 import Combine
-@preconcurrency import ConvexMobile
+import FirebaseFirestore
+import FirebaseFunctions
 import Foundation
 import HitSlopCore
+import HitSlopFirebase
 
-public struct RegistryTemplate: Decodable, Identifiable {
-    public let _id: String; public let publisherKeyId: String; public let slug: String; public let title: String; public let description: String; public let categories: [String]
+public struct RegistryAsset: Decodable, Sendable {
+    public let key: String
+    public let sha256: String
+    public let bytes: Int
+}
+
+public struct RegistryRelease: Decodable, Sendable {
+    public let id: String
+    public let number: Int
+    public let publishedAt: Date
+    public let artifact: RegistryAsset
+    public let preview: RegistryAsset
+    public let icon: RegistryAsset
+    public let manifestJSON: String
+}
+
+public struct RegistryTemplate: Decodable, Identifiable, Sendable {
+    public let id: String
+    public let publisherKeyId: String
+    public let slug: String
+    public let title: String
+    public let description: String
+    public let categories: [String]
     public let publisherDisplayName: String
-    public let currentReleaseId: String?; @ConvexInt public var currentReleaseNumber: Int
-    public let currentArtifactKey: String?; public let currentArtifactSha256: String?; public let currentArtifactBytes: Double?
-    public let currentPreviewKey: String; public let currentIconKey: String
-    public let currentManifestJson: String?; public let currentReleaseCreatedAt: Double?; public let updatedAt: Double
-    @ConvexInt public var creations: Int
-    public var id: String { _id }
+    public let currentRelease: RegistryRelease
+    public let creationCount: Int
+    public let firstPublishedAt: Date
+    public let visibility: String
+    public let searchText: String
+
     public var currentManifest: SlopManifest? {
-        guard let currentManifestJson, let data = currentManifestJson.data(using: .utf8) else { return nil }
+        guard let data = currentRelease.manifestJSON.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(SlopManifest.self, from: data)
     }
 
-    public func remoteTemplate() -> SlopRemoteTemplate? {
-        guard let artifactKey = currentArtifactKey, let sha = currentArtifactSha256 else { return nil }
-        return SlopRemoteTemplate(publisherKeyID: publisherKeyId, slug: slug, release: currentReleaseNumber, artifactKey: artifactKey, artifactSha256: sha)
+    public func remoteTemplate() -> SlopRemoteTemplate {
+        SlopRemoteTemplate(
+            publisherKeyID: publisherKeyId,
+            slug: slug,
+            release: currentRelease.number,
+            artifactKey: currentRelease.artifact.key,
+            artifactSha256: currentRelease.artifact.sha256
+        )
     }
 }
-extension RegistryTemplate: @unchecked Sendable {}
+
+public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
+    case popular
+    case new
+
+    public var id: String { rawValue }
+    public var title: String { self == .popular ? "Popular" : "New" }
+}
 
 @MainActor public final class RegistryModel: ObservableObject {
     @Published public private(set) var templates: [RegistryTemplate] = []
     @Published public private(set) var errorMessage: String?
-    private let client: ConvexClient; private var subscription: AnyCancellable?
     public let catalogURL: URL
 
-    public init(deploymentURL: String, catalogURL: URL) { client = ConvexClient(deploymentUrl: deploymentURL); self.catalogURL = catalogURL; list() }
-    public func search(_ term: String, category: String? = nil) { subscribe(to: "catalog:search", arguments: ["term": term, "category": category, "limit": 36.0]) }
-    public func list(category: String? = nil, sort: String = "popular") { subscribe(to: "catalog:list", arguments: ["category": category, "sort": sort, "limit": 36.0]) }
-    public func recordCreation(template: RegistryTemplate) async { try? await client.mutation("catalog:recordCreation", with: ["templateId": template._id]) }
+    private let firestore: Firestore
+    private let functions: Functions
+    private var listener: ListenerRegistration?
+    private var catalog: [RegistryTemplate] = []
+    private var term = ""
+    private var category: String?
+    private var sort: RegistrySort = .popular
 
-    private func subscribe(to query: String, arguments: [String: ConvexEncodable?]) {
-        subscription = client.subscribe(to: query, with: arguments, yielding: [RegistryTemplate].self)
-            .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { [weak self] completion in if case .failure(let error) = completion { self?.errorMessage = error.localizedDescription } }, receiveValue: { [weak self] in self?.errorMessage = nil; self?.templates = $0 })
+    public init(catalogURL: URL) {
+        self.catalogURL = catalogURL
+        firestore = Firestore.firestore()
+        functions = Functions.functions(region: "us-central1")
+        #if DEBUG
+        firestore.useEmulator(withHost: "127.0.0.1", port: 8080)
+        let settings = firestore.settings
+        settings.cacheSettings = MemoryCacheSettings()
+        settings.isSSLEnabled = false
+        firestore.settings = settings
+        functions.useEmulator(withHost: "127.0.0.1", port: 5001)
+        #endif
+        subscribe()
+    }
+
+    public func search(_ term: String, category: String? = nil) {
+        let categoryChanged = self.category != category
+        self.term = term.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase
+        self.category = category
+        if categoryChanged { subscribe() } else { applyFilters() }
+    }
+
+    public func list(category: String? = nil, sort: RegistrySort = .popular) {
+        term = ""
+        let queryChanged = self.category != category || self.sort != sort
+        self.category = category
+        self.sort = sort
+        if queryChanged { subscribe() } else { applyFilters() }
+    }
+
+    public func recordCreation(template: RegistryTemplate) async {
+        do {
+            _ = try await functions.httpsCallable("recordCreation").call(["templateId": template.id])
+            HitSlopFirebase.log("template_created", parameters: ["template_slug": template.slug])
+        } catch {
+            HitSlopFirebase.record(error)
+        }
+    }
+
+    private func subscribe() {
+        listener?.remove()
+        var query: Query = firestore.collection("templates")
+            .whereField("visibility", isEqualTo: "public")
+        if let category {
+            query = query.whereField("categories", arrayContains: category)
+        }
+        switch sort {
+        case .popular:
+            query = query
+                .order(by: "creationCount", descending: true)
+                .order(by: "firstPublishedAt", descending: true)
+        case .new:
+            query = query.order(by: "firstPublishedAt", descending: true)
+        }
+        listener = query
+            .limit(to: 200)
+            .addSnapshotListener { [weak self] snapshot, error in
+                Task { @MainActor in
+                    guard let self else { return }
+                    if let error {
+                        self.errorMessage = error.localizedDescription
+                        HitSlopFirebase.record(error)
+                        HitSlopFirebase.log("catalog_load_failed")
+                        return
+                    }
+                    do {
+                        self.catalog = try snapshot?.documents.map { try $0.data(as: RegistryTemplate.self) } ?? []
+                        self.errorMessage = nil
+                        self.applyFilters()
+                        HitSlopFirebase.log("catalog_loaded", parameters: ["template_count": self.catalog.count, "catalog_sort": self.sort.rawValue])
+                    } catch {
+                        self.errorMessage = error.localizedDescription
+                        HitSlopFirebase.record(error)
+                    }
+                }
+            }
+    }
+
+    private func applyFilters() {
+        templates = catalog.filter { template in
+            term.isEmpty || template.searchText.localizedLowercase.contains(term)
+        }
     }
 }
