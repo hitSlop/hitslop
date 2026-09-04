@@ -1,0 +1,11 @@
+:root {
+  --slop-surface: #e98996;
+  --slop-paper: #fff9f3;
+  --slop-ink: #432830;
+  --slop-muted: #82636a;
+  --slop-accent: #a43d59;
+  --slop-on-accent: #432830;
+  --slop-rule: #ead9cb;
+  --slop-control: #f1dfc9;
+  --slop-font: "Avenir Next", Avenir, "Helvetica Neue", sans-serif;
+}

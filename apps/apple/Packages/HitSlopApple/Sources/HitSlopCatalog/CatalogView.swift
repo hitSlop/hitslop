@@ -5,7 +5,7 @@ import HitSlopRegistry
 import HitSlopRuntime
 import SwiftUI
 
-private enum CatalogFilter: Hashable {
+enum CatalogFilter: Hashable {
     case all, myTemplates, recents, category(String)
 
     var title: String {
@@ -271,15 +271,15 @@ private struct CatalogSidebar: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 3) {
-                    SidebarButton(title: "All Slops", icon: "square.grid.2x2", selected: filter == .all) { select(.all) }
-                    SidebarButton(title: "Recents", icon: "clock", count: recentCount, selected: filter == .recents) { select(.recents) }
-                    SidebarButton(title: "Mine", icon: "folder", count: localCount, selected: filter == .myTemplates) { select(.myTemplates) }
+                    SidebarButton(title: "All Slops", emoji: catalogFilterEmoji(.all), selected: filter == .all) { select(.all) }
+                    SidebarButton(title: "Recents", emoji: catalogFilterEmoji(.recents), count: recentCount, selected: filter == .recents) { select(.recents) }
+                    SidebarButton(title: "Mine", emoji: catalogFilterEmoji(.myTemplates), count: localCount, selected: filter == .myTemplates) { select(.myTemplates) }
 
                     Text("CATEGORIES")
                         .font(.caption2.weight(.semibold)).tracking(1.2).foregroundStyle(.secondary)
                         .padding(.horizontal, 12).padding(.top, 22).padding(.bottom, 6)
                     ForEach(categories, id: \.self) { category in
-                        SidebarButton(title: categoryLabel(category), icon: categoryIcon(category), selected: filter == .category(category)) {
+                        SidebarButton(title: categoryLabel(category), emoji: categoryEmoji(category), selected: filter == .category(category)) {
                             select(.category(category))
                         }
                     }
@@ -341,19 +341,19 @@ private struct BrandLink: View {
 
 private struct SidebarButton: View {
     let title: String
-    let icon: String
+    let emoji: String
     var count: Int?
     let selected: Bool
     let action: () -> Void
 
-    init(title: String, icon: String, count: Int? = nil, selected: Bool, action: @escaping () -> Void) {
-        self.title = title; self.icon = icon; self.count = count; self.selected = selected; self.action = action
+    init(title: String, emoji: String, count: Int? = nil, selected: Bool, action: @escaping () -> Void) {
+        self.title = title; self.emoji = emoji; self.count = count; self.selected = selected; self.action = action
     }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 9) {
-                Image(systemName: icon).frame(width: 18)
+                Text(emoji).font(.system(size: 14)).frame(width: 20).accessibilityHidden(true)
                 Text(title).lineLimit(1)
                 Spacer(minLength: 4)
                 if let count, count > 0 { Text("\(count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
@@ -728,17 +728,26 @@ private func brandImage(named name: String) -> NSImage? {
 
 private func categoryLabel(_ id: String) -> String { id == "developer-tools" ? "Developer Tools" : id.capitalized }
 
-private func categoryIcon(_ category: String) -> String {
+func catalogFilterEmoji(_ filter: CatalogFilter) -> String {
+    switch filter {
+    case .all: "🧃"
+    case .recents: "🔥"
+    case .myTemplates: "🏡"
+    case .category(let category): categoryEmoji(category)
+    }
+}
+
+func categoryEmoji(_ category: String) -> String {
     switch category.localizedLowercase {
-    case "productivity": "checkmark.circle"
-    case "utilities": "wrench.and.screwdriver"
-    case "finance": "wallet.bifold"
-    case "media": "play.rectangle"
-    case "games": "gamecontroller"
-    case "developer-tools": "chevron.left.forwardslash.chevron.right"
-    case "education": "graduationcap"
-    case "business": "briefcase"
-    case "personal": "person"
-    default: "ellipsis.circle"
+    case "productivity": "⚡️"
+    case "utilities": "🪄"
+    case "finance": "🤑"
+    case "media": "🎬"
+    case "games": "🎮"
+    case "developer-tools": "👾"
+    case "education": "🎓"
+    case "business": "📊"
+    case "personal": "💖"
+    default: "🎲"
     }
 }

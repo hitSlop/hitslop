@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "1430"
-   version = "1.7">
+   version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -16,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "086D8F56CA1119F1ACF3A8CD"
-               BuildableName = "hitSlop-iOS.app"
+               BuildableName = "hitSlop.app"
                BlueprintName = "hitSlop-iOS"
                ReferencedContainer = "container:hitSlop.xcodeproj">
             </BuildableReference>
@@ -27,13 +26,12 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      onlyGenerateCoverageForSpecifiedTargets = "NO">
+      shouldUseLaunchSchemeArgsEnv = "YES">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "086D8F56CA1119F1ACF3A8CD"
-            BuildableName = "hitSlop-iOS.app"
+            BuildableName = "hitSlop.app"
             BlueprintName = "hitSlop-iOS"
             ReferencedContainer = "container:hitSlop.xcodeproj">
          </BuildableReference>
@@ -56,13 +54,11 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "086D8F56CA1119F1ACF3A8CD"
-            BuildableName = "hitSlop-iOS.app"
+            BuildableName = "hitSlop.app"
             BlueprintName = "hitSlop-iOS"
             ReferencedContainer = "container:hitSlop.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -75,7 +71,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "086D8F56CA1119F1ACF3A8CD"
-            BuildableName = "hitSlop-iOS.app"
+            BuildableName = "hitSlop.app"
             BlueprintName = "hitSlop-iOS"
             ReferencedContainer = "container:hitSlop.xcodeproj">
          </BuildableReference>

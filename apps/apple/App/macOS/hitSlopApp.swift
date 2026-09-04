@@ -51,7 +51,37 @@ private struct UpdateSettingsView: View {
     }
     func application(_ application: NSApplication, open urls: [URL]) { urls.filter { $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { if !flag { showCatalog() }; return true }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if flag { return true }
+        if !documents.isEmpty {
+            documents.values.forEach { $0.revealFromDock() }
+            NSApp.activate(ignoringOtherApps: true)
+            return true
+        }
+        showCatalog()
+        return true
+    }
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        let menu = NSMenu()
+        let open = documents.values.sorted { $0.documentTitle.localizedStandardCompare($1.documentTitle) == .orderedAscending }
+        for controller in open {
+            let item = NSMenuItem(title: controller.documentTitle, action: #selector(focusDocumentFromDock(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = controller.packageURL
+            item.image = controller.dockMenuImage
+            menu.addItem(item)
+        }
+        if !open.isEmpty { menu.addItem(.separator()) }
+        let catalogItem = NSMenuItem(title: "Catalog", action: #selector(showCatalog), keyEquivalent: "")
+        catalogItem.target = self
+        menu.addItem(catalogItem)
+        return menu
+    }
+    @objc private func focusDocumentFromDock(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        documents[url.standardizedFileURL.path]?.revealFromDock()
+        NSApp.activate(ignoringOtherApps: true)
+    }
 
     @objc func showCatalog() {
         if catalog == nil {
@@ -61,7 +91,7 @@ private struct UpdateSettingsView: View {
             window.title = ""; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 900, height: 600); window.contentViewController = host; window.center(); catalog = NSWindowController(window: window)
         }
-        catalog?.showWindow(nil); catalog?.window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        catalog?.showWindow(nil); catalog?.window?.deminiaturize(nil); catalog?.window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
     }
 
     private func openDocument(_ url: URL) {

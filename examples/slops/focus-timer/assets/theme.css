@@ -1,0 +1,12 @@
+:root {
+  --slop-surface: #ef5a49;
+  --slop-surface-rest: #91cad7;
+  --slop-surface-light: #fa8c74;
+  --slop-panel: #fff4d9;
+  --slop-ink: #352a29;
+  --slop-accent: #c93c3c;
+  --slop-rest-accent: #4f7d45;
+  --slop-action: #f9cf57;
+  --slop-focus: #fff9af;
+  --slop-font: "Avenir Next", Avenir, sans-serif;
+}

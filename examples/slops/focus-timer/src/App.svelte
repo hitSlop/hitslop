@@ -1,24 +1,20 @@
 <script lang="ts">
-  import { capture } from "@hitslop/runtime";
+  import { capture, ready } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
+  import { Tabs } from "bits-ui";
+  import { onDestroy } from "svelte";
   import Pause from "@lucide/svelte/icons/pause";
   import Play from "@lucide/svelte/icons/play";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
+  import timerSchema from "../schema";
   import Icon from "./Icon.svelte";
 
   type Kind = "focus" | "rest";
-  type Session = { startedAt: string; kind: Kind; seconds: number };
-  type TimerData = {
-    focusMinutes: number;
-    restMinutes: number;
-    history: Session[];
-  };
-
-  const timer = jsonStore<TimerData>({
+  const timer = jsonStore({ schema: timerSchema, initial: {
     focusMinutes: 25,
     restMinutes: 5,
     history: [],
-  });
+  } });
 
   let kind = $state<Kind>("focus");
   let remaining = $state(25 * 60);
@@ -80,12 +76,20 @@
     syncRemaining();
   }
 
+  function chooseKind(value: string): void {
+    if (running || (value !== "focus" && value !== "rest")) return;
+    kind = value;
+    syncRemaining();
+  }
+
   $effect(() => {
     void timer.current.focusMinutes;
     void timer.current.restMinutes;
     void kind;
     if (!running) syncRemaining();
   });
+  $effect(() => { if (!timer.isLoading) ready(); });
+  onDestroy(() => { if (tick) clearInterval(tick); timer.destroy(); });
 </script>
 
 <main
@@ -98,7 +102,7 @@
   <span class="leaf-mark" aria-hidden="true"><i></i><i></i><i></i></span>
   <output class="completed-count" aria-label={`${completedPomodoros} completed pomodoros`}><span aria-hidden="true">🍅</span>{completedPomodoros}</output>
 
-  <section class="timer-stage" aria-label={`${kind} timer: ${label} remaining`}>
+  <section class="timer-stage" aria-label={`${kind} timer: ${label} remaining`} aria-live="polite">
     <div class="dial-wrap">
       <svg class="timer-dial" viewBox="0 0 120 120" aria-hidden="true">
         {#each Array(24) as _, index}
@@ -117,10 +121,16 @@
       </svg>
       <div class="timer-readout">
         <strong>{label}</strong>
-        <small>{Math.round(ring * 100)}% steeped</small>
+        <small>{kind === "focus" ? "focus session" : "short break"} · {Math.round(ring * 100)}%</small>
       </div>
     </div>
 
+    <Tabs.Root value={kind} onValueChange={chooseKind}>
+      <Tabs.List class="mode-switch" aria-label="Timer mode" data-slop-export="hide">
+        <Tabs.Trigger value="focus" disabled={running}>Focus <span>{timer.current.focusMinutes}m</span></Tabs.Trigger>
+        <Tabs.Trigger value="rest" disabled={running}>Break <span>{timer.current.restMinutes}m</span></Tabs.Trigger>
+      </Tabs.List>
+    </Tabs.Root>
     <div class="run-control" data-slop-export="hide">
       <button class="run-button" onclick={toggleRun} aria-label={running ? "Pause timer" : "Start timer"}>{#if running}<Pause fill="currentColor" />{:else}<Play fill="currentColor" />{/if}<span>{running ? "Pause" : "Start"}</span></button>
       <button class="reset-button" onclick={reset} aria-label="Reset timer"><RotateCcw /></button>

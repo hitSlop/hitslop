@@ -7,6 +7,20 @@ import UniformTypeIdentifiers
 private final class FramelessDocumentWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+    override func performMiniaturize(_ sender: Any?) { miniaturize(sender) }
+}
+
+func slopDocumentWindowStyleMask(resizable: Bool) -> NSWindow.StyleMask {
+    var mask: NSWindow.StyleMask = [.borderless, .miniaturizable]
+    if resizable { mask.insert(.resizable) }
+    return mask
+}
+
+func slopDockMenuImage(iconURL: URL, fallbackURL: URL) -> NSImage {
+    let source = NSImage(contentsOf: iconURL) ?? NSWorkspace.shared.icon(forFile: fallbackURL.path)
+    let image = (source.copy() as? NSImage) ?? source
+    image.size = NSSize(width: 16, height: 16)
+    return image
 }
 
 func dynamicSlopWindowFrame(current: NSRect, requested: NSSize, visible: NSRect?) -> NSRect {
@@ -110,10 +124,12 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         session = opened.session
         let windowMask = try SlopWindowMask(package: session.package)
         let spec = session.package.manifest.presentation, size = NSSize(width: spec.width, height: spec.height)
-        let window = FramelessDocumentWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .resizable], backing: .buffered, defer: false)
+        let window = FramelessDocumentWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: slopDocumentWindowStyleMask(resizable: session.package.isResizable), backing: .buffered, defer: false)
         window.title = session.package.manifest.title; window.minSize = NSSize(width: 240, height: 180); window.isOpaque = false
         window.backgroundColor = .clear; window.hasShadow = !session.package.usesTransparentBackground || session.package.isSkinned; window.isReleasedWhenClosed = false; window.tabbingMode = .disallowed
-        if !session.package.isResizable { window.styleMask.remove(.resizable) }
+        window.representedURL = opened.presentedURL
+        window.miniwindowTitle = session.package.manifest.title
+        window.miniwindowImage = NSImage(contentsOf: session.package.iconURL)
         if session.package.shape == .ellipse, spec.width == spec.height { window.contentAspectRatio = NSSize(width: 1, height: 1) }
         let container = ShapedView(frame: NSRect(origin: .zero, size: size), windowMask: windowMask)
         session.webView.frame = container.bounds; session.webView.autoresizingMask = [.width, .height]; container.addSubview(session.webView)
@@ -142,19 +158,21 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) { showFailure(error) }
 
     private func setupToolbar() {
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 44), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 388, height: 44), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = true; panel.level = .floating; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
-        let tracking = HoverView(frame: panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 360, height: 44)); panel.contentView = tracking
+        panel.isExcludedFromWindowsMenu = true
+        let tracking = HoverView(frame: panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 388, height: 44)); panel.contentView = tracking
         let host = NSHostingView(rootView: toolbarView()); host.frame = tracking.bounds; host.autoresizingMask = [.width, .height]; tracking.addSubview(host)
         tracking.changed = { [weak self] in if $0 { self?.hideWork?.cancel() } else { self?.scheduleHide() } }
         window?.addChildWindow(panel, ordered: .above); panel.orderOut(nil); toolbar = panel; toolbarHost = host
     }
     private func toolbarView() -> SlopToolbar {
-        SlopToolbar(drag: { [weak self] event in self?.dragWindow(with: event) }, pinned: isPinned, close: { [weak self] in self?.close() }, pin: { [weak self] in self?.togglePin() }, duplicate: { [weak self] in self?.duplicate() }, png: { [weak self] in self?.export(.png) }, pdf: { [weak self] in self?.export(.pdf) }, share: { [weak self] in self?.share() }, reveal: { [weak self] in self?.reveal() }, copyPath: { [weak self] in self?.copyPath() }, editors: installedEditors(), openEditor: { [weak self] url in self?.openInEditor(url) })
+        SlopToolbar(drag: { [weak self] event in self?.dragWindow(with: event) }, pinned: isPinned, close: { [weak self] in self?.close() }, minimize: { [weak self] in self?.miniaturizeFromToolbar() }, pin: { [weak self] in self?.togglePin() }, duplicate: { [weak self] in self?.duplicate() }, png: { [weak self] in self?.export(.png) }, pdf: { [weak self] in self?.export(.pdf) }, share: { [weak self] in self?.share() }, reveal: { [weak self] in self?.reveal() }, copyPath: { [weak self] in self?.copyPath() }, editors: installedEditors(), openEditor: { [weak self] url in self?.openInEditor(url) })
     }
     private func dragWindow(with event: NSEvent) { hideWork?.cancel(); window?.performDrag(with: event); showToolbar() }
+    private func miniaturizeFromToolbar() { hideWork?.cancel(); toolbar?.orderOut(nil); window?.miniaturize(nil) }
     private func showToolbar() {
-        hideWork?.cancel(); guard let panel = toolbar, let window else { return }
+        hideWork?.cancel(); guard let panel = toolbar, let window, !window.isMiniaturized else { return }
         let frame = window.frame; var x = frame.midX - panel.frame.width / 2, y = frame.maxY + 8
         if let visible = window.screen?.visibleFrame { x = min(max(x, visible.minX + 8), visible.maxX - panel.frame.width - 8); if y + panel.frame.height > visible.maxY { y = frame.maxY - panel.frame.height - 10 } }
         panel.setFrameOrigin(NSPoint(x: x, y: y)); panel.orderFront(nil)
@@ -167,12 +185,21 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     private func togglePin() { window?.level = isPinned ? .normal : .floating; toolbarHost?.rootView = toolbarView() }
     public var isPinned: Bool { window?.level == .floating }
+    public var documentTitle: String { window?.title ?? session.package.manifest.title }
+    public var dockMenuImage: NSImage {
+        slopDockMenuImage(iconURL: session.package.iconURL, fallbackURL: packageURL)
+    }
     public func owns(_ candidate: NSWindow?) -> Bool { candidate === window || candidate === toolbar }
     public func togglePinFromMenu() { togglePin() }
     public func duplicateFromMenu() { duplicate() }
     public func exportPNGFromMenu() { export(.png) }
     public func exportPDFFromMenu() { export(.pdf) }
     public func shareFromMenu() { share() }
+    public func revealFromDock() {
+        showWindow(nil)
+        window?.deminiaturize(nil)
+        window?.makeKeyAndOrderFront(nil)
+    }
 
     private func duplicate() {
         guard let window else { return }; let panel = NSSavePanel(); panel.allowedContentTypes = [.slop]; panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + " copy.slop"
@@ -214,6 +241,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     public func windowDidMove(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
     public func windowDidResize(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
+    public func windowWillMiniaturize(_ notification: Notification) { hideWork?.cancel(); toolbar?.orderOut(nil) }
     public func windowWillClose(_ notification: Notification) {
         let renderURL = session.package.rootURL
         let presentedURL = packageURL
@@ -232,13 +260,13 @@ private struct FailureOverlay: View {
 
 private struct SlopToolbar: View {
     let drag: (NSEvent) -> Void
-    let pinned: Bool, close: () -> Void, pin: () -> Void, duplicate: () -> Void, png: () -> Void, pdf: () -> Void, share: () -> Void, reveal: () -> Void, copyPath: () -> Void
+    let pinned: Bool, close: () -> Void, minimize: () -> Void, pin: () -> Void, duplicate: () -> Void, png: () -> Void, pdf: () -> Void, share: () -> Void, reveal: () -> Void, copyPath: () -> Void
     let editors: [(String, URL)], openEditor: (URL) -> Void
     var body: some View {
         HStack(spacing: 3) {
             ToolbarDragHandle(onDrag: drag).frame(width: 20, height: 25).help("Drag window")
             Divider().frame(height: 16)
-            icon("xmark", "Close", close); icon(pinned ? "pin.fill" : "pin", pinned ? "Unpin" : "Always on Top", pin); Divider().frame(height: 16)
+            icon("xmark", "Close", close); icon("minus", "Minimize", minimize); icon(pinned ? "pin.fill" : "pin", pinned ? "Unpin" : "Always on Top", pin); Divider().frame(height: 16)
             icon("doc.on.doc", "Duplicate", duplicate)
             Menu { Button("Export PNG…", action: png); Button("Export PDF…", action: pdf) } label: { Image(systemName: "arrow.down.doc").frame(width: 25, height: 25) }.menuStyle(.borderlessButton).fixedSize().help("Export")
             icon("square.and.arrow.up", "Share", share)

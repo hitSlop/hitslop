@@ -1,5 +1,5 @@
 {
-  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
