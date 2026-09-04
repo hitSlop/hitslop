@@ -45,7 +45,7 @@ const faqs = [
           <h1 id="hero-title">Tiny apps &amp; docs that live on your desktop.</h1>
           <p class="hero-lede">Each <code>.slop</code> is one local-first file you can open, move, duplicate, share, commit, and keep. Its interface, data, and media stay together on your Mac—no account required.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href={SITE_LINKS.download}><span aria-hidden="true">↓</span> Download for macOS</a>
+            <a class="button button-primary" href={SITE_LINKS.download}><span aria-hidden="true">↓</span> Download for Apple silicon</a>
             <a class="button button-secondary" href="#objects">Try the slops <span aria-hidden="true">↘</span></a>
           </div>
           <ul class="hero-facts" aria-label="Key hitSlop features"><li>Open, move &amp; share</li><li>Local JSON, SQLite &amp; media</li><li>Export PNG &amp; PDF</li></ul>
@@ -129,7 +129,7 @@ const faqs = [
         <TemplateBrowser client:visible />
       </section>
       <section class="faq-section" aria-labelledby="faq-title"><div><p class="eyebrow">Questions, answered</p><h2 id="faq-title">The small print, in plain English.</h2></div><div class="faq-list">{faqs.map((faq) => <details><summary>{faq.question}<span aria-hidden="true">+</span></summary><p>{faq.answer}</p></details>)}</div></section>
-      <section class="final-cta" aria-labelledby="cta-title"><div><p class="eyebrow">Small files. Big ideas.</p><h2 id="cta-title">Put your next tiny tool on your desktop.</h2></div><a class="button button-primary" href={SITE_LINKS.download}>Download hitSlop <span aria-hidden="true">↓</span></a><div class="cta-art" aria-hidden="true"><span></span><span></span><img src="/assets/appicon.png" alt="" /></div></section>
+      <section class="final-cta" aria-labelledby="cta-title"><div><p class="eyebrow">Small files. Big ideas.</p><h2 id="cta-title">Put your next tiny tool on your desktop.</h2></div><a class="button button-primary" href={SITE_LINKS.download}>Download for Apple silicon <span aria-hidden="true">↓</span></a><div class="cta-art" aria-hidden="true"><span></span><span></span><img src="/assets/appicon.png" alt="" /></div></section>
     </main>
 
     <footer class="site-footer" id="community">

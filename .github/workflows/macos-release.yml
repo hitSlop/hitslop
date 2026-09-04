@@ -40,13 +40,22 @@ jobs:
           test -n "$KEYCHAIN_PASSWORD"
           CERTIFICATE_PATH="$RUNNER_TEMP/hitslop-certificate.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/hitslop-signing.keychain-db"
-          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$CERTIFICATE_PATH"
+          printf '%s' "$MACOS_CERTIFICATE" | base64 -D > "$CERTIFICATE_PATH"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security import "$CERTIFICATE_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+      - name: Install Developer ID provisioning profile
+        env:
+          MACOS_PROVISIONING_PROFILE: ${{ secrets.MACOS_PROVISIONING_PROFILE }}
+        run: |
+          set -euo pipefail
+          test -n "$MACOS_PROVISIONING_PROFILE"
+          PROFILES_PATH="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          mkdir -p "$PROFILES_PATH"
+          printf '%s' "$MACOS_PROVISIONING_PROFILE" | base64 -D > "$PROFILES_PATH/56d9d799-f24d-4527-9159-582b28a5c03f.provisionprofile"
       - name: Validate secrets
         run: |
           set -euo pipefail
@@ -76,9 +85,10 @@ jobs:
           VERSION="${GITHUB_REF_NAME#macos-v}"
           NOTES="$RUNNER_TEMP/release-notes.md"
           cat > "$NOTES" <<EOF
-          hitSlop $VERSION for macOS.
+          hitSlop $VERSION for Apple silicon Macs.
 
           Signed and notarized by Apple (Developer ID: Mushroom DAO Holdings Corp.).
+          Requires a Mac with an Apple M-series processor and macOS 14 or newer.
           Drag hitSlop.app into Applications, then open a \`.slop\` document.
           EOF
           gh release create "$GITHUB_REF_NAME" \

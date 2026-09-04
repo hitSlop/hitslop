@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-# Archive, Developer ID-sign, notarize, and wrap a universal hitSlop DMG.
+# Archive, Developer ID-sign, notarize, and wrap an Apple Silicon hitSlop DMG.
+# ConvexMobile's distributed binary currently provides an arm64 macOS slice.
 # Optional env:
 #   HITSLOP_CODESIGN_IDENTITY   Developer ID identity (name or hash)
 #   ASC_API_KEY_P8 / ASC_API_KEY_P8_FILE, ASC_API_KEY_ID, ASC_API_ISSUER_ID
@@ -84,7 +85,7 @@ archive_path="$stage_dir/hitSlop.xcarchive"
 export_dir="$stage_dir/export"
 /bin/mkdir -p "$export_dir"
 
-echo "Archiving universal Release…"
+echo "Archiving Apple Silicon Release…"
 # shellcheck disable=SC2086
 /usr/bin/xcodebuild \
   -quiet \
@@ -93,7 +94,7 @@ echo "Archiving universal Release…"
   -configuration Release \
   -destination "generic/platform=macOS" \
   -archivePath "$archive_path" \
-  ARCHS="arm64 x86_64" \
+  ARCHS="arm64" \
   ONLY_ACTIVE_ARCH=NO \
   DEVELOPMENT_TEAM="$team_id" \
   $auth_args \
@@ -142,7 +143,7 @@ submit_notarization() {
     echo "ASC_API_KEY_P8, ASC_API_KEY_ID, and ASC_API_ISSUER_ID are required to notarize." >&2
     exit 69
   fi
-  echo "Notarizing $file…"
+  echo "Notarizing ${file}…"
   /usr/bin/xcrun notarytool submit "$file" \
     --key "$key_path" \
     --key-id "$ASC_API_KEY_ID" \

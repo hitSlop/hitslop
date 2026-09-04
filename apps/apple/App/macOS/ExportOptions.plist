@@ -7,8 +7,13 @@
 	<key>teamID</key>
 	<string>78UAXU8QG8</string>
 	<key>signingStyle</key>
-	<string>automatic</string>
+	<string>manual</string>
 	<key>signingCertificate</key>
 	<string>Developer ID Application</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.hitslop.app</key>
+		<string>hitSlop Developer ID 2029</string>
+	</dict>
 </dict>
 </plist>
