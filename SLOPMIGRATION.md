@@ -1,21 +1,18 @@
 # Slop Migration Plan
 
-This document tracks the launch-quality migration of every existing authored slop in
-`examples/slops/`. The migration is intentionally batched: each batch must be fully
-usable, visually reviewed, tested as a real writable document, and releasable before
-the next batch is considered complete.
+This document tracks the structural and design migration of every existing authored
+slop in `examples/slops/`. Follow `SLOPMIGRATIONRUNNER.md` for the routine
+per-slop workflow. Native, persistence, export, registration, installation, and
+publishing checks happen only at an explicitly requested batch release gate.
 
 The goal is not to make every slop look alike. Every slop should do one job, explain
 itself through its interface, and have a personality appropriate to that job. Use the
 private `_vibe/` references for direction only; never copy them into source, runtime
 packages, or the open-source release.
 
-PLEASE REFER TO BITS UI DOCS TO SEE WHAT COMPONENTS ARE AVAILABLE.
-
-Step 1: Look at the components in the slop you are about to edit
-Step 2: Search the bits ui docs to see if there are any prebuilt components you could use
-
-[Bits UI Docs](_docs/bits/llms.txt)
+Inventory each slop's controls and consult the
+[local Bits UI reference](_docs/bits/llms.txt) before choosing behavioral
+primitives.
 
 ## Migration principles
 
@@ -31,9 +28,8 @@ Step 2: Search the bits ui docs to see if there are any prebuilt components you 
 - [ ] Use Vanilla Extract for compiled structural styling and plain CSS variables for
       the owner-editable theme surface.
 - [ ] Treat Zod as the authoritative definition of JSON document state.
-- [ ] Test persistence and native behavior in a built writable copy, never infer it
-      from the disposable browser preview.
-- [ ] Publish completed batches incrementally only after the complete batch gate passes.
+- [ ] Use the shared browser gallery for a focused visual and interaction smoke test.
+- [ ] Build and validate each migrated slop without registering or installing it.
 
 ## Foundation work
 
@@ -67,94 +63,30 @@ Step 2: Search the bits ui docs to see if there are any prebuilt components you 
 
 ## Per-slop definition of done
 
-Apply this checklist to every slop in every batch.
+- [ ] Read `manifest.json`, the batch entry below, and the archived reference.
+- [ ] Give the slop a unique Paper, Instrument, or Skin identity with one dominant
+      surface and one purpose-specific memorable detail.
+- [ ] Inventory controls, consult the local Bits UI reference, and use appropriate
+      Bits primitives without imposing a shared visual theme.
+- [ ] Move implementation into `src/`, update entry paths, and delete `source/`.
+- [ ] Use root Zod `schema.ts`, schema-backed JSON state, Vanilla Extract structure,
+      and semantic theme variables where applicable.
+- [ ] Run a short gallery smoke test at `http://localhost:4177/<slug>/`: inspect the
+      default-size UI, exercise the primary workflow and new Bits controls, and check
+      the console.
+- [ ] Build and validate the resulting `dist/<slug>.slop`.
+- [ ] Confirm source, dependencies, caches, stores, and editable stylesheets are absent
+      from the runtime package.
 
-### Purpose and interaction
+## Batch release gate
 
-- [ ] Read `manifest.json` first and state the slop's single job in one sentence.
-- [ ] Confirm its title, description, categories, initial dimensions, window behavior,
-      and author attribution support that job.
-- [ ] Classify the dominant object family as Paper, Instrument, or Skin.
-- [ ] Identify one dominant action, readout, or working surface.
-- [ ] Audit the current workflow before redesigning it; preserve behavior that already
-      serves the purpose well.
-- [ ] Remove generic dashboard shells, unnecessary nested cards, duplicate controls,
-      unexplained modes, and equal-weight actions.
-- [ ] Use realistic initial content that demonstrates the workflow without becoming
-      seed data in the runtime package.
-- [ ] Make empty, partial, complete, error, and content-heavy states understandable.
-- [ ] Verify keyboard operation, visible focus, accessible names, contrast, destructive
-      action handling, long text, and narrow-window behavior.
-- [ ] Preserve critical actions as the window narrows; prefer reflow and container
-      queries over hiding functionality.
-- [ ] Respect `prefers-reduced-motion` and avoid decorative motion that obscures state.
-- [ ] Use a concise inline explanation or optional Help surface only when the underlying
-      method is unfamiliar.
-- [ ] Use an ordered walkthrough only when the task genuinely has required steps.
+Run this only when release work is explicitly requested.
 
-### State and runtime boundary
-
-- [ ] Choose no persistence, JSON, SQLite, named media, or a deliberate combination
-      based on the data rather than template precedent.
-- [ ] For JSON state, create root `schema.ts` with a default-exported Zod 4 schema.
-- [ ] Infer the TypeScript data type from the Zod schema instead of maintaining a
-      separate handwritten interface.
-- [ ] Attach that same schema to `jsonStore({ schema, initial })`.
-- [ ] Ensure the initial value validates against the schema.
-- [ ] Run `bun run schema:generate` when shared schemas change.
-- [ ] Audit named image and file roles and replace/remove them through host APIs.
-- [ ] Use SQLite only for queryable collections or transactional workflows; keep a
-      transaction on one host connection and never ship WAL/SHM files.
-- [ ] Keep manifest storage implicit and free of storage IDs or release versions.
-- [ ] Preserve `manifest.author.name` and render or link `manifest.author.url` where
-      attribution is displayed.
-- [ ] Confirm authored templates and published artifacts contain no `stores/`, source,
-      dependencies, build caches, editable stylesheets, seed data, environment files,
-      keys, or Finder-managed `Icon\r`.
-
-### Components and theming
-
-- [ ] Inventory interactive controls before choosing replacements.
-- [ ] Use Bits UI for dialogs, selects, sliders, tabs, calendars, popovers, toggles,
-      checkboxes, progress controls, tooltips, and similar behavioral primitives.
-- [ ] Replace native or homemade versions of those primitives when Bits UI materially
-      improves keyboard, focus, screen-reader, or portal behavior.
-- [ ] Do not force Bits UI onto direct text editing, drag surfaces, spreadsheets,
-      canvases, Webamp, or purpose-built skinned controls.
-- [ ] Style Bits primitives through their documented data attributes.
-- [ ] Keep each slop's visual personality; Bits UI is a behavior layer, not a theme.
-- [ ] Move structural styles into Vanilla Extract `.css.ts` modules.
-- [ ] Define public semantic `--slop-*` variables with
-      `createGlobalThemeContract`.
-- [ ] Put default values for public tokens in immutable `assets/theme.css`.
-- [ ] Keep structural measurements and implementation details out of the public theme
-      contract unless owners have a safe reason to override them.
-- [ ] Confirm a document-level `stores/theme.css` visibly overrides the theme without
-      rebuilding `app.html`.
-- [ ] Check that the default theme still works when no override exists.
-
-### Presentation and release
-
-- [ ] Design deliberate live, static-capture, icon, and export states.
-- [ ] Call `ready()` only after durable data and critical media are available.
-- [ ] Mark editing-only UI with `data-slop-export="hide"`.
-- [ ] Keep exportable content in normal document flow rather than nested fixed-height
-      scrollers.
-- [ ] Verify full-height PNG and PDF output, including content beyond the initial
-      viewport.
-- [ ] Provide at most one renderer-only 512x512 icon target and mount it only during
-      icon capture.
-- [ ] Validate and build the authored project through the shared examples workspace.
-- [ ] Inspect `dist/<slug>.slop` for the exact runtime package contract.
-- [ ] Register the artifact as an immutable local template master.
-- [ ] Create a separate writable document from the master.
-- [ ] Mutate data, close the document, reopen it, and verify persistence.
-- [ ] Test named images/files, theme override, resize or alpha hit testing, Quick Look,
-      icon rendering, and export wherever applicable.
-- [ ] Capture before/after screenshots for batch review.
-- [ ] Publish only after every slop in the batch passes.
-- [ ] Install the production catalog release in the release macOS app and rerun its
-      primary workflow before marking it complete.
+- [ ] Capture and inspect native preview and icon states.
+- [ ] Create a writable document, mutate it, close it, reopen it, and verify persistence.
+- [ ] Verify theme overrides, named media, resizing, export, and Quick Look where used.
+- [ ] Register or publish only after every slop in the batch is ready.
+- [ ] Install the production catalog release and rerun its primary workflow.
 
 ## Batch 0 — Canonical framework fixtures
 
@@ -187,9 +119,9 @@ Establish repeatable patterns for compact, immediately understandable control su
       entry, completion rhythm, and archive affordance.
 - [x] **focus-timer** — Make the timer the unmistakable focal point with clear start,
       pause, mode, and completion states.
-- [ ] **countdown-milestones** — Emphasize the date, remaining time, and milestone
-      progression as a compact departure display.
-- [ ] **metronome-tapper** — Preserve its mechanical instrument character while
+- [x] **countdown-milestones** — Emphasize the date, remaining time, and milestone
+      progression as a playful mission board.
+- [x] **metronome-tapper** — Preserve its mechanical instrument character while
       improving tempo entry, Bits slider/radio/toggle behavior, audio state, and
       reduced-motion handling.
 - [ ] **water-tracker** — Create a tactile hydration gauge with an accessible target,

@@ -8,6 +8,8 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
   build caches, seed stores, or editable stylesheets.
 - Preview with `bun slop dev examples/slops/<id>` and build with
   `bun slop build examples/slops/<id>`.
+- For work tracked by `SLOPMIGRATION.md`, read and follow
+  `SLOPMIGRATIONRUNNER.md` before editing a slop.
 - Use `_vibe/` as local visual reference material. It is inspiration-only and
   must not be copied into source, runtime packages, or the open-source release.
 - A runtime package has `manifest.json`, generated `app.html`, optional immutable
@@ -22,8 +24,9 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
 - Manifest `author.name` is required and `author.url` may be an HTTP(S) URL.
   Attribution belongs to the signed artifact; the publisher identity is only a
   signing key.
-- Browser `slop dev` is a disposable UI preview: no bridge server, disk stores,
-  or polling. Test persistence and native behavior in a built writable copy.
+- Browser previews are disposable: no bridge server, disk stores, or polling.
+  Routine migrations use the shared gallery for UI smoke tests; persistence and
+  native behavior are reserved for explicit release-gate work.
 - Svelte `jsonStore` requires `{ schema, initial }`. Put the Zod 4 schema in root
   `schema.ts`, default-export it, and attach that same export to the store.
 - Treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`, `.agents/`,

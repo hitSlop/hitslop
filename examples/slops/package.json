@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "bun dev-gallery.ts",
     "dev:counter": "slop dev svelte-counter",
     "dev:react-counter": "slop dev react-counter",
     "dev:alien-radio": "slop dev alien-radio",

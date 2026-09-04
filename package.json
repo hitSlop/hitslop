@@ -21,6 +21,7 @@
     "schema:generate": "bun run --cwd packages/schema generate",
     "schema:check": "bun run --cwd packages/schema check:generated",
     "slop": "bun packages/cli/src/cli.ts",
+    "slops:dev": "bun run --cwd examples/slops dev",
     "firebase:dev": "bun run --cwd apps/firebase dev",
     "firebase:deploy": "bun run --cwd apps/firebase deploy",
     "landing:dev": "bun run --cwd apps/landing dev",

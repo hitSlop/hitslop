@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { capture } from "@hitslop/runtime";
+  import { capture, ready } from "@hitslop/runtime";
   import { jsonStore } from "@hitslop/svelte";
   import Play from "@lucide/svelte/icons/play";
   import Square from "@lucide/svelte/icons/square";
@@ -8,26 +8,20 @@
   import { Slider, RadioGroup, Toggle } from "bits-ui";
   import { onDestroy, onMount } from "svelte";
   import Icon from "./Icon.svelte";
-
-  type TimeSignature = "2/4" | "3/4" | "4/4" | "6/8";
-
-  type MetronomeState = {
-    bpm: number;
-    signature: TimeSignature;
-    volume: number;
-    muted: boolean;
-    presets: number[];
-  };
+  import metronomeSchema, { type TimeSignature } from "../schema";
 
   const SIGNATURES: TimeSignature[] = ["2/4", "3/4", "4/4", "6/8"];
   const DEFAULT_PRESETS = [60, 90, 120, 140];
 
-  const store = jsonStore<MetronomeState>({
-    bpm: 120,
-    signature: "4/4",
-    volume: 0.75,
-    muted: false,
-    presets: [...DEFAULT_PRESETS],
+  const store = jsonStore({
+    schema: metronomeSchema,
+    initial: {
+      bpm: 120,
+      signature: "4/4",
+      volume: 0.75,
+      muted: false,
+      presets: [...DEFAULT_PRESETS],
+    },
   });
 
   let isPlaying = $state(false);
@@ -218,6 +212,11 @@
     window.removeEventListener("keydown", handleKeyDown);
     stop();
     if (audioCtx) void audioCtx.close();
+    store.destroy();
+  });
+
+  $effect(() => {
+    if (!store.isLoading) ready();
   });
 </script>
 
