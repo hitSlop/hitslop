@@ -14,6 +14,7 @@ async function fixture(): Promise<string> {
   await mkdir(join(root, documentSkillPath, ".."), { recursive: true });
   await writeFile(join(root, "manifest.json"), JSON.stringify({
     $schema: manifestSchemaURL,
+    author: { name: "Fixture Author", url: "https://example.com" },
     slug: "render-test",
     title: "Render Test",
     description: "Tests native rendering command forwarding.",

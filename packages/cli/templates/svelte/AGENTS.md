@@ -1,6 +1,7 @@
 # hitSlop authoring
 
-Read `manifest.json` first. Use the local `hitslop-authoring` skill for package,
+Read `manifest.json` first. Keep its required author name and optional HTTP(S)
+author URL accurate. Use the local `hitslop-authoring` skill for package,
 storage, capture, install, and publish work. Use `hitslop-design` when creating
 or revising the interface. Treat the host window as the outer object boundary
 and size it for realistic default content. Use Bits UI (`bits-ui`) for interactive

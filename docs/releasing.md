@@ -2,7 +2,7 @@
 
 ## Version policy
 
-The macOS app is stable at `1.0.1`. The iOS app and npm packages remain in the
+The macOS app is stable at `1.0.2`. The iOS app and npm packages remain in the
 `0.1.x` line until their public interfaces settle. Do not force every workspace to
 share one version.
 

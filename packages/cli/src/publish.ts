@@ -33,11 +33,10 @@ export async function publishSlop(root: string, flags: { registry?: string; prev
   const packed = await packSlop(built.directory);
   const identity = await getIdentity();
   const envelope: PublishEnvelope = {
-    format: "hitslop-publish/2",
+    format: "hitslop-publish/3",
     requestId: crypto.randomUUID(),
     publisherKeyId: identity.keyId,
     publicKey: identity.publicKey,
-    displayName: identity.displayName,
     artifactSha256: packed.sha256,
     artifactBytes: packed.bytes.byteLength,
     timestamp: Date.now(),

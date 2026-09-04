@@ -28,7 +28,8 @@ public struct RegistryTemplate: Decodable, Identifiable, Sendable {
     public let title: String
     public let description: String
     public let categories: [String]
-    public let publisherDisplayName: String
+    public let authorName: String
+    public let authorURL: String?
     public let currentRelease: RegistryRelease
     public let creationCount: Int
     public let firstPublishedAt: Date

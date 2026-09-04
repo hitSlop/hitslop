@@ -5,6 +5,7 @@ import Foundation
 // MARK: - SlopManifest
 public struct SlopManifest: Codable, Sendable {
     public let schema: Schema
+    public let author: SlopAuthor
     public let categories: [SlopCategory]
     public let description: String
     public let presentation: SlopPresentation
@@ -13,6 +14,7 @@ public struct SlopManifest: Codable, Sendable {
 
     public enum CodingKeys: String, CodingKey {
         case schema = "$schema"
+        case author = "author"
         case categories = "categories"
         case description = "description"
         case presentation = "presentation"
@@ -20,13 +22,31 @@ public struct SlopManifest: Codable, Sendable {
         case title = "title"
     }
 
-    public init(schema: Schema, categories: [SlopCategory], description: String, presentation: SlopPresentation, slug: String, title: String) {
+    public init(schema: Schema, author: SlopAuthor, categories: [SlopCategory], description: String, presentation: SlopPresentation, slug: String, title: String) {
         self.schema = schema
+        self.author = author
         self.categories = categories
         self.description = description
         self.presentation = presentation
         self.slug = slug
         self.title = title
+    }
+}
+
+
+// MARK: - SlopAuthor
+public struct SlopAuthor: Codable, Sendable {
+    public let name: String
+    public let url: String?
+
+    public enum CodingKeys: String, CodingKey {
+        case name = "name"
+        case url = "url"
+    }
+
+    public init(name: String, url: String?) {
+        self.name = name
+        self.url = url
     }
 }
 

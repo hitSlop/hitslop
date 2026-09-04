@@ -35,9 +35,10 @@ An optional renderer-only icon target is a square 512px DOM element. Use
 
 ## Identity and publish
 
-`slop identity show`, `set-name`, `export`, and `import` manage the local
-publisher key. Never place private identity material in a project. Publish signs
-one built/captured artifact; the registry assigns release numbers externally.
+`manifest.json` owns the public author name and optional HTTP(S) author URL.
+`slop identity show`, `export`, and `import` manage only the local publisher
+key. Never place private identity material in a project. Publish signs one
+built/captured artifact; the registry assigns release numbers externally.
 
 ## Definition of done
 

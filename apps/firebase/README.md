@@ -17,10 +17,10 @@ callable Function.
 
 The catalog has four root collections:
 
-- `templates` is the public, query-ready projection. It owns identity, search
+- `templates` is the public, query-ready projection. It owns author attribution, search
   fields, `firstPublishedAt`, lifetime `creationCount`, `visibility`, and a
   nested snapshot of `currentRelease`.
-- `publishers` is the public publisher profile and signing-key record.
+- `publishers` is the public signing-key record. It does not own display metadata.
 - `releases` is private, immutable release history used by trusted backend
   tooling. Clients never need to join it to render or install a template.
 - `publishRequests` is private idempotency state. Its `expiresAt` field has a

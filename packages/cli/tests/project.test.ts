@@ -12,7 +12,7 @@ afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root,
 
 async function fixture(width = 240, height = 180, channels = 4): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "hitslop-skin-")); roots.push(root); await mkdir(join(root, "assets"), { recursive: true });
-  await writeFile(join(root, "manifest.json"), JSON.stringify({ $schema: manifestSchemaURL, slug: "skin-test", title: "Skin Test", description: "A PNG skin validation fixture.", categories: ["utilities"], presentation: { width: 240, height: 180, skin: "assets/skin.png" } }));
+  await writeFile(join(root, "manifest.json"), JSON.stringify({ $schema: manifestSchemaURL, author: { name: "Fixture Author", url: "https://example.com" }, slug: "skin-test", title: "Skin Test", description: "A PNG skin validation fixture.", categories: ["utilities"], presentation: { width: 240, height: 180, skin: "assets/skin.png" } }));
   await writeFile(join(root, "index.html"), "<main>Skin</main>");
   await writeFile(join(root, "assets/skin.png"), encode({ width, height, channels, data: new Uint8Array(width * height * channels).fill(255) }));
   return root;
@@ -115,17 +115,18 @@ describe("immutable artifacts", () => {
 describe("authoring scaffold", () => {
   test("includes portable skills, complete scripts, Bits UI, and export-aware starter", async () => {
     const root = await mkdtemp(join(tmpdir(), "hitslop-scaffold-")); roots.push(root);
-    await scaffold(root, { title: "Tiny Tally", description: "Counts a tiny thing.", categories: ["utilities"] });
+    await scaffold(root, { title: "Tiny Tally", description: "Counts a tiny thing.", categories: ["utilities"], author: { name: "Jordan Singer", url: "https://example.com/jordan" } });
     const packageJSON = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string>; devDependencies: Record<string, string>; scripts: Record<string, string> };
     expect(packageJSON.dependencies["@hitslop/runtime"]).toBe("^0.1.2");
     expect(packageJSON.dependencies["@hitslop/svelte"]).toBe("^0.1.2");
-    expect(packageJSON.devDependencies["@hitslop/cli"]).toBe("^0.1.3");
+    expect(packageJSON.devDependencies["@hitslop/cli"]).toBe("^0.1.4");
     expect(packageJSON.dependencies["bits-ui"]).toBe("^2.19.0");
     expect(packageJSON.dependencies.zod).toBe("^4.5.2");
     expect(packageJSON.devDependencies["@vanilla-extract/css"]).toBe("^1.17.4");
     expect(packageJSON.devDependencies["@vanilla-extract/vite-plugin"]).toBe("^5.1.1");
     expect(packageJSON.scripts).toMatchObject({ validate: "slop validate", register: "slop register" });
     expect(packageJSON.scripts.install).toBeUndefined();
+    expect(JSON.parse(await readFile(join(root, "manifest.json"), "utf8")).author).toEqual({ name: "Jordan Singer", url: "https://example.com/jordan" });
     const authoringSkill = await readFile(join(root, ".agents/skills/hitslop-authoring/SKILL.md"), "utf8");
     expect(authoringSkill).toContain("Storage is implicit and ID-free");
     expect(await readFile(join(root, ".agents/skills/hitslop-authoring/references/storage-and-packages.md"), "utf8")).toContain("SQLite");

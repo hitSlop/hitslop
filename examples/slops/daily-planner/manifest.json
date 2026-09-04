@@ -1,8 +1,18 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "daily-planner",
   "title": "Daily Planner",
   "description": "A folded appointment book for one day: three priorities, a ruled hour rail of time blocks, and a live marker for now.",
-  "categories": ["productivity", "personal"],
-  "presentation": { "width": 640, "height": 900 }
+  "categories": [
+    "productivity",
+    "personal"
+  ],
+  "presentation": {
+    "width": 640,
+    "height": 900
+  }
 }

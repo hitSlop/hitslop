@@ -1,8 +1,20 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "codex-pet",
   "title": "Codex Pet",
   "description": "A transparent desktop companion that animates Codex pet packages and accepts local ZIP imports.",
-  "categories": ["personal", "developer-tools"],
-  "presentation": { "width": 240, "height": 180, "resizable": false, "background": "transparent" }
+  "categories": [
+    "personal",
+    "developer-tools"
+  ],
+  "presentation": {
+    "width": 240,
+    "height": 180,
+    "resizable": false,
+    "background": "transparent"
+  }
 }

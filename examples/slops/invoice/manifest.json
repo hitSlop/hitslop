@@ -1,8 +1,18 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "invoice",
   "title": "Invoice",
   "description": "Line items, tax, and status for a local invoice.",
-  "categories": ["business", "finance"],
-  "presentation": { "width": 640, "height": 640 }
+  "categories": [
+    "business",
+    "finance"
+  ],
+  "presentation": {
+    "width": 640,
+    "height": 640
+  }
 }

@@ -62,7 +62,6 @@ export async function handlePublish(request: Request, backend: RegistryBackend):
       requestId: envelope.requestId,
       publisherKeyId: envelope.publisherKeyId,
       publicKey: envelope.publicKey,
-      displayName: envelope.displayName,
       artifactKey,
       artifactSha256: artifactHash,
       artifactBytes: artifactBytes.byteLength,

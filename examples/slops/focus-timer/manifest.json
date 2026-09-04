@@ -1,8 +1,20 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "focus-timer",
   "title": "Pomodoro",
   "description": "A playful tomato timer for focus sprints, breaks, and local session history.",
-  "categories": ["productivity", "personal"],
-  "presentation": { "width": 440, "height": 440, "resizable": false, "shape": "ellipse" }
+  "categories": [
+    "productivity",
+    "personal"
+  ],
+  "presentation": {
+    "width": 440,
+    "height": 440,
+    "resizable": false,
+    "shape": "ellipse"
+  }
 }

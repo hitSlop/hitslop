@@ -102,7 +102,7 @@ async function main(): Promise<void> {
 
     const app = join(temporary, "release-counter");
     const installedCLI = join(harness, "node_modules", ".bin", "slop");
-    await command([installedCLI, "init", app, "--yes", "--title", "Release Counter"], harness);
+    await command([installedCLI, "init", app, "--yes", "--title", "Release Counter", "--author-name", "hitSlop", "--author-url", "https://hitslop.com"], harness);
 
     // Substitute only the unpublished hitSlop packages. Everything else is
     // resolved normally, exactly as it will be after the first npm release.

@@ -1,8 +1,19 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "markdown-editor",
   "title": "Markdown Editor",
   "description": "A tactile markdown editor combining OverType's transparent native textarea with real-time Svelte rendering.",
-  "categories": ["productivity", "utilities"],
-  "presentation": { "width": 720, "height": 620, "shape": "rounded" }
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "presentation": {
+    "width": 720,
+    "height": 620,
+    "shape": "rounded"
+  }
 }

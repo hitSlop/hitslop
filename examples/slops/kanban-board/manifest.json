@@ -1,8 +1,18 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "kanban-board",
   "title": "Kanban Board",
   "description": "An anodized job-shop schedule board where work orders slot through lanes with live work-in-progress limits.",
-  "categories": ["productivity", "business"],
-  "presentation": { "width": 880, "height": 620 }
+  "categories": [
+    "productivity",
+    "business"
+  ],
+  "presentation": {
+    "width": 880,
+    "height": 620
+  }
 }

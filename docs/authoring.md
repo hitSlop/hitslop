@@ -18,7 +18,9 @@ The generated scripts wrap `slop dev`, `validate`, `build`, `register`, and
 and Vanilla Extract for structural styles.
 Use `--template svelte` for a blank base or `--template svelte-counter` for
 the teaching example. Edit `manifest.json` before the interface: it fixes the
-job, title, categories, and initial viewport.
+job, author attribution, title, categories, and initial viewport. Interactive
+init prompts for the required author name and optional public URL. In CI, pass
+`--yes --author-name "Your Name"` and optionally `--author-url https://example.com`.
 
 Development uses a disposable in-memory host fake. State lasts until the page
 reloads; SQLite and named media are forgiving UI-only stubs. Register a local
@@ -100,13 +102,14 @@ slop screenshot path/to/document.slop --target preview --output Preview.png
 
 ```sh
 slop identity show
-slop identity set-name "Your Name"
 bun run publish
 ```
 
 The CLI creates a local Ed25519 identity if needed, builds and captures one
 immutable artifact, signs its hash/size envelope, and sends it to the configured
-gateway. Export an encrypted identity backup with `slop identity export`.
+gateway. The key proves publisher ownership; public author attribution comes
+from the signed `manifest.json`. Export an encrypted identity backup with
+`slop identity export`.
 
 The default endpoint is the official catalog. Use `--registry` or
 `HITSLOP_REGISTRY_URL` for a self-hosted endpoint.

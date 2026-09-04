@@ -8,7 +8,7 @@ import { buildSlop, scaffold, validateAuthoringProject } from "./project.ts";
 import { runDev } from "./dev.ts";
 import { publishSlop } from "./publish.ts";
 import { installTemplate } from "./install.ts";
-import { exportIdentity, getIdentity, importIdentity, setIdentityName } from "./identity.ts";
+import { exportIdentity, getIdentity, importIdentity } from "./identity.ts";
 import { validateRuntimePackage } from "./runtime-package.ts";
 import { exportDocument, screenshotDocument } from "./render.ts";
 
@@ -16,9 +16,14 @@ const titleFor = (directory: string): string => directory.split("/").filter(Bool
 
 const parseCategories = (values: string[]): SlopCategory[] => values.map((value) => SlopCategorySchema.parse(value.trim().toLowerCase()));
 
-async function initMetadata(directory: string, flags: { yes?: boolean | undefined; title?: string | undefined; description?: string | undefined; category?: string[] | undefined }) {
+async function initMetadata(directory: string, flags: { yes?: boolean | undefined; title?: string | undefined; description?: string | undefined; category?: string[] | undefined; "author-name"?: string | undefined; "author-url"?: string | undefined }) {
+  const authorName = flags["author-name"]?.trim();
+  const authorURL = flags["author-url"]?.trim();
   const defaults = { title: flags.title || titleFor(directory), description: flags.description || "A small, lovable hitSlop app.", categories: parseCategories(flags.category?.length ? flags.category : ["utilities"]) };
-  if (flags.yes || !process.stdin.isTTY) return defaults;
+  if (flags.yes || !process.stdin.isTTY) {
+    if (!authorName) throw new Error("--author-name is required with --yes or in a non-interactive terminal.");
+    return { ...defaults, author: { name: authorName, ...(authorURL ? { url: authorURL } : {}) } };
+  }
   const prompt = createInterface({ input: process.stdin, output: process.stdout });
   try {
     const title = (await prompt.question(`Title (${defaults.title}): `)).trim() || defaults.title;
@@ -26,7 +31,10 @@ async function initMetadata(directory: string, flags: { yes?: boolean | undefine
     const rawCategories = (await prompt.question(`Categories, maximum 2 (${defaults.categories.join(", ")}): `)).trim();
     const categories = rawCategories ? parseCategories(rawCategories.split(",").filter(Boolean)) : defaults.categories;
     if (categories.length < 1 || categories.length > 2) throw new Error("Choose one or two categories.");
-    return { title, description, categories };
+    const name = authorName || (await prompt.question("Author name: ")).trim();
+    if (!name) throw new Error("Author name is required.");
+    const url = authorURL || (await prompt.question("Author URL (optional): ")).trim();
+    return { title, description, categories, author: { name, ...(url ? { url } : {}) } };
   } finally { prompt.close(); }
 }
 
@@ -41,6 +49,7 @@ let app = new Crust("slop").meta({ description: "Build small, self-contained hit
 app = app.command("init", (command) => command.meta({ description: "Create a Svelte hitSlop project and manifest." }).args([{ name: "directory", type: "path", default: "my-slop" }] as const).flags({
   template: { type: "string", description: "Svelte authoring template (svelte or svelte-counter)." },
   title: { type: "string", description: "Manifest title." }, description: { type: "string", description: "Manifest description." },
+  "author-name": { type: "string", description: "Required manifest author name." }, "author-url": { type: "string", description: "Optional manifest author URL." },
   category: { type: "string", multiple: true, description: "Manifest category; pass once or twice." }, yes: { type: "boolean", description: "Accept manifest defaults without prompting." },
 }).run(async ({ args, flags }) => { const metadata = await initMetadata(args.directory, flags); await scaffold(args.directory, { template: flags.template ?? "svelte-counter", ...metadata }); console.log(`Created ${args.directory}`); }));
 app = app.command("validate", (command) => command.meta({ description: "Validate an authoring project or built .slop document." }).args([{ name: "path", type: "path", default: "." }] as const).run(async ({ args }) => {
@@ -101,10 +110,9 @@ async function secret(prompt: string): Promise<string> {
 async function runIdentity(arguments_: string[]): Promise<boolean> {
   if (arguments_[0] !== "identity") return false;
   const action = arguments_[1] ?? "show";
-  if (action === "show") { const identity = await getIdentity(); console.log(`${identity.keyId}\t${identity.displayName}`); return true; }
-  if (action === "set-name") { const name = arguments_.slice(2).join(" ").trim(); if (!name) throw new Error("Usage: slop identity set-name <name>"); const identity = await setIdentityName(name); console.log(`${identity.keyId}\t${identity.displayName}`); return true; }
+  if (action === "show") { const identity = await getIdentity(); console.log(identity.keyId); return true; }
   if (action === "export") { const path = arguments_[2]; if (!path) throw new Error("Usage: slop identity export <file>"); const passphrase = await secret("Export passphrase: "); const confirmation = await secret("Confirm passphrase: "); if (passphrase !== confirmation) throw new Error("Passphrases do not match."); await exportIdentity(path, passphrase); console.log(`Exported publisher identity to ${path}`); return true; }
-  if (action === "import") { const path = arguments_[2]; if (!path) throw new Error("Usage: slop identity import <file> [--force]"); const identity = await importIdentity(path, await secret("Import passphrase: "), arguments_.includes("--force")); console.log(`${identity.keyId}\t${identity.displayName}`); return true; }
+  if (action === "import") { const path = arguments_[2]; if (!path) throw new Error("Usage: slop identity import <file> [--force]"); const identity = await importIdentity(path, await secret("Import passphrase: "), arguments_.includes("--force")); console.log(identity.keyId); return true; }
   throw new Error(`Unknown identity command: ${action}`);
 }
 

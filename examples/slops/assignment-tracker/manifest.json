@@ -1,8 +1,19 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "assignment-tracker",
   "title": "Assignment Tracker",
   "description": "A tactile student homework and due-date pad organized by urgency, course badges, and points.",
-  "categories": ["education", "productivity"],
-  "presentation": { "width": 620, "height": 700, "shape": "rounded" }
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "presentation": {
+    "width": 620,
+    "height": 700,
+    "shape": "rounded"
+  }
 }

@@ -4,14 +4,14 @@ The v1 contract deliberately removes pre-launch compatibility layers.
 
 ## Removed from the manifest
 
-- author and tags
+- free-form tags and publisher-profile attribution
 - declared store IDs, kinds, paths, seeds, and byte limits
 - document identity and template lineage
 - runtime/version and authored entry paths
 - the separate window/shape object hierarchy
 
-The replacement is one required schema URL, catalog fields, controlled
-categories, and a small `presentation` object.
+The replacement is one required schema URL, manifest-owned author attribution,
+catalog fields, controlled categories, and a small `presentation` object.
 
 ## Removed from runtime packages
 

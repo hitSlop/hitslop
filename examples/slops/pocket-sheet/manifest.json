@@ -1,8 +1,19 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "pocket-sheet",
   "title": "Pocket Spreadsheet",
   "description": "A tactile, lightweight spreadsheet with formula evaluation, cell ranges, multi-cell selection, and CSV export.",
-  "categories": ["finance", "productivity"],
-  "presentation": { "width": 760, "height": 600, "shape": "rounded" }
+  "categories": [
+    "finance",
+    "productivity"
+  ],
+  "presentation": {
+    "width": 760,
+    "height": 600,
+    "shape": "rounded"
+  }
 }

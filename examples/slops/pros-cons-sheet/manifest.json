@@ -1,8 +1,18 @@
 {
   "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "pros-cons-sheet",
   "title": "Decision Balance",
   "description": "Benjamin Franklin’s prudential algebra: weighted pros and cons on folded stationery with a live balance scale and verdict seal.",
-  "categories": ["productivity", "personal"],
-  "presentation": { "width": 720, "height": 680 }
+  "categories": [
+    "productivity",
+    "personal"
+  ],
+  "presentation": {
+    "width": 720,
+    "height": 680
+  }
 }

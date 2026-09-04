@@ -19,6 +19,9 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
 - Manifest storage is implicit. A slop can use JSON, SQLite, named media, or
   any combination. Replace JSON and media atomically and keep SQLite
   transactions on one connection.
+- Manifest `author.name` is required and `author.url` may be an HTTP(S) URL.
+  Attribution belongs to the signed artifact; the publisher identity is only a
+  signing key.
 - Browser `slop dev` is a disposable UI preview: no bridge server, disk stores,
   or polling. Test persistence and native behavior in a built writable copy.
 - Svelte `jsonStore` requires `{ schema, initial }`. Put the Zod 4 schema in root

@@ -1,8 +1,17 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
   "slug": "svelte-counter",
   "title": "Svelte Counter",
   "description": "A minimal counter for testing the Svelte SDK, JSON persistence, and native host.",
-  "categories": ["developer-tools"],
-  "presentation": { "width": 560, "height": 420 }
+  "categories": [
+    "developer-tools"
+  ],
+  "presentation": {
+    "width": 560,
+    "height": 420
+  }
 }

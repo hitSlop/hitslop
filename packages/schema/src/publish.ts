@@ -3,11 +3,10 @@ import { z } from "zod";
 export const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
 export const PublishEnvelopeSchema = z.object({
-  format: z.literal("hitslop-publish/2"),
+  format: z.literal("hitslop-publish/3"),
   requestId: z.string().uuid(),
   publisherKeyId: z.string().min(16).max(64),
   publicKey: z.string().min(40).max(100),
-  displayName: z.string().min(1).max(80),
   artifactSha256: Sha256Schema,
   artifactBytes: z.number().int().positive().max(25 * 1024 * 1024),
   timestamp: z.number().int().positive(),

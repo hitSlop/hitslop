@@ -54,6 +54,6 @@ swift test --package-path apps/apple/Packages/HitSlopApple
 swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native
 ```
 
-The macOS app is version `1.0.1`; iOS remains `0.1.0`. Release signing,
+The macOS app is version `1.0.2`; iOS remains `0.1.0`. Release signing,
 notarization, Sparkle, and App Store credentials are local/CI secrets, never
 repository files.

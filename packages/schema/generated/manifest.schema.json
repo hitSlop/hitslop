@@ -8,14 +8,17 @@
         "$schema": {
           "$ref": "#/$defs/__schema0"
         },
+        "author": {
+          "$ref": "#/$defs/SlopAuthor"
+        },
         "slug": {
-          "$ref": "#/$defs/__schema1"
+          "$ref": "#/$defs/__schema3"
         },
         "title": {
-          "$ref": "#/$defs/__schema2"
+          "$ref": "#/$defs/__schema4"
         },
         "description": {
-          "$ref": "#/$defs/__schema3"
+          "$ref": "#/$defs/__schema5"
         },
         "categories": {
           "$ref": "#/$defs/SlopCategories"
@@ -26,6 +29,7 @@
       },
       "required": [
         "$schema",
+        "author",
         "slug",
         "title",
         "description",
@@ -39,18 +43,53 @@
       "type": "string",
       "const": "https://api.hitslop.com/schemas/v1/manifest.schema.json"
     },
+    "SlopAuthor": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/__schema1"
+        },
+        "url": {
+          "$ref": "#/$defs/__schema2"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "title": "SlopAuthor"
+    },
     "__schema1": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "__schema2": {
+      "allOf": [
+        {
+          "type": "string",
+          "maxLength": 2048,
+          "format": "uri"
+        },
+        {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^https?:\\/\\/"
+        }
+      ]
+    },
+    "__schema3": {
       "type": "string",
       "minLength": 2,
       "maxLength": 64,
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
     },
-    "__schema2": {
+    "__schema4": {
       "type": "string",
       "minLength": 1,
       "maxLength": 80
     },
-    "__schema3": {
+    "__schema5": {
       "type": "string",
       "minLength": 1,
       "maxLength": 240
@@ -96,19 +135,19 @@
       "type": "object",
       "properties": {
         "width": {
-          "$ref": "#/$defs/__schema4"
-        },
-        "height": {
-          "$ref": "#/$defs/__schema5"
-        },
-        "resizable": {
           "$ref": "#/$defs/__schema6"
         },
-        "shape": {
+        "height": {
           "$ref": "#/$defs/__schema7"
         },
-        "background": {
+        "resizable": {
           "$ref": "#/$defs/__schema8"
+        },
+        "shape": {
+          "$ref": "#/$defs/__schema9"
+        },
+        "background": {
+          "$ref": "#/$defs/__schema10"
         }
       },
       "required": [
@@ -118,20 +157,20 @@
       "additionalProperties": false,
       "title": "SlopStandardPresentation"
     },
-    "__schema4": {
+    "__schema6": {
       "type": "integer",
       "minimum": 240,
       "maximum": 4096
     },
-    "__schema5": {
+    "__schema7": {
       "type": "integer",
       "minimum": 180,
       "maximum": 4096
     },
-    "__schema6": {
+    "__schema8": {
       "type": "boolean"
     },
-    "__schema7": {
+    "__schema9": {
       "type": "string",
       "enum": [
         "rounded",
@@ -139,7 +178,7 @@
         "capsule"
       ]
     },
-    "__schema8": {
+    "__schema10": {
       "type": "string",
       "const": "transparent"
     },
@@ -147,13 +186,13 @@
       "type": "object",
       "properties": {
         "width": {
-          "$ref": "#/$defs/__schema4"
+          "$ref": "#/$defs/__schema6"
         },
         "height": {
-          "$ref": "#/$defs/__schema5"
+          "$ref": "#/$defs/__schema7"
         },
         "skin": {
-          "$ref": "#/$defs/__schema9"
+          "$ref": "#/$defs/__schema11"
         }
       },
       "required": [
@@ -164,7 +203,7 @@
       "additionalProperties": false,
       "title": "SlopSkinPresentation"
     },
-    "__schema9": {
+    "__schema11": {
       "type": "string",
       "minLength": 12,
       "maxLength": 240,

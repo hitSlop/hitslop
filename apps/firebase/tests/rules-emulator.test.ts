@@ -29,7 +29,7 @@ if (!emulator) {
       await Promise.all([
         setDoc(doc(firestore, "templates/public-template"), { visibility: "public", title: "Public" }),
         setDoc(doc(firestore, "templates/hidden-template"), { visibility: "hidden", title: "Hidden" }),
-        setDoc(doc(firestore, "publishers/publisher"), { displayName: "Publisher" }),
+        setDoc(doc(firestore, "publishers/publisher"), { keyId: "publisher", publicKey: "fixture-public-key" }),
         setDoc(doc(firestore, "releases/release"), { templateId: "public-template" }),
         setDoc(doc(firestore, "publishRequests/request"), { requestId: "request" }),
       ]);

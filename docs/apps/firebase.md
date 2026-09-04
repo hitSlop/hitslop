@@ -18,14 +18,14 @@ rules remain read-only.
 
 `templates/{publisherKeyId}_{slug}` is the only collection the app queries for
 catalog rows. Each public document contains title, description, categories,
-normalized search text, publisher display name, `visibility`,
+normalized search text, manifest-owned author name and optional URL, `visibility`,
 `firstPublishedAt`, lifetime `creationCount`, and a complete nested
 `currentRelease` snapshot. That snapshot contains the release ID and number,
 publish timestamp, manifest JSON, and content-addressed artifact, preview, and
 icon descriptors.
 
-`releases/{releaseId}` is private immutable history. `publishers/{keyId}` is
-public publisher metadata. `publishRequests/{keyId}_{requestId}` is private
+`releases/{releaseId}` is private immutable history. `publishers/{keyId}` is a
+public signing-key record without profile metadata. `publishRequests/{keyId}_{requestId}` is private
 idempotency state with a seven-day `expiresAt` TTL. Firestore rules deny all
 client writes and deny client reads of releases, publish requests, and hidden
 templates.
@@ -54,10 +54,11 @@ key. Apple reports App Attest as unsupported on Mac, so the macOS client uses
 Firebase's DeviceCheck provider.
 
 Publishing deliberately keeps the public protocol independent of Firebase. The
-CLI signs and uploads one `hitslop-publish/2` multipart request to
+CLI signs and uploads one `hitslop-publish/3` multipart request to
 `https://api.hitslop.com/api/publish`. The Function validates the signature,
 hash, ZIP structure, manifest, embedded document skill, preview, icon, and skin
-before committing Storage objects and Firestore metadata.
+before committing Storage objects and Firestore metadata. Author name and URL
+are read from that signed artifact; the signing identity carries no profile.
 
 ## Development
 

@@ -6,7 +6,7 @@ import { zipSync, type Zippable } from "fflate";
 import { decode as decodePng } from "fast-png";
 import { build as viteBuild } from "vite";
 import * as z from "zod";
-import { manifestSchemaURL, parseManifest, type SlopCategory, type SlopManifest } from "@hitslop/schema";
+import { manifestSchemaURL, parseManifest, type SlopAuthor, type SlopCategory, type SlopManifest } from "@hitslop/schema";
 import cliPackage from "../package.json" with { type: "json" };
 import { emitDocumentSkill, readDocumentGuideSource } from "./document-skill.ts";
 import { readThemeContract, validateThemeReferences } from "./theme.ts";
@@ -45,9 +45,10 @@ export type ScaffoldOptions = {
   title?: string;
   description?: string;
   categories?: SlopCategory[];
+  author: SlopAuthor;
 };
 
-export async function scaffold(destination: string, options: ScaffoldOptions = {}): Promise<void> {
+export async function scaffold(destination: string, options: ScaffoldOptions): Promise<void> {
   const template = options.template ?? "svelte-counter";
   if (!new Set(["svelte", "svelte-counter"]).has(template)) throw new Error(`Unknown authoring template: ${template}`);
   if (await exists(destination) && (await readdir(destination)).length) throw new Error(`Destination is not empty: ${destination}`);
@@ -67,12 +68,14 @@ export async function scaffold(destination: string, options: ScaffoldOptions = {
     dependencies: { "@hitslop/runtime": "^0.1.2", "@hitslop/svelte": "^0.1.2", "bits-ui": "^2.19.0", "svelte": "^5.0.0", "zod": "^4.5.2" },
     devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.0.0", "@vanilla-extract/css": "^1.17.4", "@vanilla-extract/vite-plugin": "^5.1.1", "vite": "^8.0.0" },
   }, null, 2) + "\n");
-  await writeFile(join(destination, "manifest.json"), JSON.stringify({
+  const manifest = parseManifest({
     $schema: manifestSchemaURL, slug,
+    author: options.author,
     title,
     description: options.description || "A small, lovable hitSlop app.", categories: options.categories?.length ? options.categories : ["utilities"],
     presentation: { width: 560, height: 420 },
-  }, null, 2) + "\n");
+  });
+  await writeFile(join(destination, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   const appPath = join(destination, "src/App.svelte");
   await writeFile(appPath, (await readFile(appPath, "utf8")).replace("__SLOP_TITLE_LITERAL__", JSON.stringify(title)));
 }

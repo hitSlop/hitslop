@@ -3,6 +3,7 @@ import { manifestSchemaURL, parseManifest } from "../src/index.ts";
 
 const valid = {
   $schema: manifestSchemaURL,
+  author: { name: "hitSlop", url: "https://hitslop.com" },
   slug: "counter",
   title: "Counter",
   description: "A small counter.",
@@ -12,6 +13,17 @@ const valid = {
 
 describe("SlopManifest", () => {
   test("parses the minimal manifest", () => expect(parseManifest(valid).slug).toBe("counter"));
+  test("supports an author without a URL", () => expect(parseManifest({ ...valid, author: { name: "Jordan Singer" } }).author).toEqual({ name: "Jordan Singer" }));
+  test("trims author names", () => expect(parseManifest({ ...valid, author: { name: "  Jordan Singer  " } }).author.name).toBe("Jordan Singer"));
+  test("requires an author name and accepts only public web URLs", () => {
+    expect(() => parseManifest({ ...valid, author: undefined })).toThrow();
+    expect(() => parseManifest({ ...valid, author: { name: " " } })).toThrow();
+    expect(() => parseManifest({ ...valid, author: { name: "Jordan", url: "mailto:jordan@example.com" } })).toThrow("must use http or https");
+    expect(() => parseManifest({ ...valid, author: { name: "Jordan", url: "https://" } })).toThrow();
+    expect(() => parseManifest({ ...valid, author: { name: "x".repeat(81) } })).toThrow();
+    expect(() => parseManifest({ ...valid, author: { name: "Jordan", url: "http://example.com" } })).not.toThrow();
+    expect(() => parseManifest({ ...valid, author: { name: "Jordan", url: "https://example.com" } })).not.toThrow();
+  });
   test("supports two catalog categories", () => expect(parseManifest({ ...valid, categories: ["personal", "finance"] }).categories).toHaveLength(2));
   test("rejects unknown and duplicate categories", () => {
     expect(() => parseManifest({ ...valid, categories: ["widgets"] })).toThrow();
@@ -33,6 +45,6 @@ describe("SlopManifest", () => {
   });
   test("requires the versioned schema URL", () => expect(() => parseManifest({ ...valid, $schema: "https://api.hitslop.com/schemas/manifest.schema.json" })).toThrow());
   test("rejects removed manifest fields", () => {
-    for (const extra of ["author", "stores", "window", "tags", "document"]) expect(() => parseManifest({ ...valid, [extra]: {} })).toThrow();
+    for (const extra of ["stores", "window", "tags", "document"]) expect(() => parseManifest({ ...valid, [extra]: {} })).toThrow();
   });
 });

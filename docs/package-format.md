@@ -63,6 +63,10 @@ A minimal v1 manifest:
 ```json
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "Jordan Singer",
+    "url": "https://example.com"
+  },
   "slug": "tiny-counter",
   "title": "Tiny Counter",
   "description": "Counts one small thing.",
@@ -75,10 +79,15 @@ Choose one or two controlled categories: `productivity`, `utilities`,
 `finance`, `media`, `games`, `developer-tools`, `education`,
 `business`, `personal`, or `other`.
 
-There is intentionally no author, document ID, release lineage, entry path,
-storage declaration, tags, seed data, or runtime version. Publisher ownership
-and releases live outside the artifact. Copying a template preserves the
-manifest byte-for-byte.
+`author.name` is required and travels with the artifact. `author.url` is an
+optional public HTTP(S) URL. Author attribution is intentionally separate from
+the publisher signing key: the manifest says who made the work, while the key
+proves who controls its catalog releases.
+
+There is intentionally no document ID, release lineage, entry path, storage
+declaration, tags, seed data, or runtime version. Publisher ownership and
+releases live outside the artifact. Copying a template preserves the manifest
+byte-for-byte.
 
 ## Immutability rule
 

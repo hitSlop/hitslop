@@ -19,6 +19,16 @@ const categories = z.array(SlopCategorySchema).min(1).max(2).superRefine((values
   if (new Set(values).size !== values.length) context.addIssue({ code: "custom", message: "categories must be unique" });
 }).meta({ id: "SlopCategories", title: "SlopCategories" });
 
+const authorURL = z.intersection(
+  z.string().max(2_048).url(),
+  z.string().max(2_048).regex(/^https?:\/\//, "must use http or https"),
+);
+
+export const SlopAuthorSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  url: authorURL.optional(),
+}).strict().meta({ id: "SlopAuthor", title: "SlopAuthor" });
+
 /** Portable package-relative asset path. */
 export const relativePath = z.string().min(1).max(240).regex(
   /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/,
@@ -54,6 +64,7 @@ export const SlopPresentationSchema = z.union([
 
 export const SlopManifestSchema = z.object({
   $schema: z.literal(manifestSchemaURL),
+  author: SlopAuthorSchema,
   slug: z.string().min(2).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   title: z.string().min(1).max(80),
   description: z.string().min(1).max(240),
@@ -62,6 +73,7 @@ export const SlopManifestSchema = z.object({
 }).strict().meta({ id: "SlopManifest", title: "SlopManifest" });
 
 export type SlopCategory = z.infer<typeof SlopCategorySchema>;
+export type SlopAuthor = z.infer<typeof SlopAuthorSchema>;
 export type SlopManifest = z.infer<typeof SlopManifestSchema>;
 export type SlopPresentation = z.infer<typeof SlopPresentationSchema>;
 export const parseManifest = (input: unknown): SlopManifest => SlopManifestSchema.parse(input);

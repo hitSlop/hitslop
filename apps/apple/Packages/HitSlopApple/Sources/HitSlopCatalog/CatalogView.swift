@@ -35,7 +35,9 @@ private struct RecentCatalogItem: Identifiable {
     var title: String { package?.manifest.title ?? url.deletingPathExtension().lastPathComponent }
     var description: String { package?.manifest.description ?? "A local hitSlop document." }
     var categories: [String] { package?.manifest.categories.map(\.rawValue) ?? [] }
-    var searchableText: String { ([title, description] + categories).joined(separator: " ").localizedLowercase }
+    var authorName: String? { package?.manifest.author.name }
+    var authorURL: URL? { package?.manifest.author.url.flatMap(URL.init(string:)) }
+    var searchableText: String { ([title, description, authorName ?? ""] + categories).joined(separator: " ").localizedLowercase }
     var previewURL: URL? { package?.previewURL }
     var iconURL: URL? { package?.iconURL }
 
@@ -57,6 +59,8 @@ private enum CatalogEntry: Identifiable {
     var title: String { switch self { case .template(let item): item.title; case .recent(let item): item.title } }
     var description: String { switch self { case .template(let item): item.description; case .recent(let item): item.description } }
     var categories: [String] { switch self { case .template(let item): item.categories; case .recent(let item): item.categories } }
+    var authorName: String? { switch self { case .template(let item): item.authorName; case .recent(let item): item.authorName } }
+    var authorURL: URL? { switch self { case .template(let item): item.authorURL; case .recent(let item): item.authorURL } }
     var searchableText: String { switch self { case .template(let item): item.searchableText; case .recent(let item): item.searchableText } }
 }
 
@@ -506,6 +510,19 @@ private struct CatalogDetail: View {
                                 .font(.body)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
+                            if let authorName = entry.authorName {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Text("By \(authorName)")
+                                        .font(.callout.weight(.medium))
+                                        .foregroundStyle(.secondary)
+                                    if let authorURL = entry.authorURL {
+                                        Link(authorURL.absoluteString, destination: authorURL)
+                                            .font(.callout)
+                                            .lineLimit(1)
+                                            .truncationMode(.middle)
+                                    }
+                                }
+                            }
                         }
 
                         if !entry.categories.isEmpty {
@@ -588,7 +605,6 @@ private struct CatalogDetail: View {
             )
         case .template(let item):
             var extra: [CatalogFact] = []
-            if let publisher = item.publisher { extra.append(CatalogFact(icon: "person.crop.circle", title: "Publisher", value: publisher)) }
             if let release = item.releaseNumber { extra.append(CatalogFact(icon: "shippingbox", title: "Release", value: "Release \(release)")) }
             if let creationCount = item.creationCount { extra.append(CatalogFact(icon: "doc.on.doc", title: "Creations", value: "\(creationCount)")) }
             return commonFacts(

@@ -2,10 +2,10 @@ import { getPublicKeyAsync, keygenAsync, signAsync } from "@noble/ed25519";
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "node:crypto";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { homedir, userInfo } from "node:os";
+import { homedir } from "node:os";
 import { sha256 } from "./project.ts";
 
-export type Identity = { privateKey: string; publicKey: string; keyId: string; displayName: string };
+export type Identity = { privateKey: string; publicKey: string; keyId: string };
 type ExportFile = { version: 1; kdf: "scrypt"; salt: string; cipher: "aes-256-gcm"; iv: string; tag: string; ciphertext: string };
 const service = "app.hitslop.cli"; const account = "publisher"; const fallback = join(homedir(), ".hitslop", "identity.json");
 const encode = (bytes: Uint8Array): string => Buffer.from(bytes).toString("base64url");
@@ -20,22 +20,17 @@ async function storeIdentity(identity: Identity): Promise<void> {
 }
 
 async function validated(identity: Identity): Promise<Identity> {
-  if (!identity.displayName.trim() || identity.displayName.length > 80) throw new Error("Publisher name must contain 1–80 characters.");
   const derivedPublic = await getPublicKeyAsync(decode(identity.privateKey));
   if (encode(derivedPublic) !== identity.publicKey) throw new Error("Identity public and private keys do not match.");
   if (sha256(derivedPublic).slice(0, 32) !== identity.keyId) throw new Error("Identity key ID does not match its public key.");
-  return { ...identity, displayName: identity.displayName.trim() };
+  return { privateKey: identity.privateKey, publicKey: identity.publicKey, keyId: identity.keyId };
 }
 
 export async function getIdentity(): Promise<Identity> {
   const stored = await readStored(); if (stored) return validated(stored);
   const pair = await keygenAsync(); const publicKey = pair.publicKey ?? await getPublicKeyAsync(pair.secretKey);
-  const identity = await validated({ privateKey: encode(pair.secretKey), publicKey: encode(publicKey), keyId: sha256(publicKey).slice(0, 32), displayName: userInfo().username });
+  const identity = await validated({ privateKey: encode(pair.secretKey), publicKey: encode(publicKey), keyId: sha256(publicKey).slice(0, 32) });
   await storeIdentity(identity); return identity;
-}
-
-export async function setIdentityName(displayName: string): Promise<Identity> {
-  const identity = await getIdentity(); const next = await validated({ ...identity, displayName }); await storeIdentity(next); return next;
 }
 
 export async function exportIdentity(path: string, passphrase: string): Promise<void> {

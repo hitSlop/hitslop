@@ -17,7 +17,6 @@ export type FinalizePublishInput = {
   requestId: string;
   publisherKeyId: string;
   publicKey: string;
-  displayName: string;
   artifactKey: string;
   artifactSha256: string;
   artifactBytes: number;
@@ -117,7 +116,6 @@ export class FirebaseRegistryBackend implements RegistryBackend {
       transaction.set(publisherRef, {
         keyId: input.publisherKeyId,
         publicKey: input.publicKey,
-        displayName: input.displayName,
         createdAt: publisherCreatedAt,
         updatedAt: now,
       });
@@ -136,12 +134,13 @@ export class FirebaseRegistryBackend implements RegistryBackend {
       transaction.set(templateRef, {
         id: templateId,
         publisherKeyId: input.publisherKeyId,
-        publisherDisplayName: input.displayName,
+        authorName: input.manifest.author.name,
+        ...(input.manifest.author.url ? { authorURL: input.manifest.author.url } : {}),
         slug: input.manifest.slug,
         title: input.manifest.title,
         description: input.manifest.description,
         categories: input.manifest.categories,
-        searchText: [input.manifest.title, input.manifest.description, ...input.manifest.categories].join(" ").toLocaleLowerCase(),
+        searchText: [input.manifest.title, input.manifest.description, input.manifest.author.name, ...input.manifest.categories].join(" ").toLocaleLowerCase(),
         currentRelease,
         creationCount,
         firstPublishedAt,

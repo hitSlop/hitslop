@@ -24,7 +24,6 @@ if (!emulator) {
     requestId: "11111111-1111-4111-8111-111111111111",
     publisherKeyId: "publisher-key-id",
     publicKey: "publisher-public-key",
-    displayName: "Publisher",
     artifactKey: `artifacts/sha256/${hash("a")}.slop.zip`,
     artifactSha256: hash("a"),
     artifactBytes: 1_024,
@@ -36,6 +35,7 @@ if (!emulator) {
     iconBytes: 256,
     manifest: parseManifest({
       $schema: manifestSchemaURL,
+      author: { name: "Counter Author", url: "https://example.com/counter" },
       slug: "counter",
       title: "Counter",
       description: "Count one useful thing.",
@@ -66,6 +66,8 @@ if (!emulator) {
     const templateRef = firestore.collection("templates").doc(first.templateId);
     const firstTemplate = (await templateRef.get()).data()!;
     expect(firstTemplate.visibility).toBe("public");
+    expect(firstTemplate.authorName).toBe("Counter Author");
+    expect(firstTemplate.authorURL).toBe("https://example.com/counter");
     expect(firstTemplate.creationCount).toBe(0);
     expect(firstTemplate.firstPublishedAt).toBeInstanceOf(Timestamp);
     expect(firstTemplate.currentRelease.number).toBe(1);
@@ -83,6 +85,10 @@ if (!emulator) {
       requestId: "22222222-2222-4222-8222-222222222222",
       artifactKey: `artifacts/sha256/${hash("d")}.slop.zip`,
       artifactSha256: hash("d"),
+      manifest: parseManifest({
+        ...input().manifest,
+        author: { name: "Renamed Author", url: "https://example.com/renamed" },
+      }),
     }));
     expect(second.releaseNumber).toBe(2);
     const updated = (await templateRef.get()).data()!;
@@ -90,9 +96,13 @@ if (!emulator) {
     expect(updated.firstPublishedAt).toEqual(firstTemplate.firstPublishedAt);
     expect(updated.currentRelease.number).toBe(2);
     expect(updated.currentRelease.artifact.sha256).toBe(hash("d"));
+    expect(updated.authorName).toBe("Renamed Author");
+    expect(updated.authorURL).toBe("https://example.com/renamed");
 
     const releases = await firestore.collection("releases").where("templateId", "==", first.templateId).get();
     expect(releases.size).toBe(2);
+    const releaseManifests = releases.docs.map((release) => JSON.parse(String(release.get("manifestJSON"))));
+    expect(releaseManifests.map((manifest) => manifest.author.name).sort()).toEqual(["Counter Author", "Renamed Author"]);
     const request = await firestore.collection("publishRequests").doc(`${firstInput.publisherKeyId}_${firstInput.requestId}`).get();
     expect(request.get("expiresAt")).toBeInstanceOf(Timestamp);
 
