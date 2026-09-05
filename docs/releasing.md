@@ -8,7 +8,9 @@ Do not force unrelated products to share one version.
 
 ## Release gate
 
-From a clean checkout with Bun and Xcode installed:
+From a clean checkout with Bun **1.4.0** (the root `packageManager` version) and
+Xcode installed. Use that exact Bun version for generation and release checks:
+the bundled bridge's minified output changes between Bun versions.
 
 ```sh
 bun install --frozen-lockfile
