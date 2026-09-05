@@ -12,15 +12,19 @@ document.
 ```svelte
 <script lang="ts">
   import { jsonStore } from "@hitslop/svelte";
+  import { ready } from "@hitslop/runtime";
+  import { onDestroy } from "svelte";
   import counterSchema from "../schema";
 
   const document = jsonStore({
     schema: counterSchema,
     initial: { count: 0 },
   });
+  $effect(() => { if (document.isReady) ready(); });
+  onDestroy(() => document.destroy());
 </script>
 
-<button onclick={() => document.current.count += 1}>
+<button disabled={!document.isReady || document.isLoading} onclick={() => document.current.count += 1}>
   {document.current.count}
 </button>
 ```

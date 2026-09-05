@@ -6,6 +6,38 @@ import ImageIO
 import Testing
 @testable import HitSlopRuntime
 
+@Test func packagePathsMatchSharedTypeScriptCorpus() throws {
+    struct PathCase: Decodable { let path: String; let safe: Bool; let template: Bool }
+    let url = try #require(Bundle.module.url(forResource: "package-paths", withExtension: "json", subdirectory: "Fixtures"))
+    for item in try JSONDecoder().decode([PathCase].self, from: Data(contentsOf: url)) {
+        #expect(SlopPackage.isSafeRelativePath(item.path) == item.safe)
+        guard item.safe else { continue }
+        let root = try webViewPackage(skinned: false)
+        defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+        let entry = root.appendingPathComponent(item.path)
+        try FileManager.default.createDirectory(at: entry.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("asset".utf8).write(to: entry)
+        if item.template {
+            #expect(throws: Never.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: false) }
+        } else {
+            #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+        }
+    }
+}
+
+@Test func malformedWorkerRequestsThrowInsteadOfTrapping() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let worker = SlopStorageWorker(package: try SlopPackage(rootURL: root))
+    defer { worker.close() }
+    for request in ["[]", #"{"method":"json.open"}"#, #"{"method":"json.write"}"#, #"{"method":"sqlite.transaction","statements":4}"#, #"{"method":"media.open","name":4}"#, #"{"method":"media.write","name":"hero"}"#, #"{"method":"media.remove"}"#] {
+        await #expect(throws: SlopBridgeFailure.self) { _ = try await worker.perform(Data(request.utf8)) }
+    }
+    // JSON null is a value, not a missing field.
+    let result = try await worker.perform(Data(#"{"method":"json.open","value":null}"#.utf8))
+    #expect((result.value as? [String: Any])?["value"] is NSNull)
+}
+
 @MainActor private final class WindowResizeDelegate: SlopRuntimeSessionDelegate {
     var requested: CGSize?
     func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize {

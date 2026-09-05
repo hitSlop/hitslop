@@ -19,7 +19,7 @@ Validation does not coerce, insert defaults, or strip fields. Use
 `additionalProperties: true` to preserve unknown fields. Values must be plain JSON.
 The native store validates the packaged schema on reads and writes, including
 formats. Shared fixtures check TypeBox and Swift behavior. Ajv remains only in
-tooling to check packaged JSON Schema validity. Other examples and init are
+tooling to check packaged JSON Schema validity. The CLI counter starter uses this same workflow. Backlog examples are
 not migrated; there is no Zod compatibility path.
 
 Both adapters expose `flush()`, `isDirty`, and `isSaving`. A flush snapshots

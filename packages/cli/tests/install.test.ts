@@ -49,6 +49,18 @@ describe("installTemplate", () => {
     expect(await readFile(join(item.templates, "tiny-counter.slop", "app.html"), "utf8")).toContain("Hello");
   });
 
+  test("capture failure preserves the existing master", async () => {
+    const item = await fixture();
+    const installed = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeIcon });
+    const before = await readFile(join(installed.directory, "app.html"));
+    await expect(installTemplate(item.project, {
+      templatesRoot: item.templates, force: true,
+      capturePreview: async () => { throw new Error("capture failed"); },
+    })).rejects.toThrow("capture failed");
+    expect(await readFile(join(installed.directory, "app.html"))).toEqual(before);
+    expect((await lstat(installed.directory)).mode & 0o222).toBe(0);
+  });
+
   test("force replaces an existing install", async () => {
     const item = await fixture(); await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeIcon });
     const replaced = await installTemplate(item.project, { templatesRoot: item.templates, preview: item.preview, ...skipNativeIcon, force: true });

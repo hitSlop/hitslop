@@ -25,18 +25,21 @@ windows cannot resize. Avoid critical controls on antialiased/translucent edges.
 
 ## Static output
 
-During static capture the root has `data-slop-capture="static"`. Add
-`data-slop-export="hide"` to editing-only controls and use capture CSS for
-necessary flattening. Do not hide the content those controls manipulate.
+Prefer an optional `Export.svelte` wrapped in `ExportTarget` from `@hitslop/svelte`.
+Pass the current data and selected view; share presentation and theme components.
+Use normal flow rather than viewport heights or scrolling panels. This view also
+supplies the window-sized preview. Without it, use `data-slop-capture="static"`
+styles and `data-slop-export="hide"` on editing controls.
 
-Preview preserves manifest dimensions. PNG/PDF export uses current width and
-full document height; PNG is deterministic 2× and PDF keeps selectable text/
-vectors. Keep export content in normal flow, not nested scroll panels.
+PNG exports use current width and full content height at 2×, within 16384 pixels
+per side and 24 megapixels. PDF retains selectable text on one content-sized page.
+Dedicated exports do not inherit native window masks. Fonts, visible images, and
+stable geometry are awaited; asynchronous charts can use `capture.onPrepare`.
 
 ## Icon
 
-Mount at most one 512×512 `data-slop-render="icon"` target only when
-`capture.isRenderer()` is true. Reveal it only in icon capture mode. The icon
-should communicate the job with a strong silhouette, safe margins, and no
-essential small text. Catalog detail uses the full preview; Finder and compact
-catalog rows use the icon.
+Use optional `IconTarget` around `Icon.svelte`. It owns renderer-only mounting and
+a transparent 512×512 surface. Pass progress or other saved data if useful; keep
+a strong silhouette, safe margins, and no essential small text. It refreshes
+Finder metadata on close; the published `QuickLook/Icon.png` remains immutable.
+Preview icon and export modes in the disposable gallery before native checks.

@@ -142,6 +142,7 @@ async function main(): Promise<void> {
     const swiftEnv = { CLANG_MODULE_CACHE_PATH: moduleCache, SWIFTPM_MODULECACHE_OVERRIDE: moduleCache };
     await command(["swift", "test", "--package-path", "apps/apple/Packages/HitSlopApple"], root, false, swiftEnv);
     await command(["swift", "build", "--package-path", "apps/apple/Packages/HitSlopApple", "--product", "hitslop-native"], root, false, swiftEnv);
+    await command(["bun", "scripts/native-helper-check.ts"], root, false, swiftEnv);
   } else {
     process.stdout.write("↷ Swift checks run on macOS CI (or set HITSLOP_SKIP_SWIFT=0 on macOS)\n");
   }

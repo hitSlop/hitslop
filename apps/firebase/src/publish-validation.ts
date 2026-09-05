@@ -1,4 +1,6 @@
 import type { SlopManifest } from "@hitslop/schema";
+import { checkPngDimensions, safeArchivePath } from "@hitslop/schema";
+export { safeArchivePath } from "@hitslop/schema";
 import { decode as decodePng } from "fast-png";
 import { validatePackagePath } from "./publish-package.js";
 
@@ -6,11 +8,6 @@ const MAX_ENTRIES = 256;
 const MAX_ENTRY_BYTES = 25 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 const decoder = new TextDecoder("utf-8", { fatal: true });
-
-export function safeArchivePath(name: string): boolean {
-  if (!name || name.length > 240 || name.startsWith("/") || name.includes("\\") || name.includes("\0")) return false;
-  return name.replace(/\/$/, "").split("/").every((part) => part && part !== "." && part !== "..");
-}
 
 export function inspectZip(bytes: Uint8Array): void {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -76,7 +73,7 @@ export function validateSkin(files: Record<string, Uint8Array>, manifest: SlopMa
   if (!("skin" in manifest.presentation)) return;
   const skin = files[manifest.presentation.skin];
   if (!skin) throw new Error(`Artifact is missing ${manifest.presentation.skin}`);
+  checkPngDimensions(skin, "Window skin", manifest.presentation);
   const png = validatePng(skin, "Window skin");
-  if (png.width !== manifest.presentation.width || png.height !== manifest.presentation.height) throw new Error(`Window skin must be exactly ${manifest.presentation.width}x${manifest.presentation.height} pixels`);
   if (png.channels !== 4) throw new Error("Window skin must be an RGBA PNG image");
 }

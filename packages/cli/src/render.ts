@@ -1,4 +1,4 @@
-import { runNative } from "./dev.ts";
+import { runNative } from "./native.ts";
 import { validateRuntimePackage } from "./runtime-package.ts";
 
 export type NativeRunner = (arguments_: string[]) => Promise<void>;

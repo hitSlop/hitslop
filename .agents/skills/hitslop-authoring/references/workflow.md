@@ -5,10 +5,13 @@
 Quick Checklist imports root `schema.ts` directly into `jsonStore`.
 Editor types and checks work without preparation or a dev server. Builds emit
 `data.schema.json` for the host; keep schema definitions deterministic.
-The init scaffold remains deferred.
+The CLI counter starter follows the same workflow; run `bun run check` for editor/type diagnostics.
 
 ```sh
 bunx @hitslop/cli init my-slop
+cd my-slop
+bun install
+bun run check
 bun run dev
 bun run validate
 bun run build

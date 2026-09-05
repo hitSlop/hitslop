@@ -1,5 +1,5 @@
-import * as z from "zod";
+import * as Type from "typebox";
 
-export default z.object({
-  count: z.number().int().describe("Current tally count value"),
-});
+export default Type.Object({
+  count: Type.Integer({ description: "Current tally count value" }),
+}, { additionalProperties: true });

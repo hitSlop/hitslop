@@ -36,7 +36,7 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
   deterministic because the app and package builder evaluate them separately.
   Validation never coerces, inserts defaults, or strips fields. Use explicit
   initial values and `additionalProperties: true` to preserve unknown fields.
-  Quick Checklist is the only migrated example; other examples and init are deferred.
+  Quick Checklist and the CLI counter starter use this workflow; backlog examples remain deferred.
 - Quick Checklist is the platform pilot. Define its theme once in root
   `theme.ts` with `defineTheme` from `@hitslop/runtime/theme`; builds generate
   immutable `assets/theme.css`. Keep owner overrides in `stores/theme.css`.

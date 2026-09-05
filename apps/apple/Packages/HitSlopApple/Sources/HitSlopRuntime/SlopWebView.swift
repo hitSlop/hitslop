@@ -88,7 +88,10 @@ public extension SlopRuntimeSessionDelegate {
             case .ready: session?.bridgeDidBecomeReady(); value = NSNull()
             case .windowResize:
                 guard !package.isSkinned, let session else { throw SlopBridgeFailure(.unsupported, "PNG-skinned documents have a fixed window size") }
-                let size = CGSize(width: (body["width"] as! NSNumber).doubleValue, height: (body["height"] as! NSNumber).doubleValue)
+                guard let width = body["width"] as? NSNumber, let height = body["height"] as? NSNumber else {
+                    throw SlopBridgeFailure(.invalidRequest, "Missing window dimensions")
+                }
+                let size = CGSize(width: width.doubleValue, height: height.doubleValue)
                 let applied = try session.bridgeDidRequestResize(size)
                 value = ["width": applied.width, "height": applied.height]
             case .windowDrag:
@@ -188,7 +191,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         webView.isOpaque = !usesTransparentBackground
         webView.backgroundColor = usesTransparentBackground ? .clear : .systemBackground
         webView.scrollView.contentInsetAdjustmentBehavior = .never
-        if #available(iOS 16.4, *) { webView.isInspectable = true }
+        webView.isInspectable = true
         #endif
         super.init(); bridge.session = self; webView.navigationDelegate = self
         #if os(macOS)
@@ -274,15 +277,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     }
     private func reloadTheme() {
         let value = themeRevision ?? "default-\(Date().timeIntervalSince1970)"
-        webView.callAsyncJavaScript(#"""
-        const current = document.querySelector('link[data-hitslop-theme]');
-        if (!current) return;
-        const next = current.cloneNode();
-        next.href = 'theme.css?revision=' + encodeURIComponent(revision);
-        next.onload = () => current.remove();
-        next.onerror = () => next.remove();
-        current.after(next);
-        """#, arguments: ["revision": value], in: nil, in: .page) { _ in }
+        webView.callAsyncJavaScript("window.__hitslopReloadTheme?.(revision)", arguments: ["revision": value], in: nil, in: .page) { _ in }
     }
     private func emit(kind: SlopStoreKind, revision: String?, source: String, name: String? = nil) {
         sequence += 1

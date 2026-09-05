@@ -68,7 +68,9 @@ public struct SlopPackage: Sendable {
         let url = try Self.containedURL(root: rootURL, relativePath: path)
         let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("window skin must be a regular file") }
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), CGImageSourceGetType(source) as String? == "public.png", let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { throw SlopPackageError.invalid("window skin must be a valid PNG") }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), CGImageSourceGetType(source) as String? == "public.png" else { throw SlopPackageError.invalid("window skin must be a valid PNG") }
+        try Self.validateImageDimensions(source, label: "window skin", width: manifest.presentation.width, height: manifest.presentation.height)
+        guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { throw SlopPackageError.invalid("window skin must be a valid PNG") }
         guard image.width == manifest.presentation.width, image.height == manifest.presentation.height else { throw SlopPackageError.invalid("window skin must be exactly \(manifest.presentation.width)x\(manifest.presentation.height) pixels") }
         guard image.colorSpace?.model == .rgb else { throw SlopPackageError.invalid("window skin must be an RGBA PNG") }
         guard ![.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo) else { throw SlopPackageError.invalid("window skin must contain alpha") }
@@ -80,6 +82,7 @@ public struct SlopPackage: Sendable {
     }
 
     public func validateAsTemplate(requirePreview: Bool = true) throws {
+        try validateDocumentSkill(strict: true)
         if FileManager.default.fileExists(atPath: storesURL.path) { throw SlopPackageError.invalid("templates cannot contain stores") }
         if FileManager.default.fileExists(atPath: rootURL.appendingPathComponent("Icon\r").path) { throw SlopPackageError.invalid("templates cannot contain a Finder custom icon") }
         if requirePreview {
@@ -89,10 +92,11 @@ public struct SlopPackage: Sendable {
                 let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
                 guard values.isRegularFile == true, (values.fileSize ?? 0) <= 5 * 1024 * 1024,
                       let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-                      CGImageSourceGetType(source) as String? == "public.png",
-                      let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+                      CGImageSourceGetType(source) as String? == "public.png" else {
                     throw SlopPackageError.invalid("\(relativePath) must be a PNG no larger than 5 MB")
                 }
+                try Self.validateImageDimensions(source, label: relativePath, width: url == iconURL ? 512 : nil, height: url == iconURL ? 512 : nil)
+                guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { throw SlopPackageError.invalid("\(relativePath) must be a valid PNG") }
                 if url == iconURL, (image.width != 512 || image.height != 512) {
                     throw SlopPackageError.invalid("\(relativePath) must be exactly 512x512 pixels")
                 }
@@ -101,7 +105,22 @@ public struct SlopPackage: Sendable {
     }
 
     public static func isSafeRelativePath(_ path: String) -> Bool {
-        !path.hasPrefix("/") && !path.contains("\\") && !path.split(separator: "/").contains("..") && !path.isEmpty
+        guard !path.isEmpty, path.count <= 240, !path.hasPrefix("/"), !path.contains("\\"), !path.contains("\0") else { return false }
+        let normalized = path.hasSuffix("/") ? String(path.dropLast()) : path
+        return normalized.split(separator: "/", omittingEmptySubsequences: false).allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+    }
+
+    private static func validateImageDimensions(_ source: CGImageSource, label: String, width: Int? = nil, height: Int? = nil) throws {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let imageWidth = properties[kCGImagePropertyPixelWidth] as? Int,
+              let imageHeight = properties[kCGImagePropertyPixelHeight] as? Int,
+              imageWidth > 0, imageHeight > 0, imageWidth <= 16_384, imageHeight <= 16_384,
+              imageWidth * imageHeight <= 24_000_000 else {
+            throw SlopPackageError.invalid("\(label) exceeds the PNG dimension limit")
+        }
+        if let width, let height, (imageWidth != width || imageHeight != height) {
+            throw SlopPackageError.invalid("\(label) must be exactly \(width)x\(height) pixels")
+        }
     }
 
     public static func containedURL(root: URL, relativePath: String) throws -> URL {
@@ -145,7 +164,12 @@ public struct SlopPackage: Sendable {
             let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
             if url.lastPathComponent == "media" {
                 guard values.isDirectory == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("media store must be a directory") }
-                _ = try SlopMediaStore(directoryURL: url).directoryRevision()
+                for entry in try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]) {
+                    let entryValues = try entry.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                    guard SlopMediaStore.isValidName(entry.lastPathComponent), entryValues.isRegularFile == true, entryValues.isSymbolicLink != true else {
+                        throw SlopPackageError.invalid("invalid media store entry")
+                    }
+                }
             } else {
                 guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("store must be a regular file: \(url.lastPathComponent)") }
             }
@@ -167,7 +191,7 @@ public struct SlopPackage: Sendable {
         }
     }
 
-    private func validateDocumentSkill() throws {
+    private func validateDocumentSkill(strict: Bool = false) throws {
         let fileManager = FileManager.default
         let agents = rootURL.appendingPathComponent(".agents", isDirectory: true)
         guard fileManager.fileExists(atPath: agents.path) else { return }
@@ -175,21 +199,30 @@ public struct SlopPackage: Sendable {
         let folder = skills.appendingPathComponent("hitslop-document", isDirectory: true)
         let skill = folder.appendingPathComponent("SKILL.md")
         try requireDirectory(agents, allowed: ["skills"], label: ".agents")
+        if !strict && !fileManager.fileExists(atPath: skills.path) { return }
         try requireDirectory(skills, allowed: ["hitslop-document"], label: ".agents/skills")
+        if !strict && !fileManager.fileExists(atPath: folder.path) { return }
         try requireDirectory(folder, allowed: ["SKILL.md", "references"], label: ".agents/skills/hitslop-document")
-        let values = try skill.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-        guard values.isRegularFile == true, values.isSymbolicLink != true else {
-            throw SlopPackageError.invalid("document guidance must be a regular file")
+        if strict || fileManager.fileExists(atPath: skill.path) {
+            let values = try skill.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard values.isRegularFile == true, values.isSymbolicLink != true else {
+                throw SlopPackageError.invalid("document guidance must be a regular file")
+            }
         }
         let references = folder.appendingPathComponent("references", isDirectory: true)
         guard fileManager.fileExists(atPath: references.path) else { return }
         try requireDirectory(references, allowed: ["app-guide.md"], label: ".agents/skills/hitslop-document/references")
         let guide = references.appendingPathComponent("app-guide.md")
+        if !strict && !fileManager.fileExists(atPath: guide.path) { return }
         let guideValues = try guide.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
-        guard guideValues.isRegularFile == true, guideValues.isSymbolicLink != true,
-              (guideValues.fileSize ?? 0) <= 32 * 1024,
-              String(data: try Data(contentsOf: guide), encoding: .utf8) != nil else {
-            throw SlopPackageError.invalid("document app guide must be a UTF-8 Markdown file no larger than 32 KiB")
+        guard guideValues.isRegularFile == true, guideValues.isSymbolicLink != true else {
+            throw SlopPackageError.invalid("document app guide must be a regular file")
+        }
+        if strict {
+            guard (guideValues.fileSize ?? 0) <= 32 * 1024,
+                  String(data: try Data(contentsOf: guide), encoding: .utf8) != nil else {
+                throw SlopPackageError.invalid("document app guide must be a UTF-8 Markdown file no larger than 32 KiB")
+            }
         }
     }
 

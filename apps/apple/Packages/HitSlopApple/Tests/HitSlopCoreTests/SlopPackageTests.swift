@@ -8,6 +8,34 @@ import Testing
 @Test func rejectsTraversal() { #expect(!SlopPackage.isSafeRelativePath("../data.json")); #expect(SlopPackage.isSafeRelativePath("stores/data.json")) }
 @Test func hashIsStable() { #expect(SlopArchive.sha256(of: Data("hello".utf8)) == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824") }
 
+@Test func damagedOptionalGuidanceDoesNotBlockOpening() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
+    try FileManager.default.removeItem(at: skill)
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    try Data("guidance".utf8).write(to: skill)
+    let references = skill.deletingLastPathComponent().appendingPathComponent("references")
+    try FileManager.default.createDirectory(at: references, withIntermediateDirectories: true)
+    try Data([0xff]).write(to: references.appendingPathComponent("app-guide.md"))
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: false) }
+}
+
+@Test func damagedMediaIsRejectedAtAccessNotDocumentOpening() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let media = root.appendingPathComponent("stores/media")
+    try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
+    try Data("broken".utf8).write(to: media.appendingPathComponent("hero"))
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    #expect(throws: SlopPackageError.self) { _ = try SlopMediaStore(directoryURL: media).open("hero") }
+    let store = SlopMediaStore(directoryURL: media)
+    let before = try store.directoryRevision()
+    try Data("still broken, but changed".utf8).write(to: media.appendingPathComponent("hero"))
+    #expect(try store.directoryRevision() != before)
+    try FileManager.default.createSymbolicLink(at: media.appendingPathComponent("linked"), withDestinationURL: root.appendingPathComponent("app.html"))
+    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+}
+
 @Test func validatesSchemaAndRuntimeBoundary() throws {
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }

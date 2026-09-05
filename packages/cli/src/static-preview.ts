@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { checkPngDimensions } from "@hitslop/schema";
 import { decode as decodePng, encode as encodePng, type DecodedPng } from "fast-png";
 
 export const MAX_PREVIEW_BYTES = 5 * 1024 * 1024;
@@ -7,14 +8,14 @@ export const ICON_SIZE = 512;
 export function validateStaticPng(bytes: Uint8Array, label: string): DecodedPng {
   if (bytes.byteLength === 0) throw new Error(`${label} is empty.`);
   if (bytes.byteLength > MAX_PREVIEW_BYTES) throw new Error(`${label} cannot exceed 5 MiB.`);
+  checkPngDimensions(bytes, label);
   try { return decodePng(bytes, { checkCrc: true }); }
   catch { throw new Error(`${label} must be a valid PNG image.`); }
 }
 
 export function validateIconPng(bytes: Uint8Array, label = "The template icon"): DecodedPng {
-  const image = validateStaticPng(bytes, label);
-  if (image.width !== ICON_SIZE || image.height !== ICON_SIZE) throw new Error(`${label} must be exactly ${ICON_SIZE}x${ICON_SIZE} pixels.`);
-  return image;
+  checkPngDimensions(bytes, label, { width: ICON_SIZE, height: ICON_SIZE });
+  return validateStaticPng(bytes, label);
 }
 
 export function iconFromPng(bytes: Uint8Array, size = ICON_SIZE): Uint8Array {

@@ -66,7 +66,8 @@ public final class SlopMediaStore: @unchecked Sendable {
         var hasher = SHA256()
         for url in urls {
             let data = try Data(contentsOf: url)
-            _ = try Self.mediaMIMEType(data)
+            // Revisions describe disk bytes, including damaged content. Validate
+            // on access so one broken file cannot suppress other media updates.
             hasher.update(data: Data(url.lastPathComponent.utf8)); hasher.update(data: data)
         }
         let revision = hasher.finalize().map { String(format: "%02x", $0) }.joined()

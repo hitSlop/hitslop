@@ -12,7 +12,7 @@
 | `packages/runtime` | Framework-neutral host API and adapter building blocks |
 | `packages/svelte` | Svelte 5 state adapters |
 | `archive/packages/react` | Paused React adapter, excluded from workspaces/releases |
-| `packages/schema` | Zod source, JSON Schema, publish protocol, generated Swift |
+| `packages/schema` | TypeBox source, JSON Schema, publish protocol, generated Swift |
 | `examples/slops` | Maintained authored examples |
 | `archive/templates` | Explicitly inventoried prior art outside build paths |
 | `Prototypes` | Explicitly inventoried experiments outside build paths |
@@ -23,7 +23,7 @@ Read the nearest `AGENTS.md` and a slop's `manifest.json` first. Reusable
 TypeScript belongs in `packages/`. Apple Swift belongs in the app-local Swift
 package; AppKit stays in macOS-only targets.
 
-Zod is authoritative. Never edit generated Swift or JSON Schema by hand.
+TypeBox is authoritative. Never edit generated Swift or JSON Schema by hand.
 Runtime packages never contain source, dependencies, caches, seed stores, or
 editable stylesheets. Preserve this boundary in fixtures and tests.
 

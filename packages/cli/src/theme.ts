@@ -1,6 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { evaluateModule } from "./evaluate-module.ts";
 import postcss, { type Root } from "postcss";
 
 const exists = async (path: string): Promise<boolean> => stat(path).then(() => true).catch(() => false);
@@ -13,6 +13,10 @@ async function readUTF8(path: string, label: string): Promise<string> {
 
 export async function readThemeContract(root: string): Promise<Set<string> | undefined> {
   const source = await readThemeCSS(root);
+  return themeContract(source);
+}
+
+export function themeContract(source: string | undefined): Set<string> | undefined {
   if (source === undefined) return undefined;
   const contract = parseTheme(source, "theme defaults");
   validateThemeReferences(source, contract, "theme defaults");
@@ -24,10 +28,10 @@ export async function readThemeCSS(root: string): Promise<string | undefined> {
   const path = join(root, "assets", "theme.css");
   if (await exists(definition)) {
     if (await exists(path)) throw new Error("Define theme defaults in theme.ts or assets/theme.css, not both.");
-    const { default: theme } = await import(`${pathToFileURL(definition).href}?theme=${Date.now()}`);
-    if (typeof theme?.css !== "string") throw new Error("theme.ts must default-export defineTheme(...)");
-    parseTheme(theme.css, "theme.ts");
-    return theme.css;
+    const css = await evaluateModule(definition, "theme");
+    if (typeof css !== "string") throw new Error("theme.ts must default-export defineTheme(...)");
+    parseTheme(css, "theme.ts");
+    return css;
   }
   if (!await exists(path)) return undefined;
   return readUTF8(path, "assets/theme.css");

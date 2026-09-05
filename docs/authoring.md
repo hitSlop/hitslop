@@ -13,7 +13,7 @@ bun run dev
 ```
 
 The generated scripts wrap `slop dev`, `validate`, `build`, `register`, and
-`publish`. New projects start with Svelte 5, Bits UI, a Zod-backed JSON store,
+`publish`. New projects start with Svelte 5, Bits UI, a TypeBox-backed JSON store,
 and Vanilla Extract for structural styles.
 Use `--template svelte` for a blank base or `--template svelte-counter` for
 the teaching example. Edit `manifest.json` before the interface: it fixes the
@@ -54,7 +54,7 @@ Editor types and typechecking need no generated files or running dev server.
 The store uses TypeBox runtime validation without coercion, defaults, or field
 removal. The builder evaluates `schema.ts` separately to emit `data.schema.json`;
 keep schemas deterministic (no time, randomness, or environment-dependent shapes).
-The existing init scaffold and backlog examples remain deferred.
+The CLI counter starter uses the same workflow; backlog examples remain deferred.
 
 ```sh
 bun run validate

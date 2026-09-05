@@ -46,7 +46,9 @@ final class SlopStorageWorker: @unchecked Sendable {
             queue.async {
                 do {
                     guard !self.closed else { throw SlopBridgeFailure(.closed, "Document is closed") }
-                    let body = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+                    guard let body = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                        throw SlopBridgeFailure(.invalidRequest, "Expected a request object")
+                    }
                     continuation.resume(returning: try self.handle(body))
                 } catch { continuation.resume(throwing: error) }
             }
@@ -62,6 +64,10 @@ final class SlopStorageWorker: @unchecked Sendable {
         guard let sql = body["sql"] as? String else { throw SlopBridgeFailure(.invalidRequest, "Missing SQL") }
         return (sql, body["parameters"] as? [Any] ?? [])
     }
+    private func field<T>(_ name: String, in body: [String: Any], as type: T.Type = T.self) throws -> T {
+        guard let raw = body[name], let value = raw as? T else { throw SlopBridgeFailure(.invalidRequest, "Missing or invalid \(name)") }
+        return value
+    }
     private func handle(_ body: [String: Any]) throws -> SlopStorageResult {
         guard let raw = body["method"] as? String, let method = SlopBridgeMethod(rawValue: raw) else {
             throw SlopBridgeFailure(.invalidRequest, "Missing or unknown method")
@@ -69,13 +75,13 @@ final class SlopStorageWorker: @unchecked Sendable {
         switch method {
         case .jsonOpen:
             let missing = !FileManager.default.fileExists(atPath: package.jsonStoreURL.path)
-            let snapshot = try json.open(body["value"]!)
+            let snapshot = try json.open(field("value", in: body, as: Any.self))
             return .init(value: ["value": snapshot.value, "revision": snapshot.revision], kind: missing ? .json : nil, revision: snapshot.revision)
         case .jsonRead:
             let snapshot = try json.read()
             return .init(value: ["value": snapshot.value, "revision": snapshot.revision])
         case .jsonWrite:
-            let revision = try json.write(body["value"]!, expectedRevision: body["expectedRevision"] as? String)
+            let revision = try json.write(field("value", in: body, as: Any.self), expectedRevision: body["expectedRevision"] as? String)
             return .init(value: ["revision": revision], kind: .json, revision: revision)
         case .sqliteQuery:
             let sql = try statement(body)
@@ -83,17 +89,17 @@ final class SlopStorageWorker: @unchecked Sendable {
         case .sqliteExecute:
             return .init(value: try database().transaction([statement(body)]), kind: .sqlite)
         case .sqliteTransaction:
-            let statements = body["statements"] as! [[String: Any]]
+            let statements: [[String: Any]] = try field("statements", in: body)
             return .init(value: try database().transaction(statements.map(statement)), kind: .sqlite)
         case .mediaOpen:
-            let snapshot = try media.open(body["name"] as! String)
+            let snapshot = try media.open(field("name", in: body))
             return .init(value: ["exists": snapshot.exists, "revision": snapshot.revision as Any? ?? NSNull()])
         case .mediaWrite:
-            let name = body["name"] as! String
-            let revision = try media.write(name, base64: body["data"] as! String)
+            let name: String = try field("name", in: body)
+            let revision = try media.write(name, base64: field("data", in: body))
             return .init(value: ["revision": revision], kind: .media, revision: revision, name: name)
         case .mediaRemove:
-            let name = body["name"] as! String
+            let name: String = try field("name", in: body)
             try media.remove(name)
             return .init(value: ["revision": NSNull()], kind: .media, name: name)
         default: throw SlopBridgeFailure(.unsupported, "Unsupported storage method")

@@ -1,0 +1,16 @@
+// Copied into a fresh starter by the release gate; never shipped in app output.
+import { jsonStore } from "@hitslop/svelte";
+import schema from "../schema";
+
+if (false) {
+  const store = jsonStore({ schema, initial: { count: 0 } });
+  const count: number = store.current.count;
+  void count;
+  // @ts-expect-error Schema infers a number, not a string.
+  store.current.count = "one";
+  // @ts-expect-error Initial values must agree with the schema.
+  jsonStore({ schema, initial: { count: "one" } });
+  // @ts-expect-error Count is required.
+  jsonStore({ schema, initial: {} });
+  store.destroy();
+}

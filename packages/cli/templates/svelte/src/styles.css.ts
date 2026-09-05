@@ -1,5 +1,7 @@
 import { globalStyle, style } from "@vanilla-extract/css";
-import { theme } from "./theme-contract.css.ts";
+import definition from "../theme";
+
+const theme = definition.vars;
 
 globalStyle(":root", { colorScheme: "light", fontFamily: theme.font, fontSynthesis: "none" });
 globalStyle("*", { boxSizing: "border-box" });
@@ -7,8 +9,6 @@ globalStyle("html, body, #app", { width: "100%", minHeight: "100%", margin: 0 })
 globalStyle("body", { color: theme.ink, background: theme.surface });
 globalStyle("button", { font: "inherit" });
 globalStyle('html[data-slop-capture="static"] [data-slop-export="hide"]', { display: "none !important" });
-globalStyle('html[data-slop-renderer="true"][data-slop-capture="icon"] main', { display: "none" });
-globalStyle('html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"]', { display: "grid !important" });
 globalStyle("*, *::before, *::after", {
   "@media": { "(prefers-reduced-motion: reduce)": { scrollBehavior: "auto", transitionDuration: ".01ms" } },
 });
@@ -41,5 +41,6 @@ export const controlButton = style({
 export const primaryButton = style({ borderColor: "transparent", color: theme.surface, background: theme.accent });
 export const resetButton = style({ gridColumn: "1 / -1", minHeight: 30, border: 0, color: theme.muted, background: "transparent", fontSize: 10, fontWeight: 750, letterSpacing: ".08em", textTransform: "uppercase" });
 export const error = style({ margin: "10px 0 0", color: "#9a2e27", fontSize: 11 });
-export const renderTarget = style({ display: "none !important", width: 512, height: 512, placeItems: "center", overflow: "hidden", background: "transparent" });
+export const exportSurface = style({ minHeight: "100vh", padding: "34px 38px", background: theme.surface, color: theme.ink });
+export const iconSurface = style({ display: "grid", width: "100%", height: "100%", placeItems: "center" });
 export const iconTile = style({ display: "grid", placeItems: "center", width: 464, height: 464, border: `18px solid ${theme.ink}`, borderRadius: 72, color: theme.surface, background: theme.accent, fontSize: 250, fontWeight: 700 });

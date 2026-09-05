@@ -7,11 +7,15 @@ apps.
 bunx @hitslop/cli init my-slop
 cd my-slop
 bun install
+bun run check
 bun run dev
 ```
 
 The supported v1 scaffold uses Svelte 5 and includes portable
-`hitslop-authoring` and `hitslop-design` skills. `slop build` emits a
+`hitslop-authoring` and `hitslop-design` skills. Root `schema.ts` uses TypeBox;
+root `theme.ts` supplies typed CSS variables and generated default CSS. Editor
+inference and `bun run check` need no generated files or running dev server.
+Optional icon/export components share the editor's store. `slop build` emits a
 source-free runtime package; `slop register` adds an immutable local template;
 `slop publish` captures and signs one artifact for the catalog.
 

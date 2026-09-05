@@ -39,14 +39,14 @@ adding persistence or changing the runtime boundary.
   unknown fields with `additionalProperties: true`; never coerce or insert defaults.
   Quick Checklist is the only active example. Paused source is preserved in
   `examples/slops/_backlog/`, excluded from active checks, tests, and builds.
-  Promote and migrate one example at a time. The init template is deferred.
+  Promote and migrate one example at a time. The CLI counter starter follows the same APIs.
 - Authored templates and published artifacts contain no stores, source,
   dependencies, build caches, editable stylesheets, SQLite sidecars, or
   Finder-managed `Icon\r`.
 - Storage is implicit and ID-free. Never add storage declarations or release
   versions to the manifest.
 - Treat `dist/<slug>.slop` as generated output.
-- Quick Checklist is the reference pilot: root `theme.ts` uses `defineTheme`
+- Quick Checklist and the CLI counter starter use root `theme.ts` uses `defineTheme`
   from `@hitslop/runtime/theme`, supplying typed variables and generated
   immutable `assets/theme.css`. Owners still edit `stores/theme.css`.
 - Builds embed document guidance; missing or changed guidance never prevents

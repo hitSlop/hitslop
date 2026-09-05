@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encode } from "fast-png";
 import { manifestSchemaURL } from "@hitslop/schema";
+import { compileDataSchema } from "@hitslop/schema";
+import { loadDataSchema } from "../src/data-schema.ts";
 import { buildSlop, loadManifest, scaffold } from "../src/project.ts";
 import { validateRuntimePackage } from "../src/runtime-package.ts";
 
@@ -119,6 +121,23 @@ describe("immutable artifacts", () => {
     await expect(buildSlop(root)).rejects.toThrow("does not provide a default");
   });
 
+  test("build evaluates theme defaults once and cleans staging after theme failure", async () => {
+    const root = await fixture();
+    await writeFile(join(root, "theme.ts"), `
+      import { appendFileSync } from "node:fs";
+      import { join } from "node:path";
+      appendFileSync(join(import.meta.dir, "evaluations"), "x");
+      export default { css: ":root { --slop-ink: black; }" };
+    `);
+    const built = await buildSlop(root);
+    expect(await readFile(join(root, "evaluations"), "utf8")).toBe("x");
+    const previous = await readFile(join(built.directory, "app.html"));
+    await writeFile(join(root, "theme.ts"), "export default {};");
+    await expect(buildSlop(root)).rejects.toThrow("defineTheme");
+    expect(await readFile(join(built.directory, "app.html"))).toEqual(previous);
+    expect(await readdir(join(root, "dist"))).toEqual(["skin-test.slop"]);
+  });
+
   test("rejects invalid schema semantics and non-UTF-8 themes", async () => {
     const root = await fixture();
     const built = await buildSlop(root);
@@ -147,9 +166,10 @@ describe("authoring scaffold", () => {
     expect(packageJSON.dependencies["@hitslop/svelte"]).toBe("^0.1.2");
     expect(packageJSON.devDependencies["@hitslop/cli"]).toBe("^0.1.4");
     expect(packageJSON.dependencies["bits-ui"]).toBe("^2.19.0");
-    expect(packageJSON.dependencies.zod).toBe("^4.5.2");
-    expect(packageJSON.devDependencies["@vanilla-extract/css"]).toBe("^1.17.4");
-    expect(packageJSON.devDependencies["@vanilla-extract/vite-plugin"]).toBe("^5.1.1");
+    expect(packageJSON.dependencies.zod).toBeUndefined();
+    expect(packageJSON.dependencies.typebox).toBe("^1.3.26");
+    expect(packageJSON.devDependencies["@vanilla-extract/css"]).toBe("^1.21.2");
+    expect(packageJSON.devDependencies["@vanilla-extract/vite-plugin"]).toBe("^5.2.6");
     expect(packageJSON.scripts).toMatchObject({ validate: "slop validate", register: "slop register" });
     expect(packageJSON.scripts.install).toBeUndefined();
     expect(JSON.parse(await readFile(join(root, "manifest.json"), "utf8")).author).toEqual({ name: "Jordan Singer", url: "https://example.com/jordan" });
@@ -166,13 +186,44 @@ describe("authoring scaffold", () => {
     const app = await readFile(join(root, "src/App.svelte"), "utf8");
     expect(app).toContain('const title = "Tiny Tally"');
     expect(app).toContain("jsonStore({ schema: counterSchema, initial:");
-    expect(await readFile(join(root, "schema.ts"), "utf8")).toContain("z.object");
+    expect(await readFile(join(root, "schema.ts"), "utf8")).toContain("Type.Object");
     const styles = await readFile(join(root, "src/styles.css.ts"), "utf8");
-    expect(styles).toContain('from "./theme-contract.css.ts"');
+    expect(styles).toContain('from "../theme"');
     expect(styles).not.toContain("boxShadow");
-    const theme = await readFile(join(root, "assets/theme.css"), "utf8");
-    expect(theme).toContain("--slop-surface");
+    const theme = await readFile(join(root, "theme.ts"), "utf8");
+    expect(theme).toContain("defineTheme");
+    expect(app).toContain("onDestroy");
+    expect(app).toContain("<ExportTarget>");
+    expect(packageJSON.scripts.check).toContain("svelte-check");
     expect(theme).not.toContain("--slop-backing");
     expect(await readFile(join(root, "vite.config.ts"), "utf8")).toContain("vanillaExtractPlugin");
   });
+});
+
+test("starter schema checks without mutating data or stripping unknown fields", async () => {
+  const schema = await loadDataSchema(new URL("../templates/svelte/schema.ts", import.meta.url).pathname);
+  const validate = compileDataSchema(schema);
+  const value = { count: 7, future: { field: true } };
+  const before = structuredClone(value);
+  validate(value);
+  expect(value).toEqual(before);
+  for (const invalid of [{}, { count: "7" }, { count: 1.5 }, { count: Infinity }]) {
+    expect(() => validate(invalid)).toThrow();
+  }
+});
+
+test("bundled authoring skills stay in sync with canonical guidance", async () => {
+  const bundled = new URL("../templates/svelte/.agents/skills/", import.meta.url).pathname;
+  // Resolve from repository root (tests live three directories below it).
+  const source = new URL("../../../.agents/skills/", import.meta.url).pathname;
+  for (const skill of ["hitslop-authoring", "hitslop-design"]) {
+    const walk = async (relative: string): Promise<void> => {
+      for (const entry of await readdir(join(source, relative), { withFileTypes: true })) {
+        const path = join(relative, entry.name);
+        if (entry.isDirectory()) await walk(path);
+        else expect(await readFile(join(bundled, path), "utf8")).toBe(await readFile(join(source, path), "utf8"));
+      }
+    };
+    await walk(skill);
+  }
 });

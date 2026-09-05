@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -42,7 +42,6 @@ async function main(): Promise<void> {
     }
   }
 
-  await command(["bun", "run", "schema:generate"]);
   await command(["bun", "run", "schema:check"]);
 
   // Build dependency packages before TypeScript resolves workspace exports from
@@ -74,6 +73,14 @@ async function main(): Promise<void> {
     for (const name of packageNames) {
       const tarball = join(tarballs, `${name}.tgz`);
       await command(["bun", "pm", "pack", "--filename", tarball, "--quiet"], join(root, "packages", name), true);
+      const entries = (await command(["tar", "-tzf", tarball], root, true)).trim().split("\n");
+      const allowed = new Set(["package.json", "README.md", "LICENSE", "dist", ...(name === "cli" ? ["templates"] : []), ...(name === "schema" ? ["generated"] : [])]);
+      for (const entry of entries) {
+        const path = entry.replace(/^package\//, "").replace(/\/$/, "");
+        if (!path) continue;
+        if (!allowed.has(path.split("/")[0]!)) throw new Error(`Unexpected packed file: ${name}/${path}`);
+      }
+      if (name === "cli" && !entries.includes("package/dist/module-loader.js")) throw new Error("CLI tarball is missing its module loader");
       packageReferences[name] = `file:${tarball}`;
       process.stdout.write(`✓ packed @hitslop/${name}\n`);
     }
@@ -98,7 +105,50 @@ async function main(): Promise<void> {
     }, null, 2)}\n`);
     await command(["bun", "install"], harness, false, installEnv);
 
-    // Quick Checklist is the platform pilot; the legacy init scaffold is deferred.
+
+    // Exercise the packed CLI's actual init output outside the workspace.
+    const starter = join(temporary, "release-counter");
+    await command([join(harness, "node_modules/.bin/slop"), "init", starter, "--yes", "--author-name", "Release Test"], harness);
+    const starterPath = join(starter, "package.json");
+    const starterPackage = JSON.parse(await readFile(starterPath, "utf8"));
+    starterPackage.overrides = Object.fromEntries(packageNames.map(name => [`@hitslop/${name}`, packageReferences[name]]));
+    for (const group of ["dependencies", "devDependencies"]) {
+      for (const name of packageNames) {
+        const id = `@hitslop/${name}`;
+        if (starterPackage[group]?.[id]) starterPackage[group][id] = packageReferences[name];
+      }
+    }
+    await writeFile(starterPath, JSON.stringify(starterPackage, null, 2) + "\n");
+    await command(["bun", "install"], starter, false, installEnv);
+    // Compile inference and rejection checks against the actual emitted starter schema.
+    await cp(join(root, "packages/cli/tests/fixtures/counter.typecheck.txt"), join(starter, "src/counter.typecheck.ts"));
+    await command(["bun", "run", "check"], starter);
+    await rm(join(starter, "src/counter.typecheck.ts"));
+    await command(["bun", "run", "validate"], starter);
+    await command(["bun", "run", "build"], starter);
+    await command([join(starter, "node_modules/.bin/slop"), "validate", join(starter, "dist/release-counter.slop")], starter);
+
+    if (process.env.HITSLOP_NATIVE_CLI) {
+      if (process.platform !== "darwin") throw new Error("Native release checks require macOS");
+      const builtStarter = join(starter, "dist/release-counter.slop");
+      const slop = join(starter, "node_modules/.bin/slop");
+      await command(["swift", "test", "--package-path", "apps/apple/Packages/HitSlopApple", "--filter", "compiledCounterStarterPersistsAndReopens"], root, false, { HITSLOP_STARTER_PACKAGE: builtStarter });
+      for (const target of ["preview", "icon"]) {
+        const output = join(temporary, `counter-${target}.png`);
+        await command([slop, "screenshot", builtStarter, "--target", target, "--output", output], starter);
+        const png = await readFile(output);
+        if (png.readUInt32BE(0) !== 0x89504e47) throw new Error("Invalid native PNG");
+        if (target === "icon" && (png.readUInt32BE(16) !== 512 || png.readUInt32BE(20) !== 512)) throw new Error("Icon must be 512×512");
+      }
+      for (const format of ["png", "pdf"]) {
+        const output = join(temporary, `counter-export.${format}`);
+        await command([slop, "export", builtStarter, "--format", format, "--output", output], starter);
+        const bytes = await readFile(output);
+        if (format === "pdf" ? bytes.subarray(0, 5).toString() !== "%PDF-" : bytes.readUInt32BE(0) !== 0x89504e47) throw new Error(`Invalid ${format} export`);
+      }
+      if ((await readdir(builtStarter)).includes("stores")) throw new Error("Capture mutated the starter template");
+    }
+
     // Compile the actual IconTarget/ExportTarget consumer from packed dependencies.
     const app = join(temporary, "release-checklist");
     await mkdir(app);
@@ -133,10 +183,11 @@ async function main(): Promise<void> {
     const manifest = JSON.parse(await readFile(join(app, "manifest.json"), "utf8")) as { slug: string };
     await command([join(app, "node_modules", ".bin", "slop"), "validate", join(app, "dist", `${manifest.slug}.slop`)], app);
   } finally {
-    await rm(temporary, { recursive: true, force: true });
+    if (process.env.HITSLOP_KEEP_RELEASE_TEMP === "1") process.stdout.write(`Release diagnostics retained: ${temporary}\n`);
+    else await rm(temporary, { recursive: true, force: true });
   }
 
-  process.stdout.write("\n✓ npm tarballs and the clean-room Svelte capture consumer are ready\n");
+  process.stdout.write("\n✓ npm tarballs, fresh init, and Quick Checklist are ready\n");
 }
 
 await main();

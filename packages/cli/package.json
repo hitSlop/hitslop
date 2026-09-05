@@ -22,7 +22,7 @@
   },
   "files": ["dist", "templates"],
   "scripts": {
-    "build": "bun ../../scripts/clean-dist.ts && bun build src/cli.ts src/schema-loader.ts --target bun --format esm --packages external --outdir dist && /bin/chmod +x dist/cli.js",
+    "build": "bun ../../scripts/clean-dist.ts && bun build src/cli.ts src/module-loader.ts --target bun --format esm --packages external --outdir dist && /bin/chmod +x dist/cli.js",
     "check": "tsc -p tsconfig.json",
     "test": "bun run --cwd ../schema build && bun test"
   },

@@ -1,0 +1,15 @@
+[
+  { "path": "assets/font.woff2", "safe": true, "template": true },
+  { "path": "assets/icons/check.svg", "safe": true, "template": true },
+  { "path": "assets/src/file.js", "safe": true, "template": false },
+  { "path": "assets/package.json", "safe": true, "template": false },
+  { "path": "assets/style.css", "safe": true, "template": false },
+  { "path": "assets/BUILD/output.js", "safe": true, "template": false },
+  { "path": "../app.html", "safe": false, "template": false },
+  { "path": "assets//x", "safe": false, "template": false },
+  { "path": "assets/./x", "safe": false, "template": false },
+  { "path": "/app.html", "safe": false, "template": false },
+  { "path": "assets/../x", "safe": false, "template": false },
+  { "path": "assets/\\x", "safe": false, "template": false },
+  { "path": "assets/x\u0000", "safe": false, "template": false }
+]

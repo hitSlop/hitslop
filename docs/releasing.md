@@ -17,11 +17,13 @@ bun run release:check
 
 The gate checks repository hygiene, generated schema drift, the public npm
 packages, the Firebase Function's hostile-package boundary, a clean-room tarball install,
-and Swift tests/build. CI runs the same first-launch boundary.
+and Swift tests/build. On macOS it also builds and renders with a relocated Release
+helper after removing its SwiftPM build directory, verifying both embedded
+resource bundles. CI runs the same first-launch boundary.
 
-Older examples are deliberately outside this gate until they are converted to
-the v1 API. Run `bun run examples:check` when working on that collection; it is
-allowed to remain red during the initial package launch.
+Backlog examples are deliberately excluded. `bun run examples:check` must pass
+for the active Quick Checklist example. The npm gate tests both a fresh starter
+and Quick Checklist from packed dependencies.
 
 Inspect `git status --short` afterward. Generated package `dist/` directories
 are cleaned before every build so stale deleted exports cannot enter npm.
@@ -29,13 +31,19 @@ are cleaned before every build so stale deleted exports cannot enter npm.
 ## npm packages
 
 Run the focused npm foundation gate before publishing. It validates and packs
-the five public packages, installs their real tarballs outside the monorepo,
+the four public packages, installs their real tarballs outside the monorepo,
 tests the Firebase package-ingress boundary, and creates a fresh Svelte project
-through the complete init/build/validate path:
+through the complete init/check/build/validate path. Generated-file drift fails
+the gate instead of being silently regenerated:
 
 ```sh
 bun run release:npm:check
 ```
+
+On macOS, set `HITSLOP_NATIVE_CLI` to a freshly built helper to also run the
+starter save/reopen test and capture preview, icon, PNG, and PDF from packed
+packages. All documents are disposable copies. Set `HITSLOP_KEEP_RELEASE_TEMP=1`
+to retain the printed temporary directory for visual inspection and debugging.
 
 Publish in dependency order:
 
@@ -79,3 +87,11 @@ Developer ID, notarization, App Store Connect `AuthKey_*.p8`, provisioning
 profiles, and Sparkle private keys remain outside Git. Publish Sparkle signatures
 and public update metadata only. Tag the exact tested commit and attach checksums
 to release artifacts.
+## Local Firebase selection
+
+Debug builds use the configured production catalog by default, with Analytics and
+Crashlytics collection disabled. Register the App Check debug token printed by
+Firebase when testing against production. To use local emulators, set
+`HITSLOP_USE_FIREBASE_EMULATORS=1` in the Xcode run scheme: Firestore (8080),
+Functions (5001), and artifact hosting (5002) then switch together. Release builds
+ignore this environment switch and retain production App Check and telemetry.

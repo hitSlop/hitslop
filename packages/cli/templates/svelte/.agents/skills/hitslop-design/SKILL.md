@@ -49,9 +49,9 @@ and PDF behavior.
   authentic physical personality (Paper, Instrument, Skin) while remaining effortless
   to restyle or re-theme at runtime.
 - In new Svelte projects, keep structural styles in Vanilla Extract `.css.ts`
-  files and bind public `--slop-*` variables with `createGlobalThemeContract`.
-  Keep the plain default values in `assets/theme.css`; do not compile the owner-editable
-  theme surface into generated class names.
+  files and define public tokens in root `theme.ts` via `defineTheme` from
+  `@hitslop/runtime/theme`. Use its typed variable references in Vanilla Extract;
+  the builder generates `assets/theme.css`. Never maintain both defaults files.
 - Mark editing-only UI with `data-slop-export="hide"`; keep exportable content
   in normal flow.
 - Make each slop purpose-specific. Shared SDK patterns must not make unrelated

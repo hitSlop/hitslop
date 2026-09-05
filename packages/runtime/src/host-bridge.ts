@@ -1,13 +1,16 @@
 import "./capture.js";
 import type { BridgeMethod, BridgeParams, BridgeResult } from "@hitslop/schema/bridge";
 import { assertJSON } from "@hitslop/schema/validation";
+import { createThemeReload } from "./theme-reload.js";
+import { dispatchChange } from "./change-events.js";
 import { createBridgeCall } from "./bridge-call.js";
 import type { SlopChange, WindowSlop } from "./types.js";
 
 declare global {
   interface Window {
     webkit: { messageHandlers: { hitslop: { postMessage(request: unknown): Promise<unknown> } } };
-    __hitslopEmit?: (event: SlopChange) => void;
+    __hitslopEmit?: (event: unknown) => void;
+    __hitslopReloadTheme?: (revision: string) => void;
   }
 }
 
@@ -44,11 +47,8 @@ const watch = (kind: keyof typeof listeners, callback: (event: SlopChange) => vo
   listeners[kind].add(callback);
   return () => { listeners[kind].delete(callback); };
 };
-window.__hitslopEmit = (event) => {
-  for (const callback of [...listeners[event.kind]]) {
-    try { callback(event); } catch (error) { console.error("hitSlop change listener failed", error); }
-  }
-};
+window.__hitslopReloadTheme = createThemeReload(document);
+window.__hitslopEmit = value => dispatchChange(value, listeners, error => console.error("hitSlop change event failed", error));
 const bridge: WindowSlop = {
   info: () => call("host.info", {}),
   flush: drain,

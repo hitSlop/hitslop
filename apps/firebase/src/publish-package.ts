@@ -1,14 +1,8 @@
 import { decode as decodePng } from "fast-png";
-import { compileDataSchema, documentGuidePath, documentSkillPath, maxDocumentGuideBytes } from "@hitslop/schema";
+import { checkPngDimensions, compileDataSchema, documentGuidePath, documentSkillPath, maxDocumentGuideBytes } from "@hitslop/schema";
+export { validateTemplatePath as validatePackagePath } from "@hitslop/schema";
 
 export const MAX_PREVIEW_BYTES = 5 * 1024 * 1024;
-
-export function validatePackagePath(name: string): void {
-  const path = name.replace(/\/$/, "");
-  if (["manifest.json", "app.html", "data.schema.json", "assets", "QuickLook", ".agents", ".agents/skills", ".agents/skills/hitslop-document", ".agents/skills/hitslop-document/references", documentSkillPath, documentGuidePath].includes(path)) return;
-  if (path.startsWith("assets/") || path === "QuickLook/Preview.png" || path === "QuickLook/Icon.png") return;
-  throw new Error(`Template packages cannot contain ${name}`);
-}
 
 export function validatePackageMetadata(files: Record<string, Uint8Array>): void {
   const schema = files["data.schema.json"];
@@ -36,13 +30,14 @@ export function validateStaticImages(files: Record<string, Uint8Array>): { previ
   const icon = files["QuickLook/Icon.png"];
   if (!preview || !icon) throw new Error("Artifact must contain QuickLook/Preview.png and QuickLook/Icon.png");
   validatePng(preview, "QuickLook/Preview.png");
-  const decodedIcon = validatePng(icon, "QuickLook/Icon.png");
-  if (decodedIcon.width !== 512 || decodedIcon.height !== 512) throw new Error("QuickLook/Icon.png must be exactly 512x512 pixels");
+  checkPngDimensions(icon, "QuickLook/Icon.png", { width: 512, height: 512 });
+  validatePng(icon, "QuickLook/Icon.png");
   return { preview, icon };
 }
 
 function validatePng(bytes: Uint8Array, label: string): ReturnType<typeof decodePng> {
   if (bytes.byteLength > MAX_PREVIEW_BYTES) throw new Error(`${label} exceeds 5 MiB`);
+  checkPngDimensions(bytes, label);
   try { return decodePng(bytes, { checkCrc: true }); }
   catch { throw new Error(`${label} must be a valid PNG image`); }
 }

@@ -5,10 +5,10 @@ import { createHash } from "node:crypto";
 import { zipSync, type Zippable } from "fflate";
 import { decode as decodePng } from "fast-png";
 import { build as viteBuild } from "vite";
-import { manifestSchemaURL, parseManifest, type SlopAuthor, type SlopCategory, type SlopManifest } from "@hitslop/schema";
+import { checkPngDimensions, manifestSchemaURL, parseManifest, type SlopAuthor, type SlopCategory, type SlopManifest } from "@hitslop/schema";
 import cliPackage from "../package.json" with { type: "json" };
 import { emitDocumentSkill, readDocumentGuideSource } from "./document-skill.ts";
-import { readThemeContract, readThemeCSS, validateThemeReferences } from "./theme.ts";
+import { readThemeContract, readThemeCSS, themeContract, validateThemeReferences } from "./theme.ts";
 import { hitSlopBuildPlugin } from "./vite-build-plugin.ts";
 import { loadDataSchema } from "./data-schema.ts";
 
@@ -29,13 +29,12 @@ async function validateSkin(root: string, manifest: SlopManifest): Promise<void>
   const info = await lstat(path);
   if (!info.isFile() || info.isSymbolicLink()) throw new Error("The window skin must be a regular file, not a symlink.");
   let png: ReturnType<typeof decodePng>;
+  const bytes = await readFile(path);
+  checkPngDimensions(bytes, "The window skin", manifest.presentation);
   try {
-    png = decodePng(await readFile(path), { checkCrc: true });
+    png = decodePng(bytes, { checkCrc: true });
   } catch {
     throw new Error("The window skin must be a valid PNG image.");
-  }
-  if (png.width !== manifest.presentation.width || png.height !== manifest.presentation.height) {
-    throw new Error(`The window skin must be exactly ${manifest.presentation.width}x${manifest.presentation.height} pixels; received ${png.width}x${png.height}.`);
   }
   if (png.channels !== 4) throw new Error("The window skin must be an RGBA PNG image.");
 }
@@ -60,13 +59,14 @@ export async function scaffold(destination: string, options: ScaffoldOptions): P
   await writeFile(join(destination, "package.json"), JSON.stringify({
     name: slug, private: true, type: "module", scripts: {
       dev: "slop dev",
+      check: "svelte-check --tsgo --tsconfig tsconfig.json",
       validate: "slop validate",
       build: "slop build",
       register: "slop register",
       publish: "slop publish",
     },
-    dependencies: { "@hitslop/runtime": "^0.1.2", "@hitslop/svelte": "^0.1.2", "bits-ui": "^2.19.0", "svelte": "^5.0.0", "zod": "^4.5.2" },
-    devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.0.0", "@vanilla-extract/css": "^1.17.4", "@vanilla-extract/vite-plugin": "^5.1.1", "vite": "^8.0.0" },
+    dependencies: { "@hitslop/runtime": "^0.1.2", "@hitslop/svelte": "^0.1.2", "bits-ui": "^2.19.0", "svelte": "^5.57.0", "typebox": "^1.3.26" },
+    devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.3.0", "@vanilla-extract/css": "^1.21.2", "@vanilla-extract/vite-plugin": "^5.2.6", "vite": "^8.2.2", "svelte-check": "^4.7.6", "@typescript/native": "npm:typescript@^7.0.2", "typescript": "^6.0.3" },
   }, null, 2) + "\n");
   const manifest = parseManifest({
     $schema: manifestSchemaURL, slug,
@@ -91,38 +91,38 @@ export async function buildSlop(root: string): Promise<{ directory: string; mani
   const output = join(staging, `${manifest.slug}.slop`);
   const destination = join(distRoot, `${manifest.slug}.slop`);
   const viteOut = join(staging, "vite");
-  const themeContract = await readThemeContract(root);
-  const hasTheme = themeContract !== undefined;
   try {
-  await mkdir(output, { recursive: true });
-  await viteBuild({ root, plugins: [hitSlopBuildPlugin({ hasTheme })], build: { outDir: viteOut, emptyOutDir: true } });
-  const html = join(viteOut, "index.html"); if (!await exists(html)) throw new Error("Vite did not produce index.html");
-  validateThemeReferences(await readFile(html, "utf8"), themeContract, "generated app.html");
-  await cp(html, join(output, "app.html"));
-  for (const entry of await readdir(viteOut)) {
-    if (entry === "index.html") continue;
-    if (entry !== "assets") throw new Error(`Unsupported Vite output ${entry}; emit runtime resources under assets/.`);
-    await copyRuntimeTree(join(viteOut, entry), join(output, entry));
-  }
-  await writeFile(join(output, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-  for (const name of ["assets"]) {
-    const source = join(root, name);
-    if (await exists(source)) await copyRuntimeTree(source, join(output, name));
-  }
-  const themeCSS = await readThemeCSS(root);
-  if (themeCSS !== undefined) {
-    await mkdir(join(output, "assets"), { recursive: true });
-    await writeFile(join(output, "assets/theme.css"), themeCSS);
-  }
-  if (dataSchema) await writeFile(join(output, "data.schema.json"), `${JSON.stringify(dataSchema, null, 2)}\n`);
-  await emitDocumentSkill(root, output);
-  const { validateRuntimePackage } = await import("./runtime-package.ts");
-  await validateRuntimePackage(output, { template: true });
-  const previous = join(staging, "previous.slop");
-  if (await exists(destination)) await rename(destination, previous);
-  try { await rename(output, destination); }
-  catch (error) { if (await exists(previous)) await rename(previous, destination); throw error; }
-  return { directory: destination, manifest };
+    const themeCSS = await readThemeCSS(root);
+    const contract = themeContract(themeCSS);
+    const hasTheme = contract !== undefined;
+    await mkdir(output, { recursive: true });
+    await viteBuild({ root, plugins: [hitSlopBuildPlugin({ hasTheme })], build: { outDir: viteOut, emptyOutDir: true } });
+    const html = join(viteOut, "index.html"); if (!await exists(html)) throw new Error("Vite did not produce index.html");
+    validateThemeReferences(await readFile(html, "utf8"), contract, "generated app.html");
+    await cp(html, join(output, "app.html"));
+    for (const entry of await readdir(viteOut)) {
+      if (entry === "index.html") continue;
+      if (entry !== "assets") throw new Error(`Unsupported Vite output ${entry}; emit runtime resources under assets/.`);
+      await copyRuntimeTree(join(viteOut, entry), join(output, entry));
+    }
+    await writeFile(join(output, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+    for (const name of ["assets"]) {
+      const source = join(root, name);
+      if (await exists(source)) await copyRuntimeTree(source, join(output, name));
+    }
+    if (themeCSS !== undefined) {
+      await mkdir(join(output, "assets"), { recursive: true });
+      await writeFile(join(output, "assets/theme.css"), themeCSS);
+    }
+    if (dataSchema) await writeFile(join(output, "data.schema.json"), `${JSON.stringify(dataSchema, null, 2)}\n`);
+    await emitDocumentSkill(root, output);
+    const { validateRuntimePackage } = await import("./runtime-package.ts");
+    await validateRuntimePackage(output, { template: true });
+    const previous = join(staging, "previous.slop");
+    if (await exists(destination)) await rename(destination, previous);
+    try { await rename(output, destination); }
+    catch (error) { if (await exists(previous)) await rename(previous, destination); throw error; }
+    return { directory: destination, manifest };
   } finally { await rm(staging, { recursive: true, force: true }); }
 }
 

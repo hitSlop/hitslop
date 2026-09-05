@@ -21,7 +21,7 @@ writable copy when persistence semantics matter.
 ## Schemas and builds
 
 An authored project that uses Svelte `jsonStore` has a root `schema.ts` that
-default-exports a Zod 4 schema. The component imports that same value:
+default-exports a TypeBox schema. The component imports that same value:
 
 ```ts
 import dataSchema from "../schema";
@@ -50,8 +50,7 @@ contains only owner overrides and loads after the default.
 
 Quick Checklist is the platform pilot. Its root `theme.ts` uses `defineTheme`
 to supply typed CSS variable references and generate `assets/theme.css` from
-one definition. Native overrides are validated before hot reload. The init
-template and other examples will adopt this workflow after pilot review.
+one definition. Native overrides are validated before hot reload. The CLI starter follows the same workflow; other examples remain deferred.
 
 ## Package guidance
 

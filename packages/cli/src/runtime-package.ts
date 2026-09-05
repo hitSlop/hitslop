@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { forbiddenPackageNames, validateTemplatePath } from "@hitslop/schema";
 import { lstat, readFile, readdir, stat } from "node:fs/promises";
 import { basename, join, relative, sep } from "node:path";
 import { unzipSync } from "fflate";
@@ -28,9 +29,9 @@ export async function validateRuntimePackage(root: string, options: RuntimeValid
 
   const allowed = new Set(["manifest.json", "app.html", "data.schema.json", "assets", "stores", "QuickLook", ".agents", "Icon\r"]);
   for (const entry of await readdir(root)) if (!allowed.has(entry)) throw new Error(`Runtime packages cannot contain ${entry}.`);
-  const forbidden = new Set(["package.json", "bun.lock", "bun.lockb", "node_modules", "source", "src", "build", "document.json", ".build", ".hitslop", "style.css"]);
   for (const path of await walk(root)) {
-    if (forbidden.has(basename(path).toLowerCase())) throw new Error(`Runtime packages cannot contain ${relative(root, path)}.`);
+    if (forbiddenPackageNames.has(basename(path).toLowerCase())) throw new Error(`Runtime packages cannot contain ${relative(root, path)}.`);
+    if (options.template) validateTemplatePath(relative(root, path).split(sep).join("/"));
   }
 
   if (options.template && await exists(join(root, "stores"))) throw new Error("Template packages cannot contain stores.");

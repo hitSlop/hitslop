@@ -5,18 +5,40 @@ import FirebaseCrashlytics
 import Foundation
 
 public enum HitSlopFirebase {
+    /// Opt in from the Xcode scheme. A Debug build alone must not reroute traffic.
+    public static var usesEmulators: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["HITSLOP_USE_FIREBASE_EMULATORS"] == "1"
+        #else
+        false
+        #endif
+    }
+
+    public static func catalogURL(default url: URL) -> URL {
+        usesEmulators ? URL(string: "http://127.0.0.1:5002")! : url
+    }
+
     public static func configure() {
         guard FirebaseApp.allApps?.isEmpty != false else { return }
         #if DEBUG
-        AppCheck.setAppCheckProviderFactory(LocalEmulatorAppCheckProviderFactory())
+        if usesEmulators {
+            AppCheck.setAppCheckProviderFactory(LocalEmulatorAppCheckProviderFactory())
+        } else {
+            AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
+        }
         #elseif os(macOS)
         AppCheck.setAppCheckProviderFactory(DeviceCheckProviderFactory())
         #else
         AppCheck.setAppCheckProviderFactory(AppAttestProviderFactory())
         #endif
         FirebaseApp.configure()
-        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
-        Analytics.setAnalyticsCollectionEnabled(true)
+        #if DEBUG
+        let telemetryEnabled = false
+        #else
+        let telemetryEnabled = true
+        #endif
+        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(telemetryEnabled)
+        Analytics.setAnalyticsCollectionEnabled(telemetryEnabled)
     }
 
     public static func log(_ name: String, parameters: [String: Any]? = nil) {

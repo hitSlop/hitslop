@@ -33,8 +33,10 @@ describe("published package images", () => {
     expect(() => validateStaticImages({ "QuickLook/Preview.png": png() })).toThrow("Icon.png");
     const different = encode({ width: 2, height: 1, channels: 4, data: new Uint8Array(8).fill(127) });
     expect(() => validateStaticImages({ "QuickLook/Preview.png": png(), "QuickLook/Icon.png": different })).toThrow("512x512");
-    different[different.length - 1]! ^= 1;
-    expect(() => validateStaticImages({ "QuickLook/Preview.png": png(), "QuickLook/Icon.png": different })).toThrow("valid PNG");
+    const corrupt = icon();
+    corrupt[corrupt.length - 1]! ^= 1;
+    expect(() => validateStaticImages({ "QuickLook/Preview.png": png(), "QuickLook/Icon.png": corrupt })).toThrow("valid PNG");
+    for (const path of ["assets/src/file.js", "assets/package.json", "assets/style.css"]) expect(() => validatePackagePath(path)).toThrow("cannot contain");
     expect(() => validatePackagePath("QuickLook/Extra.png")).toThrow("cannot contain");
     expect(() => validatePackagePath("AGENTS.md")).toThrow("cannot contain");
   });

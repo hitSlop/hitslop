@@ -74,17 +74,17 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
     private var sort: RegistrySort = .popular
 
     public init(catalogURL: URL) {
-        self.catalogURL = catalogURL
+        self.catalogURL = HitSlopFirebase.catalogURL(default: catalogURL)
         firestore = Firestore.firestore()
         functions = Functions.functions(region: "us-central1")
-        #if DEBUG
+        if HitSlopFirebase.usesEmulators {
         firestore.useEmulator(withHost: "127.0.0.1", port: 8080)
         let settings = firestore.settings
         settings.cacheSettings = MemoryCacheSettings()
         settings.isSSLEnabled = false
         firestore.settings = settings
         functions.useEmulator(withHost: "127.0.0.1", port: 5001)
-        #endif
+        }
         subscribe()
     }
 
@@ -138,15 +138,18 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
                         HitSlopFirebase.log("catalog_load_failed")
                         return
                     }
-                    do {
-                        self.catalog = try snapshot?.documents.map { try $0.data(as: RegistryTemplate.self) } ?? []
-                        self.errorMessage = nil
-                        self.applyFilters()
-                        HitSlopFirebase.log("catalog_loaded", parameters: ["template_count": self.catalog.count, "catalog_sort": self.sort.rawValue])
-                    } catch {
-                        self.errorMessage = error.localizedDescription
-                        HitSlopFirebase.record(error)
+                    var invalidCount = 0
+                    self.catalog = (snapshot?.documents ?? []).compactMap { document in
+                        do { return try document.data(as: RegistryTemplate.self) }
+                        catch {
+                            invalidCount += 1
+                            HitSlopFirebase.record(error)
+                            return nil
+                        }
                     }
+                    self.errorMessage = invalidCount == 0 ? nil : "Skipped \(invalidCount) invalid catalog entries."
+                    self.applyFilters()
+                    HitSlopFirebase.log("catalog_loaded", parameters: ["template_count": self.catalog.count, "catalog_sort": self.sort.rawValue])
                 }
             }
     }

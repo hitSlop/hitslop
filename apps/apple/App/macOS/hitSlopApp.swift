@@ -38,7 +38,7 @@ private struct UpdateSettingsView: View {
     private var recentMenu: NSMenu?
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     var updater: SPUUpdater { updaterController.updater }
-    private var catalogURL: URL { URL(string: Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")! }
+    private var catalogURL: URL { HitSlopFirebase.catalogURL(default: URL(string: Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")!) }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         HitSlopFirebase.configure()

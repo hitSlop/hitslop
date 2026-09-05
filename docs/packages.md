@@ -43,7 +43,7 @@ These expose reactive value/loading/error/persistence state while delegating all
 durability to the runtime host. `jsonStore` accepts the schema directly
 from root TypeBox `schema.ts`, alongside its initial value, and
 validates data at the persistence boundary. Quick Checklist
-is the platform pilot; the CLI scaffold migration is deferred.
+and the CLI counter starter share this workflow; backlog examples remain deferred.
 
 The React adapter is paused in `archive/packages/react`, outside the workspace
 and release pipeline. The runtime remains suitable for future framework adapters.
