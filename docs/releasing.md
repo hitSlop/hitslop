@@ -2,9 +2,9 @@
 
 ## Version policy
 
-The macOS app is stable at `1.0.2`. The iOS app and npm packages remain in the
-`0.1.x` line until their public interfaces settle. Do not force every workspace to
-share one version.
+The macOS release candidate is `1.0.3` (build `21`). The npm platform packages
+use `0.2.x` for the breaking TypeBox API reset; iOS remains at `0.1.0`.
+Do not force unrelated products to share one version.
 
 ## Release gate
 
@@ -54,7 +54,7 @@ Publish in dependency order:
 Use `bun pm pack --dry-run` in every package before publishing. Verify the
 tarball includes only `dist`, permitted templates/generated schema,
 `package.json`, `README.md`, and `LICENSE`; confirm repository metadata,
-MIT license, and intended `0.1.x` version.
+MIT license, and intended `0.2.x` version.
 
 Tag npm releases as `npm-v<version>` and macOS releases as
 `macos-v<version>`. The separate namespaces keep an npm-only release from

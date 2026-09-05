@@ -26,10 +26,10 @@
 /* Begin PBXFileReference section */
 		3D7F4FFEA3E5F1F8855A530E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		449DA033579B03D2469FBFB8 /* HitSlopApple */ = {isa = PBXFileReference; lastKnownFileType = folder; name = HitSlopApple; path = Packages/HitSlopApple; sourceTree = SOURCE_ROOT; };
+		4D282D37A6F02DD82CEAF1D5 /* hitSlop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hitSlop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		581CEEB49B3FCB2898E086F8 /* hitSlopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = hitSlopApp.swift; sourceTree = "<group>"; };
-		6DF839B510740E924F7BB7F7 /* hitSlop-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hitSlop-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D44D81DAFCDD0B730929E65 /* hitSlop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = hitSlop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		75719DC5D67261F7EA46EC82 /* hitSlopApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = hitSlopApp.swift; sourceTree = "<group>"; };
-		8F3E8ABA833EC14B3909EFD3 /* hitSlop-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hitSlop-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C419462A556663F0047EE34C /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -73,8 +73,8 @@
 		428362E0B1DAB62483A27C3C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				6DF839B510740E924F7BB7F7 /* hitSlop-iOS.app */,
-				8F3E8ABA833EC14B3909EFD3 /* hitSlop-macOS.app */,
+				6D44D81DAFCDD0B730929E65 /* hitSlop.app */,
+				4D282D37A6F02DD82CEAF1D5 /* hitSlop.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -143,7 +143,7 @@
 				27C19B5D676A65DA61C0E14C /* HitSlopRegistry */,
 			);
 			productName = "hitSlop-iOS";
-			productReference = 6DF839B510740E924F7BB7F7 /* hitSlop-iOS.app */;
+			productReference = 6D44D81DAFCDD0B730929E65 /* hitSlop.app */;
 			productType = "com.apple.product-type.application";
 		};
 		3DAFFFD4DF6024749065F8C4 /* hitSlop-macOS */ = {
@@ -170,7 +170,7 @@
 				91BD7843075E7E977199C386 /* Sparkle */,
 			);
 			productName = "hitSlop-macOS";
-			productReference = 8F3E8ABA833EC14B3909EFD3 /* hitSlop-macOS.app */;
+			productReference = 4D282D37A6F02DD82CEAF1D5 /* hitSlop.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -415,7 +415,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Shared/hitSlop.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				ENABLE_HARDENED_RUNTIME = YES;
 				HITSLOP_CATALOG_URL = "https://api.hitslop.com";
 				INFOPLIST_FILE = App/macOS/Info.plist;
@@ -424,7 +424,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.hitslop.app;
 				PRODUCT_NAME = hitSlop;
@@ -505,16 +505,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/Shared/hitSlop.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 20;
+				CURRENT_PROJECT_VERSION = 21;
 				ENABLE_HARDENED_RUNTIME = YES;
-				HITSLOP_CATALOG_URL = "http://127.0.0.1:5002";
+				HITSLOP_CATALOG_URL = "https://api.hitslop.com";
 				INFOPLIST_FILE = App/macOS/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0.2;
+				MARKETING_VERSION = 1.0.3;
 				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.hitslop.app;
 				PRODUCT_NAME = hitSlop;

@@ -1,6 +1,6 @@
 {
   "name": "@hitslop/schema",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Canonical hitSlop schemas and publish protocol.",
   "license": "MIT",
   "repository": {

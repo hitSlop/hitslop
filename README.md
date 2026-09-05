@@ -8,8 +8,8 @@ an account you have to maintain. The app owns its interface; the host owns
 durable JSON, SQLite, named media, previews, export, and native window behavior.
 
 <p align="center">
-  <img src="examples/slops/invoice/screenshots/preview.png" width="30%" alt="Invoice slop">
-  <img src="examples/slops/focus-timer/screenshots/preview.png" width="30%" alt="Focus Timer slop">
+  <img src="examples/slops/_backlog/invoice/screenshots/preview.png" width="30%" alt="Invoice slop">
+  <img src="examples/slops/_backlog/focus-timer/screenshots/preview.png" width="30%" alt="Focus Timer slop">
 </p>
 
 A slop can feel like **paper** (invoice, recipe, résumé), an **instrument**

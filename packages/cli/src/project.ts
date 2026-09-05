@@ -65,7 +65,7 @@ export async function scaffold(destination: string, options: ScaffoldOptions): P
       register: "slop register",
       publish: "slop publish",
     },
-    dependencies: { "@hitslop/runtime": "^0.1.2", "@hitslop/svelte": "^0.1.2", "bits-ui": "^2.19.0", "svelte": "^5.57.0", "typebox": "^1.3.26" },
+    dependencies: { "@hitslop/runtime": "^0.2.0", "@hitslop/svelte": "^0.2.0", "bits-ui": "^2.19.0", "svelte": "^5.57.0", "typebox": "^1.3.26" },
     devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.3.0", "@vanilla-extract/css": "^1.21.2", "@vanilla-extract/vite-plugin": "^5.2.6", "vite": "^8.2.2", "svelte-check": "^4.7.6", "@typescript/native": "npm:typescript@^7.0.2", "typescript": "^6.0.3" },
   }, null, 2) + "\n");
   const manifest = parseManifest({

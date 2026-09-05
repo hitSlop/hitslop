@@ -20,6 +20,7 @@ packages:
 targets:
   hitSlop-iOS:
     type: application
+    productName: hitSlop
     platform: iOS
     sources:
       - path: App/Shared/Assets.xcassets
@@ -53,6 +54,7 @@ targets:
           HITSLOP_CATALOG_URL: https://api.hitslop.com
   hitSlop-macOS:
     type: application
+    productName: hitSlop
     platform: macOS
     sources:
       - path: App/Shared/Assets.xcassets
@@ -113,15 +115,15 @@ targets:
         INFOPLIST_FILE: App/macOS/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/Shared/hitSlop.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "1.0.2"
-        CURRENT_PROJECT_VERSION: "20"
+        MARKETING_VERSION: "1.0.3"
+        CURRENT_PROJECT_VERSION: "21"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         ENABLE_HARDENED_RUNTIME: YES
         OTHER_LDFLAGS: $(inherited) -ObjC
         SKIP_INSTALL: NO
       configs:
         Debug:
-          HITSLOP_CATALOG_URL: http://127.0.0.1:5002
+          HITSLOP_CATALOG_URL: https://api.hitslop.com
         Release:
           HITSLOP_CATALOG_URL: https://api.hitslop.com
 schemes:
