@@ -34,7 +34,7 @@
     "./manifest.schema.json": "./generated/manifest.schema.json"
   },
   "scripts": {
-    "generate": "bun src/generate.ts",
+    "generate": "bun run build && bun src/generate.ts",
     "check:generated": "bun src/check-generated.ts",
     "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json",
