@@ -50,10 +50,9 @@ bun run register
 bun run publish
 ```
 
-The CLI scaffolds a source project, previews it against isolated local stores,
-and builds a source-free `dist/<slug>.slop`. The repository also includes a
-React SDK and a maintained React example, but the v1 CLI does not scaffold
-React projects yet.
+The CLI scaffolds a Svelte source project, previews it with disposable in-memory
+data, and builds a source-free `dist/<slug>.slop`. The runtime remains framework-neutral;
+the React adapter is archived while supported authoring focuses on Svelte.
 
 Read [Authoring a slop](docs/authoring.md) for the full workflow and
 [Designing tiny software](docs/presentation.md) for object families,
@@ -93,8 +92,8 @@ any combination, or none. See [Package format](docs/package-format.md) and
   rules for publishing and discovery.
 - `packages/cli` — create, validate, preview, build, register, sign, and publish.
 - `packages/runtime` — the framework-neutral browser bridge.
-- `packages/svelte` and `packages/react` — reactive adapters.
-- `packages/schema` — authoritative Zod schemas and generated Swift/JSON
+- `packages/svelte` — reactive adapters and optional icon/export components.
+- `packages/schema` — authoritative TypeBox schemas and generated Swift/JSON
   boundaries.
 - `examples/slops` — maintained source examples; `archive/templates` is
   inventoried prior art, never a runtime package.
@@ -113,7 +112,7 @@ That first-launch gate checks generated schemas, the public TypeScript/Svelte
 packages, clean-room npm tarballs, Firebase package ingestion, documentation and
 tracked-file hygiene, and the Swift package. Older examples have the separate
 `bun run examples:check` gate while they are intentionally converted to v1. If
-you are changing Zod, run `bun run schema:generate` first.
+you are changing platform TypeBox schemas, run `bun run schema:generate` first.
 
 Start with the [documentation map](docs/README.md), then read
 [Architecture](docs/architecture.md), [Repository guide](docs/repository.md),

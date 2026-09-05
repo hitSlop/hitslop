@@ -15,7 +15,7 @@
   "keywords": [
     "hitslop",
     "schema",
-    "zod",
+    "typebox",
     "json-schema"
   ],
   "publishConfig": {
@@ -28,6 +28,9 @@
   ],
   "exports": {
     ".": "./dist/index.js",
+    "./bridge": "./dist/bridge.js",
+    "./validation": "./dist/validation.js",
+    "./json": "./dist/json.js",
     "./manifest.schema.json": "./generated/manifest.schema.json"
   },
   "scripts": {
@@ -38,10 +41,12 @@
     "test": "bun test"
   },
   "dependencies": {
-    "zod": "^4.5.2"
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "typebox": "^1.3.26"
   },
   "devDependencies": {
-    "quicktype": "^26.0.0",
+    "quicktype-core": "26.0.0",
     "typescript": "^7.0.2"
   }
 }

@@ -150,10 +150,8 @@ public struct SlopPackage: Sendable {
                 guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("store must be a regular file: \(url.lastPathComponent)") }
             }
         }
-        if fileManager.fileExists(atPath: jsonStoreURL.path) { _ = try JSONSerialization.jsonObject(with: Data(contentsOf: jsonStoreURL), options: [.fragmentsAllowed]) }
-        if fileManager.fileExists(atPath: themeOverrideURL.path), String(data: try Data(contentsOf: themeOverrideURL), encoding: .utf8) == nil {
-            throw SlopPackageError.invalid("stores/theme.css must be UTF-8")
-        }
+        // Mutable contents are validated when accessed. A damaged store must not
+        // prevent the guest from opening and presenting a recoverable error.
     }
 
     private func validateSchemaMetadata() throws {
@@ -172,7 +170,7 @@ public struct SlopPackage: Sendable {
     private func validateDocumentSkill() throws {
         let fileManager = FileManager.default
         let agents = rootURL.appendingPathComponent(".agents", isDirectory: true)
-        guard fileManager.fileExists(atPath: agents.path) else { throw SlopPackageError.missing(".agents/skills/hitslop-document/SKILL.md") }
+        guard fileManager.fileExists(atPath: agents.path) else { return }
         let skills = agents.appendingPathComponent("skills", isDirectory: true)
         let folder = skills.appendingPathComponent("hitslop-document", isDirectory: true)
         let skill = folder.appendingPathComponent("SKILL.md")
@@ -180,9 +178,8 @@ public struct SlopPackage: Sendable {
         try requireDirectory(skills, allowed: ["hitslop-document"], label: ".agents/skills")
         try requireDirectory(folder, allowed: ["SKILL.md", "references"], label: ".agents/skills/hitslop-document")
         let values = try skill.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-        guard values.isRegularFile == true, values.isSymbolicLink != true,
-              try Data(contentsOf: skill) == Self.canonicalDocumentSkillData() else {
-            throw SlopPackageError.invalid(".agents/skills/hitslop-document/SKILL.md is not a recognized canonical document skill")
+        guard values.isRegularFile == true, values.isSymbolicLink != true else {
+            throw SlopPackageError.invalid("document guidance must be a regular file")
         }
         let references = folder.appendingPathComponent("references", isDirectory: true)
         guard fileManager.fileExists(atPath: references.path) else { return }

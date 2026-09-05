@@ -2,11 +2,11 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import react from "@vitejs/plugin-react";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { createServer, type Plugin } from "vite";
 import { injectHost } from "../../packages/cli/src/dev-bridge.ts";
+import { readThemeCSS } from "../../packages/cli/src/theme.ts";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const port = 4177;
@@ -62,7 +62,7 @@ export async function discoverSlops(directory = root): Promise<GallerySlop[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const slops: GallerySlop[] = [];
   for (const entry of entries) {
-    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+    if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name.startsWith("_") || entry.name === "node_modules") continue;
     const child = join(directory, entry.name);
     if (!await exists(join(child, "manifest.json")) || !await exists(join(child, "index.html"))) continue;
     const manifest = await readGalleryManifest(join(child, "manifest.json"));
@@ -73,7 +73,7 @@ export async function discoverSlops(directory = root): Promise<GallerySlop[]> {
       description: manifest.description,
       width: manifest.presentation.width,
       height: manifest.presentation.height,
-      hasTheme: await exists(join(child, "assets", "theme.css")),
+      hasTheme: await exists(join(child, "theme.ts")) || await exists(join(child, "assets", "theme.css")),
       migrated: await exists(join(child, "src", "main.ts")) || await exists(join(child, "src", "main.tsx")),
     });
   }
@@ -85,12 +85,13 @@ const escapeHTML = (value: string): string =>
 
 export function galleryHTML(slops: GallerySlop[]): string {
   const cards = slops.map((slop) => `
-    <a class="slop-card" href="/${encodeURIComponent(slop.slug)}/">
+    <article class="slop-card">
       <div class="card-meta"><span>${escapeHTML(slop.slug)}</span><em>${slop.migrated ? "migrated" : "source → src"}</em></div>
       <strong>${escapeHTML(slop.title)}</strong>
       <p>${escapeHTML(slop.description)}</p>
       <small>${slop.width} × ${slop.height}</small>
-    </a>`).join("");
+      <nav><a href="/${encodeURIComponent(slop.slug)}/">Live</a> · <a href="/${encodeURIComponent(slop.slug)}/?capture=icon">Icon</a> · <a href="/${encodeURIComponent(slop.slug)}/?capture=export">Export</a></nav>
+    </article>`).join("");
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -139,6 +140,16 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
       server.middlewares.use(async (request, response, next) => {
         if (!request.url || request.method !== "GET") return next();
         const pathname = new URL(request.url, "http://localhost").pathname;
+        const themeMatch = pathname.match(/^\/([^/]+)\/assets\/theme\.css$/);
+        if (themeMatch) {
+          const slop = bySlug.get(themeMatch[1]!);
+          if (slop) {
+            try {
+              const css = await readThemeCSS(join(directory, slop.directory));
+              if (css !== undefined) { response.setHeader("content-type", "text/css; charset=utf-8"); response.end(css); return; }
+            } catch (error) { return next(error as Error); }
+          }
+        }
         if (pathname === healthPath) {
           response.setHeader("content-type", "text/plain; charset=utf-8");
           response.end(healthValue);
@@ -207,7 +218,7 @@ if (isMain) {
       root,
       configFile: false,
       appType: "mpa",
-      plugins: [galleryPlugin(slops), vanillaExtractPlugin(), react(), svelte()],
+      plugins: [galleryPlugin(slops), vanillaExtractPlugin(), svelte()],
       server: { host: "localhost", port, strictPort: true },
     });
     await server.listen();

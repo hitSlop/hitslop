@@ -34,7 +34,7 @@ public extension Notification.Name {
 
     /// Finder list rows use a document custom icon rather than the package's
     /// Quick Look preview. Keep that macOS-only metadata derived from the
-    /// immutable author-supplied icon until an authored live icon is
+    /// immutable author-supplied icon until an authored close-time icon is
     /// rendered. Never use the live full-document preview.
     private static func installFinderIcon(for packageURL: URL) {
         let finderMetadataURL = packageURL.appendingPathComponent("Icon\r")

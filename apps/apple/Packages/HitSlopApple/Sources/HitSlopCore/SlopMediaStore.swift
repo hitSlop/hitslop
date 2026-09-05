@@ -86,6 +86,7 @@ public final class SlopMediaStore: @unchecked Sendable {
     }
 
     public static func mediaMIMEType(_ data: Data) throws -> String {
+        guard data.count <= 25 * 1024 * 1024 else { throw SlopPackageError.invalid("media exceeds 25 MiB") }
         if let mime = detectedImageMIMEType(data) { return mime }
         try validateZIP(data)
         return "application/zip"

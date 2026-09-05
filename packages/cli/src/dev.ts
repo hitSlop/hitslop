@@ -4,6 +4,7 @@ import type { Plugin } from "vite";
 import { createServer } from "vite";
 import { injectHost } from "./dev-bridge.ts";
 import { loadManifest } from "./project.ts";
+import { readThemeCSS } from "./theme.ts";
 
 const exists = async (path: string): Promise<boolean> => { try { await stat(path); return true; } catch { return false; } };
 
@@ -20,13 +21,33 @@ export function mockHostPlugin(options: { themeHref?: string } = {}): Plugin {
 
 export async function runDev(root: string): Promise<void> {
   await loadManifest(root);
-  const themeHref = await exists(join(root, "assets", "theme.css")) ? "/assets/theme.css" : undefined;
-  const server = await createServer({ root, plugins: [mockHostPlugin(themeHref ? { themeHref } : {})] });
+  const themeHref = await readThemeCSS(root) !== undefined ? "/assets/theme.css" : undefined;
+  const server = await createServer({ root, plugins: [themePreviewPlugin(root), mockHostPlugin(themeHref ? { themeHref } : {})] });
   await server.listen();
   const url = server.resolvedUrls?.local[0];
   if (!url) throw new Error("Vite did not expose a development URL");
   console.log(`hitSlop UI preview: ${url}`);
   if (process.platform === "darwin") Bun.spawn(["open", url], { stdout: "ignore", stderr: "ignore" });
+}
+
+export function themePreviewPlugin(root: string): Plugin {
+  return {
+    name: "hitslop:theme-preview",
+    configureServer(server) {
+      server.middlewares.use(async (request, response, next) => {
+        if (request.url?.split("?")[0] !== "/assets/theme.css") return next();
+        try {
+          const css = await readThemeCSS(root);
+          if (css === undefined) return next();
+          response.setHeader("Content-Type", "text/css; charset=utf-8");
+          response.end(css);
+        } catch (error) { next(error as Error); }
+      });
+    },
+    handleHotUpdate({ file, server }) {
+      if (file === join(root, "theme.ts")) server.ws.send({ type: "full-reload" });
+    },
+  };
 }
 
 export async function runNative(arguments_: string[]): Promise<void> {

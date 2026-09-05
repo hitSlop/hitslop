@@ -11,7 +11,7 @@
 | `packages/cli` | Authoring, browser preview fake, build, capture, identity, register, publish |
 | `packages/runtime` | Framework-neutral host API and adapter building blocks |
 | `packages/svelte` | Svelte 5 state adapters |
-| `packages/react` | React hooks |
+| `archive/packages/react` | Paused React adapter, excluded from workspaces/releases |
 | `packages/schema` | Zod source, JSON Schema, publish protocol, generated Swift |
 | `examples/slops` | Maintained authored examples |
 | `archive/templates` | Explicitly inventoried prior art outside build paths |

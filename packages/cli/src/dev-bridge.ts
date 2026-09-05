@@ -1,9 +1,22 @@
+import { protocolVersion } from "@hitslop/schema/bridge";
 // Browser-only half of `slop dev`. This disposable window.slop fake exists to
 // keep authored UI renderable; it deliberately does not model durable storage.
 
 export const hostStyle = `<style data-hitslop-host>*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}</style>`;
 
 export const devHostJavaScript = `(() => {
+  const captureMode = new URL(window.location?.href ?? 'http://localhost/').searchParams.get('capture');
+  if (captureMode === 'icon') document.documentElement.dataset.slopRenderer = 'true';
+  if (captureMode === 'icon' || captureMode === 'export') {
+    window.addEventListener('slop:ready', () => {
+      setTimeout(async () => {
+        try {
+          if (captureMode === 'icon') document.documentElement.style.width = '512px';
+          await window.__hitslopCapture.begin('dev-preview', captureMode, {blockInteraction:false});
+        } catch (error) { console.error('Capture preview failed', error); }
+      }, 0);
+    }, {once:true});
+  }
   const listeners = { json: new Set(), sqlite: new Set(), media: new Set() };
   let jsonValue;
   let jsonRevision = 0;
@@ -22,6 +35,8 @@ export const devHostJavaScript = `(() => {
   const drag = async () => undefined;
 
   window.slop = Object.freeze({
+    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['host.info', 'json.open', 'json.read', 'json.write', 'window.resize', 'window.drag'] }),
+    flush: async () => undefined,
     json: Object.freeze({
       open: async (value) => {
         if (!jsonOpened) { jsonValue = clone(value); jsonOpened = true; }
@@ -32,7 +47,7 @@ export const devHostJavaScript = `(() => {
         return { value: clone(jsonValue), revision: revision() };
       },
       write: async (value, expectedRevision) => {
-        if (expectedRevision && expectedRevision !== revision()) throw new Error('revision_conflict');
+        if (expectedRevision !== undefined && expectedRevision !== revision()) throw Object.assign(new Error('Document changed'), { code: 'revision_conflict' });
         jsonValue = clone(value); jsonOpened = true; jsonRevision += 1;
         const result = { revision: revision() };
         emit('json', { source: 'app', revision: result.revision });

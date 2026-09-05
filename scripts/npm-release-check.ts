@@ -1,9 +1,9 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
-const packageNames = ["schema", "runtime", "svelte", "react", "cli"] as const;
+const packageNames = ["schema", "runtime", "svelte", "cli"] as const;
 
 async function command(argv: string[], cwd = root, quiet = false, extraEnv: Record<string, string> = {}): Promise<string> {
   const label = argv.join(" ");
@@ -87,11 +87,9 @@ async function main(): Promise<void> {
         "@hitslop/schema": packageReferences.schema,
         "@hitslop/runtime": packageReferences.runtime,
         "@hitslop/svelte": packageReferences.svelte,
-        "@hitslop/react": packageReferences.react,
         "@hitslop/cli": packageReferences.cli,
-        react: "^19.0.0",
         svelte: "^5.0.0",
-        zod: "^4.0.0",
+        typebox: "^1.3.26",
       },
       overrides: {
         "@hitslop/schema": packageReferences.schema,
@@ -100,29 +98,36 @@ async function main(): Promise<void> {
     }, null, 2)}\n`);
     await command(["bun", "install"], harness, false, installEnv);
 
-    const app = join(temporary, "release-counter");
-    const installedCLI = join(harness, "node_modules", ".bin", "slop");
-    await command([installedCLI, "init", app, "--yes", "--title", "Release Counter", "--author-name", "hitSlop", "--author-url", "https://hitslop.com"], harness);
-
-    // Substitute only the unpublished hitSlop packages. Everything else is
-    // resolved normally, exactly as it will be after the first npm release.
-    const appPackagePath = join(app, "package.json");
-    const appPackage = JSON.parse(await readFile(appPackagePath, "utf8")) as {
-      dependencies: Record<string, string>;
-      devDependencies: Record<string, string>;
-      overrides?: Record<string, string>;
+    // Quick Checklist is the platform pilot; the legacy init scaffold is deferred.
+    // Compile the actual IconTarget/ExportTarget consumer from packed dependencies.
+    const app = join(temporary, "release-checklist");
+    await mkdir(app);
+    for (const name of ["src", "manifest.json", "index.html", "schema.ts", "theme.ts", "vite.config.ts"]) {
+      await cp(join(root, "examples/slops/quick-checklist", name), join(app, name), { recursive: true });
+    }
+    const examplePackage = JSON.parse(await readFile(join(root, "examples/slops/package.json"), "utf8")) as {
+      dependencies: Record<string, string>; devDependencies: Record<string, string>;
     };
-    appPackage.dependencies["@hitslop/runtime"] = packageReferences.runtime;
-    appPackage.dependencies["@hitslop/svelte"] = packageReferences.svelte;
-    appPackage.devDependencies["@hitslop/cli"] = packageReferences.cli;
-    appPackage.devDependencies["@hitslop/schema"] = packageReferences.schema;
-    appPackage.overrides = {
-      "@hitslop/schema": packageReferences.schema,
-      "@hitslop/runtime": packageReferences.runtime,
+    const appPackage = {
+      name: "hitslop-capture-consumer", private: true, type: "module",
+      scripts: { check: "svelte-check --tsgo --tsconfig tsconfig.json", build: "slop build .", validate: "slop validate ." },
+      dependencies: examplePackage.dependencies,
+      devDependencies: examplePackage.devDependencies,
+      overrides: Object.fromEntries(packageNames.map(name => [`@hitslop/${name}`, packageReferences[name]])),
     };
-    await writeFile(appPackagePath, `${JSON.stringify(appPackage, null, 2)}\n`);
+    for (const dependencies of [appPackage.dependencies, appPackage.devDependencies]) {
+      for (const name of Object.keys(dependencies)) {
+        if (name in appPackage.overrides) dependencies[name] = appPackage.overrides[name]!;
+      }
+    }
+    await writeFile(join(app, "package.json"), JSON.stringify(appPackage, null, 2) + "\n");
+    await writeFile(join(app, "tsconfig.json"), JSON.stringify({
+      compilerOptions: { target: "ES2022", module: "ESNext", moduleResolution: "bundler", strict: true, skipLibCheck: true, allowJs: true, checkJs: true, verbatimModuleSyntax: true, noEmit: true },
+      include: ["src/**/*", "schema.ts", "theme.ts"],
+    }, null, 2) + "\n");
 
     await command(["bun", "install"], app, false, installEnv);
+    await command(["bun", "run", "check"], app);
     await command(["bun", "run", "validate"], app);
     await command(["bun", "run", "build"], app);
     const manifest = JSON.parse(await readFile(join(app, "manifest.json"), "utf8")) as { slug: string };
@@ -131,7 +136,7 @@ async function main(): Promise<void> {
     await rm(temporary, { recursive: true, force: true });
   }
 
-  process.stdout.write("\n✓ npm tarballs and the clean-room authoring scaffold are ready\n");
+  process.stdout.write("\n✓ npm tarballs and the clean-room Svelte capture consumer are ready\n");
 }
 
 await main();

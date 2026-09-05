@@ -2,6 +2,11 @@
 
 ## Commands
 
+Quick Checklist imports root `schema.ts` directly into `jsonStore`.
+Editor types and checks work without preparation or a dev server. Builds emit
+`data.schema.json` for the host; keep schema definitions deterministic.
+The init scaffold remains deferred.
+
 ```sh
 bunx @hitslop/cli init my-slop
 bun run dev
@@ -25,13 +30,18 @@ skill's single reference after validating its encoding and size.
 
 ## Capture
 
-Call `ready()` after initial durable data and critical assets are usable. Test
-the manifest viewport in live and `data-slop-capture="static"` states. Mark
-editing controls `data-slop-export="hide"`. Keep output in normal document
-flow so full-height PNG/PDF can see it.
+Call `ready()` after initial data is usable. Prefer optional `IconTarget` and
+`ExportTarget` from `@hitslop/svelte`, wrapping ordinary `Icon.svelte` and
+`Export.svelte` presentation components. Pass the same data and selected view;
+never open a second store. Helpers own mounting, geometry, and capture state.
+Export content belongs in normal flow. Without an export target, use the existing
+`data-slop-capture="static"` CSS and `data-slop-export="hide"` fallback.
 
-An optional renderer-only icon target is a square 512px DOM element. Use
-`capture.isRenderer()` so they never mount in the interactive app.
+Preview `?capture=icon` and `?capture=export` in the disposable gallery. The
+runtime waits for fonts, images, and stable layout. For charts/virtualization,
+register `capture.onPrepare(async (mode, signal) => { ... })` and clean up the
+returned registration. Background captures use temporary snapshots. Optional
+icons refresh Finder metadata on close; `QuickLook/Icon.png` remains immutable.
 
 ## Identity and publish
 

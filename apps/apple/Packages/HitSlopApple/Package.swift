@@ -41,7 +41,8 @@ let package = Package(
         ),
         .target(
             name: "HitSlopRuntime",
-            dependencies: ["HitSlopCore"],
+            dependencies: ["HitSlopCore", .product(name: "DynamicJSON", package: "swift-dynamicjson")],
+            resources: [.copy("Resources/host-bridge.js"), .copy("Resources/bridge-request.schema.json")],
             linkerSettings: [.linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS])), .linkedLibrary("sqlite3")]
         ),
         .target(
@@ -74,7 +75,7 @@ let package = Package(
             linkerSettings: [.linkedFramework("AppKit")]
         ),
         .testTarget(name: "HitSlopCoreTests", dependencies: ["HitSlopCore"]),
-        .testTarget(name: "HitSlopRuntimeTests", dependencies: ["HitSlopRuntime", "HitSlopCore"]),
+        .testTarget(name: "HitSlopRuntimeTests", dependencies: ["HitSlopRuntime", "HitSlopCore"], resources: [.copy("Fixtures")]),
         .testTarget(name: "HitSlopHostTests", dependencies: ["HitSlopHost", "HitSlopCore"]),
         .testTarget(
             name: "HitSlopCatalogTests",

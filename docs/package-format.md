@@ -12,6 +12,7 @@ my-app/
 ├── manifest.json
 ├── package.json
 ├── schema.ts                    required when using Svelte jsonStore
+├── theme.ts                     optional single-source theme definition
 ├── document-guide.md            optional app-specific agent guidance
 ├── index.html
 ├── vite.config.ts
@@ -39,6 +40,16 @@ my-app.slop/
     ├── Preview.png            mutable host snapshot; required to publish
     └── Icon.png               immutable Finder/catalog artwork
 ```
+
+Generated JavaScript, workers, fonts, and WASM also live under immutable
+`assets/`. Structural styles remain in `app.html`. Every new CLI build embeds
+document guidance, but its text or absence is never a prerequisite for opening
+a document. Publishing validation accepts optional UTF-8 guidance as well.
+
+Asset preservation is not a guarantee of browser API support: the current
+Apple host permits blob workers, not direct custom-scheme worker URLs. Use
+Vite's inline worker mode for now; external worker execution needs a separate
+native compatibility test before being advertised as supported.
 
 A writable document may lazily add canonical data:
 

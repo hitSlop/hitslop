@@ -3,14 +3,31 @@
   "version": "0.1.2",
   "description": "React hooks for the hitSlop runtime.",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/react" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hitslop/hitslop.git",
+    "directory": "packages/react"
+  },
   "homepage": "https://hitslop.com",
-  "bugs": { "url": "https://github.com/hitslop/hitslop/issues" },
-  "keywords": ["hitslop", "react", "local-first", "mini-apps"],
-  "publishConfig": { "access": "public" },
+  "bugs": {
+    "url": "https://github.com/hitslop/hitslop/issues"
+  },
+  "keywords": [
+    "hitslop",
+    "react",
+    "local-first",
+    "mini-apps"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
-  "files": ["dist"],
-  "exports": { ".": "./dist/index.js" },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "scripts": {
     "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json",
@@ -26,5 +43,6 @@
     "@types/react": "^19.2.13",
     "react": "^19.2.4",
     "typescript": "^7.0.2"
-  }
+  },
+  "private": true
 }

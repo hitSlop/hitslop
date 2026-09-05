@@ -3,8 +3,10 @@
 `.slop` packages are framework-neutral runtime web apps with optional host-owned
 JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
 
-- Authored templates live in `examples/slops/`; paused templates live in
-  `archive/templates/`. Runtime packages never contain source, dependencies,
+- Active authored templates live in `examples/slops/`; paused examples live in
+  `examples/slops/_backlog/` and older templates in `archive/templates/`.
+  Backlog source is excluded from gallery discovery, builds, tests, and checks.
+  Runtime packages never contain source, dependencies,
   build caches, seed stores, or editable stylesheets.
 - Preview with `bun slop dev examples/slops/<id>` and build with
   `bun slop build examples/slops/<id>`.
@@ -27,8 +29,21 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
 - Browser previews are disposable: no bridge server, disk stores, or polling.
   Routine migrations use the shared gallery for UI smoke tests; persistence and
   native behavior are reserved for explicit release-gate work.
-- Svelte `jsonStore` requires `{ schema, initial }`. Put the Zod 4 schema in root
-  `schema.ts`, default-export it, and attach that same export to the store.
+- Author JSON schemas with `import * as Type from "typebox"` in root `schema.ts`.
+  Import that schema directly into `jsonStore({ schema, initial })`.
+  Types are inferred from the schema; the store uses TypeBox runtime validation.
+  No generated files or dev server are needed for editor types. Schemas must be
+  deterministic because the app and package builder evaluate them separately.
+  Validation never coerces, inserts defaults, or strips fields. Use explicit
+  initial values and `additionalProperties: true` to preserve unknown fields.
+  Quick Checklist is the only migrated example; other examples and init are deferred.
+- Quick Checklist is the platform pilot. Define its theme once in root
+  `theme.ts` with `defineTheme` from `@hitslop/runtime/theme`; builds generate
+  immutable `assets/theme.css`. Keep owner overrides in `stores/theme.css`.
+- Builds embed document guidance, but opening a document never depends on its
+  exact text or presence. Do not make optional guidance a runtime prerequisite.
+- The bridge contract lives in `packages/schema/src/bridge.ts`. Generate its
+  native resources with `bun run schema:generate`; do not edit generated code.
 - Treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`, `.agents/`,
   and `QuickLook/Icon.png` as immutable in a document. Never add `style.css`,
   `document.json`, or a build directory. The macOS host may add the
@@ -38,7 +53,10 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
   app-local `apps/apple/Packages/HitSlopApple` package; AppKit code remains in
   its macOS-only Host, Catalog, and NativeCLI targets.
 - macOS uses built-in package Quick Look for previews and derives each local
-  document's Finder custom icon from its immutable `QuickLook/Icon.png`.
+  document's initial Finder custom icon from immutable `QuickLook/Icon.png`.
+  Optional authored icon targets refresh Finder metadata on close. Background
+  capture uses disposable snapshots; dedicated Svelte export/icon views share
+  data with the editor through `ExportTarget` and `IconTarget`.
 - Catalog selection caches immutable artifacts at
   `~/.hitslop/templates/cache/<publisher>/<slug>/<release>.slop`, verifies
   SHA-256, and copies one to the user-selected path. Local `slop register`
@@ -46,5 +64,5 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
   `~/.hitslop/templates` is a catalog master, never a writable document.
   Firebase stores only public catalog metadata and immutable published artifacts;
   it never stores a local document.
-- Zod is authoritative. Run `bun run schema:generate` after schema changes;
+- TypeBox is authoritative. Run `bun run schema:generate` after schema changes;
   JSON Schema then generates the Swift types and validates Swift manifests.

@@ -178,3 +178,211 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     let offset = (y * image.width + x) * 4
     return (bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3])
 }
+
+@Test @MainActor func capturePreparationFailureRestoresSelectionAndNestedScroll() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = session.webView
+    session.load(); try await session.waitUntilReady()
+    _ = try await session.webView.evaluateJavaScript(#"""
+      document.body.insertAdjacentHTML('afterbegin','<textarea id="edit">abcdef</textarea><div id="scroll" style="height:40px;overflow:auto"><div style="height:300px">Nested</div></div>');
+      document.querySelector('#edit').focus(); document.querySelector('#edit').setSelectionRange(1,4);
+      document.querySelector('#scroll').scrollTop=90;
+      window.unregisterFailure = window.__hitslopCapture.onPrepare(() => {throw new Error('Chart failed')}); void 0;
+    """#)
+    do {
+        _ = try await SlopRenderer.exportPNGData(session: session)
+        Issue.record("Expected chart preparation to fail")
+    } catch { #expect(error.localizedDescription.contains("Chart failed")) }
+    let state = try #require(try await session.webView.evaluateJavaScript("({capture:document.documentElement.getAttribute('data-slop-capture'),active:document.activeElement.id,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd,scroll:document.querySelector('#scroll').scrollTop})") as? [String: Any])
+    #expect(state["capture"] is NSNull)
+    #expect(state["active"] as? String == "edit")
+    #expect(state["start"] as? Int == 1)
+    #expect(state["end"] as? Int == 4)
+    #expect(state["scroll"] as? Int == 90)
+    #expect(session.webView.frame.size == CGSize(width: 320, height: 240))
+    _ = try await session.webView.evaluateJavaScript("window.unregisterFailure()")
+    _ = try await SlopRenderer.exportPDFData(session: session)
+}
+
+@Test @MainActor func dedicatedExportWaitsForAsyncContentAndPreservesCurrentView() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = session.webView
+    session.load(); try await session.waitUntilReady()
+    _ = try await session.webView.evaluateJavaScript(#"""
+      window.selectedView = 'Filed';
+      const target = document.createElement('section'); target.style.display='none'; document.body.append(target);
+      window.__hitslopCapture.registerTarget('export', {
+        element:target,
+        prepare:async()=>{
+          target.style.cssText='display:block;width:100%;height:1200px;background:white';
+          await new Promise(r=>setTimeout(r,180));
+          target.innerHTML='<p>'+window.selectedView+'</p><p style="position:absolute;top:1150px">Final selected item</p>';
+        },
+        restore:()=>{target.style.display='none';target.replaceChildren()}
+      }); void 0;
+    """#)
+    let pdf = try #require(PDFDocument(data: try await SlopRenderer.exportPDFData(session: session)))
+    #expect(pdf.pageCount == 1)
+    #expect(pdf.string?.contains("Filed") == true)
+    #expect(pdf.string?.contains("Final selected item") == true)
+    #expect(pdf.string?.contains("Control") == false)
+    let imageData = try await SlopRenderer.exportPNGData(session: session)
+    let image = try #require(CGImageSourceCreateWithData(imageData as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    #expect(image.width == 640)
+    #expect(image.height == 2400)
+    #expect(try rgba(image, x: 0, y: 0).alpha == 255) // No native rounded mask on dedicated exports.
+    #expect(try await session.webView.evaluateJavaScript("document.querySelector('button').textContent") as? String == "Control")
+}
+
+@Test @MainActor func longVectorExportIsNotSubjectToRasterLimits() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = session.webView
+    session.load(); try await session.waitUntilReady()
+    _ = try await session.webView.evaluateJavaScript("document.body.style.minHeight='18000px';document.querySelector('.tail').style.top='17900px'")
+    await #expect(throws: SlopPackageError.self) { _ = try await SlopRenderer.exportPNGData(session: session) }
+    let pdf = try #require(PDFDocument(data: try await SlopRenderer.exportPDFData(session: session)))
+    #expect(pdf.pageCount == 1)
+    #expect(pdf.page(at: 0)?.bounds(for: .mediaBox).height == 14400)
+    #expect(pdf.page(at: 0)?.bounds(for: .mediaBox).width == 256)
+    #expect(pdf.string?.contains("Bottom content") == true)
+    let page = try #require(pdf.page(at: 0))
+    let text = try #require(page.string)
+    let selection = try #require(page.selection(for: (text as NSString).range(of: "Bottom content")))
+    #expect(selection.bounds(for: page).minY >= 0)
+    #expect(selection.bounds(for: page).maxY < 120)
+
+}
+
+@Test @MainActor func iconFailureDoesNotDiscardPreviewAndRenderingDoesNotInitializeOriginalStores() async throws {
+    let root = try rendererPackage(duplicateIcon: true)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let app = root.appendingPathComponent("app.html")
+    var html = try String(contentsOf: app, encoding: .utf8)
+    html = html.replacingOccurrences(of: "window.slop.ready()", with: "window.slop.json.open({captureCount:1}).then(()=>window.slop.ready())")
+    try Data(html.utf8).write(to: app)
+    let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
+    #expect(assets.previewPNG != nil)
+    #expect(assets.finderIconPNG == nil)
+    #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("stores").path))
+    _ = try await SlopRenderer.exportPDFData(packageURL: root)
+    #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("stores").path))
+}
+
+@Test @MainActor func overlappingExportsSerializeAndRestoreTheEditor() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = session.webView
+    session.load(); try await session.waitUntilReady()
+    let first = Task { @MainActor in try await SlopRenderer.exportPNGData(session: session) }
+    let second = Task { @MainActor in try await SlopRenderer.exportPDFData(session: session) }
+    #expect(try await first.value.count > 0)
+    #expect(try await second.value.count > 0)
+    #expect(session.webView.frame.size == CGSize(width: 320, height: 240))
+    #expect(try await session.webView.evaluateJavaScript("document.documentElement.getAttribute('data-slop-capture')") is NSNull)
+}
+
+@Test @MainActor func backgroundCaptureKeepsExistingJSONSQLiteMediaAndThemeUnchanged() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    session.load(); try await session.waitUntilReady()
+    _ = try await session.webView.callAsyncJavaScript(#"""
+      await slop.json.open({count:1});
+      await slop.db.execute('CREATE TABLE counts (value INTEGER)');
+      await slop.db.execute('INSERT INTO counts VALUES (1)');
+      await slop.media.write('photo','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','image/png');
+      return true;
+    """#, arguments: [:], in: nil, contentWorld: .page)
+    try await session.flush(); session.close()
+    try Data(":root{--slop-ink:#123456}".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
+    let paths = ["stores/data.json", "stores/data.sqlite", "stores/media/photo", "stores/theme.css"]
+    let originals = try paths.map { try Data(contentsOf: root.appendingPathComponent($0)) }
+    let app = root.appendingPathComponent("app.html")
+    let html = try String(contentsOf: app, encoding: .utf8).replacingOccurrences(of: "window.slop.ready()", with: #"""
+      (async()=>{const s=await slop.json.read();await slop.json.write({count:99},s.revision);await slop.db.execute('UPDATE counts SET value=99');await slop.media.remove('photo');slop.ready()})()
+    """#)
+    try Data(html.utf8).write(to: app)
+    let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
+    #expect(assets.previewPNG != nil)
+    #expect(assets.finderIconPNG != nil)
+    for (index, path) in paths.enumerated() { #expect(try Data(contentsOf: root.appendingPathComponent(path)) == originals[index]) }
+}
+
+@Test @MainActor func captureTimeoutAbortsPreparationAndRestoresEditor() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    session.load(); try await session.waitUntilReady()
+    _ = try await session.webView.evaluateJavaScript(#"""
+      window.__hitslopCapture.onPrepare((mode,signal)=>new Promise(()=>{signal.addEventListener('abort',()=>{window.wasAborted=true})})); void 0;
+    """#)
+    await #expect(throws: (any Error).self) { _ = try await SlopRenderer.exportPDFData(session: session) }
+    #expect(try await session.webView.evaluateJavaScript("window.wasAborted") as? Bool == true)
+    #expect(try await session.webView.evaluateJavaScript("document.documentElement.getAttribute('data-slop-capture')") is NSNull)
+}
+
+@Test @MainActor func invalidatedCloseJobCannotReplacePreview() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    SlopDocumentAssetRefreshQueue.schedule(snapshot: try SlopRenderSnapshot(packageURL: root), presentedURL: root)
+    try await Task.sleep(for: .milliseconds(100))
+    SlopDocumentAssetRefreshQueue.invalidate(root)
+    await SlopDocumentAssetRefreshQueue.finishForTermination()
+    #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("QuickLook/Preview.png").path))
+    let app = root.appendingPathComponent("app.html")
+    let stalled = try String(contentsOf: app, encoding: .utf8).replacingOccurrences(of: "window.slop.ready()", with: "void 0")
+    try Data(stalled.utf8).write(to: app)
+    SlopDocumentAssetRefreshQueue.schedule(snapshot: try SlopRenderSnapshot(packageURL: root), presentedURL: root)
+    let started = ContinuousClock.now
+    await SlopDocumentAssetRefreshQueue.finishForTermination(grace: .milliseconds(100))
+    #expect(ContinuousClock.now - started < .seconds(1))
+    #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("QuickLook/Preview.png").path))
+}
+
+@Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_PILOT_PACKAGE"] != nil))
+@MainActor func compiledChecklistExportsSelectedViewLongContentAndDynamicIcon() async throws {
+    let source = URL(fileURLWithPath: ProcessInfo.processInfo.environment["HITSLOP_PILOT_PACKAGE"]!)
+    let snapshot = try SlopRenderSnapshot(packageURL: source)
+    defer { snapshot.remove() }
+    let stores = snapshot.url.appendingPathComponent("stores")
+    try FileManager.default.createDirectory(at: stores, withIntermediateDirectories: true)
+    let tasks: [[String: Any]] = (0..<120).map { ["id":"task-\($0)","text":"Task \($0) with a second line\nand extra detail", "done":$0 == 0,"archived":false] } + [["id":"filed","text":"Only filed item","done":true,"archived":true]]
+    try JSONSerialization.data(withJSONObject: ["title":"A long checklist", "tasks":tasks]).write(to: stores.appendingPathComponent("data.json"))
+    let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true)
+    defer { session.close() }
+    let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = session.webView
+    session.load(); try await session.waitUntilReady()
+    let long = try #require(PDFDocument(data: try await SlopRenderer.exportPDFData(session: session)))
+    #expect(long.pageCount == 1)
+    #expect(long.string?.contains("Task 119") == true)
+    #expect(long.string?.contains("Only filed item") == false)
+    _ = try await session.webView.callAsyncJavaScript("document.querySelector('[role=tab][data-value=filed]')?.click(); const tabs=[...document.querySelectorAll('[role=tab]')]; tabs.find(e=>e.textContent.includes('Filed')).click(); await new Promise(r=>setTimeout(r,0)); return true", arguments: [:], in: nil, contentWorld: .page)
+    let filed = try #require(PDFDocument(data: try await SlopRenderer.exportPDFData(session: session)))
+    #expect(filed.string?.contains("Only filed item") == true)
+    #expect(filed.string?.contains("Task 119") == false)
+    #expect(filed.string?.contains("Restore") == false)
+    let png = try await SlopRenderer.exportPNGData(session: session)
+    let image = try #require(CGImageSourceCreateWithData(png as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    #expect(image.width == 960)
+    let firstIcon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
+    _ = try await session.webView.callAsyncJavaScript("const s=await slop.json.read(); s.value.tasks.forEach(t=>t.done=true); await slop.json.write(s.value,s.revision); await new Promise(r=>setTimeout(r,100)); return true", arguments: [:], in: nil, contentWorld: .page)
+    let completedIcon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
+    #expect(firstIcon != completedIcon)
+}

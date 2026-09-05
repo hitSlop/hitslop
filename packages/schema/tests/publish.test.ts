@@ -1,5 +1,5 @@
+import { parsePublishEnvelope } from "../src/publish.ts";
 import { describe, expect, test } from "bun:test";
-import { PublishEnvelopeSchema } from "../src/publish.ts";
 
 const valid = {
   format: "hitslop-publish/3",
@@ -12,7 +12,7 @@ const valid = {
 } as const;
 
 describe("publish envelope v3", () => {
-  test("accepts the key-only publisher envelope", () => expect(PublishEnvelopeSchema.parse(valid)).toEqual(valid));
-  test("rejects the prelaunch v2 envelope", () => expect(() => PublishEnvelopeSchema.parse({ ...valid, format: "hitslop-publish/2" })).toThrow());
-  test("rejects publisher display metadata", () => expect(() => PublishEnvelopeSchema.parse({ ...valid, displayName: "Jordan" })).toThrow());
+  test("accepts the key-only publisher envelope", () => expect(parsePublishEnvelope(valid)).toEqual(valid));
+  test("rejects the prelaunch v2 envelope", () => expect(() => parsePublishEnvelope({ ...valid, format: "hitslop-publish/2" })).toThrow());
+  test("rejects publisher display metadata", () => expect(() => parsePublishEnvelope({ ...valid, displayName: "Jordan" })).toThrow());
 });

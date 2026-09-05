@@ -1,0 +1,35 @@
+[
+  {
+    "name": "non-mutating document validation",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "done": { "type": "boolean", "default": false },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+      },
+      "required": ["count", "done", "items"],
+      "additionalProperties": true,
+      "$defs": { "item": { "type": "object", "properties": { "text": { "type": "string", "minLength": 1 } }, "required": ["text"], "additionalProperties": true } }
+    },
+    "cases": [
+      { "valid": true, "value": { "count": 0, "done": false, "items": [{ "text": "ok", "future": 3 }], "future": true } },
+      { "valid": false, "value": { "count": "0", "done": false, "items": [] } },
+      { "valid": false, "value": { "count": 0, "items": [] } },
+      { "valid": false, "value": { "count": -1, "done": false, "items": [] } },
+      { "valid": false, "value": { "count": 0.5, "done": false, "items": [] } },
+      { "valid": false, "value": { "count": 0, "done": false, "items": [{ "text": "" }] } }
+    ]
+  },
+  {
+    "name": "format assertions and union branches",
+    "schema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "anyOf": [{ "type": "string", "format": "email" }, { "const": "local" }] },
+    "cases": [
+      { "valid": true, "value": "person@example.com" },
+      { "valid": true, "value": "local" },
+      { "valid": false, "value": "not an email" },
+      { "valid": false, "value": 3 }
+    ]
+  }
+]

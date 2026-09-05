@@ -1,11 +1,17 @@
-import type { SlopHost, SlopStatement, SlopWindowSize, WindowSlop } from "./types.ts";
+import type { SlopHost, SlopStatement, SlopWindowSize, WindowSlop, SQLValue } from "./types.ts";
 export type { SlopChange, SlopHost, SlopMediaSnapshot, SlopSnapshot, SlopStatement, SlopStoreKind, SlopWindowSize, WindowSlop } from "./types.ts";
 export { sql } from "./sql.js";
+export { flush } from "./lifecycle.js";
+export { SlopError } from "./errors.js";
+export async function hostInfo() {
+  if (typeof window === "undefined" || !window.slop?.info) throw new Error("Host information is unavailable");
+  return window.slop.info();
+}
 
 let configuredHost: SlopHost | undefined;
 
 const fromBridge = (bridge: WindowSlop): SlopHost => ({
-  query: <T>(sql: string, params: unknown[] = []) => bridge.db.query(sql, params) as Promise<T[]>,
+  query: <T>(sql: string, params: SQLValue[] = []) => bridge.db.query(sql, params) as Promise<T[]>,
   execute: (sql, params = []) => bridge.db.execute(sql, params),
   transaction: (statements: SlopStatement[]) => bridge.db.transaction(statements),
   jsonOpen: async <T>(initialValue: T) => {
@@ -48,8 +54,8 @@ export const slop = {
     onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("json", callback),
   },
   db: {
-    query: <T = Record<string, unknown>>(sql: string, params?: unknown[]) => getHost().query<T>(sql, params),
-    execute: (sql: string, params?: unknown[]) => getHost().execute(sql, params),
+    query: <T = Record<string, unknown>>(sql: string, params?: SQLValue[]) => getHost().query<T>(sql, params),
+    execute: (sql: string, params?: SQLValue[]) => getHost().execute(sql, params),
     transaction: (statements: SlopStatement[]) => getHost().transaction(statements),
     onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("sqlite", callback),
   },
@@ -67,11 +73,4 @@ export const slop = {
 
 export function ready(): void { if (typeof window !== "undefined") window.slop?.ready?.(); }
 
-/// Icon capture support. The native host renders document assets in a
-/// hidden WebView with `<html data-slop-renderer="true">` set before any guest
-/// code runs; use `capture.isRenderer()` to mount the `data-slop-render`
-/// icon target only in that pass and keep it out of the interactive app.
-export const capture = {
-  isRenderer: (): boolean =>
-    typeof document !== "undefined" && document.documentElement.dataset.slopRenderer === "true",
-};
+export { capture, type CaptureMode } from "./capture.js";

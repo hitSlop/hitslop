@@ -1,13 +1,14 @@
 export type SlopStoreKind = "json" | "sqlite" | "media";
-export type SlopChange = { kind: SlopStoreKind; source: "app" | "external" | "dev"; revision?: string | null; sequence?: number };
-export type SlopStatement = { sql: string; parameters?: unknown[] };
+import type { HostInfo, SlopChange, SQLValue } from "@hitslop/schema/bridge";
+export type { HostInfo, SlopChange, SQLValue } from "@hitslop/schema/bridge";
+export type SlopStatement = { sql: string; parameters?: SQLValue[] };
 export type SlopSnapshot<T> = { value: T; revision: string };
 export type SlopMediaSnapshot = { exists: boolean; revision: string | null };
 export type SlopWindowSize = { width: number; height: number };
 
 export interface SlopHost {
-  query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<T[]>;
-  execute(sql: string, params?: unknown[]): Promise<number>;
+  query<T = Record<string, unknown>>(sql: string, params?: SQLValue[]): Promise<T[]>;
+  execute(sql: string, params?: SQLValue[]): Promise<number>;
   transaction(statements: SlopStatement[]): Promise<number>;
   jsonOpen<T>(initialValue: T): Promise<SlopSnapshot<T>>;
   jsonRead<T>(): Promise<SlopSnapshot<T>>;
@@ -21,9 +22,10 @@ export interface SlopHost {
 }
 
 export type WindowSlop = {
+  info?: () => Promise<HostInfo>;
   db: {
-    query: (sql: string, parameters?: unknown[]) => Promise<unknown[]>;
-    execute: (sql: string, parameters?: unknown[]) => Promise<number>;
+    query: (sql: string, parameters?: SQLValue[]) => Promise<unknown[]>;
+    execute: (sql: string, parameters?: SQLValue[]) => Promise<number>;
     transaction: (statements: SlopStatement[]) => Promise<number>;
     onChange: (callback: (event: SlopChange) => void) => () => void;
   };
@@ -44,6 +46,7 @@ export type WindowSlop = {
     drag?: () => Promise<void>;
   };
   ready?: () => void;
+  flush?: () => Promise<void>;
 };
 
 declare global { interface Window { slop?: WindowSlop } }

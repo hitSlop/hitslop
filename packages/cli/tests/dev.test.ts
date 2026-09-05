@@ -58,7 +58,7 @@ test("browser preview keeps JSON in memory and emits local changes", async () =>
   expect(await slop.json.read()).toEqual({ value: { count: 1 }, revision: "dev:0" });
   expect(await slop.json.write({ count: 2 }, opened.revision)).toEqual({ revision: "dev:1" });
   expect(changes).toEqual([{ kind: "json", source: "app", revision: "dev:1" }]);
-  await expect(slop.json.write({ count: 3 }, "dev:0")).rejects.toThrow("revision_conflict");
+  await expect(slop.json.write({ count: 3 }, "dev:0")).rejects.toMatchObject({ code: "revision_conflict" });
   stop();
   await slop.json.write({ count: 4 }, "dev:1");
   expect(changes).toHaveLength(1);

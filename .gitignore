@@ -45,6 +45,7 @@ dist/
 **/dist/
 **/.vite/
 **/.svelte-check/
+**/.svelte-kit/
 .hitslop/
 *.slop
 *.slop.zip

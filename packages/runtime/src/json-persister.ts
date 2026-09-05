@@ -13,6 +13,7 @@ type Options<T> = {
   onRevision: (revision: string | null) => void;
   onSource: (source: Source) => void;
   onError: (message: string | null) => void;
+  onStatus?: (state: { isDirty: boolean; isSaving: boolean }) => void;
 };
 
 export class JsonPersister<T> {
@@ -25,6 +26,24 @@ export class JsonPersister<T> {
   private localVersion = 0;
   private draining: Promise<void> | null = null;
   private operations = Promise.resolve<unknown>(undefined);
+  private failure: Error | null = null;
+
+  private status(): void { this.options.onStatus?.({ isDirty: this.pending !== null || this.writing, isSaving: this.writing }); }
+
+  async flush(): Promise<void> {
+    const retry = this.stopped;
+    await this.operations;
+    if (this.stopped && !retry && this.failure) throw this.failure;
+    if (!this.loaded) {
+      if (!this.pending) return;
+      throw new Error("Document data has not loaded");
+    }
+    this.stopped = false;
+    this.failure = null;
+    this.requestDrain();
+    while (this.draining) await this.draining;
+    if (this.failure) throw this.failure;
+  }
 
   constructor(private options: Options<T>) {
     this.lastPersistedJson = options.fallback.json;
@@ -39,11 +58,13 @@ export class JsonPersister<T> {
       this.pending = null;
       this.stopped = false;
       this.options.onError(null);
+      this.status();
       return;
     }
 
     this.pending = { json, value };
     this.stopped = false;
+    this.status();
     this.requestDrain();
   }
 
@@ -83,6 +104,7 @@ export class JsonPersister<T> {
           this.adopt(result.value, result.revision, wasLoaded ? "external" : "package");
         }
         this.options.onError(null);
+        this.status();
       } catch (error) {
         const message = this.message(error);
         this.options.onError(message);
@@ -113,6 +135,7 @@ export class JsonPersister<T> {
     if (this.draining || !this.loaded || this.stopped || !this.pending) return;
     this.draining = this.schedule(() => this.drainLoop()).finally(() => {
       this.draining = null;
+      this.status();
       if (this.loaded && this.pending && !this.stopped) this.requestDrain();
     });
   }
@@ -120,6 +143,8 @@ export class JsonPersister<T> {
   private async drainLoop(): Promise<void> {
     if (!this.loaded || this.stopped) return;
     this.writing = true;
+    this.status();
+    let conflicts = 0;
     try {
       while (this.pending && !this.stopped) {
         const snapshot = this.pending;
@@ -137,8 +162,10 @@ export class JsonPersister<T> {
           this.options.onRevision(result.revision);
           this.options.onSource("app");
           this.options.onError(null);
+          this.failure = null;
+          conflicts = 0;
         } catch (error) {
-          if (this.message(error).includes("revision_conflict")) {
+          if (error && typeof error === "object" && "code" in error && error.code === "revision_conflict" && conflicts++ === 0) {
             try {
               const result = await this.options.io.read();
               this.revision = result.revision;
@@ -149,6 +176,7 @@ export class JsonPersister<T> {
             } catch (readError) {
               this.pending ??= snapshot;
               this.stopped = true;
+              this.failure = new Error(this.message(readError));
               this.options.onError(this.message(readError));
               continue;
             }
@@ -158,11 +186,13 @@ export class JsonPersister<T> {
           // and re-arms persistence without losing any fields.
           this.pending ??= snapshot;
           this.stopped = true;
+          this.failure = new Error(this.message(error));
           this.options.onError(this.message(error));
         }
       }
     } finally {
       this.writing = false;
+      this.status();
     }
   }
 

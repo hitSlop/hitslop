@@ -1,21 +1,43 @@
 import CryptoKit
+import CoreFoundation
+import DynamicJSON
 import Foundation
 import HitSlopCore
 import SQLite3
 
 private let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
+struct SlopBridgeFailure: LocalizedError {
+    let code: SlopBridgeErrorCode
+    let message: String
+    init(_ code: SlopBridgeErrorCode, _ message: String) { self.code = code; self.message = message }
+    var errorDescription: String? { message }
+}
+
 final class SlopJSONStore {
     let url: URL
     /// Stat-first cache for the change poller: re-read and re-hash the file only
     /// when its modification date or size changes.
     private var revisionCache: (modified: Date, size: UInt64, revision: String)?
-    init(url: URL) { self.url = url }
+    private let schemaURL: URL?
+    private var schema: JSONSchema?
+    init(url: URL, schemaURL: URL? = nil) { self.url = url; self.schemaURL = schemaURL }
+
+    private func validate(_ data: Data) throws {
+        if schema == nil, let schemaURL, FileManager.default.fileExists(atPath: schemaURL.path) {
+            schema = try JSONSchema(data: Data(contentsOf: schemaURL))
+        }
+        if let schema {
+            let result = try JSON(data: data).validate(with: schema, dialect: .draft2020Format)
+            guard result.isValid else { throw SlopBridgeFailure(.validationFailed, "JSON schema validation failed: \(result)") }
+        }
+    }
 
     func open(_ initialValue: Any) throws -> (value: Any, revision: String) {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         if !FileManager.default.fileExists(atPath: url.path) {
             let data = try Self.encode(initialValue)
+            try validate(data)
             do { try data.write(to: url, options: .withoutOverwriting) }
             catch let error as CocoaError where error.code == .fileWriteFileExists { }
         }
@@ -24,13 +46,15 @@ final class SlopJSONStore {
 
     func read() throws -> (value: Any, revision: String) {
         let data = try Data(contentsOf: url)
+        try validate(data)
         return (try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed]), Self.revision(data))
     }
 
     func write(_ value: Any, expectedRevision: String?) throws -> String {
         let current = try Data(contentsOf: url)
-        if let expectedRevision, expectedRevision != Self.revision(current) { throw SlopPackageError.invalid("revision_conflict") }
+        if let expectedRevision, expectedRevision != Self.revision(current) { throw SlopBridgeFailure(.revisionConflict, "The document changed since it was read") }
         let data = try Self.encode(value)
+        try validate(data)
         try data.write(to: url, options: .atomic)
         return Self.revision(data)
     }
@@ -54,7 +78,23 @@ final class SlopJSONStore {
 
 final class SlopThemeStore {
     let url: URL
-    init(url: URL) { self.url = url }
+    private let defaultURL: URL?
+    private var lastValid = Data()
+    init(url: URL, defaultURL: URL? = nil) { self.url = url; self.defaultURL = defaultURL }
+
+    func stylesheet() -> Data {
+        guard FileManager.default.fileExists(atPath: url.path) else { lastValid = Data(); return lastValid }
+        do {
+            guard let defaultURL else { throw SlopBridgeFailure(.validationFailed, "Theme overrides require immutable defaults") }
+            let defaults = try String(contentsOf: defaultURL, encoding: .utf8)
+            let contract = try SlopTheme.properties(defaults)
+            try SlopTheme.validate(defaults, contract: contract)
+            let css = try String(contentsOf: url, encoding: .utf8)
+            try SlopTheme.validate(css, contract: contract)
+            lastValid = Data(css.utf8)
+        } catch { print("[hitSlop theme] Keeping previous theme: \(error.localizedDescription)") }
+        return lastValid
+    }
 
     func revision() throws -> String? {
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
@@ -65,6 +105,8 @@ final class SlopThemeStore {
 
 final class SlopDatabase {
     private var handle: OpaquePointer?
+    private var guestMode = 0 // 0 host, 1 read, 2 mutation
+    private var deadline: UInt64 = 0
     init(url: URL) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         var database: OpaquePointer?
@@ -78,7 +120,8 @@ final class SlopDatabase {
         try executeInternal("PRAGMA journal_mode=WAL")
         try executeInternal("PRAGMA trusted_schema=OFF")
         sqlite3_limit(database, SQLITE_LIMIT_ATTACHED, 0)
-        sqlite3_set_authorizer(database, { _, action, arg1, arg2, _, _ in
+        sqlite3_set_authorizer(database, { context, action, arg1, arg2, _, _ in
+            let store = Unmanaged<SlopDatabase>.fromOpaque(context!).takeUnretainedValue()
             switch action {
             case SQLITE_ATTACH, SQLITE_DETACH, SQLITE_CREATE_VTABLE, SQLITE_DROP_VTABLE: return SQLITE_DENY
             case SQLITE_FUNCTION:
@@ -86,30 +129,40 @@ final class SlopDatabase {
                 return name == "load_extension" ? SQLITE_DENY : SQLITE_OK
             case SQLITE_PRAGMA:
                 let name = arg1.map { String(cString: $0).lowercased() } ?? ""
+                if store.guestMode != 0 {
+                    return store.guestMode == 1 && ["table_info", "table_xinfo", "index_list", "index_info", "foreign_key_list"].contains(name) ? SQLITE_OK : SQLITE_DENY
+                }
                 return ["data_store_directory", "temp_store_directory", "writable_schema"].contains(name) ? SQLITE_DENY : SQLITE_OK
+            case SQLITE_TRANSACTION, SQLITE_SAVEPOINT:
+                return store.guestMode == 0 ? SQLITE_OK : SQLITE_DENY
             default: return SQLITE_OK
             }
-        }, nil)
+        }, Unmanaged.passUnretained(self).toOpaque())
+        sqlite3_progress_handler(database, 1000, { context in
+            let store = Unmanaged<SlopDatabase>.fromOpaque(context!).takeUnretainedValue()
+            return store.deadline != 0 && DispatchTime.now().uptimeNanoseconds > store.deadline ? 1 : 0
+        }, Unmanaged.passUnretained(self).toOpaque())
     }
     deinit { close() }
 
     func query(_ sql: String, parameters: [Any]) throws -> [[String: Any]] {
-        let normalized = sql.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if normalized.hasPrefix("pragma "), !["pragma table_info", "pragma table_xinfo", "pragma index_list", "pragma index_info", "pragma foreign_key_list"].contains(where: normalized.hasPrefix) {
-            throw SlopPackageError.invalid("this PRAGMA is not available to guest queries")
-        }
+        guestMode = 1; deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
+        defer { guestMode = 0; deadline = 0 }
         let statement = try prepareSingle(sql); defer { sqlite3_finalize(statement) }
         guard sqlite3_stmt_readonly(statement) != 0 else { throw SlopPackageError.invalid("query only accepts read-only SQL") }
         try bind(parameters, to: statement)
         var rows: [[String: Any]] = []
+        var bytes = 0
         while true {
             switch sqlite3_step(statement) {
             case SQLITE_ROW:
                 var row: [String: Any] = [:]
                 for index in 0..<sqlite3_column_count(statement) {
                     let key = sqlite3_column_name(statement, index).map { String(cString: $0) } ?? "column_\(index)"
-                    row[key] = column(statement, index)
+                    row[key] = try column(statement, index)
                 }
+                bytes += try JSONSerialization.data(withJSONObject: row).count
+                guard rows.count < 10_000, bytes <= 16 * 1024 * 1024 else { throw SlopBridgeFailure(.limitExceeded, "Query exceeds 10,000 rows or 16 MiB; use LIMIT and pagination") }
                 rows.append(row)
             case SQLITE_DONE: return rows
             default: throw error()
@@ -118,8 +171,10 @@ final class SlopDatabase {
     }
 
     func execute(_ sql: String, parameters: [Any]) throws -> Int {
-        let first = sql.trimmingCharacters(in: .whitespacesAndNewlines).split(whereSeparator: { $0.isWhitespace }).first?.lowercased() ?? ""
-        guard !["pragma", "begin", "commit", "rollback", "savepoint", "release", "attach", "detach"].contains(first) else { throw SlopPackageError.invalid("transaction and connection control are host-owned") }
+        guestMode = 2
+        let ownsDeadline = deadline == 0
+        if ownsDeadline { deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000 }
+        defer { guestMode = 0; if ownsDeadline { deadline = 0 } }
         let statement = try prepareSingle(sql); defer { sqlite3_finalize(statement) }
         guard sqlite3_stmt_readonly(statement) == 0 else { throw SlopPackageError.invalid("execute only accepts mutating SQL") }
         try bind(parameters, to: statement)
@@ -128,6 +183,8 @@ final class SlopDatabase {
     }
 
     func transaction(_ statements: [(String, [Any])]) throws -> Int {
+        deadline = DispatchTime.now().uptimeNanoseconds + 2_000_000_000
+        defer { deadline = 0 }
         try executeInternal("BEGIN IMMEDIATE")
         do {
             var changes = 0
@@ -171,22 +228,29 @@ final class SlopDatabase {
             let index = Int32(offset + 1), result: Int32
             switch value {
             case is NSNull: result = sqlite3_bind_null(statement, index)
-            case let value as Bool: result = sqlite3_bind_int(statement, index, value ? 1 : 0)
-            case let value as Int: result = sqlite3_bind_int64(statement, index, Int64(value))
-            case let value as Int64: result = sqlite3_bind_int64(statement, index, value)
-            case let value as Double: result = sqlite3_bind_double(statement, index, value)
-            case let value as NSNumber: result = sqlite3_bind_double(statement, index, value.doubleValue)
+            case let value as NSNumber:
+                let number = value.doubleValue
+                guard number.isFinite, abs(number) <= 9_007_199_254_740_991 else { throw SlopBridgeFailure(.invalidRequest, "SQLite numbers must be finite and within the JavaScript safe range") }
+                if CFGetTypeID(value) == CFBooleanGetTypeID() { result = sqlite3_bind_int(statement, index, value.boolValue ? 1 : 0) }
+                else if number.rounded() == number { result = sqlite3_bind_int64(statement, index, value.int64Value) }
+                else { result = sqlite3_bind_double(statement, index, number) }
             case let value as String: result = sqlite3_bind_text(statement, index, value, -1, sqliteTransient)
             case let value as Data: result = value.withUnsafeBytes { sqlite3_bind_blob(statement, index, $0.baseAddress, Int32($0.count), sqliteTransient) }
+            case let value as [String: String]:
+                guard value.count == 1, let base64 = value["$blob"], let data = Data(base64Encoded: base64) else { throw SlopBridgeFailure(.invalidRequest, "SQLite blob needs valid base64") }
+                result = data.isEmpty ? sqlite3_bind_zeroblob(statement, index, 0) : data.withUnsafeBytes { sqlite3_bind_blob(statement, index, $0.baseAddress, Int32($0.count), sqliteTransient) }
             default: throw SlopPackageError.invalid("unsupported SQLite parameter")
             }
             guard result == SQLITE_OK else { throw error() }
         }
     }
 
-    private func column(_ statement: OpaquePointer, _ index: Int32) -> Any {
+    private func column(_ statement: OpaquePointer, _ index: Int32) throws -> Any {
         switch sqlite3_column_type(statement, index) {
-        case SQLITE_INTEGER: return sqlite3_column_int64(statement, index)
+        case SQLITE_INTEGER:
+            let value = sqlite3_column_int64(statement, index)
+            guard (-9_007_199_254_740_991...9_007_199_254_740_991).contains(value) else { throw SlopBridgeFailure(.limitExceeded, "SQLite integer exceeds JavaScript precision; cast it to TEXT") }
+            return value
         case SQLITE_FLOAT: return sqlite3_column_double(statement, index)
         case SQLITE_TEXT: return sqlite3_column_text(statement, index).map { String(cString: $0) } ?? NSNull()
         case SQLITE_BLOB:
@@ -200,5 +264,8 @@ final class SlopDatabase {
         guard let handle else { throw SlopPackageError.invalid("SQLite store is closed") }
         guard sqlite3_exec(handle, sql, nil, nil, nil) == SQLITE_OK else { throw error() }
     }
-    private func error() -> SlopPackageError { .invalid(handle.map { String(cString: sqlite3_errmsg($0)) } ?? "SQLite store is closed") }
+    private func error() -> SlopBridgeFailure {
+        let code: SlopBridgeErrorCode = handle.map { sqlite3_errcode($0) == SQLITE_INTERRUPT } == true ? .limitExceeded : .storageError
+        return .init(code, handle.map { String(cString: sqlite3_errmsg($0)) } ?? "SQLite store is closed")
+    }
 }

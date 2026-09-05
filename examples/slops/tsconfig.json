@@ -11,16 +11,14 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
-    "types": ["vite/client"],
+    "types": ["vite/client", "bun"],
     "verbatimModuleSyntax": true,
-    "jsx": "react-jsx",
     "paths": {
-      "@hitslop/react": ["../../packages/react/src/index.ts"],
       "@hitslop/runtime": ["../../packages/runtime/src/index.ts"],
       "@hitslop/runtime/adapter": ["../../packages/runtime/src/adapter.ts"],
       "@hitslop/svelte": ["../../packages/svelte/src/index.ts"]
     }
   },
   "include": ["**/*.svelte", "**/*.ts", "**/*.tsx", "**/*.js"],
-  "exclude": ["**/*.test.ts"]
+  "exclude": ["_backlog", ".svelte-check", "**/.svelte-check/**", "node_modules", "**/node_modules/**", "**/dist/**", "**/*.test.ts"]
 }

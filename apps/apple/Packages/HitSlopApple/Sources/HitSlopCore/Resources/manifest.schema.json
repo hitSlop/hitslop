@@ -1,216 +1,150 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$ref": "#/$defs/SlopManifest",
-  "$defs": {
-    "SlopManifest": {
-      "type": "object",
-      "properties": {
-        "$schema": {
-          "$ref": "#/$defs/__schema0"
-        },
-        "author": {
-          "$ref": "#/$defs/SlopAuthor"
-        },
-        "slug": {
-          "$ref": "#/$defs/__schema3"
-        },
-        "title": {
-          "$ref": "#/$defs/__schema4"
-        },
-        "description": {
-          "$ref": "#/$defs/__schema5"
-        },
-        "categories": {
-          "$ref": "#/$defs/SlopCategories"
-        },
-        "presentation": {
-          "$ref": "#/$defs/SlopPresentation"
-        }
-      },
-      "required": [
-        "$schema",
-        "author",
-        "slug",
-        "title",
-        "description",
-        "categories",
-        "presentation"
-      ],
-      "additionalProperties": false,
-      "title": "SlopManifest"
-    },
-    "__schema0": {
+  "type": "object",
+  "required": [
+    "$schema",
+    "author",
+    "slug",
+    "title",
+    "description",
+    "categories",
+    "presentation"
+  ],
+  "properties": {
+    "$schema": {
       "type": "string",
       "const": "https://api.hitslop.com/schemas/v1/manifest.schema.json"
     },
-    "SlopAuthor": {
+    "author": {
       "type": "object",
-      "properties": {
-        "name": {
-          "$ref": "#/$defs/__schema1"
-        },
-        "url": {
-          "$ref": "#/$defs/__schema2"
-        }
-      },
       "required": [
         "name"
       ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "\\S"
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 2048,
+          "format": "uri",
+          "pattern": "^https?://[^/?#\\s]+"
+        }
+      },
       "additionalProperties": false,
       "title": "SlopAuthor"
     },
-    "__schema1": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 80
-    },
-    "__schema2": {
-      "allOf": [
-        {
-          "type": "string",
-          "maxLength": 2048,
-          "format": "uri"
-        },
-        {
-          "type": "string",
-          "maxLength": 2048,
-          "pattern": "^https?:\\/\\/"
-        }
-      ]
-    },
-    "__schema3": {
+    "slug": {
       "type": "string",
       "minLength": 2,
       "maxLength": 64,
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
     },
-    "__schema4": {
+    "title": {
       "type": "string",
       "minLength": 1,
       "maxLength": 80
     },
-    "__schema5": {
+    "description": {
       "type": "string",
       "minLength": 1,
       "maxLength": 240
     },
-    "SlopCategories": {
-      "minItems": 1,
-      "maxItems": 2,
+    "categories": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/SlopCategory"
+        "enum": [
+          "productivity",
+          "utilities",
+          "finance",
+          "media",
+          "games",
+          "developer-tools",
+          "education",
+          "business",
+          "personal",
+          "other"
+        ],
+        "title": "SlopCategory"
       },
-      "title": "SlopCategories",
+      "minItems": 1,
+      "maxItems": 2,
       "uniqueItems": true
     },
-    "SlopCategory": {
-      "type": "string",
-      "enum": [
-        "productivity",
-        "utilities",
-        "finance",
-        "media",
-        "games",
-        "developer-tools",
-        "education",
-        "business",
-        "personal",
-        "other"
-      ],
-      "title": "SlopCategory"
-    },
-    "SlopPresentation": {
+    "presentation": {
       "anyOf": [
         {
-          "$ref": "#/$defs/SlopStandardPresentation"
+          "type": "object",
+          "required": [
+            "width",
+            "height"
+          ],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 240,
+              "maximum": 4096
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 180,
+              "maximum": 4096
+            },
+            "resizable": {
+              "type": "boolean"
+            },
+            "shape": {
+              "enum": [
+                "rounded",
+                "ellipse",
+                "capsule"
+              ]
+            },
+            "background": {
+              "type": "string",
+              "const": "transparent"
+            }
+          },
+          "additionalProperties": false,
+          "title": "SlopStandardPresentation"
         },
         {
-          "$ref": "#/$defs/SlopSkinPresentation"
+          "type": "object",
+          "required": [
+            "width",
+            "height",
+            "skin"
+          ],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 240,
+              "maximum": 4096
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 180,
+              "maximum": 4096
+            },
+            "skin": {
+              "type": "string",
+              "minLength": 12,
+              "maxLength": 240,
+              "pattern": "^assets/(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+\\.[pP][nN][gG]$"
+            }
+          },
+          "additionalProperties": false,
+          "title": "SlopSkinPresentation"
         }
       ],
       "title": "SlopPresentation"
-    },
-    "SlopStandardPresentation": {
-      "type": "object",
-      "properties": {
-        "width": {
-          "$ref": "#/$defs/__schema6"
-        },
-        "height": {
-          "$ref": "#/$defs/__schema7"
-        },
-        "resizable": {
-          "$ref": "#/$defs/__schema8"
-        },
-        "shape": {
-          "$ref": "#/$defs/__schema9"
-        },
-        "background": {
-          "$ref": "#/$defs/__schema10"
-        }
-      },
-      "required": [
-        "width",
-        "height"
-      ],
-      "additionalProperties": false,
-      "title": "SlopStandardPresentation"
-    },
-    "__schema6": {
-      "type": "integer",
-      "minimum": 240,
-      "maximum": 4096
-    },
-    "__schema7": {
-      "type": "integer",
-      "minimum": 180,
-      "maximum": 4096
-    },
-    "__schema8": {
-      "type": "boolean"
-    },
-    "__schema9": {
-      "type": "string",
-      "enum": [
-        "rounded",
-        "ellipse",
-        "capsule"
-      ]
-    },
-    "__schema10": {
-      "type": "string",
-      "const": "transparent"
-    },
-    "SlopSkinPresentation": {
-      "type": "object",
-      "properties": {
-        "width": {
-          "$ref": "#/$defs/__schema6"
-        },
-        "height": {
-          "$ref": "#/$defs/__schema7"
-        },
-        "skin": {
-          "$ref": "#/$defs/__schema11"
-        }
-      },
-      "required": [
-        "width",
-        "height",
-        "skin"
-      ],
-      "additionalProperties": false,
-      "title": "SlopSkinPresentation"
-    },
-    "__schema11": {
-      "type": "string",
-      "minLength": 12,
-      "maxLength": 240,
-      "pattern": "^assets\\/(?!.*(?:^|\\/)\\.\\.(?:\\/|$))[A-Za-z0-9._/-]+\\.png$"
     }
   },
-  "$id": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "additionalProperties": false,
   "title": "SlopManifest",
+  "$id": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
   "description": "The framework-neutral manifest for hitSlop web documents."
 }

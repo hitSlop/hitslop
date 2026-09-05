@@ -95,14 +95,14 @@ import Testing
     #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
 }
 
-@Test func rejectsInvalidSchemaMetadataAndThemeEncoding() throws {
+@Test func rejectsInvalidSchemaMetadataButOpensDamagedMutableTheme() throws {
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     try Data("not json".utf8).write(to: root.appendingPathComponent("data.schema.json"))
     #expect(throws: (any Error).self) { _ = try SlopPackage(rootURL: root) }
     try FileManager.default.removeItem(at: root.appendingPathComponent("data.schema.json"))
     try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
     try Data([0xff]).write(to: root.appendingPathComponent("stores/theme.css"))
-    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
 }
 
 @Test func rejectsNoncanonicalSchemaMetadataNames() throws {
@@ -111,18 +111,18 @@ import Testing
     #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
 }
 
-@Test func validatesCanonicalEmbeddedDocumentSkill() throws {
+@Test func opensChangedEmbeddedDocumentGuidance() throws {
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
     try Data("changed".utf8).write(to: skill)
-    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
 }
 
-@Test func rejectsPackageWithoutDocumentSkill() throws {
+@Test func opensPackageWithoutDocumentSkill() throws {
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     try FileManager.default.removeItem(at: root.appendingPathComponent(".agents"))
-    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
 }
 
 @Test func validatesSkinPixelsAndAlpha() throws {

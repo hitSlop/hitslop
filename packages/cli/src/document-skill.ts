@@ -5,7 +5,6 @@ import {
   documentGuideSource,
   documentSkillContent,
   documentSkillPath,
-  isCanonicalDocumentSkill,
   maxDocumentGuideBytes,
 } from "@hitslop/schema";
 
@@ -38,7 +37,7 @@ export async function readDocumentGuideSource(sourceRoot: string): Promise<Buffe
 export async function validateDocumentSkill(root: string): Promise<void> {
   const agents = join(root, ".agents");
   if (!await exists(agents)) {
-    throw new Error(`Runtime package is missing ${documentSkillPath}.`);
+    return;
   }
   await requireDirectory(agents, ".agents");
   await requireOnly(agents, new Set(["skills"]), ".agents");
@@ -52,10 +51,8 @@ export async function validateDocumentSkill(root: string): Promise<void> {
   const skillPath = join(root, documentSkillPath);
   const skillInfo = await lstat(skillPath).catch(() => undefined);
   if (!skillInfo?.isFile() || skillInfo.isSymbolicLink()) throw new Error(`${documentSkillPath} must be a regular file.`);
-  let canonical = false;
-  try { canonical = isCanonicalDocumentSkill(await readFile(skillPath)); }
+  try { decoder.decode(await readFile(skillPath)); }
   catch { throw new Error(`${documentSkillPath} must be UTF-8.`); }
-  if (!canonical) throw new Error(`${documentSkillPath} is not a recognized canonical hitSlop document skill.`);
 
   const references = join(folder, "references");
   if (!await exists(references)) return;

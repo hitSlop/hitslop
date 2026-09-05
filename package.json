@@ -12,9 +12,9 @@
     "Prototypes/*"
   ],
   "scripts": {
-    "build": "bun run schema:generate && bun run --cwd packages/schema build && bun run --cwd packages/runtime build && bun run --cwd packages/svelte build && bun run --cwd packages/react build && bun run --cwd packages/cli build && bun run --cwd apps/firebase build && bun run --cwd apps/landing build && bun run --cwd examples/slops build",
+    "build": "bun run schema:generate && bun run --cwd packages/schema build && bun run --cwd packages/runtime build && bun run --cwd packages/svelte build && bun run --cwd packages/cli build && bun run --cwd apps/firebase build && bun run --cwd apps/landing build && bun run --cwd examples/slops build",
     "check": "bun run schema:check && bun run --filter '@hitslop/*' check",
-    "test": "bun run --cwd packages/schema test && bun run --cwd packages/runtime test && bun run --cwd packages/svelte test && bun run --cwd packages/react test && bun run --cwd packages/cli test && bun run --cwd apps/firebase test && bun run --cwd examples/slops test",
+    "test": "bun run --cwd packages/schema test && bun run --cwd packages/runtime test && bun run --cwd packages/svelte test && bun run --cwd packages/cli test && bun run --cwd apps/firebase test && bun run --cwd examples/slops test",
     "release:check": "bun scripts/release-check.ts",
     "release:npm:check": "bun scripts/npm-release-check.ts",
     "examples:check": "bun run --cwd examples/slops check && bun run --cwd examples/slops test && bun run --cwd examples/slops build",
@@ -30,5 +30,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^7.0.2"
+  },
+  "patchedDependencies": {
+    "@sveltejs/package@2.5.8": "patches/@sveltejs%2Fpackage@2.5.8.patch"
   }
 }

@@ -12,12 +12,14 @@
   "files": ["dist"],
   "exports": {
     ".": "./dist/index.js",
-    "./adapter": "./dist/adapter.js"
+    "./adapter": "./dist/adapter.js",
+    "./theme": "./dist/theme.js"
   },
   "scripts": {
     "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
     "check": "tsc -p tsconfig.json",
     "test": "bun test"
   },
+  "dependencies": { "@hitslop/schema": "^0.1.3" },
   "devDependencies": { "typescript": "^7.0.2" }
 }

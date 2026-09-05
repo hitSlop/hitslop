@@ -1,5 +1,5 @@
 import { slop } from "@hitslop/runtime";
-import { JsonPersister, type JsonSnapshot } from "@hitslop/runtime/adapter";
+import { JsonPersister, registerFlush, type JsonSnapshot } from "@hitslop/runtime/adapter";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ExternalStore, errorMessage } from "./external-store.js";
 
@@ -9,6 +9,8 @@ type JsonState<T> = {
   /** Latest value. Treat it as immutable; change it through `set` or `update`. */
   value: T;
   isLoading: boolean;
+  isDirty: boolean;
+  isSaving: boolean;
   error: string | null;
   revision: string | null;
   lastChangeSource: Source;
@@ -21,6 +23,7 @@ export type JsonStore<T> = JsonState<T> & {
   update: (mutate: (draft: T) => void) => void;
   /** Discard pending edits and re-read the canonical store. */
   reload: () => Promise<void>;
+  flush: () => Promise<void>;
 };
 
 const snapshot = <T>(value: T): JsonSnapshot<T> => {
@@ -37,7 +40,7 @@ export class JsonStoreCore<T> extends ExternalStore<JsonState<T>> {
 
   constructor(initial: T) {
     const fallback = snapshot(initial);
-    super({ value: fallback.value, isLoading: true, error: null, revision: null, lastChangeSource: "package" });
+    super({ value: fallback.value, isLoading: true, isDirty: false, isSaving: false, error: null, revision: null, lastChangeSource: "package" });
     this.local = fallback;
     this.persister = new JsonPersister<T>({
       fallback,
@@ -54,13 +57,16 @@ export class JsonStoreCore<T> extends ExternalStore<JsonState<T>> {
       onRevision: (revision) => this.patch({ revision }),
       onSource: (source) => this.patch({ lastChangeSource: source }),
       onError: (error) => this.patch({ error }),
+      onStatus: (status) => this.patch(status),
     });
   }
 
   /** Starts the initial load once and watches for external changes. */
   attach = (): (() => void) => {
     if (!this.loaded) { this.loaded = true; void this.reload(); }
-    return slop.json.onChange((event) => this.persister.externalChanged(event.revision));
+    const unwatch = slop.json.onChange((event) => this.persister.externalChanged(event.revision));
+    const unregister = registerFlush(this.flush);
+    return () => { unwatch(); unregister(); };
   };
 
   set = (value: T): void => {
@@ -92,6 +98,7 @@ export class JsonStoreCore<T> extends ExternalStore<JsonState<T>> {
       this.patch({ isLoading: false });
     }
   };
+  flush = (): Promise<void> => this.persister.flush();
 }
 
 export function useJsonStore<T>(initial: T): JsonStore<T> {
@@ -99,7 +106,7 @@ export function useJsonStore<T>(initial: T): JsonStore<T> {
   useEffect(() => store.attach(), [store]);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   return useMemo(
-    () => ({ ...state, set: store.set, update: store.update, reload: store.reload }),
+    () => ({ ...state, set: store.set, update: store.update, reload: store.reload, flush: store.flush }),
     [state, store],
   );
 }

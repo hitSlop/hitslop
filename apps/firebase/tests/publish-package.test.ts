@@ -18,13 +18,13 @@ describe("published package images", () => {
     expect(result.icon).toEqual(icon());
   });
 
-  test("requires the canonical document skill and validates the data schema", () => {
+  test("accepts optional guidance and validates the data schema", () => {
     const bytes = (value: string) => new TextEncoder().encode(value);
     expect(() => validatePackageMetadata({ [documentSkillPath]: bytes(documentSkillContent), "data.schema.json": bytes("{}") })).not.toThrow();
     expect(() => validatePackageMetadata({ [documentSkillPath]: bytes(documentSkillContent), "data.schema.json": bytes("nope") })).toThrow("valid UTF-8 JSON");
     expect(() => validatePackageMetadata({ [documentSkillPath]: bytes(documentSkillContent), "data.schema.json": bytes('{"type":"nope"}') })).toThrow("valid UTF-8 JSON");
-    expect(() => validatePackageMetadata({ [documentSkillPath]: bytes("changed") })).toThrow("canonical");
-    expect(() => validatePackageMetadata({})).toThrow("must contain");
+    expect(() => validatePackageMetadata({ [documentSkillPath]: bytes("changed") })).not.toThrow();
+    expect(() => validatePackageMetadata({})).not.toThrow();
     expect(() => validatePackagePath("schema.json")).toThrow("cannot contain");
     expect(() => validatePackagePath("SCHEMA.md")).toThrow("cannot contain");
   });

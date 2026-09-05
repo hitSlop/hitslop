@@ -40,7 +40,7 @@ bun run release:npm:check
 Publish in dependency order:
 
 1. `@hitslop/schema` and `@hitslop/runtime`
-2. `@hitslop/svelte` and `@hitslop/react`
+2. `@hitslop/svelte`
 3. `@hitslop/cli`
 
 Use `bun pm pack --dry-run` in every package before publishing. Verify the

@@ -1,18 +1,18 @@
-import { z } from "zod";
+import * as Type from "typebox";
+import { validate } from "./validation.js";
 
-export const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
-
-export const PublishEnvelopeSchema = z.object({
-  format: z.literal("hitslop-publish/3"),
-  requestId: z.string().uuid(),
-  publisherKeyId: z.string().min(16).max(64),
-  publicKey: z.string().min(40).max(100),
+export const Sha256Schema = Type.String({ pattern: "^[a-f0-9]{64}$" });
+export const PublishEnvelopeSchema = Type.Object({
+  format: Type.Literal("hitslop-publish/3"),
+  requestId: Type.String({ format: "uuid" }),
+  publisherKeyId: Type.String({ minLength: 16, maxLength: 64 }),
+  publicKey: Type.String({ minLength: 40, maxLength: 100 }),
   artifactSha256: Sha256Schema,
-  artifactBytes: z.number().int().positive().max(25 * 1024 * 1024),
-  timestamp: z.number().int().positive(),
-}).strict();
-
-export type PublishEnvelope = z.infer<typeof PublishEnvelopeSchema>;
+  artifactBytes: Type.Integer({ minimum: 1, maximum: 25 * 1024 * 1024 }),
+  timestamp: Type.Integer({ minimum: 1 }),
+}, { additionalProperties: false });
+export type PublishEnvelope = Type.Static<typeof PublishEnvelopeSchema>;
+export const parsePublishEnvelope = (input: unknown): PublishEnvelope => validate(PublishEnvelopeSchema, input);
 
 const canonicalize = (value: unknown): string => {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -22,4 +22,4 @@ const canonicalize = (value: unknown): string => {
 };
 
 export const canonicalPublishEnvelope = (envelope: PublishEnvelope): Uint8Array =>
-  new TextEncoder().encode(canonicalize(PublishEnvelopeSchema.parse(envelope)));
+  new TextEncoder().encode(canonicalize(parsePublishEnvelope(envelope)));

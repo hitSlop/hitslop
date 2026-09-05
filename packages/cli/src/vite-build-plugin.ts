@@ -1,73 +1,76 @@
-import type { Plugin, UserConfig } from "vite";
-import { version as viteVersion } from "vite";
+import { parse, type DefaultTreeAdapterMap } from "parse5";
+import type { Plugin } from "vite";
 
 export type HitSlopBuildPluginOptions = { hasTheme: boolean };
-type BundleAsset = { type: "asset"; fileName: string; source: string | Uint8Array };
-type BundleChunk = { type: "chunk"; fileName: string; code: string };
+type Element = DefaultTreeAdapterMap["element"];
 
-const escapePattern = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function elements(html: string): Element[] {
+  const result: Element[] = [];
+  const visit = (node: DefaultTreeAdapterMap["node"]): void => {
+    if ("tagName" in node) result.push(node);
+    if ("childNodes" in node) node.childNodes.forEach(visit);
+  };
+  visit(parse(html, { sourceCodeLocationInfo: true }));
+  return result;
+}
+const attribute = (node: Element, name: string) => node.attrs.find((attr) => attr.name === name)?.value;
+const matches = (value: string | undefined, file: string) => value?.replace(/^\.\//, "") === file;
+
+function replaceElements(html: string, replace: (element: Element) => string | undefined): string {
+  for (const element of elements(html).reverse()) {
+    const replacement = replace(element);
+    const location = element.sourceCodeLocation;
+    if (replacement !== undefined && location) html = html.slice(0, location.startOffset) + replacement + html.slice(location.endOffset);
+  }
+  return html;
+}
 
 export function inlineScript(html: string, fileName: string, code: string): string {
-  const name = escapePattern(fileName);
-  const tag = new RegExp(`<script([^>]*?)\\ssrc=["'](?:[^"']*\\/)?${name}["']([^>]*)>\\s*</script>`, "g");
-  const safeCode = code.replace(/"?__VITE_PRELOAD__"?/g, "void 0").replace(/<(\/script>|!--)/g, "\\x3C$1");
-  return html.replace(tag, (_match, before, after) => `<script${before}${after}>${safeCode.trim()}</script>`);
+  return replaceElements(html, (node) => {
+    if (node.tagName !== "script" || !matches(attribute(node, "src"), fileName)) return;
+    const start = node.sourceCodeLocation!.startTag!;
+    const tag = html.slice(start.startOffset, start.endOffset);
+    const src = node.sourceCodeLocation!.attrs!.src!;
+    const withoutSource = tag.slice(0, src.startOffset - start.startOffset) + tag.slice(src.endOffset - start.startOffset);
+    return withoutSource.replace(/\s+>/, ">") + code.replace(/<(\/script|!--)/gi, "\\x3C$1") + "</script>";
+  });
 }
 
 export function inlineStyle(html: string, fileName: string, css: string): string {
-  const name = escapePattern(fileName);
-  const tag = new RegExp(`<link([^>]*?)\\shref=["'](?:[^"']*\\/)?${name}["']([^>]*)>`, "g");
-  return html.replace(tag, (_match, before, after) => `<style${before}${after}>${css.replace('@charset "UTF-8";', "").trim()}</style>`);
+  return replaceElements(html, (node) => {
+    if (node.tagName !== "link" || !matches(attribute(node, "href"), fileName)) return;
+    const media = attribute(node, "media");
+    const attributes = media ? ' media="' + media.replaceAll("&", "&amp;").replaceAll('"', "&quot;") + '"' : "";
+    return "<style" + attributes + ">" + css.replace(/@charset\s+"UTF-8";/i, "").replace(/<\/style/gi, "<\\/style").trim() + "</style>";
+  });
 }
 
-const addThemeLinks = (html: string): string => {
-  if (html.includes("data-hitslop-theme-default")) return html;
-  const links = '<link rel="stylesheet" href="assets/theme.css" data-hitslop-theme-default><link rel="stylesheet" href="theme.css" data-hitslop-theme>';
-  return /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${links}</head>`) : links + html;
-};
-
-/** Builds one source-free app.html while preserving an external theme contract. */
+/** Preserve the JS/resource graph; inline only linked structural CSS. */
 export function hitSlopBuildPlugin(options: HitSlopBuildPluginOptions): Plugin {
-  const configure = (config: UserConfig): void => {
-    config.base = "./";
-    config.build ??= {};
-    config.build.assetsInlineLimit = () => true;
-    config.build.chunkSizeWarningLimit = 100_000_000;
-    config.build.cssCodeSplit = false;
-    config.build.assetsDir = "";
-    config.build.rollupOptions ??= {};
-    config.build.rollupOptions.output ??= {};
-    const outputs = Array.isArray(config.build.rollupOptions.output)
-      ? config.build.rollupOptions.output
-      : [config.build.rollupOptions.output];
-    for (const output of outputs) {
-      if (Number.parseInt(viteVersion.split(".")[0] ?? "0", 10) >= 8) {
-        (output as { codeSplitting: boolean }).codeSplitting = false;
-      } else output.inlineDynamicImports = true;
-    }
-  };
-
   return {
     name: "hitslop:build",
     enforce: "post",
-    config: configure,
+    config: () => ({ base: "./", build: { cssCodeSplit: false, assetsDir: "assets", sourcemap: false, assetsInlineLimit: 4096 } }),
     generateBundle(_output, bundle) {
-      const htmlAssets = Object.values(bundle).filter((item): item is typeof item & BundleAsset => item.type === "asset" && item.fileName.endsWith(".html"));
-      const scripts = Object.values(bundle).filter((item): item is typeof item & BundleChunk => item.type === "chunk" && /\.[mc]?js$/.test(item.fileName));
-      const styles = Object.values(bundle).filter((item): item is typeof item & BundleAsset => item.type === "asset" && item.fileName.endsWith(".css"));
-      const consumed = new Set<string>();
-
-      for (const asset of htmlAssets) {
-        let html = typeof asset.source === "string" ? asset.source : new TextDecoder().decode(asset.source);
-        for (const script of scripts) { html = inlineScript(html, script.fileName, script.code); consumed.add(script.fileName); }
-        for (const style of styles) {
-          const css = typeof style.source === "string" ? style.source : new TextDecoder().decode(style.source);
-          html = inlineStyle(html, style.fileName, css); consumed.add(style.fileName);
+      for (const asset of Object.values(bundle)) {
+        if (asset.type !== "asset" || !asset.fileName.endsWith(".html")) continue;
+        let html = String(asset.source);
+        for (const style of Object.values(bundle)) {
+          if (style.type !== "asset" || !style.fileName.endsWith(".css")) continue;
+          const directory = style.fileName.slice(0, style.fileName.lastIndexOf("/") + 1);
+          const css = String(style.source).replace(/url\((['"]?)(\.\/)?([^)'"\s]+)\1\)/g, (match, quote: string, _dot: string, url: string) =>
+            /^(?:[a-z]+:|\/|#)/i.test(url) ? match : "url(" + quote + directory + url + quote + ")");
+          const updated = inlineStyle(html, style.fileName, css);
+          if (updated !== html) { html = updated; delete bundle[style.fileName]; }
         }
-        if (options.hasTheme) html = addThemeLinks(html);
+        if (options.hasTheme) {
+          const head = elements(html).find((node) => node.tagName === "head");
+          const offset = head?.sourceCodeLocation?.endTag?.startOffset ?? 0;
+          const links = '<link rel="stylesheet" href="assets/theme.css" data-hitslop-theme-default><link rel="stylesheet" href="theme.css" data-hitslop-theme>';
+          html = html.slice(0, offset) + links + html.slice(offset);
+        }
         asset.source = html;
       }
-      for (const fileName of consumed) delete bundle[fileName];
     },
   };
 }

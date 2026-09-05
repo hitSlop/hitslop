@@ -3,8 +3,7 @@ import { lstat, readFile, readdir, stat } from "node:fs/promises";
 import { basename, join, relative, sep } from "node:path";
 import { unzipSync } from "fflate";
 import { decode as decodePng } from "fast-png";
-import * as z from "zod";
-import type { SlopManifest } from "@hitslop/schema";
+import { compileDataSchema, type SlopManifest } from "@hitslop/schema";
 import { validateDocumentSkill } from "./document-skill.ts";
 import { loadManifest } from "./project.ts";
 import { validateIconPng, validateStaticPng } from "./static-preview.ts";
@@ -54,7 +53,7 @@ async function readDataSchema(root: string): Promise<Record<string, unknown> | u
   try {
     const value = JSON.parse(await readFile(current, "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("schema root must be an object");
-    z.fromJSONSchema(value);
+    compileDataSchema(value);
     return value as Record<string, unknown>;
   } catch (error) {
     throw new Error(`data.schema.json must contain valid JSON Schema: ${error instanceof Error ? error.message : String(error)}`);
@@ -77,11 +76,10 @@ async function validateStores(root: string, schema: Record<string, unknown> | un
     try { value = JSON.parse(decoder.decode(await readFile(json))); }
     catch (error) { throw new Error(`stores/data.json must be valid UTF-8 JSON: ${error instanceof Error ? error.message : String(error)}`); }
     if (schema) {
-      let validator: z.ZodType;
-      try { validator = z.fromJSONSchema(schema); }
+      let validator: ReturnType<typeof compileDataSchema>;
+      try { validator = compileDataSchema(schema); }
       catch (error) { throw new Error(`The data schema is not supported: ${error instanceof Error ? error.message : String(error)}`); }
-      const result = validator.safeParse(value);
-      if (!result.success) throw new Error(`stores/data.json does not match the data schema: ${z.prettifyError(result.error)}`);
+      validator(value);
     }
   }
   const sqlite = join(stores, "data.sqlite");

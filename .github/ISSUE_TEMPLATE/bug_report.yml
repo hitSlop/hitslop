@@ -14,7 +14,6 @@ body:
         - macOS or iOS app
         - Authoring CLI
         - Svelte SDK
-        - React SDK
         - Catalog or registry
         - A bundled example
         - Other

@@ -30,14 +30,27 @@ adding persistence or changing the runtime boundary.
 - Runtime packages contain `manifest.json`, generated `app.html`, optional
   `data.schema.json`, the canonical document Agent Skill, optional immutable `assets/`, optional host-owned
   `stores/` in writable documents, and optional `QuickLook/` images.
-- Svelte JSON stores require `{ schema, initial }`; default-export the Zod 4
-  schema from root `schema.ts` and attach that same export to the store.
+- Author root `schema.ts` with `import * as Type from "typebox"`.
+  Import that schema directly into `jsonStore({ schema, initial })`.
+  Type inference requires no generated files or running dev server. The store
+  uses TypeBox runtime validation; builds emit `data.schema.json` for the host.
+  Keep schema definitions deterministic: app and builder evaluate separately.
+  Never manually supply a validator or rewrite ordinary schema imports. Preserve
+  unknown fields with `additionalProperties: true`; never coerce or insert defaults.
+  Quick Checklist is the only active example. Paused source is preserved in
+  `examples/slops/_backlog/`, excluded from active checks, tests, and builds.
+  Promote and migrate one example at a time. The init template is deferred.
 - Authored templates and published artifacts contain no stores, source,
   dependencies, build caches, editable stylesheets, SQLite sidecars, or
   Finder-managed `Icon\r`.
 - Storage is implicit and ID-free. Never add storage declarations or release
   versions to the manifest.
 - Treat `dist/<slug>.slop` as generated output.
+- Quick Checklist is the reference pilot: root `theme.ts` uses `defineTheme`
+  from `@hitslop/runtime/theme`, supplying typed variables and generated
+  immutable `assets/theme.css`. Owners still edit `stores/theme.css`.
+- Builds embed document guidance; missing or changed guidance never prevents
+  opening. Do not compare its text with the host's current copy.
 - Publishing captures `QuickLook/Preview.png`, produces an exact 512×512
   `QuickLook/Icon.png`, and signs one immutable ZIP.
 - Publisher ownership comes from the local Ed25519 identity; back it up with

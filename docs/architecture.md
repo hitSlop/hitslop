@@ -82,8 +82,19 @@ slop.window.resize({ width, height })
 slop.window.drag()
 ```
 
-`@hitslop/runtime` exposes this contract. Svelte and React packages adapt it
-to their reactive models; they do not define a second persistence system.
+`@hitslop/runtime` exposes this contract. The Svelte package adapts it
+to its reactive model; it does not define a second persistence system.
+
+`packages/schema/src/bridge.ts` defines the wire requests, reply envelope,
+error codes, host information, SQL values, and change events. One
+`BridgeMethods` registry pairs parameter and result schemas for each method.
+JavaScript calls infer their result from the method and validate the
+reply envelope and method-specific value before returning it. Generation emits
+the native request schema, Swift method/error enums, and the browser bridge
+bundle. The Apple host validates every request before dispatch. Storage runs
+on a serial worker, while WebKit and window operations remain on the UI actor.
+`hostInfo()` reports protocol version and capabilities; errors expose a stable
+`code`. `flush()` waits for registered framework stores and bridge writes.
 
 Browser `slop dev` injects a disposable in-memory implementation of this
 contract for UI work. It has no disk-backed bridge or polling. On macOS, built
@@ -91,11 +102,11 @@ documents use FSEvents to wake revision checks after external file changes.
 
 ## Schema pipeline
 
-Zod under `packages/schema/src` is authoritative for the shared manifest and
+TypeBox under `packages/schema/src` is authoritative for the shared manifest and
 publish protocol:
 
 ```text
-Zod → JSON Schema draft 2020-12 → Swift Codable models
+TypeBox → JSON Schema draft 2020-12 → Swift Codable models
                          └──────→ bundled Swift validation resource
 ```
 
@@ -104,25 +115,25 @@ committed and CI rejects drift.
 
 Each Svelte app with a JSON store also default-exports its data schema from root
 `schema.ts` and attaches it to `jsonStore({ schema, initial })`. The CLI emits
-that app-specific contract as `data.schema.json` during build.
+that app-specific persisted-value contract as `data.schema.json` during build.
+The native host and CLI validate it without coercion or field removal.
 
-Every new build also embeds one immutable, canonical Agent Skill at
+Every new build also embeds one immutable Agent Skill at
 `.agents/skills/hitslop-document`. It teaches compatible agents the package
 boundary and safe direct-file workflows. A publisher may add only one bounded
 Markdown reference through source `document-guide.md`; scripts, extra skills,
-and arbitrary resources are rejected.
+and arbitrary resources are rejected by authoring validation. Guidance is
+optional when opening a document; its contents are not compared with the host's
+current copy.
 
 ## Capture and export
 
-The native renderer uses a separate hidden WebView. It marks the root with
-capture state, waits for `slop.ready()`, layout settlement, and a short font/
-paint buffer, then captures. Preview preserves manifest dimensions. PNG and PDF
-exports use current width and full document height; PNG is deterministic 2× and
-PDF retains WebKit text/vector output.
-
-An optional renderer-only `icon` target is 512×512. Finder and compact catalog
-rows use the icon; catalog detail uses the full preview. See
-[Design and presentation](presentation.md).
+Background capture uses a hidden WebView with a disposable package snapshot.
+Interactive export uses the current session, serializes capture, and restores
+editor state. A shared runtime controller prepares optional Svelte capture views,
+awaits assets and stable layout, and retains the existing static CSS fallback.
+Preview and icon failures are independent; Finder metadata refreshes on close.
+See [Capture views](capture.md) for authoring, dimensions, and limits.
 
 ## Platform topology
 

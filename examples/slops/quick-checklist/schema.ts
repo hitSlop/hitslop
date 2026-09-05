@@ -1,14 +1,14 @@
-import { z } from "zod";
+import * as Type from "typebox";
 
-const checklistSchema = z.object({
-  title: z.string(),
-  tasks: z.array(z.object({
-    id: z.string(),
-    text: z.string(),
-    done: z.boolean(),
-    archived: z.boolean().default(false),
-  })),
-});
+const checklistSchema = Type.Object({
+  title: Type.String(),
+  tasks: Type.Array(Type.Object({
+    id: Type.String(),
+    text: Type.String(),
+    done: Type.Boolean(),
+    archived: Type.Boolean(),
+  }, { additionalProperties: true })),
+}, { additionalProperties: true });
 
-export type Checklist = z.infer<typeof checklistSchema>;
+export type Checklist = Type.Static<typeof checklistSchema>;
 export default checklistSchema;

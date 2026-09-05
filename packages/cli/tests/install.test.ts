@@ -131,3 +131,17 @@ test("default icons fit previews inside a 512 pixel square", () => {
   const icon = decode(iconFromPng(source));
   expect([icon.width, icon.height]).toEqual([512, 512]);
 });
+
+test("fallback icon downsampling averages fine detail and respects transparent edges", () => {
+  const checker = new Uint8Array(1024 * 1024 * 4);
+  for (let y = 0; y < 1024; y++) for (let x = 0; x < 1024; x++) {
+    const offset = (y * 1024 + x) * 4;
+    const value = (x + y) % 2 ? 255 : 0;
+    checker.set([value, value, value, 255], offset);
+  }
+  const icon = decode(iconFromPng(encode({ width: 1024, height: 1024, channels: 4, data: checker })));
+  expect(icon.data[0]).toBe(128);
+  const edge = encode({ width: 2, height: 1, channels: 4, data: new Uint8Array([255, 0, 0, 255, 0, 0, 0, 0]) });
+  const blended = decode(iconFromPng(edge, 1));
+  expect(Array.from(blended.data)).toEqual([255, 0, 0, 128]);
+});

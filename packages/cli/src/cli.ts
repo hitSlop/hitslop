@@ -3,7 +3,7 @@ import { Crust } from "@crustjs/core";
 import { join } from "node:path";
 import { stat } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
-import { SlopCategorySchema, type SlopCategory } from "@hitslop/schema";
+import { validate, SlopCategorySchema, type SlopCategory } from "@hitslop/schema";
 import { buildSlop, scaffold, validateAuthoringProject } from "./project.ts";
 import { runDev } from "./dev.ts";
 import { publishSlop } from "./publish.ts";
@@ -14,7 +14,7 @@ import { exportDocument, screenshotDocument } from "./render.ts";
 
 const titleFor = (directory: string): string => directory.split("/").filter(Boolean).at(-1)?.split(/[-_ ]+/).map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" ") || "My Slop";
 
-const parseCategories = (values: string[]): SlopCategory[] => values.map((value) => SlopCategorySchema.parse(value.trim().toLowerCase()));
+const parseCategories = (values: string[]): SlopCategory[] => values.map((value) => validate(SlopCategorySchema, value.trim().toLowerCase()));
 
 async function initMetadata(directory: string, flags: { yes?: boolean | undefined; title?: string | undefined; description?: string | undefined; category?: string[] | undefined; "author-name"?: string | undefined; "author-url"?: string | undefined }) {
   const authorName = flags["author-name"]?.trim();

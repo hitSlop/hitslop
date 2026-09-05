@@ -52,6 +52,9 @@ and PDF behavior.
   files and bind public `--slop-*` variables with `createGlobalThemeContract`.
   Keep the plain default values in `assets/theme.css`; do not compile the owner-editable
   theme surface into generated class names.
+- Quick Checklist pilots single-source `theme.ts` via `defineTheme` from
+  `@hitslop/runtime/theme`. Use its typed variable references in Vanilla Extract;
+  the builder generates `assets/theme.css`. Never maintain both defaults files.
 - Mark editing-only UI with `data-slop-export="hide"`; keep exportable content
   in normal flow.
 - Make each slop purpose-specific. Shared SDK patterns must not make unrelated

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encode } from "fast-png";
@@ -25,6 +25,32 @@ describe("skin validation", () => {
 });
 
 describe("immutable artifacts", () => {
+  test("failed rebuild leaves the previous artifact intact", async () => {
+    const root = await fixture();
+    const built = await buildSlop(root);
+    const previous = await readFile(join(built.directory, "app.html"), "utf8");
+    await writeFile(join(root, "index.html"), '<script type="module" src="/missing.ts"></script>');
+    await expect(buildSlop(root)).rejects.toThrow();
+    expect(await readFile(join(built.directory, "app.html"), "utf8")).toBe(previous);
+    expect(await readdir(join(root, "dist"))).toEqual(["skin-test.slop"]);
+  });
+
+  test("preserves emitted worker, dynamic module, font, and wasm assets", async () => {
+    const root = await fixture();
+    await writeFile(join(root, "index.html"), '<script type="module" src="/main.js"></script><link rel="stylesheet" href="/src.css">');
+    await writeFile(join(root, "main.js"), 'new Worker(new URL("./worker.js", import.meta.url)); import("./lazy.js").then(console.log); import wasm from "./module.wasm?url"; console.log(wasm);');
+    await writeFile(join(root, "worker.js"), 'postMessage("worker fixture")');
+    await writeFile(join(root, "lazy.js"), 'export const value = "lazy fixture";');
+    await writeFile(join(root, "module.wasm"), new Uint8Array(5000).fill(1));
+    await writeFile(join(root, "font.woff2"), new Uint8Array(5000));
+    await writeFile(join(root, "src.css"), '@font-face{font-family:fixture;src:url("./font.woff2")}body{font-family:fixture}');
+    const built = await buildSlop(root);
+    const assets = await readdir(join(built.directory, "assets"));
+    for (const prefix of ["worker-", "lazy-", "module-", "font-"]) expect(assets.some(name => name.startsWith(prefix))).toBe(true);
+    const html = await readFile(join(built.directory, "app.html"), "utf8");
+    expect(html).toMatch(/url\(["']?(?:\.\/)?assets\/font-/);
+  });
+
   test("inlines authored CSS into app.html", async () => {
     const root = await fixture();
     await writeFile(join(root, "index.html"), '<link rel="stylesheet" href="/src.css"><main>Skin</main>');
@@ -46,7 +72,7 @@ describe("immutable artifacts", () => {
   test("builds immutable theme and schema metadata without document stores", async () => {
     const root = await fixture();
     await writeFile(join(root, "index.html"), '<main style="color:var(--slop-accent)">Themed</main>');
-    await writeFile(join(root, "schema.ts"), `import * as z from ${JSON.stringify(import.meta.resolve("zod"))};\nexport default z.object({ count: z.number().default(0).describe("Current count") });\n`);
+    await writeFile(join(root, "schema.ts"), `import * as Type from ${JSON.stringify(import.meta.resolve("typebox"))};\nexport default Type.Object({ count: Type.Number({ default: 0, description: "Current count" }) });\n`);
     await writeFile(join(root, "assets", "theme.css"), ":root { --slop-accent: tomato; }\n");
     const built = await buildSlop(root);
     const html = await readFile(join(built.directory, "app.html"), "utf8");
@@ -63,7 +89,7 @@ describe("immutable artifacts", () => {
   test("validates document data, theme overrides, and the canonical skill", async () => {
     const root = await fixture();
     await writeFile(join(root, "index.html"), '<main style="color:var(--slop-accent)">Themed</main>');
-    await writeFile(join(root, "schema.ts"), `import * as z from ${JSON.stringify(import.meta.resolve("zod"))};\nexport default z.object({ count: z.number().int() });\n`);
+    await writeFile(join(root, "schema.ts"), `import * as Type from ${JSON.stringify(import.meta.resolve("typebox"))};\nexport default Type.Object({ count: Type.Integer() });\n`);
     await writeFile(join(root, "assets", "theme.css"), ":root { --slop-accent: tomato; }\n");
     const built = await buildSlop(root);
     await mkdir(join(built.directory, "stores"));
@@ -71,19 +97,19 @@ describe("immutable artifacts", () => {
     await writeFile(join(built.directory, "stores/theme.css"), ":root { --slop-accent: hotpink; }\n");
     await expect(validateRuntimePackage(built.directory)).resolves.toMatchObject({ slug: "skin-test" });
     await writeFile(join(built.directory, "stores/data.json"), '{"count":"two"}\n');
-    await expect(validateRuntimePackage(built.directory)).rejects.toThrow("does not match");
+    await expect(validateRuntimePackage(built.directory)).rejects.toThrow("validation failed");
     await writeFile(join(built.directory, "stores/data.json"), '{"count":2}\n');
     await writeFile(join(built.directory, "stores/theme.css"), ":root { --slop-unknown: hotpink; }\n");
     await expect(validateRuntimePackage(built.directory)).rejects.toThrow("unknown theme variable");
     await writeFile(join(built.directory, "stores/theme.css"), ":root { --slop-accent: hotpink; }\n");
     await writeFile(join(built.directory, ".agents/skills/hitslop-document/SKILL.md"), "changed\n");
-    await expect(validateRuntimePackage(built.directory)).rejects.toThrow("canonical");
+    await expect(validateRuntimePackage(built.directory)).resolves.toMatchObject({ slug: "skin-test" });
   });
 
-  test("rejects a runtime package without its document skill", async () => {
+  test("opens a runtime package without document guidance", async () => {
     const built = await buildSlop(await fixture());
     await rm(join(built.directory, ".agents"), { recursive: true });
-    await expect(validateRuntimePackage(built.directory)).rejects.toThrow("missing .agents/skills/hitslop-document/SKILL.md");
+    await expect(validateRuntimePackage(built.directory)).resolves.toMatchObject({ slug: "skin-test" });
   });
 
   test("requires every public theme reference to have an immutable default", async () => {

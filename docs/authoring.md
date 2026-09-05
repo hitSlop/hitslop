@@ -1,8 +1,7 @@
 # Authoring a slop
 
 The supported v1 path is Bun + Svelte 5. The runtime format is framework-neutral,
-and the React SDK/example demonstrate a second integration, but the CLI does not
-yet scaffold React projects.
+with the React adapter archived while supported authoring focuses on Svelte.
 
 ## Create and preview
 
@@ -36,8 +35,9 @@ master and open a writable document to test persistence, external edits, or nati
 Storage is implicit; do not add declarations to the manifest. See
 [Storage](storage.md) for concurrency and copy semantics.
 
-Svelte JSON stores require a root `schema.ts` that default-exports a Zod 4
-schema. Import and attach that schema where the store is created:
+Quick Checklist's current JSON-store contract uses a root `schema.ts` that
+default-exports a TypeBox schema (`import * as Type from "typebox"`).
+Import that schema directly where the store is created:
 
 ```ts
 import dataSchema from "../schema";
@@ -49,6 +49,12 @@ const document = jsonStore({
 ```
 
 ## Build
+
+Editor types and typechecking need no generated files or running dev server.
+The store uses TypeBox runtime validation without coercion, defaults, or field
+removal. The builder evaluates `schema.ts` separately to emit `data.schema.json`;
+keep schemas deterministic (no time, randomness, or environment-dependent shapes).
+The existing init scaffold and backlog examples remain deferred.
 
 ```sh
 bun run validate
@@ -72,7 +78,8 @@ framework-neutral.
 
 `register` and `publish` use the native renderer to capture a full preview and
 produce an exact 512×512 icon. A dedicated icon DOM target gives the best
-result; see [Design and presentation](presentation.md).
+result. Use optional Svelte `IconTarget` and `ExportTarget` helpers; see
+[Capture views](capture.md).
 
 For CI or exceptional artwork, pass `--preview <png>` and/or
 `--icon <png>`. These flags replace capture inputs; they do not relax PNG
@@ -117,7 +124,7 @@ The default endpoint is the official catalog. Use `--registry` or
 ## Definition of done
 
 The app has one obvious purpose; keyboard/focus/reduced-motion behavior works;
-persistent defaults conform to the app's Zod schema; standard resizing or skin
+persistent initial values conform to the app's data schema; standard resizing or skin
 hit-testing is tested; static capture has no editing controls; generated output
 contains only allowed runtime files; and `bun run release:check` passes in this
 repository.

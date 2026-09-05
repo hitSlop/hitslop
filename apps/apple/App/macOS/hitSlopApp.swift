@@ -51,6 +51,21 @@ private struct UpdateSettingsView: View {
     }
     func application(_ application: NSApplication, open urls: [URL]) { urls.filter { $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        Task {
+            do {
+                for document in documents.values { try await document.prepareToClose() }
+                await SlopDocumentWindowController.finishAssetRefreshesForTermination()
+                sender.reply(toApplicationShouldTerminate: true)
+            } catch {
+                let alert = NSAlert(error: error)
+                alert.messageText = "Changes could not be saved"
+                alert.runModal()
+                sender.reply(toApplicationShouldTerminate: false)
+            }
+        }
+        return .terminateLater
+    }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if flag { return true }
         if !documents.isEmpty {

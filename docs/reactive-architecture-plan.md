@@ -36,8 +36,10 @@ The adapter validates initial, loaded, external, and outgoing values. The CLI
 imports root `schema.ts` during a build and emits `data.schema.json`. The
 authoring source schema is never copied into the runtime package.
 
-The internal Vite build plugin emits one source-free `app.html`. Authored
-structural CSS, including Vanilla Extract output, is inlined with the app.
+The internal Vite build plugin emits source-free `app.html` and preserves the
+generated dependency graph under immutable `assets/`. Authored structural CSS,
+including Vanilla Extract output, is inlined with the app. Failed builds retain
+the previous successful artifact.
 
 ## Themes
 
@@ -46,9 +48,10 @@ Themeable apps keep stable `--slop-*` custom properties in immutable
 `stores/theme.css`, served by the native host as `theme.css`. That writable file
 contains only owner overrides and loads after the default.
 
-The `svelte-counter` example is the first Vanilla Extract pilot, and new
-`slop init` projects use the same setup. Existing examples can migrate
-independently after the contract is proven.
+Quick Checklist is the platform pilot. Its root `theme.ts` uses `defineTheme`
+to supply typed CSS variable references and generate `assets/theme.css` from
+one definition. Native overrides are validated before hot reload. The init
+template and other examples will adopt this workflow after pilot review.
 
 ## Package guidance
 

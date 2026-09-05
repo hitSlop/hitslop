@@ -1,41 +1,42 @@
 import { slop } from "@hitslop/runtime";
-import { JsonPersister, type JsonSnapshot } from "@hitslop/runtime/adapter";
+import { JsonPersister, registerFlush, type JsonSnapshot } from "@hitslop/runtime/adapter";
 import { untrack } from "svelte";
-import type * as z from "zod";
+import type { Static, TSchema } from "typebox";
+import { validate } from "@hitslop/schema/validation";
+import { assertJSON } from "@hitslop/schema/json";
 
-export type JsonStoreOptions<Schema extends z.ZodType> = {
-  schema: Schema;
-  initial: z.input<Schema>;
-};
-
-type JsonSchema<T> = {
-  safeParse(value: unknown):
-    | { success: true; data: T }
-    | { success: false; error: { issues: ReadonlyArray<{ path: PropertyKey[]; message: string }> } };
+export type JsonStoreOptions<S extends TSchema> = {
+  schema: S;
+  initial: NoInfer<Static<S>>;
 };
 
 const snapshot = <T>(value: T): JsonSnapshot<T> => {
-  const json = JSON.stringify($state.snapshot(value));
-  if (json === undefined) throw new Error("JsonStore values must be JSON-serializable");
+  const detached = $state.snapshot(value);
+  assertJSON(detached);
+  const json = JSON.stringify(detached);
   return { json, value: JSON.parse(json) as T };
 };
 
-export class JsonStore<T> {
-  current = $state() as T;
+export class JsonStore<S extends TSchema> {
+  current = $state() as Static<S>;
   isLoading = $state(true);
+  isReady = $state(false);
+  isDirty = $state(false);
+  isSaving = $state(false);
   error = $state<string | null>(null);
   revision = $state<string | null>(null);
   lastChangeSource = $state("package");
-  private persister: JsonPersister<T>;
-  readonly schema: JsonSchema<T>;
+  private persister: JsonPersister<Static<S>>;
+  readonly schema: S;
   private unwatch: (() => void) | null = null;
   private stopEffect: (() => void) | null = null;
+  private unregisterFlush: (() => void) | null = null;
 
-  constructor(options: { schema: JsonSchema<T>; initial: unknown }) {
+  constructor(options: JsonStoreOptions<S>) {
     this.schema = options.schema;
     const fallbackSnapshot = snapshot(this.parse(options.initial));
     this.current = fallbackSnapshot.value;
-    this.persister = new JsonPersister<T>({
+    this.persister = new JsonPersister<Static<S>>({
       fallback: fallbackSnapshot,
       io: {
         open: async (initial) => {
@@ -53,6 +54,7 @@ export class JsonStore<T> {
       onRevision: (revision) => { this.revision = revision; },
       onSource: (source) => { this.lastChangeSource = source; },
       onError: (message) => { this.error = message; },
+      onStatus: ({ isDirty, isSaving }) => { this.isDirty = isDirty; this.isSaving = isSaving; },
     });
 
     // Snapshotting reads the complete proxy tree, so one effect run observes all
@@ -60,7 +62,7 @@ export class JsonStore<T> {
     // The root is not component-owned and must be released by destroy().
     this.stopEffect = $effect.root(() => {
       $effect(() => {
-        let local: JsonSnapshot<T>;
+        let local: JsonSnapshot<Static<S>>;
         try {
           local = snapshot(this.parse(this.current));
         } catch (error) {
@@ -72,6 +74,7 @@ export class JsonStore<T> {
     });
 
     void this.reload();
+    this.unregisterFlush = registerFlush(() => this.flush());
     this.unwatch = slop.json.onChange((event) => this.persister.externalChanged(event.revision));
   }
 
@@ -79,6 +82,7 @@ export class JsonStore<T> {
     this.isLoading = true;
     try {
       await this.persister.reload();
+      this.isReady = true;
     } catch (error) {
       this.error = error instanceof Error ? error.message : String(error);
     } finally {
@@ -87,22 +91,27 @@ export class JsonStore<T> {
   }
 
   destroy(): void {
+    if (!this.isLoading) void this.flush().catch(() => undefined);
+    this.unregisterFlush?.();
+    this.unregisterFlush = null;
     this.unwatch?.();
     this.unwatch = null;
     this.stopEffect?.();
     this.stopEffect = null;
   }
 
-  private parse(value: unknown): T {
-    const result = this.schema.safeParse(value);
-    if (result.success) return result.data;
-    const detail = result.error.issues.map((issue) => {
-      const path = issue.path.length ? issue.path.join(".") : "value";
-      return `${path}: ${issue.message}`;
-    }).join("; ");
-    throw new Error(`JSON schema validation failed: ${detail}`);
+  async flush(): Promise<void> {
+    const local = snapshot(this.parse(this.current));
+    this.persister.localChanged(local.json, local.value);
+    await this.persister.flush();
+  }
+
+  private parse(value: unknown): Static<S> {
+    assertJSON(value);
+    return validate(this.schema, value);
   }
 }
 
-export const jsonStore = <Schema extends z.ZodType>(options: JsonStoreOptions<Schema>): JsonStore<z.output<Schema>> =>
-  new JsonStore<z.output<Schema>>(options);
+export function jsonStore<S extends TSchema>(options: JsonStoreOptions<S>): JsonStore<S> {
+  return new JsonStore(options);
+}

@@ -8,6 +8,9 @@ private final class FramelessDocumentWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
     override func performMiniaturize(_ sender: Any?) { miniaturize(sender) }
+    override func performClose(_ sender: Any?) {
+        if delegate?.windowShouldClose?(self) ?? true { close() }
+    }
 }
 
 func slopDocumentWindowStyleMask(resizable: Bool) -> NSWindow.StyleMask {
@@ -90,21 +93,50 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     func updateNSView(_ view: SlopToolbarDragHandleView, context: Context) { view.onDrag = onDrag }
 }
 
-@MainActor private enum SlopDocumentAssetRefreshQueue {
-    private static var jobs: [UUID: Task<Void, Never>] = [:]
+@MainActor enum SlopDocumentAssetRefreshQueue {
+    private struct Job {
+        let snapshot: SlopRenderSnapshot
+        let destination: URL
+        let generation: UUID
+    }
+    private static var generations: [URL: UUID] = [:]
+    private static var pending: [Job] = []
+    private static var worker: Task<Void, Never>?
 
-    static func schedule(renderURL: URL, presentedURL: URL) {
-        let id = UUID()
-        jobs[id] = Task { @MainActor in
-            defer { jobs.removeValue(forKey: id) }
-            do {
-                let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: renderURL)
-                if let preview = assets.previewPNG { try SlopPreviewWriter.write(preview, to: presentedURL) }
-                if let icon = assets.finderIconPNG { SlopPreviewWriter.installFinderIcon(icon, for: presentedURL) }
-            } catch {
-                print("[hitSlop assets] Could not refresh \(presentedURL.lastPathComponent): \(error.localizedDescription)")
+    static func invalidate(_ url: URL) {
+        let key = url.standardizedFileURL
+        generations[key] = UUID()
+        pending.removeAll { $0.destination == key }
+    }
+    static func schedule(snapshot: SlopRenderSnapshot, presentedURL: URL) {
+        let key = presentedURL.standardizedFileURL
+        invalidate(key)
+        let generation = generations[key]!
+        pending.append(Job(snapshot: snapshot, destination: key, generation: generation))
+        startWorkerIfNeeded()
+    }
+    private static func startWorkerIfNeeded() {
+        guard worker == nil, !pending.isEmpty else { return }
+        worker = Task { @MainActor in
+            defer { worker = nil; startWorkerIfNeeded() }
+            while !pending.isEmpty, !Task.isCancelled {
+                let job = pending.removeFirst()
+                do {
+                    let assets = try await SlopRenderer.documentAssetsPNGData(snapshot: job.snapshot)
+                    guard !Task.isCancelled, generations[job.destination] == job.generation else { continue }
+                    if let preview = assets.previewPNG {
+                        do { try SlopPreviewWriter.write(preview, to: job.destination) }
+                        catch { print("[hitSlop assets] Preview write failed: \(error.localizedDescription)") }
+                    }
+                    if let icon = assets.finderIconPNG { SlopPreviewWriter.installFinderIcon(icon, for: job.destination) }
+                } catch { print("[hitSlop assets] Refresh failed: \(error.localizedDescription)") }
             }
         }
+    }
+    static func finishForTermination(grace: Duration = .seconds(5)) async {
+        let deadline = ContinuousClock.now.advanced(by: grace)
+        while worker != nil, ContinuousClock.now < deadline { try? await Task.sleep(for: .milliseconds(40)) }
+        if worker != nil { worker?.cancel(); pending.removeAll(); generations.removeAll() }
     }
 }
 
@@ -138,6 +170,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         window.delegate = self; session.delegate = self; container.changed = { [weak self] in $0 ? self?.showToolbar() : self?.scheduleHide() }
         opened.onFlushError = { [weak self] error in self?.present("Could not save to iCloud", error) }
         setupToolbar()
+        SlopDocumentAssetRefreshQueue.invalidate(self.packageURL)
         SlopPreviewWriter.installExistingPreview(for: self.packageURL)
         session.load()
     }
@@ -206,17 +239,20 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         panel.directoryURL = SlopCloud.defaultCreationDirectory()
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let self, let target = panel.url else { return }
-            do {
-                try self.opened.flush()
-                self.onOpenDocument?(try SlopDuplicator.duplicate(from: self.session.package.rootURL, to: target))
-            } catch { self.present("Could not duplicate", error) }
+                Task {
+                    do {
+                        try await self.session.flush()
+                        try self.opened.flush()
+                        self.onOpenDocument?(try SlopDuplicator.duplicate(from: self.session.package.rootURL, to: target))
+                    } catch { self.present("Could not duplicate", error) }
+                }
         }
     }
     private enum ExportKind { case png, pdf }
     private func export(_ kind: ExportKind) {
         let panel = NSSavePanel(); panel.allowedContentTypes = [kind == .png ? .png : .pdf]; panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + (kind == .png ? ".png" : ".pdf")
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        Task { do { try await (kind == .png ? SlopRenderer.exportPNGData(session: session) : SlopRenderer.exportPDFData(session: session)).write(to: url, options: .atomic) } catch { present("Export failed", error) } }
+        Task { do { try await session.flush(); try await (kind == .png ? SlopRenderer.exportPNGData(session: session) : SlopRenderer.exportPDFData(session: session)).write(to: url, options: .atomic) } catch { present("Export failed", error) } }
     }
     private func share() { guard let view = toolbar?.contentView else { return }; NSSharingServicePicker(items: [packageURL]).show(relativeTo: view.bounds, of: view, preferredEdge: .minY) }
     private func reveal() { NSWorkspace.shared.activateFileViewerSelecting([packageURL]) }
@@ -240,14 +276,39 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         overlay.frame = content.bounds; overlay.autoresizingMask = [.width, .height]; content.addSubview(overlay); failedOverlay = overlay
     }
     public func windowDidMove(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
+    private var closePrepared = false
+    private var preparingClose = false
+    public override func close() {
+        guard let window, windowShouldClose(window) else { return }
+        super.close()
+    }
+    public func prepareToClose() async throws {
+        try await session.flush()
+        try opened.flush()
+        do {
+            let snapshot = try SlopRenderSnapshot(packageURL: session.package.rootURL)
+            SlopDocumentAssetRefreshQueue.schedule(snapshot: snapshot, presentedURL: packageURL)
+        } catch { print("[hitSlop assets] Could not snapshot saved document: \(error.localizedDescription)") }
+    }
+    public static func finishAssetRefreshesForTermination() async {
+        await SlopDocumentAssetRefreshQueue.finishForTermination()
+    }
+    public func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if closePrepared { return true }
+        guard !preparingClose else { return false }
+        preparingClose = true
+        Task {
+            defer { preparingClose = false }
+            do { try await prepareToClose(); closePrepared = true; sender.close() }
+            catch { present("Changes could not be saved", error) }
+        }
+        return false
+    }
     public func windowDidResize(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
     public func windowWillMiniaturize(_ notification: Notification) { hideWork?.cancel(); toolbar?.orderOut(nil) }
     public func windowWillClose(_ notification: Notification) {
-        let renderURL = session.package.rootURL
-        let presentedURL = packageURL
         toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil
         opened.close()
-        SlopDocumentAssetRefreshQueue.schedule(renderURL: renderURL, presentedURL: presentedURL)
         onClose?()
     }
     private func present(_ title: String, _ error: Error) { let alert = NSAlert(error: error); alert.messageText = title; alert.runModal() }

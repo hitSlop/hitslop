@@ -166,6 +166,9 @@ import Testing
     let stores = root.appendingPathComponent("stores", isDirectory: true)
     try FileManager.default.createDirectory(at: stores, withIntermediateDirectories: true)
     let theme = stores.appendingPathComponent("theme.css")
+    let assets = root.appendingPathComponent("assets")
+    try FileManager.default.createDirectory(at: assets, withIntermediateDirectories: true)
+    try Data(":root { --slop-test-color: black; }".utf8).write(to: assets.appendingPathComponent("theme.css"))
     try Data(":root { --slop-test-color: rgb(1, 2, 3); }".utf8).write(to: theme)
     let html = #"""
     <link rel="stylesheet" href="theme.css" data-hitslop-theme>

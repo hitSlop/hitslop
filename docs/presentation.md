@@ -79,37 +79,19 @@ click-through. A skinned window is fixed-size: its DOM, image, and hit-test mask
 must share exact dimensions. Keep important controls away from feathered edges,
 and test dragging plus pointer behavior around transparent holes.
 
-## Static capture and export
+## Capture views
 
-The root gains `data-slop-capture="static"` during preview/export. Hide editing
-chrome without removing the underlying content:
+Prefer optional `Export.svelte` and `Icon.svelte` presentation components wrapped
+in `ExportTarget` and `IconTarget` from `@hitslop/svelte`. Pass current data and
+selected view, share presentation components and theme variables, and keep
+export content in normal flow. Simple slops can use the existing static CSS
+fallback. The runtime owns preparation, asset readiness, and restoration.
 
-```html
-<button data-slop-export="hide">Add row</button>
-```
-
-Keep exportable content in normal page flow. Nested scrolling panels capture
-only their viewport and make PDF reading worse. PNG/PDF export uses current
-width and full document height; preview uses manifest dimensions.
-
-Call `ready()` only after initial data and critical fonts/images are usable.
-Respect reduced motion; capture should not depend on a particular animation
-frame.
-
-## Icon art
-
-Icon art is compiled DOM, not an extra image source file. Mount the square
-target only in the hidden renderer:
-
-```svelte
-{#if capture.isRenderer()}
-  <section data-slop-render="icon">…</section>
-{/if}
-```
-
-The target is exactly one 512×512 element, revealed by CSS only for icon capture
-mode. Give it a strong silhouette, safe margins, and no tiny text. Finder and
-compact catalog rows use the icon; catalog detail uses the full preview.
+PNG exports are 2× with explicit memory limits. PDF preserves text and vectors
+on one full-length page, recomposing WebKit's internal pages when necessary.
+Icons use a transparent 512px square and refresh Finder metadata on close;
+immutable `QuickLook/Icon.png` stays unchanged. See [Capture views](capture.md)
+for examples, preview modes, and the asynchronous preparation hook.
 
 ## Shipping checklist
 

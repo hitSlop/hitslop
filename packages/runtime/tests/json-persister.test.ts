@@ -95,7 +95,7 @@ test("revision conflicts rebase and retry the latest local snapshot", async () =
     if (attempts === 1) {
       state.stored = { count: 8 };
       state.revision = "remote-change";
-      throw new Error("revision_conflict");
+      throw Object.assign(new Error("Document changed"), { code: "revision_conflict" });
     }
     expect(expected).toBe("remote-change");
     state.stored = structuredClone(value);
@@ -271,4 +271,23 @@ test("an external read does not adopt after a local change arrives", async () =>
   await tick();
   expect(state.local).toEqual({ count: 2 });
   expect(state.stored).toEqual({ count: 2 });
+});
+
+test("flush waits for the last snapshot and bounds repeated conflicts", async () => {
+  const state = harness({ count: 0 });
+  await state.persister.reload();
+  let attempts = 0;
+  state.io.write = async () => {
+    attempts += 1;
+    throw Object.assign(new Error("Document changed again"), { code: "revision_conflict" });
+  };
+  state.local = { count: 7 };
+  const changed = snapshot(state.local);
+  state.persister.localChanged(changed.json, changed.value);
+  await expect(state.persister.flush()).rejects.toThrow("changed again");
+  expect(attempts).toBe(2);
+  expect(state.local).toEqual({ count: 7 });
+  state.io.write = async value => { state.stored = value; return { revision: "saved" }; };
+  await state.persister.flush();
+  expect(state.stored).toEqual({ count: 7 });
 });

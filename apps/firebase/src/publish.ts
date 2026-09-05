@@ -1,4 +1,5 @@
-import { PublishEnvelopeSchema, SlopManifestSchema, canonicalPublishEnvelope } from "@hitslop/schema";
+import { parsePublishEnvelope, parseManifest } from "@hitslop/schema";
+import { canonicalPublishEnvelope } from "@hitslop/schema";
 import { unzipSync } from "fflate";
 import type { RegistryBackend } from "./backend.js";
 import { validatePackageMetadata, validateStaticImages } from "./publish-package.js";
@@ -22,7 +23,7 @@ export async function handlePublish(request: Request, backend: RegistryBackend):
       return Response.json({ error: "Missing publish fields" }, { status: 400 });
     }
 
-    const envelope = PublishEnvelopeSchema.parse(JSON.parse(envelopeValue));
+    const envelope = parsePublishEnvelope(JSON.parse(envelopeValue));
     if (Math.abs(Date.now() - envelope.timestamp) > 5 * 60_000) return Response.json({ error: "Publish envelope expired" }, { status: 400 });
     if (artifact.size !== envelope.artifactBytes) return Response.json({ error: "Artifact size does not match signed envelope" }, { status: 400 });
 
@@ -44,7 +45,7 @@ export async function handlePublish(request: Request, backend: RegistryBackend):
     if (!manifestBytes || !unpacked["app.html"]) throw new Error("Artifact must contain manifest.json and app.html");
     if (manifestBytes.byteLength > MAX_MANIFEST_BYTES) throw new Error("manifest.json exceeds 64 KiB");
     const { preview, icon } = validateStaticImages(unpacked);
-    const manifest = SlopManifestSchema.parse(JSON.parse(decoder.decode(manifestBytes)));
+    const manifest = parseManifest(JSON.parse(decoder.decode(manifestBytes)));
     validateSkin(unpacked, manifest);
 
     const previewHash = await digest(ownedBuffer(preview));

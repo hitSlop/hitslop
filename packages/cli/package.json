@@ -3,18 +3,26 @@
   "version": "0.1.4",
   "description": "Create, develop, build, register, and publish hitSlop apps.",
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/cli" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hitslop/hitslop.git",
+    "directory": "packages/cli"
+  },
   "homepage": "https://hitslop.com",
-  "bugs": { "url": "https://github.com/hitslop/hitslop/issues" },
+  "bugs": {
+    "url": "https://github.com/hitslop/hitslop/issues"
+  },
   "keywords": ["hitslop", "cli", "local-first", "mini-apps"],
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "slop": "dist/cli.js"
   },
   "files": ["dist", "templates"],
   "scripts": {
-    "build": "bun ../../scripts/clean-dist.ts && bun build src/cli.ts --target bun --format esm --packages external --outfile dist/cli.js && /bin/chmod +x dist/cli.js",
+    "build": "bun ../../scripts/clean-dist.ts && bun build src/cli.ts src/schema-loader.ts --target bun --format esm --packages external --outdir dist && /bin/chmod +x dist/cli.js",
     "check": "tsc -p tsconfig.json",
     "test": "bun run --cwd ../schema build && bun test"
   },
@@ -24,12 +32,13 @@
     "@noble/ed25519": "^3.2.0",
     "fast-png": "^8.0.0",
     "fflate": "^0.8.3",
+    "parse5": "^8.0.1",
     "postcss": "^8.5.6",
-    "vite": "^8.2.2",
-    "zod": "^4.5.2"
+    "vite": "^8.2.2"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "typebox": "^1.3.26",
     "typescript": "^7.0.2"
   }
 }

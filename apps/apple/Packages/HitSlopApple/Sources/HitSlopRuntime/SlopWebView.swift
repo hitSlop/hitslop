@@ -5,77 +5,27 @@ import UniformTypeIdentifiers
 import UIKit
 #endif
 import Foundation
+import DynamicJSON
 import HitSlopCore
 import WebKit
 
-private let runtimeScript = #"""
-(() => {
-  const installHostStyle = () => {
-    if (document.querySelector('style[data-hitslop-host]')) return;
-    const style = document.createElement('style');
-    style.dataset.hitslopHost = '';
-    style.textContent = '*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}';
-    (document.head || document.documentElement).appendChild(style);
-  };
-  if (document.documentElement) installHostStyle();
-  else document.addEventListener('DOMContentLoaded', installHostStyle, { once: true });
-  const native = window.webkit.messageHandlers.hitslop;
-  let pending = 0, guestReady = false, readySent = false, mutationVersion = 0;
-  const call = (method, args = {}) => {
-    if (method !== 'log' && method !== 'ready') pending += 1;
-    return native.postMessage({ method, ...args }).finally(() => {
-      if (method !== 'log' && method !== 'ready') pending -= 1;
-      scheduleReady();
-    });
-  };
-  const scheduleReady = () => {
-    if (!guestReady || readySent || pending !== 0) return;
-    const version = mutationVersion;
-    let settled = false;
-    const finish = () => {
-      if (settled || readySent) return;
-      if (pending !== 0 || version !== mutationVersion) { settled = true; return scheduleReady(); }
-      settled = true; readySent = true;
-      native.postMessage({ method: 'ready' });
-      window.dispatchEvent(new Event('slop:ready'));
-    };
-    requestAnimationFrame(() => requestAnimationFrame(finish));
-    setTimeout(finish, 100);
-  };
-  new MutationObserver(() => { mutationVersion += 1; scheduleReady(); })
-    .observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
-  const listeners = { json: [], sqlite: [], media: [] };
-  window.__hitslopEmit = event => listeners[event.kind]?.forEach(callback => callback(event));
-  const watch = (kind, callback) => { listeners[kind].push(callback); return () => { listeners[kind] = listeners[kind].filter(value => value !== callback); }; };
-  window.addEventListener('error', event => call('log', { message: `JavaScript error: ${event.message}` }));
-  window.addEventListener('unhandledrejection', event => call('log', { message: `Unhandled rejection: ${String(event.reason)}` }));
-  window.slop = Object.freeze({
-    json: Object.freeze({
-      open: value => call('json.open', { value }),
-      read: () => call('json.read'),
-      write: (value, expectedRevision) => call('json.write', { value, expectedRevision }),
-      onChange: callback => watch('json', callback)
-    }),
-    db: Object.freeze({
-      query: (sql, parameters = []) => call('sqlite.query', { sql, parameters }),
-      execute: (sql, parameters = []) => call('sqlite.execute', { sql, parameters }),
-      transaction: statements => call('sqlite.transaction', { statements }),
-      onChange: callback => watch('sqlite', callback)
-    }),
-    media: Object.freeze({
-      open: name => call('media.open', { name }),
-      write: (name, data, mimeType) => call('media.write', { name, data, mimeType }),
-      remove: name => call('media.remove', { name }),
-      onChange: callback => watch('media', callback)
-    }),
-    window: Object.freeze({
-      resize: size => call('window.resize', size),
-      drag: () => call('window.drag')
-    }),
-    ready: () => { guestReady = true; document.documentElement.dataset.hitslopReady = 'true'; scheduleReady(); }
-  });
-})();
-"""#
+private func hostBridgeSource() throws -> String {
+    guard let url = Bundle.module.url(forResource: "host-bridge", withExtension: "js") else {
+        throw SlopPackageError.missing("bundled host bridge")
+    }
+    return try String(contentsOf: url, encoding: .utf8) + #"""
+    ;(() => {
+      const install = () => {
+        const style = document.createElement('style');
+        style.dataset.hitslopHost = '';
+        style.textContent = '*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}';
+        (document.head || document.documentElement).appendChild(style);
+      };
+      if (document.documentElement) install();
+      else document.addEventListener('DOMContentLoaded', install, {once:true});
+    })();
+    """#
+}
 
 @MainActor public protocol SlopRuntimeSessionDelegate: AnyObject {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
@@ -100,97 +50,69 @@ public extension SlopRuntimeSessionDelegate {
 @MainActor final class SlopBridge: NSObject, WKScriptMessageHandlerWithReply {
     weak var session: SlopRuntimeSession?
     private let package: SlopPackage
-    private let jsonStore: SlopJSONStore
-    private let mediaStore: SlopMediaStore
-    private let themeStore: SlopThemeStore
-    private var sqliteStore: SlopDatabase?
+    private let storage: SlopStorageWorker
+    private let requestSchema: JSONSchema
 
-    init(package: SlopPackage) { self.package = package; jsonStore = SlopJSONStore(url: package.jsonStoreURL); mediaStore = SlopMediaStore(directoryURL: package.mediaStoresURL); themeStore = SlopThemeStore(url: package.themeOverrideURL) }
-    func close() { sqliteStore?.close() }
-    func checkpoint() { sqliteStore?.checkpoint() }
-    func sqliteVersion() -> Int64? { try? sqliteStore?.dataVersion() }
-    func jsonRevision() -> String? { try? jsonStore.revision() }
-    func mediaRevision() -> String? { try? mediaStore.directoryRevision() }
-    func themeRevision() -> String? { try? themeStore.revision() }
+    init(package: SlopPackage) throws {
+        self.package = package
+        storage = SlopStorageWorker(package: package)
+        requestSchema = try JSONSchema(data: Data(contentsOf: Bundle.module.url(forResource: "bridge-request.schema", withExtension: "json")!))
+    }
+    func close() { storage.close() }
+    func checkpoint() { storage.checkpoint() }
+    func revisions() async -> SlopRevisions { await storage.revisions() }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
-        guard let body = message.body as? [String: Any], let method = body["method"] as? String else { replyHandler(nil, "Malformed host request"); return }
+        func failure(_ error: Error) {
+            let code = (error as? SlopBridgeFailure)?.code ?? .storageError
+            replyHandler(["ok": false, "error": ["code": code.rawValue, "message": error.localizedDescription]], nil)
+        }
         do {
+            guard message.frameInfo.isMainFrame, message.frameInfo.securityOrigin.protocol == "slop",
+                  let body = message.body as? [String: Any], let raw = body["method"] as? String,
+                  let method = SlopBridgeMethod(rawValue: raw) else { throw SlopBridgeFailure(.invalidRequest, "Malformed document request") }
+            let data = try JSONSerialization.data(withJSONObject: body)
+            guard data.count <= 36 * 1024 * 1024 else { throw SlopBridgeFailure(.limitExceeded, "Host request exceeds 36 MiB") }
+            let validation = try JSON(data: data).validate(with: requestSchema)
+            guard validation.isValid else { throw SlopBridgeFailure(.invalidRequest, "Malformed host request: \(validation)") }
+            let value: Any
             switch method {
-            case "log": print("[slop guest] \(body["message"] as? String ?? "Unknown diagnostic")"); replyHandler(["logged": true], nil)
-            case "ready": session?.bridgeDidBecomeReady(); replyHandler(["ready": true], nil)
-            case "json.open":
-                guard let value = body["value"] else { throw SlopPackageError.invalid("JSON open needs an initial value") }
-                let wasMissing = jsonRevision() == nil, snapshot = try jsonStore.open(value)
-                if wasMissing { session?.bridgeDidCommit(kind: .json, revision: snapshot.revision) }
-                replyHandler(["value": snapshot.value, "revision": snapshot.revision], nil)
-            case "json.read":
-                let snapshot = try jsonStore.read(); replyHandler(["value": snapshot.value, "revision": snapshot.revision], nil)
-            case "json.write":
-                guard let value = body["value"] else { throw SlopPackageError.invalid("JSON write needs a value") }
-                let revision = try jsonStore.write(value, expectedRevision: body["expectedRevision"] as? String)
-                session?.bridgeDidCommit(kind: .json, revision: revision); replyHandler(["revision": revision], nil)
-            case "media.open":
-                let name = try mediaName(body), snapshot = try mediaStore.open(name)
-                replyHandler(["exists": snapshot.exists, "revision": snapshot.revision as Any? ?? NSNull()], nil)
-            case "media.write":
-                let name = try mediaName(body)
-                guard let data = body["data"] as? String else { throw SlopPackageError.invalid("media write needs base64 data") }
-                let revision = try mediaStore.write(name, base64: data)
-                session?.bridgeDidCommit(kind: .media, revision: revision); replyHandler(["revision": revision], nil)
-            case "media.remove":
-                try mediaStore.remove(try mediaName(body))
-                session?.bridgeDidCommit(kind: .media, revision: nil); replyHandler(["revision": NSNull()], nil)
-            case "window.resize":
-                guard !package.isSkinned else { throw SlopPackageError.invalid("PNG-skinned documents have a fixed window size") }
-                guard let session else { throw SlopPackageError.invalid("runtime session is unavailable") }
-                let applied = try session.bridgeDidRequestResize(try windowSize(body))
-                replyHandler(["width": applied.width, "height": applied.height], nil)
-            case "window.drag":
-                guard let session else { throw SlopPackageError.invalid("runtime session is unavailable") }
+            case .hostInfo:
+                var capabilities = SlopBridgeMethod.allCases.map(\.rawValue)
+                #if !os(macOS)
+                capabilities.removeAll { $0 == "window.drag" || $0 == "window.resize" }
+                #endif
+                if package.isSkinned { capabilities.removeAll { $0 == "window.resize" } }
+                value = ["protocolVersion": slopProtocolVersion, "capabilities": capabilities]
+            case .log: print("[slop guest] \(body["message"] as? String ?? "")"); value = NSNull()
+            case .ready: session?.bridgeDidBecomeReady(); value = NSNull()
+            case .windowResize:
+                guard !package.isSkinned, let session else { throw SlopBridgeFailure(.unsupported, "PNG-skinned documents have a fixed window size") }
+                let size = CGSize(width: (body["width"] as! NSNumber).doubleValue, height: (body["height"] as! NSNumber).doubleValue)
+                let applied = try session.bridgeDidRequestResize(size)
+                value = ["width": applied.width, "height": applied.height]
+            case .windowDrag:
+                guard let session else { throw SlopBridgeFailure(.closed, "Document is closed") }
                 try session.bridgeDidRequestWindowDrag()
-                replyHandler(["dragging": true], nil)
-            case "sqlite.query":
-                let statement = try sql(body); replyHandler(try database().query(statement.0, parameters: statement.1), nil)
-            case "sqlite.execute":
-                let statement = try sql(body), changes = try database().transaction([statement])
-                session?.bridgeDidCommit(kind: .sqlite, revision: nil); replyHandler(changes, nil)
-            case "sqlite.transaction":
-                guard let payloads = body["statements"] as? [[String: Any]], !payloads.isEmpty else { throw SlopPackageError.invalid("transaction needs statements") }
-                let changes = try database().transaction(payloads.map(sql)); session?.bridgeDidCommit(kind: .sqlite, revision: nil); replyHandler(changes, nil)
-            default: replyHandler(nil, "Unknown host method")
+                value = NSNull()
+            default:
+                Task {
+                    do {
+                        let result = try await storage.perform(data)
+                        if let kind = result.kind { session?.bridgeDidCommit(kind: kind, revision: result.revision, name: result.name) }
+                        replyHandler(["ok": true, "value": result.value], nil)
+                    } catch { failure(error) }
+                }
+                return
             }
-        } catch { replyHandler(nil, error.localizedDescription) }
-    }
-
-    private func database() throws -> SlopDatabase {
-        if let sqliteStore { return sqliteStore }
-        let store = try SlopDatabase(url: package.sqliteStoreURL); sqliteStore = store; return store
-    }
-    private func sql(_ body: [String: Any]) throws -> (String, [Any]) {
-        guard let sql = body["sql"] as? String, !sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw SlopPackageError.invalid("SQL must not be empty") }
-        return (sql, body["parameters"] as? [Any] ?? [])
-    }
-    private func mediaName(_ body: [String: Any]) throws -> String {
-        guard let name = body["name"] as? String else { throw SlopPackageError.invalid("media operation needs a name") }
-        return name
-    }
-    private func windowSize(_ body: [String: Any]) throws -> CGSize {
-        guard let width = body["width"] as? NSNumber, let height = body["height"] as? NSNumber else {
-            throw SlopPackageError.invalid("window resize needs numeric width and height")
-        }
-        let values = [width.doubleValue, height.doubleValue]
-        guard values.allSatisfy({ $0.isFinite && $0.rounded() == $0 }),
-              (240...4096).contains(values[0]), (180...4096).contains(values[1]) else {
-            throw SlopPackageError.invalid("window dimensions must be whole pixels between 240x180 and 4096x4096")
-        }
-        return CGSize(width: values[0], height: values[1])
+            replyHandler(["ok": true, "value": value], nil)
+        } catch { failure(error) }
     }
 }
-
 private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     private let package: SlopPackage
-    init(package: SlopPackage) { self.package = package }
+    private let theme: SlopThemeStore
+    init(package: SlopPackage) { self.package = package; theme = SlopThemeStore(url: package.themeOverrideURL, defaultURL: package.rootURL.appendingPathComponent("assets/theme.css")) }
     func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
         guard let url = task.request.url else { task.didFailWithError(SlopPackageError.invalid("missing resource URL")); return }
         do {
@@ -208,8 +130,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     private func resource(for url: URL) throws -> (data: Data, mime: String) {
         if ["", "/", "/index.html"].contains(url.path) { return (try Data(contentsOf: package.entryURL), "text/html; charset=utf-8") }
         if url.path == "/theme.css" {
-            guard FileManager.default.fileExists(atPath: package.themeOverrideURL.path) else { return (Data(), "text/css; charset=utf-8") }
-            return (try Data(contentsOf: package.themeOverrideURL), "text/css; charset=utf-8")
+            return (theme.stylesheet(), "text/css; charset=utf-8")
         }
         if url.path.hasPrefix("/media/") {
             let name = String(url.path.dropFirst("/media/".count)).removingPercentEncoding ?? ""
@@ -223,7 +144,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         return (try Data(contentsOf: resource), Self.mime(resource.pathExtension))
     }
     private static func mime(_ ext: String) -> String {
-        ["png":"image/png", "jpg":"image/jpeg", "jpeg":"image/jpeg", "gif":"image/gif", "webp":"image/webp", "svg":"image/svg+xml", "css":"text/css", "json":"application/json", "woff":"font/woff", "woff2":"font/woff2", "mp3":"audio/mpeg", "mp4":"video/mp4"][ext.lowercased()] ?? "application/octet-stream"
+        ["js":"text/javascript", "mjs":"text/javascript", "wasm":"application/wasm", "png":"image/png", "jpg":"image/jpeg", "jpeg":"image/jpeg", "gif":"image/gif", "webp":"image/webp", "svg":"image/svg+xml", "css":"text/css", "json":"application/json", "woff":"font/woff", "woff2":"font/woff2", "mp3":"audio/mpeg", "mp4":"video/mp4"][ext.lowercased()] ?? "application/octet-stream"
     }
 }
 
@@ -255,8 +176,8 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
                 in: .page
             ))
         }
-        configuration.userContentController.addUserScript(WKUserScript(source: runtimeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
-        let bridge = SlopBridge(package: package); self.bridge = bridge
+        configuration.userContentController.addUserScript(WKUserScript(source: try hostBridgeSource(), injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
+        let bridge = try SlopBridge(package: package); self.bridge = bridge
         configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "hitslop")
         let frame = CGRect(x: 0, y: 0, width: package.manifest.presentation.width, height: package.manifest.presentation.height)
         #if os(macOS)
@@ -269,7 +190,6 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         if #available(iOS 16.4, *) { webView.isInspectable = true }
         #endif
-        sqliteVersion = bridge.sqliteVersion(); jsonRevision = bridge.jsonRevision(); mediaRevision = bridge.mediaRevision(); themeRevision = bridge.themeRevision()
         super.init(); bridge.session = self; webView.navigationDelegate = self
         #if os(macOS)
         webView.uiDelegate = self
@@ -277,13 +197,18 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
             Task { @MainActor [weak self] in self?.scheduleExternalRefresh() }
         }
         #else
-        timer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.refreshExternalState() } }
+        timer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { [weak self] _ in Task { @MainActor in await self?.refreshExternalState() } }
         #endif
     }
 
     public func load() { isReady = false; webView.load(URLRequest(url: URL(string: "slop://app/")!)) }
     public func reload() { isReady = false; webView.reload() }
     public func checkpoint() { bridge.checkpoint() }
+    public func flush() async throws {
+        guard !closed else { throw SlopBridgeFailure(.closed, "Document is closed") }
+        _ = try await webView.callAsyncJavaScript("await window.__hitslopFlush?.(); await window.slop?.flush?.(); return true", arguments: [:], in: nil, contentWorld: .page)
+        bridge.checkpoint()
+    }
     public func close() {
         guard !closed else { return }
         closed = true
@@ -305,8 +230,12 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         }
     }
     fileprivate func bridgeDidBecomeReady() { guard !isReady else { return }; isReady = true; retryCount = 0; delegate?.runtimeSessionDidBecomeReady(self) }
-    fileprivate func bridgeDidCommit(kind: SlopStoreKind, revision: String?) {
-        sqliteVersion = bridge.sqliteVersion(); jsonRevision = bridge.jsonRevision(); mediaRevision = bridge.mediaRevision(); themeRevision = bridge.themeRevision(); emit(kind: kind, revision: revision, source: "app"); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
+    fileprivate func bridgeDidCommit(kind: SlopStoreKind, revision: String?, name: String? = nil) {
+        switch kind {
+        case .json: jsonRevision = revision
+        case .sqlite, .media: break
+        }
+        emit(kind: kind, revision: revision, source: "app", name: name); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
     }
     fileprivate func bridgeDidRequestResize(_ size: CGSize) throws -> CGSize {
         guard let delegate else { throw SlopPackageError.invalid("the host does not support dynamic window sizing") }
@@ -330,14 +259,18 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         refreshTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(50))
             guard !Task.isCancelled else { return }
-            self?.refreshExternalState()
+            await self?.refreshExternalState()
         }
     }
-    private func refreshExternalState() {
-        let nextJSON = bridge.jsonRevision(); if nextJSON != jsonRevision { jsonRevision = nextJSON; if nextJSON != nil { emit(kind: .json, revision: nextJSON, source: "external") } }
-        let nextSQLite = bridge.sqliteVersion(); if nextSQLite != sqliteVersion { sqliteVersion = nextSQLite; if nextSQLite != nil { emit(kind: .sqlite, revision: nil, source: "external") } }
-        let nextMedia = bridge.mediaRevision(); if nextMedia != mediaRevision { mediaRevision = nextMedia; emit(kind: .media, revision: nextMedia, source: "external") }
-        let nextTheme = bridge.themeRevision(); if nextTheme != themeRevision { themeRevision = nextTheme; reloadTheme(); onStoreCommit?() }
+    private func refreshExternalState() async {
+        let requestedAtSequence = sequence
+        let revisions = await bridge.revisions()
+        guard !closed else { return }
+        guard requestedAtSequence == sequence else { scheduleExternalRefresh(); return }
+        if revisions.json != jsonRevision { jsonRevision = revisions.json; emit(kind: .json, revision: revisions.json, source: "external") }
+        if revisions.sqlite != sqliteVersion { sqliteVersion = revisions.sqlite; emit(kind: .sqlite, revision: nil, source: "external") }
+        if revisions.media != mediaRevision { mediaRevision = revisions.media; emit(kind: .media, revision: revisions.media, source: "external") }
+        if revisions.theme != themeRevision { themeRevision = revisions.theme; reloadTheme(); onStoreCommit?() }
     }
     private func reloadTheme() {
         let value = themeRevision ?? "default-\(Date().timeIntervalSince1970)"
@@ -351,9 +284,10 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         current.after(next);
         """#, arguments: ["revision": value], in: nil, in: .page) { _ in }
     }
-    private func emit(kind: SlopStoreKind, revision: String?, source: String) {
+    private func emit(kind: SlopStoreKind, revision: String?, source: String, name: String? = nil) {
         sequence += 1
-        let event: [String: Any] = ["kind": kind.rawValue, "source": source, "sequence": sequence, "revision": revision ?? NSNull()]
+        var event: [String: Any] = ["kind": kind.rawValue, "source": source, "sequence": sequence, "revision": revision ?? NSNull()]
+        if let name { event["name"] = name }
         // callAsyncJavaScript serializes arguments on the WebKit side, so the
         // event payload never round-trips through string interpolation.
         webView.callAsyncJavaScript("window.__hitslopEmit?.(event)", arguments: ["event": event], in: nil, in: .page) { _ in }

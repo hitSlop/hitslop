@@ -1,6 +1,5 @@
 import { decode as decodePng } from "fast-png";
-import * as z from "zod";
-import { documentGuidePath, documentSkillPath, isCanonicalDocumentSkill, maxDocumentGuideBytes } from "@hitslop/schema";
+import { compileDataSchema, documentGuidePath, documentSkillPath, maxDocumentGuideBytes } from "@hitslop/schema";
 
 export const MAX_PREVIEW_BYTES = 5 * 1024 * 1024;
 
@@ -17,18 +16,13 @@ export function validatePackageMetadata(files: Record<string, Uint8Array>): void
     try {
       const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(schema));
       if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("schema root must be an object");
-      z.fromJSONSchema(value);
+      compileDataSchema(value);
     } catch (error) {
       throw new Error(`Artifact data schema must be valid UTF-8 JSON: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   const skill = files[documentSkillPath];
-  if (!skill) throw new Error(`Artifact must contain ${documentSkillPath}`);
-  try {
-    if (!isCanonicalDocumentSkill(skill)) throw new Error("mismatch");
-  } catch {
-    throw new Error(`${documentSkillPath} is not a recognized canonical hitSlop document skill`);
-  }
+  if (skill) new TextDecoder("utf-8", { fatal: true }).decode(skill);
   const guide = files[documentGuidePath];
   if (guide) {
     if (guide.byteLength > maxDocumentGuideBytes) throw new Error(`${documentGuidePath} exceeds 32 KiB`);

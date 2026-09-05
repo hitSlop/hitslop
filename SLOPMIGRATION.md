@@ -1,5 +1,10 @@
 # Slop Migration Plan
 
+Current platform pilot: only Quick Checklist is active. Other example projects
+are preserved in `examples/slops/_backlog/`; the historical checklist below
+does not certify compatibility with the current TypeBox/runtime contracts.
+Promote and migrate one project at a time before marking it supported again.
+
 This document tracks the structural and design migration of every existing authored
 slop in `examples/slops/`. Follow `SLOPMIGRATIONRUNNER.md` for the routine
 per-slop workflow. Native, persistence, export, registration, installation, and
