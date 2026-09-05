@@ -34,7 +34,7 @@ the user explicitly asks.
 ## 3. Audit controls with Bits UI
 
 1. Inventory the interactive controls before changing them.
-2. Search [the local Bits UI reference](_docs/bits/llms.txt) for applicable
+2. Search [the Bits UI documentation](https://bits-ui.com/docs/introduction) for applicable
    primitives.
 3. Use Bits UI for dialogs, selects, sliders, tabs, calendars, popovers, toggles,
    checkboxes, progress controls, tooltips, and similar behavior when it improves

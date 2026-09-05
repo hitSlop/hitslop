@@ -16,7 +16,7 @@ private `_vibe/` references for direction only; never copy them into source, run
 packages, or the open-source release.
 
 Inventory each slop's controls and consult the
-[local Bits UI reference](_docs/bits/llms.txt) before choosing behavioral
+[Bits UI documentation](https://bits-ui.com/docs/introduction) before choosing behavioral
 primitives.
 
 ## Migration principles
