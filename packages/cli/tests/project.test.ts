@@ -162,9 +162,9 @@ describe("authoring scaffold", () => {
     const root = await mkdtemp(join(tmpdir(), "hitslop-scaffold-")); roots.push(root);
     await scaffold(root, { title: "Tiny Tally", description: "Counts a tiny thing.", categories: ["utilities"], author: { name: "Jordan Singer", url: "https://example.com/jordan" } });
     const packageJSON = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string>; devDependencies: Record<string, string>; scripts: Record<string, string> };
-    expect(packageJSON.dependencies["@hitslop/runtime"]).toBe("^0.2.0");
-    expect(packageJSON.dependencies["@hitslop/svelte"]).toBe("^0.2.0");
-    expect(packageJSON.devDependencies["@hitslop/cli"]).toBe("^0.2.0");
+    expect(packageJSON.dependencies["@hitslop/runtime"]).toBe("^0.3.0");
+    expect(packageJSON.dependencies["@hitslop/svelte"]).toBe("^0.3.0");
+    expect(packageJSON.devDependencies["@hitslop/cli"]).toBe("^0.3.0");
     expect(packageJSON.dependencies["bits-ui"]).toBe("^2.19.0");
     expect(packageJSON.dependencies.zod).toBeUndefined();
     expect(packageJSON.dependencies.typebox).toBe("^1.3.26");

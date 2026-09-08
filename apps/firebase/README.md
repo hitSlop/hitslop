@@ -7,6 +7,7 @@ stores never enter Firebase.
 `api.hitslop.com` keeps the public protocol stable:
 
 - `POST /api/publish` validates one signed immutable artifact.
+- `GET /api/catalog` returns the bounded public catalog used by the landing page.
 - `GET /api/artifact?key=...` redirects to content-addressed Storage media.
 - `/schemas/v1/manifest.schema.json` is a static generated asset.
 

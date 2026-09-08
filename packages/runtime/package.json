@@ -1,6 +1,6 @@
 {
   "name": "@hitslop/runtime",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Framework-neutral browser bridge for hitSlop documents.",
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/hitslop/hitslop.git", "directory": "packages/runtime" },
@@ -20,6 +20,6 @@
     "check": "tsc -p tsconfig.json",
     "test": "bun test"
   },
-  "dependencies": { "@hitslop/schema": "^0.2.0" },
+  "dependencies": { "@hitslop/schema": "^0.3.0" },
   "devDependencies": { "typescript": "^7.0.2" }
 }

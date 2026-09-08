@@ -28,7 +28,7 @@ final class SlopJSONStore {
             schema = try JSONSchema(data: Data(contentsOf: schemaURL))
         }
         if let schema {
-            let result = try JSON(data: data).validate(with: schema, dialect: .draft2020Format)
+            let result = try JSON(data: data).validate(with: schema, dialect: SlopJSONValidation.dialect)
             guard result.isValid else { throw SlopBridgeFailure(.validationFailed, "JSON schema validation failed: \(result)") }
         }
     }

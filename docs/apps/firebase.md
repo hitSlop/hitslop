@@ -5,6 +5,9 @@ project `hitslopapp`.
 
 Firebase Hosting owns `api.hitslop.com`. It serves the versioned JSON Schema
 directly and rewrites `/api/**` to the `api` Function in `us-central1`.
+The credential-free `GET /api/catalog` endpoint returns a cacheable, versioned
+projection for public web clients; preview, icon, and download URLs continue to
+flow through the content-addressed artifact endpoint.
 Firestore stores publishers, catalog templates, immutable releases, and
 idempotent publish requests. Cloud Storage stores only content-addressed published artifacts,
 previews, and icons. It never stores a user's writable `.slop` document.

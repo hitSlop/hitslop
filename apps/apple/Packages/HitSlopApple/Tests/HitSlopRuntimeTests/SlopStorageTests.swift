@@ -50,6 +50,7 @@ private func temporaryDirectory() -> URL {
         let schemaURL = directory.appendingPathComponent("schema.json")
         try JSONSerialization.data(withJSONObject: fixture["schema"]!).write(to: schemaURL)
         let cases = try #require(fixture["cases"] as? [[String: Any]])
+        let validValue = try #require(cases.first { $0["valid"] as? Bool == true }?["value"])
         for (index, item) in cases.enumerated() {
             let dataURL = directory.appendingPathComponent("case-\(index).json")
             let store = SlopJSONStore(url: dataURL, schemaURL: schemaURL)
@@ -59,9 +60,21 @@ private func temporaryDirectory() -> URL {
                 let expected = try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .fragmentsAllowed])
                 let actual = try JSONSerialization.data(withJSONObject: result.value, options: [.sortedKeys, .fragmentsAllowed])
                 #expect(actual == expected)
+                let revision = try store.write(value, expectedRevision: result.revision)
+                let read = try store.read()
+                #expect(read.revision == revision)
+                #expect(try JSONSerialization.data(withJSONObject: read.value, options: [.sortedKeys, .fragmentsAllowed]) == expected)
             } else {
                 #expect(throws: Error.self) { _ = try store.open(value) }
                 #expect(!FileManager.default.fileExists(atPath: dataURL.path))
+                let baseline = try store.open(validValue)
+                let original = try Data(contentsOf: dataURL)
+                #expect(throws: Error.self) { _ = try store.write(value, expectedRevision: baseline.revision) }
+                #expect(try Data(contentsOf: dataURL) == original)
+                let invalid = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])
+                try invalid.write(to: dataURL, options: .atomic)
+                #expect(throws: Error.self) { _ = try store.read() }
+                #expect(try Data(contentsOf: dataURL) == invalid)
             }
         }
     }

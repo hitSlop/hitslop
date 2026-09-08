@@ -1,6 +1,6 @@
 # Framework and authoring packages
 
-All public packages are MIT licensed and currently versioned `0.1.x`. The
+All public packages are MIT licensed and currently versioned `0.3.x`. The
 runtime contract is framework-neutral; UI adapters are intentionally thin.
 
 ## @hitslop/cli

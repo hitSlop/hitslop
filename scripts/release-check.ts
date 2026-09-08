@@ -133,6 +133,8 @@ async function main(): Promise<void> {
   process.stdout.write("✓ repository hygiene, documentation, and skills\n");
 
   await command(["bun", "run", "release:npm:check"]);
+  await command(["bun", "run", "check"], join(root, "apps/landing"));
+  await command(["bun", "run", "build"], join(root, "apps/landing"));
   assertNoGeneratedSource(await gitFiles());
   await command(["bun", "run", "test:emulator"], join(root, "apps/firebase"));
 

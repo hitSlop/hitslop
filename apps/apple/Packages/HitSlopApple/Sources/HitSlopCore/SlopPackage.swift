@@ -151,7 +151,7 @@ public struct SlopPackage: Sendable {
         guard String(data: data, encoding: .utf8) != nil else { throw SlopPackageError.invalid("manifest.json must be UTF-8") }
         guard let schemaURL = Bundle.module.url(forResource: "manifest.schema", withExtension: "json") else { throw SlopPackageError.invalid("bundled manifest schema is missing") }
         let schema = try JSONSchema(data: Data(contentsOf: schemaURL))
-        let result = try JSON(data: data).validate(with: schema)
+        let result = try JSON(data: data).validate(with: schema, dialect: SlopJSONValidation.dialect)
         guard result.isValid else { throw SlopPackageError.invalid("manifest.json does not match v1 schema: \(result)") }
     }
 
@@ -187,7 +187,13 @@ public struct SlopPackage: Sendable {
             guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("\(name) must be a regular file") }
             let data = try Data(contentsOf: url)
             guard String(data: data, encoding: .utf8) != nil else { throw SlopPackageError.invalid("\(name) must be UTF-8") }
-            _ = try JSONSerialization.jsonObject(with: data)
+            guard let metadata = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw SlopPackageError.invalid("\(name) must contain a JSON Schema object")
+            }
+            if let dialect = metadata["$schema"], dialect as? String != "https://json-schema.org/draft/2020-12/schema" {
+                throw SlopPackageError.invalid("\(name) must use JSON Schema draft 2020-12")
+            }
+            _ = try JSONSchema(data: data)
         }
     }
 

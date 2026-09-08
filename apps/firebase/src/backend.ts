@@ -1,5 +1,5 @@
 import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
-import type { SlopManifest } from "@hitslop/schema";
+import { parseManifest, type CatalogTemplate, type SlopManifest } from "@hitslop/schema";
 
 type StorageFile = {
   exists(): Promise<[boolean]>;
@@ -12,6 +12,12 @@ type StorageBucket = {
 };
 
 export type PublishResult = { templateId: string; releaseId: string; releaseNumber: number };
+type RegistryCatalogAsset = Omit<CatalogTemplate["preview"], "url"> & { key: string };
+export type RegistryCatalogTemplate = Omit<CatalogTemplate, "preview" | "icon" | "download"> & {
+  preview: RegistryCatalogAsset;
+  icon: RegistryCatalogAsset;
+  download: RegistryCatalogAsset;
+};
 
 export type FinalizePublishInput = {
   requestId: string;
@@ -34,7 +40,23 @@ export interface RegistryBackend {
   putObject(key: string, bytes: Uint8Array, contentType: string): Promise<void>;
   mediaURL(key: string): string;
   finalizePublish(input: FinalizePublishInput): Promise<PublishResult>;
+  listTemplates(): Promise<RegistryCatalogTemplate[]>;
   recordCreation(templateId: string): Promise<boolean>;
+}
+
+function catalogAsset(value: unknown): RegistryCatalogAsset {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid catalog asset");
+  const asset = value as Record<string, unknown>;
+  if (typeof asset.key !== "string" || typeof asset.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(asset.sha256)
+    || typeof asset.bytes !== "number" || !Number.isSafeInteger(asset.bytes) || asset.bytes < 1) {
+    throw new Error("invalid catalog asset");
+  }
+  return { key: asset.key, sha256: asset.sha256, bytes: asset.bytes };
+}
+
+function isoTimestamp(value: unknown): string {
+  if (!(value instanceof Timestamp)) throw new Error("invalid catalog timestamp");
+  return value.toDate().toISOString();
 }
 
 export class FirebaseRegistryBackend implements RegistryBackend {
@@ -156,6 +178,45 @@ export class FirebaseRegistryBackend implements RegistryBackend {
       });
       return { templateId, releaseId: releaseRef.id, releaseNumber };
     });
+  }
+
+  async listTemplates(): Promise<RegistryCatalogTemplate[]> {
+    const snapshot = await this.firestore.collection("templates")
+      .where("visibility", "==", "public")
+      .orderBy("creationCount", "desc")
+      .orderBy("firstPublishedAt", "desc")
+      .limit(200)
+      .get();
+    const templates: RegistryCatalogTemplate[] = [];
+    for (const document of snapshot.docs) {
+      try {
+        const data = document.data();
+        const release = data.currentRelease as Record<string, unknown>;
+        const manifest = parseManifest(JSON.parse(String(release.manifestJSON)));
+        const author = manifest.author.url ? { name: manifest.author.name, url: manifest.author.url } : { name: manifest.author.name };
+        const creationCount = Number(data.creationCount);
+        const releaseNumber = Number(release.number);
+        if (!Number.isSafeInteger(creationCount) || creationCount < 0 || !Number.isSafeInteger(releaseNumber) || releaseNumber < 1) {
+          throw new Error("invalid catalog counters");
+        }
+        templates.push({
+          id: document.id,
+          slug: manifest.slug,
+          title: manifest.title,
+          description: manifest.description,
+          categories: manifest.categories,
+          author,
+          creationCount,
+          release: { number: releaseNumber, publishedAt: isoTimestamp(release.publishedAt) },
+          preview: catalogAsset(release.preview),
+          icon: catalogAsset(release.icon),
+          download: catalogAsset(release.artifact),
+        });
+      } catch (error) {
+        console.error(`Skipping invalid public template ${document.id}`, error);
+      }
+    }
+    return templates;
   }
 
   async recordCreation(templateId: string): Promise<boolean> {

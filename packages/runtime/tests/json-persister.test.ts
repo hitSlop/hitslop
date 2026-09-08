@@ -15,7 +15,36 @@ const deferred = <T>() => {
 
 const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-function harness<T>(fallback: T, initial: T = fallback) {
+type Scheduler = { setTimeout: (callback: () => void, delay: number) => unknown; clearTimeout: (handle: unknown) => void };
+const immediateScheduler: Scheduler = {
+  setTimeout: callback => setTimeout(callback, 0),
+  clearTimeout: handle => clearTimeout(handle as ReturnType<typeof setTimeout>),
+};
+class Clock implements Scheduler {
+  now = 0;
+  private next = 0;
+  private timers = new Map<number, { at: number; callback: () => void }>();
+  setTimeout = (callback: () => void, delay: number) => {
+    const id = ++this.next;
+    this.timers.set(id, { at: this.now + delay, callback });
+    return id;
+  };
+  clearTimeout = (handle: unknown) => { this.timers.delete(handle as number); };
+  advance(ms: number) {
+    const end = this.now + ms;
+    for (;;) {
+      const next = [...this.timers.entries()].filter(([, timer]) => timer.at <= end).sort((a, b) => a[1].at - b[1].at)[0];
+      if (!next) break;
+      this.now = next[1].at;
+      this.timers.delete(next[0]);
+      next[1].callback();
+    }
+    this.now = end;
+  }
+  get size() { return this.timers.size; }
+}
+
+function harness<T>(fallback: T, initial: T = fallback, scheduler: Scheduler = immediateScheduler) {
   let stored = structuredClone(initial);
   let local = structuredClone(fallback);
   let revision = "initial";
@@ -23,6 +52,7 @@ function harness<T>(fallback: T, initial: T = fallback) {
   const errors: Array<string | null> = [];
   const sources: string[] = [];
   const adopted: T[] = [];
+  const statuses: Array<{ isDirty: boolean; isSaving: boolean }> = [];
   const io: {
     open: (initialValue: T) => Promise<{ value: T; revision: string }>;
     read: () => Promise<{ value: T; revision: string }>;
@@ -38,13 +68,15 @@ function harness<T>(fallback: T, initial: T = fallback) {
     },
   };
   const persister = new JsonPersister<T>({
+    scheduler,
     fallback: snapshot(fallback),
     io,
     getLocal: () => snapshot(local),
     onAdopt: (value, source) => { local = structuredClone(value); adopted.push(structuredClone(value)); sources.push(source); },
     onRevision: (value) => { revision = value ?? revision; },
     onSource: (source) => { sources.push(source); },
-    onError: (message) => { errors.push(message); },
+    onError: (error) => { errors.push(error?.message ?? null); },
+    onStatus: status => { statuses.push(status); },
   });
   return {
     persister,
@@ -59,8 +91,146 @@ function harness<T>(fallback: T, initial: T = fallback) {
     errors,
     sources,
     adopted,
+    statuses,
   };
 }
+
+function edit(state: ReturnType<typeof harness<{ count: number }>>, count: number) {
+  state.local = { count };
+  const value = snapshot(state.local);
+  state.persister.localChanged(value.json, value.value);
+}
+
+test("typing debounces for 150ms, echoes do not postpone saving, and status follows acknowledgement", async () => {
+  const clock = new Clock();
+  const state = harness({ count: 0 }, undefined, clock);
+  await state.persister.reload();
+  edit(state, 1);
+  clock.advance(100);
+  edit(state, 2);
+  clock.advance(100);
+  edit(state, 2);
+  expect(state.writes).toBe(0);
+  expect(state.statuses.at(-1)).toEqual({ isDirty: true, isSaving: false });
+  clock.advance(50);
+  await tick();
+  expect(state.writes).toBe(1);
+  expect(state.stored.count).toBe(2);
+  expect(state.statuses).toContainEqual({ isDirty: true, isSaving: true });
+  expect(state.statuses.at(-1)).toEqual({ isDirty: false, isSaving: false });
+  expect(clock.size).toBe(0);
+});
+
+test("continuous edits save within one second", async () => {
+  const clock = new Clock();
+  const state = harness({ count: 0 }, undefined, clock);
+  await state.persister.reload();
+  for (let count = 1; count <= 10; count++) { edit(state, count); clock.advance(100); }
+  await tick();
+  expect(state.writes).toBe(1);
+  expect(state.stored.count).toBe(10);
+  expect(clock.size).toBe(0);
+});
+
+test("flush bypasses timers, shares the drain, and awaits edits made during a write", async () => {
+  const clock = new Clock();
+  const state = harness({ count: 0 }, undefined, clock);
+  await state.persister.reload();
+  const saving = deferred<{ revision: string }>();
+  const values: number[] = [];
+  state.io.write = async value => { values.push(value.count); return values.length === 1 ? saving.promise : { revision: "latest" }; };
+  edit(state, 1);
+  const first = state.persister.flush();
+  const second = state.persister.flush();
+  expect(second).toBe(first);
+  await tick();
+  expect(values).toEqual([1]);
+  expect(clock.size).toBe(0);
+  edit(state, 2);
+  saving.resolve({ revision: "first" });
+  await first;
+  expect(values).toEqual([1, 2]);
+});
+
+test("reverting before the debounce cancels the write", async () => {
+  const clock = new Clock();
+  const state = harness({ count: 0 }, undefined, clock);
+  await state.persister.reload();
+  edit(state, 1);
+  edit(state, 0);
+  clock.advance(1_000);
+  await state.persister.flush();
+  expect(state.writes).toBe(0);
+  expect(clock.size).toBe(0);
+});
+
+test("failed saves preserve the original error and identical echoes do not retry", async () => {
+  const clock = new Clock();
+  const state = harness({ count: 0 }, undefined, clock);
+  await state.persister.reload();
+  const error = Object.assign(new Error("disk full"), { code: "storage_error" });
+  let attempts = 0;
+  state.io.write = async () => { attempts++; throw error; };
+  edit(state, 1);
+  await expect(state.persister.flush()).rejects.toBe(error);
+  edit(state, 1);
+  clock.advance(1_000);
+  await tick();
+  expect(attempts).toBe(1);
+  await expect(state.persister.flush()).rejects.toBe(error);
+  expect(attempts).toBe(2);
+});
+
+test("invalid local data blocks older snapshots and explicit reload recovers", async () => {
+  const clock = new Clock();
+  const state = harness({ count: 0 }, undefined, clock);
+  await state.persister.reload();
+  edit(state, 1);
+  const error = Object.assign(new Error("not JSON"), { code: "validation_failed" });
+  state.persister.localInvalid(error);
+  clock.advance(1_000);
+  await expect(state.persister.flush()).rejects.toBe(error);
+  expect(state.writes).toBe(0);
+  expect(state.statuses.at(-1)?.isDirty).toBe(true);
+  await state.persister.reload();
+  expect(state.local.count).toBe(0);
+  expect(state.statuses.at(-1)?.isDirty).toBe(false);
+});
+
+test("reload discards queued edits but preserves edits made during the read", async () => {
+  const clock = new Clock();
+  const state = harness({ count: 0 }, undefined, clock);
+  await state.persister.reload();
+  edit(state, 1);
+  const reading = deferred<{ value: { count: number }; revision: string }>();
+  state.io.read = () => reading.promise;
+  const reloading = state.persister.reload();
+  edit(state, 2);
+  reading.resolve({ value: { count: 9 }, revision: "external" });
+  await reloading;
+  await state.persister.flush();
+  expect(state.stored.count).toBe(2);
+  expect(clock.size).toBe(0);
+});
+
+test("reload recovers when a previously running write fails after the reload request", async () => {
+  const state = harness({ count: 0 });
+  await state.persister.reload();
+  const saving = deferred<{ revision: string }>();
+  state.io.write = () => saving.promise;
+  edit(state, 1);
+  await tick();
+  const reloading = state.persister.reload();
+  saving.reject(new Error("failed old write"));
+  await reloading;
+  expect(state.local.count).toBe(0);
+  state.stored = { count: 2 };
+  state.revision = "external";
+  state.persister.externalChanged("external");
+  await tick();
+  expect(state.local.count).toBe(2);
+  expect(state.errors.at(-1)).toBeNull();
+});
 
 test("pristine init adopts the opened value and suppresses its effect echo", async () => {
   const state = harness({ count: 0 }, { count: 4 });

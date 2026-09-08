@@ -8,8 +8,7 @@ an account you have to maintain. The app owns its interface; the host owns
 durable JSON, SQLite, named media, previews, export, and native window behavior.
 
 <p align="center">
-  <img src="examples/slops/_backlog/invoice/screenshots/preview.png" width="30%" alt="Invoice slop">
-  <img src="examples/slops/_backlog/focus-timer/screenshots/preview.png" width="30%" alt="Focus Timer slop">
+  <img src="apps/landing/public/assets/desktop-hero-current.png" width="80%" alt="hitSlop on macOS">
 </p>
 
 A slop can feel like **paper** (invoice, recipe, résumé), an **instrument**
@@ -110,16 +109,17 @@ bun run release:check
 
 That first-launch gate checks generated schemas, the public TypeScript/Svelte
 packages, clean-room npm tarballs, Firebase package ingestion, documentation and
-tracked-file hygiene, and the Swift package. Older examples have the separate
-`bun run examples:check` gate while they are intentionally converted to v1. If
+tracked-file hygiene, the landing build, and the Swift package.
+`bun run examples:check` checks Quick Checklist; paused examples stay excluded. If
 you are changing platform TypeBox schemas, run `bun run schema:generate` first.
 
 Start with the [documentation map](docs/README.md), then read
 [Architecture](docs/architecture.md), [Repository guide](docs/repository.md),
 and [Contributing](CONTRIBUTING.md).
 
-The macOS app is at `1.0.1`. The iOS app and public npm packages are at
-`0.1.0` while their APIs settle.
+The MVP authoring path is macOS + Svelte + JSON, demonstrated by Quick Checklist.
+The macOS app is at `1.0.4` and public npm packages are at `0.3.0`.
+iOS remains at `0.1.0`; iOS, iCloud sync, and SQLite improvements are deferred.
 
 ## License
 

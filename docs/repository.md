@@ -40,8 +40,8 @@ bun run build
 bun run release:check
  bun run examples:check
 
-bun slop dev examples/slops/invoice
-bun slop build examples/slops/invoice
+bun slop dev examples/slops/quick-checklist
+bun slop build examples/slops/quick-checklist
 
 swift test --package-path apps/apple/Packages/HitSlopApple
 swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native

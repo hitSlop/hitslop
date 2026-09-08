@@ -139,6 +139,36 @@ import Testing
     #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
 }
 
+@Test func decodesDataSchemasAtOpenAndRejectsOtherDialects() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let url = root.appendingPathComponent("data.schema.json")
+    for schema in [#"{"type":"object"}"#, #"{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object"}"#] {
+        try Data(schema.utf8).write(to: url)
+        #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    }
+    for schema in [#"{"type":"bogus"}"#, #"{"type":"string","minLength":"wrong"}"#, "[]", "true",
+                   #"{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"}"#,
+                   #"{"$schema":null,"type":"object"}"#] {
+        try Data(schema.utf8).write(to: url)
+        #expect(throws: (any Error).self) { _ = try SlopPackage(rootURL: root) }
+    }
+    try Data(#"{"type":"object","required":["count"],"properties":{"count":{"type":"integer"}}}"#.utf8).write(to: url)
+    try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
+    try Data(#"{"count":"broken"}"#.utf8).write(to: root.appendingPathComponent("stores/data.json"))
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+}
+
+@Test func manifestURIFormatDoesNotRepairInvalidAuthorURLs() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let url = root.appendingPathComponent("manifest.json")
+    var manifest = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+    for authorURL in ["https://example.com/with space", "https://example.com/%zz"] {
+        manifest["author"] = ["name": "Author", "url": authorURL]
+        try JSONSerialization.data(withJSONObject: manifest).write(to: url)
+        #expect(throws: (any Error).self) { _ = try SlopPackage(rootURL: root) }
+    }
+}
+
 @Test func opensChangedEmbeddedDocumentGuidance() throws {
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")

@@ -2,8 +2,9 @@
 
 ## Version policy
 
-The macOS release candidate is `1.0.3` (build `21`). The npm platform packages
-use `0.2.x` for the breaking TypeBox API reset; iOS remains at `0.1.0`.
+The macOS release candidate is `1.0.4` (build `22`). The npm platform packages
+use `0.3.x` for JSON persistence improvements and the adapter error callback
+change; iOS remains at `0.1.0`.
 Do not force unrelated products to share one version.
 
 ## Release gate
@@ -49,14 +50,20 @@ to retain the printed temporary directory for visual inspection and debugging.
 
 Publish in dependency order:
 
-1. `@hitslop/schema` and `@hitslop/runtime`
-2. `@hitslop/svelte`
-3. `@hitslop/cli`
+1. `@hitslop/schema`
+2. `@hitslop/runtime`
+3. `@hitslop/svelte`
+4. `@hitslop/cli`
 
 Use `bun pm pack --dry-run` in every package before publishing. Verify the
 tarball includes only `dist`, permitted templates/generated schema,
 `package.json`, `README.md`, and `LICENSE`; confirm repository metadata,
-MIT license, and intended `0.2.x` version.
+MIT license, and intended `0.3.x` version.
+
+In `0.3.0`, `JsonPersister.onError` receives `Error | null` instead of a
+message string. Adapter consumers should read `error.message` for display and
+retain the original error for its code. Existing immutable documents retain
+their bundled runtime; rebuild and publish templates to distribute these fixes.
 
 Tag npm releases as `npm-v<version>` and macOS releases as
 `macos-v<version>`. The separate namespaces keep an npm-only release from
@@ -67,6 +74,19 @@ starting the signed macOS release workflow.
 Deploy Firebase Functions, Firestore and Storage rules, generated schemas, and
 Hosting together from `apps/firebase`. Firebase Hosting targets
 `api.hitslop.com`; the static Astro Worker remains at `hitslop.com`.
+
+Cloudflare Workers Builds connects `hitslop-landing` to `hitSlop/hitslop`, with
+production branch `master`, repository root `/`, and `BUN_VERSION=1.4.0`.
+The build command is:
+
+```sh
+bun run --cwd packages/schema build && bun run --cwd apps/landing check && bun run --cwd apps/landing build
+```
+
+The deploy command is `cd apps/landing && npx --no-install wrangler deploy`.
+Deploy compatible Firebase changes before pushing the landing update. After
+pushing `master`, verify both GitHub CI and the Cloudflare deployment for that
+commit. Preview builds are disabled for the MVP release.
 
 ## macOS
 

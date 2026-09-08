@@ -23,7 +23,7 @@ Interactive init asks for a required author name and optional URL. For
 non-interactive use, pass `--yes --author-name "Your Name"` and optionally
 `--author-url https://example.com`.
 
-Documentation: [Authoring](https://github.com/hitslop/hitslop/blob/main/docs/authoring.md) ·
-[Package format](https://github.com/hitslop/hitslop/blob/main/docs/package-format.md)
+Documentation: [Authoring](https://github.com/hitslop/hitslop/blob/master/docs/authoring.md) ·
+[Package format](https://github.com/hitslop/hitslop/blob/master/docs/package-format.md)
 
 MIT © 2026 hitSlop contributors.

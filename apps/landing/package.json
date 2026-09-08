@@ -11,6 +11,7 @@
     "deploy": "bun run build && wrangler deploy"
   },
   "dependencies": {
+    "@hitslop/schema": "0.3.0",
     "@astrojs/svelte": "^9.0.1",
     "astro": "^7.2.10",
     "svelte": "^5.57.0"

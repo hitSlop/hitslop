@@ -18,6 +18,15 @@ Document authoring uses namespace imports (`import * as Type from "typebox"`).
 The CLI evaluates the authored schema to emit packaged JSON Schema. Guest
 apps import their schema directly; no generated validator module is required.
 
-Documentation: [Package format](https://github.com/hitslop/hitslop/blob/main/docs/package-format.md)
+Document schemas use JSON Schema draft 2020-12. An omitted `$schema` receives
+that dialect during packaging; an explicitly different dialect is rejected.
+Tooling uses Ajv compilation to reject malformed schemas, unknown formats and
+keywords, and unresolved references, then TypeBox to validate values. Validation
+does not coerce values, fill defaults, or remove fields. The shared JS/Swift
+conformance fixtures cover document values and format assertions. Native package
+opening decodes immutable schema metadata; mutable data is validated when the
+store is accessed so the guest can report recoverable errors.
+
+Documentation: [Package format](https://github.com/hitslop/hitslop/blob/master/docs/package-format.md)
 
 MIT © 2026 hitSlop contributors.

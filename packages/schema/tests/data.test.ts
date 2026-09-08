@@ -7,6 +7,15 @@ import fixtures from "../../../apps/apple/Packages/HitSlopApple/Tests/HitSlopRun
 test("independent schemas may reuse their document id", () => {
   for (let i = 0; i < 2; i++) expect(() => compileDataSchema({ $id: "urn:hitslop:test", type: "object" })).not.toThrow();
 });
+test("document schemas default to 2020-12 and reject incompatible explicit dialects", () => {
+  const dialect = "https://json-schema.org/draft/2020-12/schema";
+  expect(dataSchemaFromJSON({ type: "object" }).$schema).toBe(dialect);
+  expect(dataSchemaFromJSON({ $schema: dialect, type: "object" }).$schema).toBe(dialect);
+  for (const $schema of ["http://json-schema.org/draft-07/schema#", "https://example.com/custom", null, 3]) {
+    expect(() => dataSchemaFromJSON({ $schema, type: "object" })).toThrow("draft 2020-12");
+    expect(() => compileDataSchema({ $schema, type: "object" })).toThrow("draft 2020-12");
+  }
+});
 test("TypeBox and packaged validation match shared native fixtures without mutation", () => {
   for (const fixture of fixtures) {
     const check = compileDataSchema(fixture.schema);

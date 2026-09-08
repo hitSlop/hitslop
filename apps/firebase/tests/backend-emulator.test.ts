@@ -99,6 +99,17 @@ if (!emulator) {
     expect(updated.authorName).toBe("Renamed Author");
     expect(updated.authorURL).toBe("https://example.com/renamed");
 
+    const catalog = await backend.listTemplates();
+    expect(catalog).toHaveLength(1);
+    expect(catalog[0]).toMatchObject({
+      id: first.templateId,
+      slug: "counter",
+      creationCount: 1,
+      author: { name: "Renamed Author", url: "https://example.com/renamed" },
+      release: { number: 2 },
+    });
+    expect(catalog[0]?.download.key).toBe(`artifacts/sha256/${hash("d")}.slop.zip`);
+
     const releases = await firestore.collection("releases").where("templateId", "==", first.templateId).get();
     expect(releases.size).toBe(2);
     const releaseManifests = releases.docs.map((release) => JSON.parse(String(release.get("manifestJSON"))));
@@ -108,6 +119,7 @@ if (!emulator) {
 
     await templateRef.update({ visibility: "hidden" });
     expect(await backend.recordCreation(first.templateId)).toBe(false);
+    expect(await backend.listTemplates()).toEqual([]);
     expect(await backend.recordCreation("missing")).toBe(false);
   });
 }

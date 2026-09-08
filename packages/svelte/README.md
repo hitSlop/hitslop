@@ -37,7 +37,34 @@ validates initial, loaded, externally changed, and outgoing values using the
 TypeBox interpreter; it does not coerce, insert defaults, strip unknown fields,
 or write browser storage.
 
-See the [Svelte authoring examples](https://github.com/hitslop/hitslop/tree/main/examples/slops).
+Once loaded, JSON edits save after 150 ms without another change, or after one
+second of continuous editing. Only one write runs at a time; edits during a write
+coalesce into the newest follow-up snapshot. `await document.flush()` captures
+current state immediately, bypasses the delay, and waits for pending writes.
+Concurrent flushes share the same drain. Schema validation runs at I/O boundaries,
+so invalid edits remain in memory and are never written.
+
+`isDirty` stays true while changes are waiting, saving, or failed; `isSaving` is
+true during a write. `error` contains the display message and `errorCode` contains
+the `SlopError` code when available, including `validation_failed`,
+`revision_conflict`, and `storage_error`. A failed save retains the latest edits.
+Call `flush()` to retry, or make a new edit to resume automatic saving. Repeated
+observations of an identical value do not retry a failed save.
+
+External file changes load while the store is clean. While dirty, local edits
+win: a revision conflict reads the new revision and retries the latest full
+local snapshot once. This does not merge another writer's fields. Another
+conflict stops saving and surfaces an error. After loading, explicit `reload()`
+discards edits made before the call and adopts the file; edits made during the
+read survive. Retrying a failed initial load also preserves local edits.
+
+Call `destroy()` on teardown to stop observation and immediately drain a detached
+final snapshot. It is synchronous and safe to call twice. Pending or failed saves
+stay registered with the runtime flush barrier until a flush succeeds. For a
+user-initiated teardown where errors should prevent navigation, await `flush()`
+before removing the component. A destroyed store cannot reload or resume editing.
+
+See the [Svelte authoring examples](https://github.com/hitslop/hitslop/tree/master/examples/slops).
 
 MIT © 2026 hitSlop contributors.
 

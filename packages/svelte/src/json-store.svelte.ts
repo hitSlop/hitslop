@@ -1,4 +1,4 @@
-import { slop } from "@hitslop/runtime";
+import { slop, SlopError } from "@hitslop/runtime";
 import { JsonPersister, registerFlush, type JsonSnapshot } from "@hitslop/runtime/adapter";
 import { untrack } from "svelte";
 import type { Static, TSchema } from "typebox";
@@ -11,10 +11,13 @@ export type JsonStoreOptions<S extends TSchema> = {
 };
 
 const snapshot = <T>(value: T): JsonSnapshot<T> => {
-  const detached = $state.snapshot(value);
-  assertJSON(detached);
-  const json = JSON.stringify(detached);
-  return { json, value: JSON.parse(json) as T };
+  try {
+    const detached = $state.snapshot(value);
+    assertJSON(detached);
+    return { json: JSON.stringify(detached), value: detached as T };
+  } catch (error) {
+    throw new SlopError("validation_failed", error instanceof Error ? error.message : String(error));
+  }
 };
 
 export class JsonStore<S extends TSchema> {
@@ -24,6 +27,7 @@ export class JsonStore<S extends TSchema> {
   isDirty = $state(false);
   isSaving = $state(false);
   error = $state<string | null>(null);
+  errorCode = $state<SlopError["code"] | null>(null);
   revision = $state<string | null>(null);
   lastChangeSource = $state("package");
   private persister: JsonPersister<Static<S>>;
@@ -31,6 +35,9 @@ export class JsonStore<S extends TSchema> {
   private unwatch: (() => void) | null = null;
   private stopEffect: (() => void) | null = null;
   private unregisterFlush: (() => void) | null = null;
+  private destroyed = false;
+  private finalSnapshot: JsonSnapshot<Static<S>> | null = null;
+  private finalError: Error | null = null;
 
   constructor(options: JsonStoreOptions<S>) {
     this.schema = options.schema;
@@ -47,13 +54,16 @@ export class JsonStore<S extends TSchema> {
           const result = await slop.json.read<unknown>();
           return { ...result, value: this.parse(result.value) };
         },
-        write: (value, revision) => slop.json.write(this.parse(value), revision),
+        write: (value, revision) => slop.json.write(this.parse(value, false), revision),
       },
-      getLocal: () => snapshot(this.parse(this.current)),
-      onAdopt: (value, source) => { this.current = value; this.lastChangeSource = source; },
+      getLocal: () => this.getLocal(),
+      onAdopt: (value, source) => {
+        this.current = value; this.lastChangeSource = source;
+        if (this.destroyed) this.finalSnapshot = snapshot(value);
+      },
       onRevision: (revision) => { this.revision = revision; },
       onSource: (source) => { this.lastChangeSource = source; },
-      onError: (message) => { this.error = message; },
+      onError: (error) => this.setError(error),
       onStatus: ({ isDirty, isSaving }) => { this.isDirty = isDirty; this.isSaving = isSaving; },
     });
 
@@ -64,9 +74,9 @@ export class JsonStore<S extends TSchema> {
       $effect(() => {
         let local: JsonSnapshot<Static<S>>;
         try {
-          local = snapshot(this.parse(this.current));
+          local = snapshot(this.current);
         } catch (error) {
-          untrack(() => { this.error = error instanceof Error ? error.message : String(error); });
+          untrack(() => this.persister.localInvalid(error as Error));
           return;
         }
         untrack(() => this.persister.localChanged(local.json, local.value));
@@ -79,36 +89,62 @@ export class JsonStore<S extends TSchema> {
   }
 
   async reload(): Promise<void> {
+    if (this.destroyed) throw new SlopError("closed", "JSON store is destroyed");
     this.isLoading = true;
     try {
       await this.persister.reload();
       this.isReady = true;
     } catch (error) {
-      this.error = error instanceof Error ? error.message : String(error);
+      this.setError(error);
     } finally {
       this.isLoading = false;
     }
   }
 
   destroy(): void {
-    if (!this.isLoading) void this.flush().catch(() => undefined);
-    this.unregisterFlush?.();
-    this.unregisterFlush = null;
+    if (this.destroyed) return;
+    try { this.finalSnapshot = snapshot(this.current); }
+    catch (error) { this.finalError = error as Error; }
+    this.destroyed = true;
     this.unwatch?.();
     this.unwatch = null;
     this.stopEffect?.();
     this.stopEffect = null;
+    // Keep failed writes registered so the host barrier can report/retry them.
+    void this.flush().catch(() => undefined);
   }
 
   async flush(): Promise<void> {
-    const local = snapshot(this.parse(this.current));
-    this.persister.localChanged(local.json, local.value);
-    await this.persister.flush();
+    try {
+      let local: JsonSnapshot<Static<S>>;
+      try { local = this.getLocal(); }
+      catch (error) { this.persister.localInvalid(error as Error); throw error; }
+      this.persister.localChanged(local.json, local.value);
+      await this.persister.flush();
+      if (this.destroyed) {
+        this.unregisterFlush?.();
+        this.unregisterFlush = null;
+      }
+    } catch (error) { this.setError(error); throw error; }
   }
 
-  private parse(value: unknown): Static<S> {
-    assertJSON(value);
-    return validate(this.schema, value);
+  private getLocal(): JsonSnapshot<Static<S>> {
+    if (this.finalError) throw this.finalError;
+    return this.finalSnapshot ?? snapshot(this.current);
+  }
+
+  private setError(error: unknown): void {
+    this.error = error == null ? null : error instanceof Error ? error.message : String(error);
+    this.errorCode = error instanceof SlopError ? error.code : null;
+  }
+
+  private parse(value: unknown, checkJSON = true): Static<S> {
+    try {
+      if (checkJSON) assertJSON(value);
+      return validate(this.schema, value);
+    } catch (error) {
+      throw new SlopError("validation_failed", error instanceof Error ? error.message : String(error));
+    }
   }
 }
 

@@ -15,8 +15,8 @@ bun run dev
 The generated scripts wrap `slop dev`, `validate`, `build`, `register`, and
 `publish`. New projects start with Svelte 5, Bits UI, a TypeBox-backed JSON store,
 and Vanilla Extract for structural styles.
-Use `--template svelte` for a blank base or `--template svelte-counter` for
-the teaching example. Edit `manifest.json` before the interface: it fixes the
+Both `--template svelte` and `--template svelte-counter` create the same
+JSON counter starter. Edit `manifest.json` before the interface: it fixes the
 job, author attribution, title, categories, and initial viewport. Interactive
 init prompts for the required author name and optional public URL. In CI, pass
 `--yes --author-name "Your Name"` and optionally `--author-url https://example.com`.

@@ -1,6 +1,6 @@
 {
   "name": "@hitslop/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Create, develop, build, register, and publish hitSlop apps.",
   "license": "MIT",
   "repository": {
@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@crustjs/core": "^0.0.19",
-    "@hitslop/schema": "^0.2.0",
+    "@hitslop/schema": "^0.3.0",
     "@noble/ed25519": "^3.2.0",
     "fast-png": "^8.0.0",
     "fflate": "^0.8.3",
