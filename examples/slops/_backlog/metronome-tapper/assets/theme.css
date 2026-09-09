@@ -1,0 +1,15 @@
+:root {
+  --slop-chassis: #1a1614;
+  --slop-chassis-hi: #3d342e;
+  --slop-chassis-rim: #2d2622;
+  --slop-brass: #d4a337;
+  --slop-brass-hi: #f5d17a;
+  --slop-brass-shadow: #8f681a;
+  --slop-screen: #0c0a09;
+  --slop-glow: #f59e0b;
+  --slop-glow-accent: #ef4444;
+  --slop-ink: #fdfbf7;
+  --slop-ink-muted: #9a9086;
+  --slop-focus: #f59e0b;
+  --slop-body-font: "Avenir Next", "Helvetica Neue", sans-serif;
+}

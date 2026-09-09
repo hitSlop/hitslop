@@ -1,0 +1,142 @@
+# hitSlop template roadmap
+
+Single-purpose digital objects worth building as `.slop` packages. The list is
+ordered by product value, breadth of everyday use, and how well each template
+helps establish the hitSlop design language.
+
+- `[x]` implemented, reviewed, and ready in `examples/slops/`
+- `[ ]` planned or implemented but still awaiting the current quality review
+- **Paper** favors editorial hierarchy, direct editing, and clean static export.
+- **Instrument** favors compact controls, inset readouts, and durable state.
+- **Skin** uses a recognizable object or silhouette when it strengthens the job.
+
+Content and visual archetypes are intentionally independent. A canonical
+template can gain skins later—such as `invoice x thermal receipt` or
+`habit tracker x Tamagotchi`—without becoming a duplicate template.
+
+## Canonical template folder
+
+`examples/slops/` is the single source folder for every maintained,
+in-progress, and completed authored template. The exact inventory below is
+retained as prior art, not as parallel template homes. Unlisted local archive
+or prototype directories stay ignored.
+
+- [ ] Inventory each repository template and map it to one canonical slug in `examples/slops/`, consolidating overlapping versions instead of copying duplicates.
+- [ ] Migrate selected archived templates into current authored packages under `examples/slops/`; repair manifests, storage, accessibility, responsive behavior, export state, and visuals as part of each migration.
+- [ ] Move `Prototypes/ambient-mixer` to `examples/slops/ambient-sound-mixer` when its P0 build begins.
+- [ ] Retire repository-local archived and prototype source copies after their canonical replacement is verified.
+
+## Current examples
+
+- [x] **Invoice** — Business / Paper — Edit parties, line items, tax, payment state, and notes, then export a control-free document. **Visual:** flat warm editorial paper, confident invoice typography, crisp rules, and a restrained green signal. The icon is a cream document with a folded corner on deep green, its total the heaviest slab. Archived `archive/templates/invoice-minimal` is superseded by this version.
+- [ ] **Pomodoro — quality review required** — Productivity / Instrument — Run focus and rest cycles while retaining local session state. **Visual:** a playful tomato kitchen timer with a leafy top, bold dial, compact controls, and a ripe red Finder icon. **Review:** confirm accessible focus and reduced motion, responsive sizing, and clean static capture before marking it ready.
+- [x] **Kanban Board** — Work / Instrument — Name the board, add, reorder, and retire lanes, nominate a completed lane, and move work orders across lanes with live work-in-progress limits. **Visual:** anodized job-shop schedule board with an editable brushed nameplate, milled lane slots that scroll horizontally, slotted paper tickets with punched holes, an amber WIP signal, and filed grey tickets in the completed lane. The icon is three milled slots on the graphite chassis, the middle one lit amber.
+- [x] **Random Picker** — Utility / Instrument — Maintain a set of choices, draw a result, and keep lightweight history. **Visual:** animated capsule utility with one prominent action.
+- [x] **Alien Radio** — Music / Skin — Control a tiny media player built around a playful receiver object. **Visual:** dark alien-green radio skin with hardware-like controls.
+
+`examples/slops/svelte-counter` is a framework fixture, not a product template,
+so it is intentionally excluded from the implemented count.
+
+## P0 — Next foundation set
+
+- [x] **Resume** — Personal / Paper — Directly edit and reorder a polished one-page resume, including experience, education, skills, and contact details. **Visual:** flat warm ivory editorial sheet with a quiet rail, readable typography, fine rules, and one teal signal. **Prior art:** legacy Swift `Resume` template.
+- [ ] **Quick Checklist — quality review required** — Productivity / Instrument — Add, reorder, complete, archive, and clear short tasks with fast keyboard entry and canonical JSON persistence. **Visual:** blush handheld utility with tactile checkboxes and a chunky completion control. **Prior art:** consolidate `archive/templates/field-notes`, `archive/templates/sqlite-field-notes`, and `archive/templates/notebook` rather than reviving overlapping note apps.
+- [ ] **Weekly Planner** — Planning / Paper — Arrange appointments and tasks across a week and mark items complete. **Visual:** ruled cream desk planner with restrained red and blue markings. **Reference:** `archive/templates/weekly-planner`.
+- [x] **Recipe Card** — Food / Paper + Instrument — Edit servings, ingredients, steps, a meal photo, and guided per-step timers. **Visual:** a flat dark countertop recipe with generous food imagery, warm serif type, and a focused orange cooking signal. **Reference:** `archive/templates/recipe-card`.
+- [x] **Harada Method** — Planning / Paper + Instrument — Fill in the Open Window 64 chart: one core goal, eight themes, and sixty-four concrete actions that tick off individually. Editing a theme beside the goal rewrites the centre of its own block, and the reverse, so the sheet stays consistent from either direction. **Visual:** cool-white plate floating on a flat grey field, ruled in two weights only — hairlines inside each 3×3 block, heavy ink rules between them — with shaded theme centres and an indigo goal block at the heart of the grid, under a grotesk masthead. The icon is one 3×3 window in miniature: white cells on an ink plate, the centre indigo. Narrow windows collapse to one 3×3 at a time; an export is always the whole chart. Scope is the chart only, not the long-term goal form, routine sheet, or diary.
+- [x] **Habit Tracker** — Health / Instrument — Track several habits, daily check-ins, streaks, and recent consistency. **Visual:** cheerful yellow Tamagotchi-style pocket board with circular check-ins. **Reference:** `archive/templates/habit-heatmap`.
+- [x] **Trip Itinerary** — Travel / Paper — Organize days, stops, bookings, times, and practical notes. **Visual:** lilac transit board crossed with a boarding pass. **Reference:** `archive/templates/trip-planner`.
+- [x] **Meeting Notes** — Work / Paper — Capture agenda items, freeform notes, decisions, and assigned actions in one document. **Visual:** sober green meeting memo with acid-paper accents. The icon is a green memo sheet with top clip, header rule, checklist, and acid callout card. **Reference:** `archive/templates/meeting-notes`.
+- [x] **Personal Budget** — Money / Instrument + Paper — Track income, spending groups, limits, and remaining amounts for a month. **Visual:** graphite pocket calculator fused with a clean paper ledger. The icon is a dark pocket calculator body with mint green LCD screen, orange operation key, and ledger bars. **Prior art:** legacy Swift budget and financial tracker templates.
+- [x] **Pocket Spreadsheet** — Money / Instrument + Paper — Fast tabular modeling with formulas (=SUM, =AVG, arithmetic), multi-cell selection stats, and CSV export. **Visual:** vintage green-bar accounting ledger housed in a dark slate chassis with formula fx bar and emerald selection box. The icon is a dark chassis with green-bar grid, active selection cell, and fx =SUM formula bar.
+- [x] **Contact Card** — Personal / Paper + Skin — Edit identity, avatar, contact details, links, location, and a short introduction. **Visual:** translucent mint pager crossed with a compact Rolodex card. The icon is a frosted mint rounded badge with circular avatar aperture and contact rule bars. **Prior art:** legacy Swift `ContactCRM` template.
+- [ ] **Subscription Tracker — quality review required** — Money / Paper — Track recurring costs, renewal dates, billing periods, and paused services with one document-wide currency preference and canonical JSON persistence. **Visual:** calm off-white ledger with green renewal signals and tabular totals. **Reference:** `archive/templates/subscription-tracker`.
+- [x] **Ambient Sound Mixer** — Music / Instrument — Mix, mute, solo, and save volume presets for a small set of ambient channels with synthesized audio. **Visual:** smoked-glass hi-fi mixer with physical faders and green LED level bars. The icon is a dark rackmount audio mixer with 5 vertical faders and glowing LED bars. **Reference:** `Prototypes/ambient-mixer`.
+- [x] **Countdown & Milestones** — Planning / Instrument — Count down to a target date and track intermediate checkpoints. **Visual:** compact digital departure display housed in a capsule body. The icon is a dark titanium capsule bezel with glowing amber 7-segment digital counter and milestone progress track. **Reference:** `archive/templates/countdown-milestones`.
+- [x] **Slide Deck** — Pitch / Stage + Studio — Single-file presentation suite inspired by Bento with structured slide archetypes (Title, Split, Metric, Quote, Cards), live inline canvas editing, and fullscreen presenter mode. **Visual:** dark studio projector chassis housing a 16:9 widescreen canvas with Swiss red typography and orange active dot. The icon is a dark projector shell with 16:9 screen, header tag pill, split columns, and orange play badge. **Reference:** `_docs/bento-main`.
+
+## P1 — Everyday documents and utilities
+
+- [x] **Daily Planner** — Planning / Paper — Schedule a day, time-block important work, and keep the top three priorities in view. Draw blocks by dragging down the rail, move and stretch them by their handles, colour them by kind, and tick off the top three. **Visual:** folded appointment book on warm cream stock with a printed fold crease, a serif weekday masthead, numbered rank seals that strike through when checked, and a ruled 6am–midnight hour rail carrying four inks — navy focus, ochre meetings, green breaks, violet personal — that pack into side-by-side columns when they overlap and fade once their hour has passed, under a bright vermilion marker tracking the current time. The icon inverts the sheet — a navy plate of pale blocks cut by a vermilion NOW lozenge that overhangs onto the cream. **Prior art:** legacy Swift `DailyPlanner` template.
+- [x] **Expense Log** — Money / Paper + Instrument — Rapidly record purchases and inspect category and monthly totals. **Visual:** thermal-receipt roll with crisp numeric typography and tiny category marks. **Reference:** `archive/templates/expense-pulse`.
+- [ ] **Quote / Estimate** — Business / Paper — Build a priced estimate with parties, scope, line items, validity, and approval status. **Visual:** pale blue trade form with carbon-copy details and a stamped status accent.
+- [ ] **Proposal** — Business / Paper — Assemble a concise client proposal with problem, approach, deliverables, timeline, and pricing. **Visual:** minimal editorial booklet with confident black typography and one saturated cover accent.
+- [ ] **Project Brief** — Work / Paper — Define goals, audience, constraints, owners, milestones, and success measures. **Visual:** clipped studio brief with modular sections and annotation marks.
+- [ ] **Meeting Agenda** — Work / Instrument + Paper — Order and time discussion topics while capturing decisions during the meeting. **Visual:** cassette J-card with track-like agenda rows and a compact elapsed-time display.
+- [x] **Packing List** — Travel / Paper — Group and check packing items by bag, person, or trip phase. **Visual:** luggage tag and baggage-label system with bold category stamps. The icon is a Manila luggage tag with brass eyelet, string loop, airmail chevron stripe, and red packed seal. **Prior art:** legacy Swift `PackingList` template.
+- [x] **Grocery List** — Food / Paper — Organize checkable items by store section with quantities and short notes. **Visual:** playful fridge-magnet board on a quiet enamel surface with colorful 3D-styled enamel magnets and a pinned sticky memo. The icon is a cream shopping notepad with a yellow banana magnet and checkbox rows.
+- [ ] **Meal Planner** — Food / Paper — Assign meals to days and maintain a lightweight preparation overview. **Visual:** tiled kitchen calendar with warm food accents and handwritten marks. **Prior art:** legacy Swift `MealPlanner` template.
+- [x] **Workout Planner** — Health / Instrument — Build exercises with sets, reps, rest, and completion state. **Visual:** Game Boy-inspired training cartridge with strong numeric controls and green LCD matrix. The icon is an atomic purple cartridge shell with green LCD screen and dumbbell mark. **Prior art:** legacy Swift `WorkoutPlanner` template.
+- [x] **Water Tracker** — Health / Instrument — Log drinks against a daily target and see simple progress. **Visual:** tiny translucent aqua hydration instrument with a liquid-level readout. The icon is a frosted aqua flask with wavy water meniscus, droplet badge, and level dots. **Prior art:** legacy Swift `WaterIntake` template.
+- [x] **Mood Log** — Health / Paper — Record mood, energy, and a short dated reflection without gamified pressure. **Visual:** gentle color journal with soft fields, luminous mood orbs, and generous breathing room. The icon is a clean linen journal sheet with 5 colorful mood orbs and ruled reflection lines. **Reference:** `archive/templates/mood-log`.
+- [x] **Flashcards** — Learning / Instrument — Create decks and review cards using a lightweight spaced-repetition flow. **Visual:** compact school index-card machine with satisfying flip states.
+- [x] **Markdown Editor** — Writing / Paper + Instrument — Compose, edit, and read markdown with native textarea interactions, real-time in-place syntax styling, and split/preview modes. **Visual:** typewriter desk manuscript with warm cream paper, carbon ink, safety-vermilion cursor, and obsidian dark mode. The icon is an archival paper card with bold # mark, syntax tags, and vermilion caret.
+- [x] **Reading Tracker** — Learning / Paper — Queue, rank, annotate, and finish books or articles. **Visual:** library checkout card with stamped progress, circular red ink seal, and star ratings. The icon is a manila card with red circular stamp and horizontal book checkout table.
+- [ ] **Home Inventory** — Home / Paper — Record rooms, belongings, values, serial numbers, and optional photos. **Visual:** labeled archival storage-box index with sober insurance-friendly typography. **Prior art:** legacy Swift `HomeInventory` template.
+- [ ] **Party Invite & RSVP** — Social / Paper — Present event details and retain a simple guest response state. **Visual:** bold letterpress invitation with a detachable RSVP stub. **Prior art:** legacy Swift `PartyPlanner` template.
+
+## P2 — Focused life and work tools
+
+- [ ] **Savings Goal Tracker** — Money / Instrument — Track contributions and progress toward a named target. **Visual:** glass coin bank with restrained etched progress markings.
+- [ ] **Debt Payoff Tracker** — Money / Paper + Instrument — Model balances, payments, payoff order, and progress over time. **Visual:** serious ledger with a satisfying disappearing balance bar. **Prior art:** legacy Swift `DebtPayoffTracker` template.
+- [ ] **Bill Splitter** — Money / Instrument — Divide shared costs, tax, tip, and selected items among people. **Visual:** restaurant check presenter with movable initials and tabular totals.
+- [ ] **Tip Calculator** — Money / Instrument — Calculate tip and per-person totals with minimal input. **Visual:** tiny chrome diner calculator with oversized number keys.
+- [ ] **Sleep Log** — Health / Instrument — Record sleep windows, perceived quality, and recent patterns. **Visual:** dim midnight bedside clock with soft lunar graphics. **Prior art:** legacy Swift `SleepTracker` template.
+- [ ] **Medication Schedule** — Health / Paper — Track doses, timing, instructions, and completion state with high legibility. **Visual:** pharmacy-label organizer with accessible status color. **Prior art:** legacy Swift `MedicationSchedule` template.
+- [ ] **Cleaning Schedule** — Home / Paper — Assign recurring chores by room, person, and day. **Visual:** enamel household clipboard with colored task tabs. **Prior art:** legacy Swift `CleaningSchedule` template.
+- [ ] **Plant Care Card** — Home / Paper — Record watering, light, feeding, repotting, and observations for one plant. **Visual:** botanical specimen tag in soft forest tones.
+- [ ] **Guest Welcome Card** — Home / Paper + Skin — Present Wi-Fi, house notes, contacts, and checkout details. **Visual:** old motel key tag paired with a compact house manual.
+- [ ] **City Cheat Sheet** — Travel / Paper — Save essential places, transit notes, phrases, and emergency details without requiring a live map. **Visual:** folded pocket map with dense but calm wayfinding typography.
+- [ ] **Travel Expense Tracker** — Travel / Paper — Record trip spending by currency and category with local and home totals. **Visual:** passport-stamp ledger with crisp conversion figures.
+- [ ] **Study Plan** — Learning / Paper — Break a learning goal into sessions, topics, milestones, and deadlines. **Visual:** academic timetable with selective highlighter marks.
+- [ ] **Decision Matrix** — Thinking / Instrument — Score options against weighted criteria and compare derived totals. **Visual:** drafting-board grid with transparent scoring overlays.
+- [ ] **Brain Dump** — Thinking / Paper — Rapidly capture, cluster, and promote loose thoughts into next actions. **Visual:** oversized yellow legal pad with margin annotations.
+- [ ] **Gratitude Journal** — Personal / Paper — Record a few dated reflections with very little friction. **Visual:** intimate linen-bound pocket journal with warm, quiet typography. **Prior art:** legacy Swift `GratitudeJournal` template.
+- [ ] **Event Run-of-Show** — Events / Instrument + Paper — Coordinate timed cues, owners, notes, and live completion during an event. **Visual:** backstage clipboard with high-visibility cue rows and a fixed show clock.
+
+## P3 — Creative, technical, and expressive range
+
+- [ ] **JSON Formatter** — Developer / Instrument — Paste, format, validate, fold, and copy JSON locally. **Visual:** compact terminal utility with precise syntax color and an inset error readout.
+- [ ] **Regex Tester** — Developer / Instrument — Test a pattern against sample text and inspect matches and groups. **Visual:** laboratory analyzer with illuminated result bands.
+- [ ] **Markdown Preview** — Developer / Paper — Edit Markdown beside a clean rendered preview and export the result. **Visual:** split notebook crossed with a restrained type specimen.
+- [ ] **Unit Converter** — Utility / Instrument — Convert common measurements and retain favorite conversion pairs. **Visual:** rotary laboratory instrument with large tabular readouts. **Prior art:** legacy Swift `UnitConverter` template.
+- [ ] **Color Palette** — Creative / Paper — Build, label, reorder, and export a compact set of colors. **Visual:** physical paint-chip fan deck with direct swatch editing.
+- [ ] **Moodboard** — Creative / Paper — Arrange images, colors, and short notes on a focused canvas. **Visual:** editorial corkboard with shallow pinned layers.
+- [x] **Wordle** — Games / Instrument — Guess a 5-letter hidden word in six attempts with mechanical tile flips, physical & on-screen keyboard, daily and practice modes, streak stats, and spoiler-free grid sharing. **Visual:** dark graphite word-puzzle instrument with tactile milled letter tiles, emerald/amber status feedback, and mechanical keyboard keys. The icon is a dark chassis with embossed green, amber, and slate letter tiles.
+- [ ] **Scorekeeper** — Games / Instrument — Track players, rounds, undoable score changes, and the current leader. **Visual:** compact tabletop electronic scoreboard.
+- [ ] **Bingo Card** — Games / Paper — Generate, mark, reset, and export a bingo grid. **Visual:** community-hall paper card with translucent daub marks.
+- [ ] **Tournament Bracket** — Games / Paper — Seed participants and advance winners through a compact bracket. **Visual:** sports-broadcast bracket printed on folded newsprint.
+- [ ] **Weather Station** — Live / Instrument + Skin — Display current conditions and a short forecast when a data source is available. **Visual:** alien-green portable weather receiver with iconographic readouts.
+- [ ] **Website Uptime Monitor** — Live / Instrument — Show endpoint state, recent checks, and a compact incident history. **Visual:** tiny server-rack status panel with restrained alarm color.
+- [ ] **Digital Pet** — Playful / Skin — Maintain a persistent creature through small care interactions and elapsed time. **Visual:** expressive Tamagotchi-inspired shell with a monochrome creature display.
+- [ ] **Mini Music Player** — Music / Skin — Manage a short queue with playback, seek, volume, and now-playing state. **Visual:** translucent early-2000s MP3 player.
+- [x] **Metronome & BPM Tapper** — Music / Instrument — Tap a tempo and run an adjustable visual and audible metronome. **Visual:** mechanical music-practice instrument with a swinging tempo indicator.
+- [x] **Pixel-Art Canvas** — Creative / Instrument — Draw on a small grid with a limited palette, undo, and clean export. **Visual:** colorful pocket-console cartridge.
+- [ ] **Poster Generator** — Creative / Paper — Edit a constrained message, hierarchy, palette, and composition, then export it. **Visual:** Swiss print-shop tool with bold type and disciplined geometry.
+
+## Prior-art inventory
+
+These are the only repository prior-art directories allowed through
+`.gitignore`. Use them as design and behavior references, not as runtime
+packages to copy:
+
+- `archive/templates/countdown-milestones`
+- `archive/templates/expense-pulse`
+- `archive/templates/field-notes`
+- `archive/templates/habit-heatmap`
+- `archive/templates/invoice-minimal`
+- `archive/templates/meeting-notes`
+- `archive/templates/mood-log`
+- `archive/templates/notebook`
+- `archive/templates/recipe-card`
+- `archive/templates/sqlite-field-notes`
+- `archive/templates/subscription-tracker`
+- `archive/templates/trip-planner`
+- `archive/templates/weekly-planner`
+- `Prototypes/ambient-mixer`
+
+Every maintained template must live under `examples/slops/`, follow current
+manifests and storage conventions, support direct local editing, and use
+`data-slop-export="hide"` for controls that should not appear in PNG, PDF,
+Quick Look, or catalog captures. A legacy implementation is reference material
+until it has been migrated, reviewed, and made canonical there.

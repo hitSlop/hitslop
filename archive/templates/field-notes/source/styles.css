@@ -1,0 +1,404 @@
+@import "tailwindcss";
+
+:root {
+	--note-shell: #202322;
+	--note-shell-soft: #303431;
+	--note-paper: #f2eddf;
+	--note-ink: #222421;
+	--note-muted: #777264;
+	--note-moss: #416452;
+	--note-moss-soft: #bdd2bd;
+	--note-persimmon: #ee5a42;
+	--note-butter: #f0e690;
+	--note-rule: rgb(34 36 33 / 16%);
+	--note-focus: #ee5a42;
+	--note-danger: #a32f27;
+	--note-shadow: 0 14px 32px rgb(23 25 23 / 18%);
+	--note-body: "Avenir Next", Avenir, "SF Pro Text", sans-serif;
+	--note-display: "SF Pro Rounded", "Avenir Next", sans-serif;
+	color-scheme: light;
+	font-synthesis: none;
+}
+
+* {
+	box-sizing: border-box;
+}
+html,
+body,
+#app {
+	width: 100%;
+	min-height: 100%;
+	margin: 0;
+}
+body {
+	color: var(--note-ink);
+	background: var(--note-shell);
+	font-family: var(--note-body);
+}
+button,
+input {
+	font: inherit;
+}
+.notes-shell {
+	position: relative;
+	min-height: 100vh;
+	overflow: hidden;
+	padding: 18px;
+	background: linear-gradient(90deg, transparent calc(100% - 52px), rgb(255 255
+		255 / 4%) 0), var(--note-shell);
+	container-type: inline-size;
+	font-variant-numeric: tabular-nums;
+}
+.notes-shell::after {
+	position: absolute;
+	inset: 0 48px 0 auto;
+	width: 1px;
+	background: rgb(255 255 255 / 7%);
+	content: "";
+	pointer-events: none;
+}
+.notes-header {
+	position: relative;
+	min-height: 158px;
+	overflow: hidden;
+	border-radius: 28px 28px 9px 28px;
+	padding: 22px 24px;
+	color: var(--note-ink);
+	background: var(--note-moss-soft);
+	box-shadow: inset 0 1px rgb(255 255 255 / 34%);
+}
+.notes-header::before {
+	position: absolute;
+	right: 22px;
+	top: 19px;
+	color: var(--note-moss);
+	content: "FIELD / 08";
+	font-size: 8px;
+	font-weight: 800;
+	letter-spacing: .16em;
+}
+.notes-header::after {
+	position: absolute;
+	right: -24px;
+	bottom: -38px;
+	width: 150px;
+	height: 150px;
+	border: 1px solid color-mix(in srgb, var(--note-moss) 22%, transparent);
+	border-radius: 50%;
+	content: "";
+	pointer-events: none;
+}
+.note-title,
+.title-editor {
+	display: block;
+	width: calc(100% - 82px);
+	margin: 24px 0 0;
+	border: 0;
+	padding: 0;
+	color: var(--note-ink);
+	background: transparent;
+	font-family: var(--note-display);
+	font-size: clamp(2.65rem, 11cqw, 4rem);
+	font-weight: 620;
+	line-height: .82;
+	letter-spacing: -.07em;
+	text-align: left;
+}
+.note-subtitle,
+.subtitle-editor {
+	display: block;
+	width: min(29ch, calc(100% - 70px));
+	margin: 11px 0 0 2px;
+	border: 0;
+	padding: 0;
+	color: color-mix(in srgb, var(--note-moss) 78%, var(--note-ink));
+	background: transparent;
+	font-size: .76rem;
+	font-weight: 560;
+	line-height: 1.38;
+	text-align: left;
+}
+.note-title,
+.note-subtitle {
+	cursor: pointer;
+}
+.title-editor,
+.subtitle-editor {
+	border-bottom: 2px solid var(--note-persimmon);
+	outline: none;
+}
+.composer {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 8px 12px;
+	align-items: end;
+	margin-top: 10px;
+	border-radius: 9px 27px 9px 9px;
+	padding: 16px 18px 17px;
+	color: var(--note-ink);
+	background: var(--note-butter);
+}
+.composer > label {
+	grid-column: 1 / -1;
+	color: color-mix(in srgb, var(--note-ink) 66%, transparent);
+	font-size: 8px;
+	font-weight: 800;
+	letter-spacing: .15em;
+	text-transform: uppercase;
+}
+.composer-input {
+	min-width: 0;
+	height: 38px;
+	border: 0;
+	border-bottom: 2px solid color-mix(in srgb, var(--note-ink) 34%, transparent);
+	border-radius: 0;
+	padding: 0 2px;
+	color: var(--note-ink);
+	background: transparent;
+	font-size: .94rem;
+	outline: none;
+}
+.composer-input::placeholder {
+	color: color-mix(in srgb, var(--note-ink) 52%, transparent);
+}
+.composer-input:focus {
+	border-color: var(--note-persimmon);
+}
+.primary-action {
+	min-height: 38px;
+	border: 0;
+	border-radius: 999px;
+	padding: 0 15px;
+	color: var(--note-paper);
+	background: var(--note-ink);
+	cursor: pointer;
+	font-size: .7rem;
+	font-weight: 750;
+	transition: transform 120ms ease-out, background 140ms ease-out;
+}
+.primary-action:hover {
+	background: var(--note-persimmon);
+}
+.primary-action:active {
+	transform: scale(.96);
+}
+.notes-nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 48px;
+	margin-top: 10px;
+	padding: 0 3px 0 10px;
+	color: rgb(242 237 223 / 58%);
+}
+.notes-nav > span {
+	font-size: 8px;
+	font-weight: 800;
+	letter-spacing: .16em;
+	text-transform: uppercase;
+}
+.filter-group {
+	display: flex;
+	gap: 2px;
+	border-radius: 9px;
+	padding: 3px;
+	background: var(--note-shell-soft);
+}
+.filter-button {
+	min-width: 54px;
+	height: 30px;
+	border: 0;
+	border-radius: 7px;
+	padding: 0 10px;
+	color: rgb(242 237 223 / 54%);
+	background: transparent;
+	cursor: pointer;
+	font-size: 9px;
+	font-weight: 700;
+}
+.filter-button[data-state="on"] {
+	color: var(--note-ink);
+	background: var(--note-paper);
+}
+.notes-list,
+.notes-empty {
+	margin: 0;
+	border-radius: 9px 9px 28px 28px;
+	padding: 0;
+	overflow: hidden;
+	color: var(--note-ink);
+	background: var(--note-paper);
+	box-shadow: var(--note-shadow);
+	list-style: none;
+}
+.note-row {
+	display: grid;
+	grid-template-columns: 32px minmax(0,1fr) 36px;
+	gap: 8px;
+	align-items: center;
+	min-height: 58px;
+	border-bottom: 1px solid var(--note-rule);
+	padding: 0 12px;
+}
+.note-row:last-child {
+	border-bottom: 0;
+}
+.note-row[data-done="true"] {
+	background: color-mix(in srgb, var(--note-moss-soft) 23%, var(--note-paper));
+}
+.complete-action {
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	border: 1px solid color-mix(in srgb, var(--note-ink) 35%, transparent);
+	border-radius: 50%;
+	padding: 0;
+	color: transparent;
+	background: transparent;
+	cursor: pointer;
+}
+.note-row[data-done="true"] .complete-action {
+	border-color: var(--note-persimmon);
+	color: var(--note-paper);
+	background: var(--note-persimmon);
+}
+.note-copy {
+	min-width: 0;
+	overflow-wrap: anywhere;
+	font-family: var(--note-display);
+	font-size: .98rem;
+	font-weight: 560;
+	cursor: pointer;
+}
+.note-row[data-done="true"] .note-copy {
+	color: var(--note-muted);
+	text-decoration: line-through;
+	text-decoration-thickness: 1px;
+}
+.note-editor {
+	width: 100%;
+	border: 0;
+	border-bottom: 2px solid var(--note-persimmon);
+	border-radius: 0;
+	padding: 8px 0;
+	color: var(--note-ink);
+	background: transparent;
+	outline: none;
+	font-family: var(--note-display);
+	font-size: .98rem;
+}
+.delete-note {
+	width: 36px;
+	height: 36px;
+	border: 0;
+	padding: 0;
+	color: var(--note-muted);
+	background: transparent;
+	opacity: 0;
+	cursor: pointer;
+	font-size: 1.2rem;
+	transition: opacity 120ms, color 120ms, transform 120ms;
+}
+.note-row:hover .delete-note,
+.delete-note:focus-visible {
+	opacity: 1;
+}
+.delete-note:hover {
+	color: var(--note-persimmon);
+}
+.delete-note:active {
+	transform: scale(.9);
+}
+.notes-empty {
+	display: grid;
+	gap: 5px;
+	padding: 28px 22px;
+}
+.notes-empty strong {
+	font-family: var(--note-display);
+	font-size: 1.15rem;
+}
+.notes-empty span {
+	color: var(--note-muted);
+	font-size: .78rem;
+}
+.document-status,
+.document-error {
+	margin: 12px 8px 0;
+	color: rgb(242 237 223 / 55%);
+	font-size: 8px;
+	font-weight: 650;
+	letter-spacing: .04em;
+}
+.document-error {
+	color: #ff8a76;
+}
+.document-footer {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	margin-top: 24px;
+	padding: 0 8px;
+	color: rgb(242 237 223 / 55%);
+	font-size: 8px;
+	font-weight: 700;
+	letter-spacing: .1em;
+	text-transform: uppercase;
+}
+button:focus-visible,
+[role="button"]:focus-visible {
+	outline: 0;
+	box-shadow: 0 0 0 1px var(--note-focus);
+}
+input:focus-visible {
+	outline: 0;
+	border-bottom-color: var(--note-focus);
+	box-shadow: inset 0 -2px 0 var(--note-focus);
+}
+@keyframes note-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+@media (hover: none) {
+	.delete-note {
+		opacity: 1;
+	}
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--note-shell: #191b1a;
+		--note-shell-soft: #292c2a;
+		--note-paper: #e8e0d1;
+		--note-ink: #20221f;
+		--note-muted: #70695f;
+		--note-moss: #345342;
+		--note-moss-soft: #a9c3a9;
+		--note-butter: #e7dc83;
+		--note-persimmon: #fb624b;
+	}
+}
+.notes-header::before,
+.composer > label,
+.notes-nav > span,
+.document-error,
+.document-footer {
+	font-size: 10px;
+}
+.filter-button {
+	font-size: 11px;
+}
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: .01ms !important;
+		transition-duration: .01ms !important;
+	}
+}

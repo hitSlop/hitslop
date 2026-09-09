@@ -1,0 +1,52 @@
+{
+  "name": "@hitslop/schema",
+  "version": "0.3.0",
+  "description": "Canonical hitSlop schemas and publish protocol.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hitslop/hitslop.git",
+    "directory": "packages/schema"
+  },
+  "homepage": "https://hitslop.com",
+  "bugs": {
+    "url": "https://github.com/hitslop/hitslop/issues"
+  },
+  "keywords": [
+    "hitslop",
+    "schema",
+    "typebox",
+    "json-schema"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "generated"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./bridge": "./dist/bridge.js",
+    "./validation": "./dist/validation.js",
+    "./json": "./dist/json.js",
+    "./manifest.schema.json": "./generated/manifest.schema.json"
+  },
+  "scripts": {
+    "generate": "bun run build && bun src/generate.ts",
+    "check:generated": "bun src/check-generated.ts",
+    "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "typebox": "^1.3.26"
+  },
+  "devDependencies": {
+    "quicktype-core": "26.0.0",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,522 @@
+:root {
+  --fridge-surface: #e9e4d8;
+  --fridge-border: #d2ccbf;
+  --paper-bg: #fffefb;
+  --paper-ruled: rgba(100, 115, 130, 0.12);
+  --paper-ink: #232220;
+  --paper-ink-muted: #6e6b66;
+  --paper-ink-dim: #a39f97;
+  --sticky-bg: #fde8ec;
+  --sticky-border: #fbc6d0;
+  --sticky-ink: #881337;
+  --banana: #facc15;
+  --banana-tip: #854d0e;
+  --star-blue: #38bdf8;
+  --berry-red: #ef4444;
+  --radius: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--paper-ink);
+  background: #1c1a17;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.fridge-canvas {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  background: #25221d;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.fridge-door {
+  flex: 1;
+  background: var(--fridge-surface);
+  border-radius: var(--radius);
+  border: 2px solid var(--fridge-border);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  gap: 12px;
+}
+
+/* 3D-styled enamel fridge magnets */
+.magnet {
+  position: absolute;
+  z-index: 10;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.22));
+  user-select: none;
+}
+
+.magnet-banana {
+  top: 8px;
+  right: 28px;
+  width: 44px;
+  height: 38px;
+  transform: rotate(-12deg);
+}
+
+.banana-body {
+  width: 40px;
+  height: 20px;
+  border-bottom: 9px solid var(--banana);
+  border-right: 5px solid var(--banana);
+  border-bottom-right-radius: 20px;
+  border-bottom-left-radius: 14px;
+  position: relative;
+}
+
+.banana-tip-left {
+  position: absolute;
+  bottom: -4px;
+  left: -3px;
+  width: 4px;
+  height: 4px;
+  background: var(--banana-tip);
+  border-radius: 50%;
+}
+
+.banana-tip-right {
+  position: absolute;
+  top: 8px;
+  right: -3px;
+  width: 4px;
+  height: 4px;
+  background: var(--banana-tip);
+  border-radius: 50%;
+}
+
+.magnet-smiley {
+  top: 110px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  background: #facc15;
+  border-radius: 50%;
+  border: 1.5px solid #ca8a04;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.magnet-star {
+  top: 160px;
+  right: 18px;
+  color: var(--star-blue);
+  font-size: 28px;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: rotate(15deg);
+}
+
+/* Main Paper Shopping Pad */
+.notepad {
+  flex: 1;
+  background: var(--paper-bg);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(40, 35, 30, 0.15), 0 1px 2px rgba(40, 35, 30, 0.1);
+  margin-right: 48px;
+  display: flex;
+  flex-direction: column;
+  border-top: 5px solid #d9534f;
+  padding: 14px 16px 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.pad-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--paper-ink);
+  padding-bottom: 4px;
+}
+
+.pad-title-input {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--paper-ink);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.pad-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--paper-ink-muted);
+}
+
+/* Category Filter Tabs */
+.filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.filter-tab {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--paper-ink-muted);
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.filter-tab[data-state="active"],
+.filter-tab.active {
+  background: var(--paper-ink);
+  color: #ffffff;
+  border-color: var(--paper-ink);
+}
+
+/* Input quick add row */
+.add-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px dashed var(--paper-ruled);
+  padding-bottom: 6px;
+}
+
+.new-item-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: var(--paper-ink);
+  outline: none;
+  font-family: inherit;
+}
+
+.section-select {
+  background: #f4f2eb;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--paper-ink-muted);
+  padding: 3px 6px;
+  outline: none;
+}
+
+.add-btn {
+  background: var(--paper-ink);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Items List */
+.items-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--paper-ruled);
+  transition: opacity 0.15s;
+}
+
+.item-check {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--paper-ink);
+  border-radius: 3px;
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.item-check[data-state="checked"],
+.item-check:checked {
+  background: var(--paper-ink);
+}
+
+.item-check[data-state="checked"]::before,
+.item-check:checked::before {
+  content: "";
+  width: 7px;
+  height: 3.5px;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+.item-title-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: var(--paper-ink);
+  outline: none;
+}
+
+.item-row.done .item-title-input {
+  text-decoration: line-through;
+  color: var(--paper-ink-dim);
+}
+
+.item-badge {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  background: #f3efe6;
+  color: var(--paper-ink-muted);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.delete-item-btn {
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: var(--paper-ink-dim);
+  cursor: pointer;
+  padding: 2px;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.item-row:hover .delete-item-btn {
+  opacity: 1;
+}
+
+.delete-item-btn:hover {
+  color: #ef4444;
+}
+
+/* Sticky Note Memo on the bottom */
+.sticky-note {
+  background: var(--sticky-bg);
+  border: 1px solid var(--sticky-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-right: 48px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  position: relative;
+  transform: rotate(-1deg);
+}
+
+.sticky-pin {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 1px solid #b91c1c;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.sticky-textarea {
+  width: 100%;
+  min-height: 40px;
+  resize: none;
+  background: transparent;
+  border: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--sticky-ink);
+  outline: none;
+  line-height: 1.4;
+}
+
+/* Static export styling */
+html[data-slop-capture="static"] [data-slop-export="hide"] {
+  display: none !important;
+}
+
+html[data-slop-capture="static"] input,
+html[data-slop-capture="static"] textarea {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* 512x512 Icon Render Target */
+.fridge-render {
+  display: none !important;
+  width: 512px;
+  height: 512px;
+  place-items: center;
+  overflow: hidden;
+  background: transparent;
+}
+
+html[data-slop-renderer="true"][data-slop-capture="icon"] .fridge-canvas {
+  display: none;
+}
+
+html[data-slop-renderer="true"][data-slop-capture="icon"] [data-slop-render="icon"] {
+  display: grid !important;
+}
+
+.fridge-icon {
+  width: 512px;
+  height: 512px;
+  background: #1e1b17;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-fridge-plate {
+  width: 440px;
+  height: 440px;
+  background: #ece7db;
+  border-radius: 40px;
+  border: 14px solid #d4cfc2;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-notepad {
+  width: 290px;
+  height: 330px;
+  background: #fffefb;
+  border-radius: 10px;
+  border-top: 10px solid #d9534f;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.icon-header-strip {
+  width: 140px;
+  height: 16px;
+  background: #232220;
+  border-radius: 8px;
+}
+
+.icon-list-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.icon-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-box {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #232220;
+  border-radius: 4px;
+}
+
+.icon-box-checked {
+  width: 18px;
+  height: 18px;
+  background: #232220;
+  border-radius: 4px;
+  position: relative;
+}
+
+.icon-box-checked::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 5px;
+  height: 9px;
+  border: solid #ffffff;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+
+.icon-line {
+  flex: 1;
+  height: 10px;
+  background: #e2ded4;
+  border-radius: 5px;
+}
+
+.icon-banana-magnet {
+  position: absolute;
+  top: 36px;
+  right: 48px;
+  width: 70px;
+  height: 60px;
+}
+
+.icon-banana-curve {
+  width: 60px;
+  height: 34px;
+  border-bottom: 14px solid #facc15;
+  border-right: 10px solid #facc15;
+  border-bottom-right-radius: 36px;
+  border-bottom-left-radius: 24px;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}
+
+.icon-star-magnet {
+  position: absolute;
+  bottom: 50px;
+  right: 50px;
+  color: #38bdf8;
+  font-size: 38px;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+}

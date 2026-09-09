@@ -1,0 +1,24 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /artifacts/sha256/{name} {
+      allow read: if name.matches('^[a-f0-9]{64}\\.slop\\.zip$');
+      allow write: if false;
+    }
+
+    match /previews/sha256/{name} {
+      allow read: if name.matches('^[a-f0-9]{64}\\.png$');
+      allow write: if false;
+    }
+
+    match /icons/sha256/{name} {
+      allow read: if name.matches('^[a-f0-9]{64}\\.png$');
+      allow write: if false;
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

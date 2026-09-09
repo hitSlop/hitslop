@@ -1,0 +1,22 @@
+diff --git a/src/typescript.js b/src/typescript.js
+index 1105f935aa9827e990bf3aa53a26c7f3193420ec..27e4cc27cec9c6be3bfb8ef58596d3f3b9456450 100644
+--- a/src/typescript.js
++++ b/src/typescript.js
+@@ -1,6 +1,7 @@
+ import * as fs from 'node:fs';
+ import * as path from 'node:path';
+ import { createRequire } from 'node:module';
++import { pathToFileURL } from 'node:url';
+ import semver from 'semver';
+ import { posixify, mkdirp, rimraf, walk } from './filesystem.js';
+ import { resolve_aliases, write } from './utils.js';
+@@ -113,7 +114,8 @@ export async function transpile_ts(tsconfig, filename, source, cache) {
+ 
+ async function try_load_ts() {
+ 	try {
+-		return (await import('typescript')).default;
++		const require = createRequire(path.resolve('package.json'));
++		return (await import(pathToFileURL(require.resolve('typescript')).href)).default;
+ 	} catch {
+ 		throw new Error(
+ 			'You need to install TypeScript if you want to transpile TypeScript files and/or generate type definitions'

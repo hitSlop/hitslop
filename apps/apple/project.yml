@@ -1,0 +1,146 @@
+name: hitSlop
+options:
+  bundleIdPrefix: com.hitslop
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: 78UAXU8QG8
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_STRICT_CONCURRENCY: minimal
+packages:
+  HitSlopApple:
+    path: Packages/HitSlopApple
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.9.6
+targets:
+  hitSlop-iOS:
+    type: application
+    productName: hitSlop
+    platform: iOS
+    sources:
+      - path: App/Shared/Assets.xcassets
+      - path: App/iOS
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: HitSlopApple
+        product: HitSlopCore
+      - package: HitSlopApple
+        product: HitSlopRuntime
+      - package: HitSlopApple
+        product: HitSlopRegistry
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.ios
+        PRODUCT_NAME: hitSlop
+        INFOPLIST_FILE: App/iOS/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/Shared/hitSlop.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
+      configs:
+        Debug:
+          HITSLOP_CATALOG_URL: https://api.hitslop.com
+        Release:
+          HITSLOP_CATALOG_URL: https://api.hitslop.com
+  hitSlop-macOS:
+    type: application
+    productName: hitSlop
+    platform: macOS
+    sources:
+      - path: App/Shared/Assets.xcassets
+      - path: App/macOS
+        excludes:
+          - ExportOptions.plist
+          - Info.plist
+          - GoogleService-Info.plist
+      - path: App/macOS/GoogleService-Info.plist
+        buildPhase: resources
+    dependencies:
+      - package: HitSlopApple
+        product: HitSlopHost
+      - package: HitSlopApple
+        product: HitSlopCatalog
+      - package: HitSlopApple
+        product: HitSlopRuntime
+      - package: HitSlopApple
+        product: HitSlopCore
+      - package: HitSlopApple
+        product: HitSlopFirebase
+      - package: Sparkle
+        product: Sparkle
+    postCompileScripts:
+      - name: Embed hitslop-native
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+          case "${CONFIGURATION:-}" in
+            Release) ;;
+            *) exit 0 ;;
+          esac
+          export HITSLOP_NATIVE_ARCHS="${ARCHS:-}"
+          "${SRCROOT}/../../scripts/embed-hitslop-native.sh" "${TARGET_BUILD_DIR}/${WRAPPER_NAME}"
+    postBuildScripts:
+      - name: Upload Crashlytics symbols
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - $(DWARF_DSYM_FOLDER_PATH)/$(DWARF_DSYM_FILE_NAME)
+          - $(DWARF_DSYM_FOLDER_PATH)/$(DWARF_DSYM_FILE_NAME)/Contents/Resources/DWARF/$(PRODUCT_NAME)
+          - $(DWARF_DSYM_FOLDER_PATH)/$(DWARF_DSYM_FILE_NAME)/Contents/Info.plist
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist
+          - $(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)
+        script: |
+          set -euo pipefail
+          case "${CONFIGURATION:-}" in
+            Release) ;;
+            *) exit 0 ;;
+          esac
+          if [ "${CODE_SIGNING_ALLOWED:-YES}" = "NO" ]; then
+            exit 0
+          fi
+          "${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app
+        PRODUCT_NAME: hitSlop
+        INFOPLIST_FILE: App/macOS/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/Shared/hitSlop.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "1.0.4"
+        CURRENT_PROJECT_VERSION: "22"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ENABLE_HARDENED_RUNTIME: YES
+        OTHER_LDFLAGS: $(inherited) -ObjC
+        SKIP_INSTALL: NO
+      configs:
+        Debug:
+          HITSLOP_CATALOG_URL: https://api.hitslop.com
+        Release:
+          HITSLOP_CATALOG_URL: https://api.hitslop.com
+schemes:
+  hitSlop-iOS:
+    build:
+      targets:
+        hitSlop-iOS: all
+    run:
+      config: Debug
+      executable: hitSlop-iOS
+  hitSlop-macOS:
+    build:
+      targets:
+        hitSlop-macOS: all
+    run:
+      config: Debug
+      executable: hitSlop-macOS
+    profile:
+      config: Release
+      executable: hitSlop-macOS

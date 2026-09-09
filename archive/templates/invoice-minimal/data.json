@@ -1,0 +1,21 @@
+{
+	"number": "2026-041",
+	"status": "Draft",
+	"issued": "2026-08-28",
+	"due": "2026-09-11",
+	"from": {
+		"name": "Longtail Labs",
+		"detail": "14 Binder Street\nPortland, OR 97201\nhello@longtail.test"
+	},
+	"to": {
+		"name": "Northwind Studio",
+		"detail": "88 Harbor Ave\nSeattle, WA 98101"
+	},
+	"items": [
+		{ "id": 1, "name": "Product design sprint", "qty": 1, "rate": 2400 },
+		{ "id": 2, "name": "Interface polish", "qty": 12, "rate": 120 }
+	],
+	"tax": 0.05,
+	"notes": "Payment due within 14 days. Thank you for the work.",
+	"nextID": 3
+}

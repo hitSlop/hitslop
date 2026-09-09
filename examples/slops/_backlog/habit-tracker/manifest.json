@@ -1,0 +1,19 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
+  "slug": "habit-tracker",
+  "title": "Habit Tracker",
+  "description": "A cheerful yellow pocket instrument for tracking daily habits, check-ins, streaks, and consistency.",
+  "categories": [
+    "productivity",
+    "personal"
+  ],
+  "presentation": {
+    "width": 520,
+    "height": 720,
+    "shape": "rounded"
+  }
+}

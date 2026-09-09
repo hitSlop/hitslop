@@ -1,0 +1,19 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
+  "slug": "reading-tracker",
+  "title": "Reading Tracker",
+  "description": "A vintage library checkout card for logging books, authors, star ratings, and reading status.",
+  "categories": [
+    "education",
+    "personal"
+  ],
+  "presentation": {
+    "width": 560,
+    "height": 600,
+    "shape": "rounded"
+  }
+}

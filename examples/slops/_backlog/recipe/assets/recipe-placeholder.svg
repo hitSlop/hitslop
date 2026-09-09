@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0c374"/><stop offset="1" stop-color="#d96d39"/></linearGradient>
+    <radialGradient id="plate"><stop stop-color="#fff8df"/><stop offset=".72" stop-color="#eadcb8"/><stop offset=".74" stop-color="#9e3e28"/><stop offset=".8" stop-color="#f6e8c9"/></radialGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <circle cx="400" cy="315" r="245" fill="#5b241c" opacity=".22"/>
+  <circle cx="400" cy="300" r="230" fill="url(#plate)"/>
+  <g fill="none" stroke="#d9832f" stroke-width="18" stroke-linecap="round" opacity=".95">
+    <path d="M245 250c85-80 235 22 305-35M235 302c110-67 225 52 330-14M255 355c94-58 197 46 280-5M290 405c75-48 142 16 222-24"/>
+    <path d="M300 205c34 67 22 139 82 198M405 184c-5 94 58 140 72 219M500 205c-55 63-28 119-76 189"/>
+  </g>
+  <g fill="#6d7f3a">
+    <ellipse cx="338" cy="242" rx="24" ry="10" transform="rotate(-30 338 242)"/><ellipse cx="465" cy="337" rx="28" ry="11" transform="rotate(28 465 337)"/><ellipse cx="389" cy="390" rx="22" ry="9" transform="rotate(-12 389 390)"/>
+  </g>
+  <g fill="#fff3c9" opacity=".9"><circle cx="310" cy="330" r="8"/><circle cx="442" cy="236" r="7"/><circle cx="520" cy="304" r="8"/><circle cx="380" cy="278" r="6"/></g>
+  <text x="400" y="555" text-anchor="middle" fill="#401b18" font-family="ui-monospace, monospace" font-size="20" letter-spacing="5">ADD YOUR DISH</text>
+</svg>

@@ -1,0 +1,131 @@
+[
+  {
+    "name": "non-mutating document validation",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "done": { "type": "boolean", "default": false },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+      },
+      "required": ["count", "done", "items"],
+      "additionalProperties": true,
+      "$defs": { "item": { "type": "object", "properties": { "text": { "type": "string", "minLength": 1 } }, "required": ["text"], "additionalProperties": true } }
+    },
+    "cases": [
+      { "valid": true, "value": { "count": 0, "done": false, "items": [{ "text": "ok", "future": 3 }], "future": true } },
+      { "valid": false, "value": { "count": "0", "done": false, "items": [] } },
+      { "valid": false, "value": { "count": 0, "items": [] } },
+      { "valid": false, "value": { "count": -1, "done": false, "items": [] } },
+      { "valid": false, "value": { "count": 0.5, "done": false, "items": [] } },
+      { "valid": false, "value": { "count": 0, "done": false, "items": [{ "text": "" }] } }
+    ]
+  },
+  {
+    "name": "format assertions and union branches",
+    "schema": { "$schema": "https://json-schema.org/draft/2020-12/schema", "anyOf": [{ "type": "string", "format": "email" }, { "const": "local" }] },
+    "cases": [
+      { "valid": true, "value": "person@example.com" },
+      { "valid": true, "value": "local" },
+      { "valid": false, "value": "not an email" },
+      { "valid": false, "value": 3 }
+    ]
+  },
+  {
+    "name": "integer representation and bounds",
+    "schema": { "type": "integer", "minimum": 0, "maximum": 10 },
+    "cases": [
+      { "valid": true, "value": 1.0 },
+      { "valid": true, "value": 10 },
+      { "valid": false, "value": 1.5 },
+      { "valid": false, "value": "1" },
+      { "valid": false, "value": true },
+      { "valid": false, "value": 11 }
+    ]
+  },
+  {
+    "name": "deep array uniqueness",
+    "schema": { "type": "array", "uniqueItems": true },
+    "cases": [
+      { "valid": true, "value": [{ "a": [1, 2] }, { "a": [2, 1] }] },
+      { "valid": false, "value": [{ "a": [1, 2] }, { "a": [1, 2] }] },
+      { "valid": false, "value": [{ "a": 1, "b": 2 }, { "b": 2, "a": 1 }] },
+      { "valid": false, "value": [1, 1.0] }
+    ]
+  },
+  {
+    "name": "unevaluated properties across composition",
+    "schema": {
+      "type": "object",
+      "allOf": [{ "properties": { "title": { "type": "string" } }, "required": ["title"] }],
+      "unevaluatedProperties": false
+    },
+    "cases": [
+      { "valid": true, "value": { "title": "ok" } },
+      { "valid": false, "value": { "title": "ok", "extra": 1 } },
+      { "valid": false, "value": {} }
+    ]
+  },
+  {
+    "name": "recursive local references and nested unknown fields",
+    "schema": {
+      "$ref": "#/$defs/node",
+      "$defs": {
+        "node": {
+          "type": "object",
+          "properties": { "text": { "type": "string" }, "children": { "type": "array", "items": { "$ref": "#/$defs/node" } } },
+          "required": ["text"],
+          "additionalProperties": true
+        }
+      }
+    },
+    "cases": [
+      { "valid": true, "value": { "text": "root", "future": { "keep": true }, "children": [{ "text": "child", "extra": 3 }] } },
+      { "valid": false, "value": { "text": "root", "children": [{ "text": 3 }] } }
+    ]
+  },
+  {
+    "name": "exclusive union branches",
+    "schema": { "oneOf": [{ "type": "integer" }, { "type": "number", "minimum": 0 }] },
+    "cases": [
+      { "valid": true, "value": -1 },
+      { "valid": true, "value": 1.5 },
+      { "valid": false, "value": 1 },
+      { "valid": false, "value": "1" }
+    ]
+  },
+  {
+    "name": "URI format assertions",
+    "schema": { "type": "string", "format": "uri" },
+    "cases": [
+      { "valid": true, "value": "https://example.com/path?q=one#two" },
+      { "valid": true, "value": "urn:hitslop:example" },
+      { "valid": false, "value": "/relative" },
+      { "valid": false, "value": "https://example.com/with space" },
+      { "valid": false, "value": "https://example.com/%zz" },
+      { "valid": false, "value": "not a URI" }
+    ]
+  },
+  {
+    "name": "URI reference format assertions",
+    "schema": { "type": "string", "format": "uri-reference" },
+    "cases": [
+      { "valid": true, "value": "" },
+      { "valid": true, "value": "/relative?q=one#two" },
+      { "valid": true, "value": "https://example.com/encoded%20space" },
+      { "valid": false, "value": "/with space" },
+      { "valid": false, "value": "/%zz" }
+    ]
+  },
+  {
+    "name": "date time format assertions",
+    "schema": { "type": "string", "format": "date-time" },
+    "cases": [
+      { "valid": true, "value": "2026-09-08T12:30:00Z" },
+      { "valid": true, "value": "2026-09-08T12:30:00-06:00" },
+      { "valid": false, "value": "2026-09-08" },
+      { "valid": false, "value": "not a date" }
+    ]
+  }
+]

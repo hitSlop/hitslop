@@ -1,0 +1,8 @@
+# Semester Planner
+
+A bird's-eye academic term calendar for mapping syllabus milestones, exam dates, and semester deadlines.
+
+```sh
+bun slop dev examples/slops/semester-planner
+bun slop build examples/slops/semester-planner
+```

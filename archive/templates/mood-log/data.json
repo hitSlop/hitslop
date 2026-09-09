@@ -1,0 +1,55 @@
+{
+	"title": "How are you, really?",
+	"nextID": 8,
+	"entries": [
+		{
+			"id": 1,
+			"day": "THU 28",
+			"mood": 4,
+			"energy": 3,
+			"note": "Clear head after a slow morning."
+		},
+		{
+			"id": 2,
+			"day": "WED 27",
+			"mood": 3,
+			"energy": 2,
+			"note": "A little stretched, still moving."
+		},
+		{
+			"id": 3,
+			"day": "TUE 26",
+			"mood": 5,
+			"energy": 4,
+			"note": "Deep work clicked."
+		},
+		{
+			"id": 4,
+			"day": "MON 25",
+			"mood": 4,
+			"energy": 5,
+			"note": "Good people, loud brain."
+		},
+		{
+			"id": 5,
+			"day": "SUN 24",
+			"mood": 2,
+			"energy": 2,
+			"note": "Needed more rest."
+		},
+		{
+			"id": 6,
+			"day": "SAT 23",
+			"mood": 4,
+			"energy": 3,
+			"note": "Long walk, no agenda."
+		},
+		{
+			"id": 7,
+			"day": "FRI 22",
+			"mood": 3,
+			"energy": 4,
+			"note": "Steady enough."
+		}
+	]
+}

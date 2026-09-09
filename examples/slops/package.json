@@ -1,0 +1,31 @@
+{
+  "name": "@hitslop/templates",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun dev-gallery.ts",
+    "dev:quick-checklist": "slop dev quick-checklist",
+    "validate": "bun active.ts validate",
+    "build": "bun active.ts build",
+    "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "@hitslop/runtime": "workspace:*",
+    "@hitslop/svelte": "workspace:*",
+    "@lucide/svelte": "^1.37.0",
+    "bits-ui": "^2.19.0",
+    "svelte": "^5.57.0",
+    "typebox": "^1.3.26"
+  },
+  "devDependencies": {
+    "@hitslop/cli": "workspace:*",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vanilla-extract/css": "^1.21.2",
+    "@vanilla-extract/vite-plugin": "^5.2.6",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@hitslop/runtime": ["../runtime/src/index.ts"],
+      "@hitslop/runtime/adapter": ["../runtime/src/adapter.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}

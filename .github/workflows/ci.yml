@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  javascript:
+    name: JavaScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: bun install --frozen-lockfile
+      - run: bun run release:check
+        env:
+          HITSLOP_SKIP_SWIFT: "1"
+
+  macos:
+    name: macOS
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Swift package tests
+        run: swift test --package-path apps/apple/Packages/HitSlopApple
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Apple project
+        working-directory: apps/apple
+        run: xcodegen generate
+      - name: Verify macOS app contents
+        working-directory: apps/apple
+        run: |
+          derived="$RUNNER_TEMP/hitslop-macos-derived"
+          xcodebuild \
+            -project hitSlop.xcodeproj \
+            -scheme hitSlop-macOS \
+            -configuration Debug \
+            -destination "platform=macOS" \
+            -derivedDataPath "$derived" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          debug_app="$derived/Build/Products/Debug/hitSlop.app"
+          test ! -e "$debug_app/Contents/PlugIns/SlopThumbnail.appex"
+          xcodebuild \
+            -project hitSlop.xcodeproj \
+            -scheme hitSlop-macOS \
+            -configuration Release \
+            -destination "platform=macOS" \
+            -derivedDataPath "$derived" \
+            CODE_SIGNING_ALLOWED=NO \
+            ARCHS="$(uname -m)" \
+            ONLY_ACTIVE_ARCH=YES \
+            build
+          release_plugins="$derived/Build/Products/Release/hitSlop.app/Contents/PlugIns"
+          test ! -e "$release_plugins/SlopThumbnail.appex"
+      - name: Generate and build iOS simulator
+        working-directory: apps/apple
+        run: |
+          xcodebuild \
+            -project hitSlop.xcodeproj \
+            -scheme hitSlop-iOS \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO \
+            build

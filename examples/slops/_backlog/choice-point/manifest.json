@@ -1,0 +1,19 @@
+{
+  "$schema": "https://hitslop.app/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
+  "slug": "choice-point",
+  "title": "Choice Point",
+  "description": "Russ Harris’s ACT fork-in-the-road worksheet: name the moment, map away vs towards, STOP, and pick one tiny move.",
+  "categories": [
+    "personal",
+    "education"
+  ],
+  "presentation": {
+    "width": 760,
+    "height": 980,
+    "shape": "rounded"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "react-counter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slop dev",
+    "build": "slop build",
+    "publish": "slop publish"
+  },
+  "dependencies": {
+    "@hitslop/react": "^0.1.0",
+    "@hitslop/runtime": "^0.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@hitslop/cli": "^0.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^8.0.0"
+  }
+}
