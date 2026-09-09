@@ -175,7 +175,8 @@ describe("authoring scaffold", () => {
     expect(JSON.parse(await readFile(join(root, "manifest.json"), "utf8")).author).toEqual({ name: "Jordan Singer", url: "https://example.com/jordan" });
     const authoringSkill = await readFile(join(root, ".agents/skills/hitslop-authoring/SKILL.md"), "utf8");
     expect(authoringSkill).toContain("Storage is implicit and ID-free");
-    expect(await readFile(join(root, ".agents/skills/hitslop-authoring/references/storage-and-packages.md"), "utf8")).toContain("SQLite");
+    const storageGuide = await readFile(join(root, ".agents/skills/hitslop-authoring/references/storage-and-packages.md"), "utf8");
+    expect(storageGuide).toContain("Use JSON for structured data");
     const designSkill = await readFile(join(root, ".agents/skills/hitslop-design/SKILL.md"), "utf8");
     expect(designSkill).toContain("data-slop-export");
     expect(designSkill).toContain("host window be the outer object boundary");

@@ -296,25 +296,23 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     #expect(try await session.webView.evaluateJavaScript("document.documentElement.getAttribute('data-slop-capture')") is NSNull)
 }
 
-@Test @MainActor func backgroundCaptureKeepsExistingJSONSQLiteMediaAndThemeUnchanged() async throws {
+@Test @MainActor func backgroundCaptureKeepsExistingJSONMediaAndThemeUnchanged() async throws {
     let root = try rendererPackage()
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let session = try SlopRuntimeSession(packageURL: root)
     session.load(); try await session.waitUntilReady()
     _ = try await session.webView.callAsyncJavaScript(#"""
       await slop.json.open({count:1});
-      await slop.db.execute('CREATE TABLE counts (value INTEGER)');
-      await slop.db.execute('INSERT INTO counts VALUES (1)');
       await slop.media.write('photo','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','image/png');
       return true;
     """#, arguments: [:], in: nil, contentWorld: .page)
     try await session.flush(); session.close()
     try Data(":root{--slop-ink:#123456}".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
-    let paths = ["stores/data.json", "stores/data.sqlite", "stores/media/photo", "stores/theme.css"]
+    let paths = ["stores/data.json", "stores/media/photo", "stores/theme.css"]
     let originals = try paths.map { try Data(contentsOf: root.appendingPathComponent($0)) }
     let app = root.appendingPathComponent("app.html")
     let html = try String(contentsOf: app, encoding: .utf8).replacingOccurrences(of: "window.slop.ready()", with: #"""
-      (async()=>{const s=await slop.json.read();await slop.json.write({count:99},s.revision);await slop.db.execute('UPDATE counts SET value=99');await slop.media.remove('photo');slop.ready()})()
+      (async()=>{const s=await slop.json.read();await slop.json.write({count:99},s.revision);await slop.media.remove('photo');slop.ready()})()
     """#)
     try Data(html.utf8).write(to: app)
     let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)

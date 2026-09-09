@@ -40,7 +40,7 @@ function assertTrackedHygiene(files: string[]): void {
     const example = lower.endsWith(".example");
     if ((lower.startsWith(".env") || lower.startsWith(".dev.vars")) && !example) failures.push(path);
     if (/^authkey_.*\.p8$/i.test(name) || /\.(p8|p12|key|jks|keystore|mobileprovision)$/i.test(name)) failures.push(path);
-    if (name === "Icon\r" || /\.sqlite-(wal|shm)$/i.test(name) || /\.sqlite-journal$/i.test(name)) failures.push(path);
+    if (name === "Icon\r") failures.push(path);
   }
   if (failures.length) throw new Error(`Forbidden tracked artifacts:\n${[...new Set(failures)].map((path) => `  - ${path}`).join("\n")}`);
 }

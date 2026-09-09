@@ -1,0 +1,125 @@
+---
+title: Create your first slop
+description: Scaffold, preview, build, and install a small hitSlop app.
+---
+
+This tutorial starts with the supported counter template, changes its identity
+and interface, then installs a real writable copy on your Mac.
+
+:::tip[Start with your coding agent]
+`slop init` creates a root `AGENTS.md` plus local `hitslop-authoring` and
+`hitslop-design` skills under `.agents/skills/`. Open the generated project in
+your coding agent and describe the focused app you want to make. The project
+already contains the package, storage, window, capture, and design guidance the
+agent needs to build it correctly.
+:::
+
+## Before you start
+
+Install [Bun](https://bun.sh/) to create and preview the source project. For the
+native install step, download hitSlop on an Apple silicon Mac running macOS 14
+or newer.
+
+1. **Create a source project.**
+
+   ```sh
+   bunx @hitslop/cli init tiny-counter
+   cd tiny-counter
+   bun install
+   ```
+
+   The interactive setup asks for a title, description, one or two categories,
+   your required author name, and an optional public author URL.
+
+2. **Read `manifest.json` first.**
+
+   The manifest fixes the app's identity, discovery information, and initial
+   native window. Keep the job narrow and choose a useful starting size. The
+   [manifest and windows guide](/docs/guides/manifest-and-windows/) lists every
+   field and native presentation option.
+
+   ```json
+   {
+     "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+     "author": { "name": "Your Name" },
+     "slug": "tiny-counter",
+     "title": "Tiny Counter",
+     "description": "Counts one small thing.",
+     "categories": ["utilities"],
+     "presentation": { "width": 560, "height": 420 }
+   }
+   ```
+
+3. **Preview the app.**
+
+   ```sh
+   bun run dev
+   ```
+
+   Edit `src/App.svelte` and the preview refreshes as you work. The browser uses
+   an in-memory host fake: reloading clears JSON, and media calls are
+   UI-only stubs. Use it to develop layout and interaction, not to prove
+   persistence.
+
+4. **Change the counter.**
+
+   The starter stores its value in `state.current.count`. Svelte bindings and
+   event handlers can mutate that state directly:
+
+   ```svelte
+   <button onclick={() => state.current.count += 1}>
+     Counted {state.current.count}
+   </button>
+   ```
+
+   If you add or rename data, update `schema.ts` and the explicit `initial`
+   value together. See [Data and media](/docs/guides/data-and-schemas/).
+
+5. **Check and build it.**
+
+   ```sh
+   bun run check
+   bun run build
+   ```
+
+   `check` runs Svelte and TypeScript diagnostics. `build` checks the authoring
+   contract, bundles the interface, and validates the generated runtime
+   package. For a faster contract-only check without bundling, run
+   `bun run validate`; the same CLI command can also validate an existing
+   package with `slop validate path/to/document.slop`.
+
+   The result is `dist/tiny-counter.slop`. It contains the generated interface,
+   manifest, data schema, immutable assets, and document guidance. It contains
+   no source, dependencies, personal stores, or capture artwork yet;
+   registration and publishing create the initial Quick Look images.
+
+   If hitSlop is installed, you can double-click that `.slop` on macOS to open
+   it immediately. Treat this as a disposable test: the app may add local
+   stores, refreshed Quick Look artwork, or Finder icon metadata to the package.
+   Run `bun run build` again before registering or publishing so the generated
+   template is clean.
+
+6. **Install a local template.**
+
+   ```sh
+   bun run register
+   ```
+
+   Registration builds the app, captures its preview and icon, and writes an
+   immutable master under `~/.hitslop/templates/`. Open it from **My Templates**
+   and choose a destination to create a writable document.
+
+7. **Test the writable copy.**
+
+   Change the count, close the window, and reopen the document. Also check a
+   duplicate, a smaller window, the Finder preview, and PNG or PDF export.
+   This writable copy is the right place to test persistence and native
+   behavior. Browser preview remains disposable, and the package under `dist/`
+   remains generated output.
+
+## Next steps
+
+- [Style the app](/docs/guides/styling/) and give it a clearer object language.
+- [Design its icon and exports](/docs/guides/icons-and-exports/) from current data.
+- [Define its data and media](/docs/guides/data-and-schemas/) around the real job.
+- [Build and share it](/docs/guides/build-and-share/) when it is ready.

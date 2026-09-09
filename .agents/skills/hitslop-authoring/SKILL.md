@@ -11,7 +11,7 @@ runtime document.
 ## Workflow
 
 1. Fix the single job, categories, and initial window size in the manifest.
-2. Choose no storage, JSON, SQLite, named media, or a deliberate combination.
+2. Choose no storage, JSON, named media, or a deliberate combination.
 3. Develop against the disposable browser fake and test live plus static capture states.
 4. Validate and build a source-free, store-free runtime package.
 5. Register a local master, create a writable copy, and test reopen/export.
@@ -41,7 +41,7 @@ adding persistence or changing the runtime boundary.
   `examples/slops/_backlog/`, excluded from active checks, tests, and builds.
   Promote and migrate one example at a time. The CLI counter starter follows the same APIs.
 - Authored templates and published artifacts contain no stores, source,
-  dependencies, build caches, editable stylesheets, SQLite sidecars, or
+  dependencies, build caches, editable stylesheets, unsupported stores, or
   Finder-managed `Icon\r`.
 - Storage is implicit and ID-free. Never add storage declarations or release
   versions to the manifest.

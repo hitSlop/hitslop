@@ -52,7 +52,7 @@ Use `?capture=icon` or `?capture=export` in `slop dev` or the shared gallery to
 inspect disposable capture views. Reload to return to normal editing. Native
 capture remains the authority for image/PDF fidelity.
 
-Background captures operate on temporary snapshots, including a SQLite backup,
+Background captures operate on temporary snapshots,
 and cannot initialize or modify the source stores. User exports use the current
 session to preserve view state; captures are serialized and restore the editor
 on success or failure. Preview and icon failures are independent. Close-time

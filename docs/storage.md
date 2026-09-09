@@ -1,6 +1,6 @@
 # Storage
 
-A slop can use JSON, SQLite, named media, any combination, or none. Storage does
+A slop can use JSON, named media, either, or neither. Storage does
 not appear in the manifest and is created lazily in the writable document.
 
 ## JSON
@@ -33,23 +33,6 @@ The macOS host flushes guest writes before normal close, quit, duplicate, and
 export. A failed save keeps the document open. A damaged JSON store is reported
 by the guest; opening the app shell does not replace it with initial data.
 
-## SQLite
-
-Use SQLite for collections, querying, ordering, and multi-step updates. Schema
-creation should be idempotent. Parameterize values and use the exported
-`sql` tag where it improves readability. Send every related mutation in one
-`transaction`; the host keeps that transaction on one connection.
-
-WAL and SHM files are host-owned transient sidecars. Never put them in source,
-templates, published artifacts, or backups captured while the database is live.
-The host snapshots SQLite safely when duplicating or coordinating a document.
-Guest SQL runs on a serial storage worker. The authorizer reserves connection
-and transaction control for the host. Queries return at most 10,000 rows / 16 MiB
-and SQL execution has a two-second progress budget (lock waits may take up to
-five seconds). Exceeding a limit rejects the operation without truncated results.
-Numbers must fit the JavaScript safe range; cast larger database integers to
-TEXT when reading. Blobs use `{ "$blob": "base64" }` in both directions.
-
 ## Named media
 
 Named media is for a small, known set of user-selected files such as
@@ -62,7 +45,7 @@ blob URLs. Re-open media through the adapter after host change notifications.
 
 ## Development and copies
 
-`slop dev` supplies disposable in-memory JSON and forgiving SQLite/media stubs
+`slop dev` supplies disposable in-memory JSON and forgiving media stubs
 for UI iteration. It performs no storage I/O, and a full page reload resets its
 state. A build never copies authoring data.
 
@@ -92,6 +75,6 @@ the override restores defaults. Invalid mutable theme contents never block openi
 ## iCloud
 
 On iOS, documents live in the user's iCloud container. The runtime operates on
-a coordinated working copy and explicitly flushes canonical JSON, SQLite,
-media, and theme stores back to iCloud. Coordination errors are user-visible
+a coordinated working copy and explicitly flushes canonical JSON, media, and
+theme stores back to iCloud. Coordination errors are user-visible
 and must not be treated as a successful save.

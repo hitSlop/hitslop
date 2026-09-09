@@ -1,4 +1,3 @@
-import { Database } from "bun:sqlite";
 import { forbiddenPackageNames, validateTemplatePath } from "@hitslop/schema";
 import { lstat, readFile, readdir, stat } from "node:fs/promises";
 import { basename, join, relative, sep } from "node:path";
@@ -66,7 +65,7 @@ async function validateStores(root: string, schema: Record<string, unknown> | un
   if (!await exists(stores)) return;
   const info = await lstat(stores);
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("stores must be a directory.");
-  const allowed = new Set(["data.json", "data.sqlite", "data.sqlite-wal", "data.sqlite-shm", "media", "theme.css"]);
+  const allowed = new Set(["data.json", "media", "theme.css"]);
   for (const entry of await readdir(stores, { withFileTypes: true })) {
     if (!allowed.has(entry.name)) throw new Error(`Unexpected store entry stores/${entry.name}.`);
     if (entry.name === "media" ? !entry.isDirectory() : !entry.isFile()) throw new Error(`Invalid store entry stores/${entry.name}.`);
@@ -83,25 +82,9 @@ async function validateStores(root: string, schema: Record<string, unknown> | un
       validator(value);
     }
   }
-  const sqlite = join(stores, "data.sqlite");
-  for (const sidecar of ["data.sqlite-wal", "data.sqlite-shm"]) {
-    if (await exists(join(stores, sidecar)) && !await exists(sqlite)) throw new Error(`stores/${sidecar} requires stores/data.sqlite.`);
-  }
-  if (await exists(sqlite)) validateSQLite(sqlite);
   const media = join(stores, "media");
   if (await exists(media)) await validateMedia(media);
   await validateThemeOverride(root, contract);
-}
-
-function validateSQLite(path: string): void {
-  let database: Database | undefined;
-  try {
-    database = new Database(path, { readonly: true, strict: true });
-    const rows = database.query("PRAGMA quick_check").all() as Record<string, unknown>[];
-    if (rows.length !== 1 || Object.values(rows[0] ?? {})[0] !== "ok") throw new Error("PRAGMA quick_check did not return ok");
-  } catch (error) {
-    throw new Error(`stores/data.sqlite failed its integrity check: ${error instanceof Error ? error.message : String(error)}`);
-  } finally { database?.close(); }
 }
 
 async function validateMedia(directory: string): Promise<void> {

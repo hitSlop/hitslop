@@ -1,0 +1,103 @@
+---
+title: Style a slop
+description: Define typed theme defaults, structural styles, responsive behavior, and owner overrides.
+---
+
+A memorable slop feels like one complete digital object. Start with its job,
+choose a visual metaphor that supports that job, and keep the primary action
+obvious at the manifest's initial window size.
+
+## Choose an object language
+
+- **Paper** works when the output is the object: an invoice, recipe, plan, or note.
+- **Instrument** works when interaction is the object: a timer, picker, or mixer.
+- **Skin** uses a custom silhouette when the physical shape improves the idea.
+  Follow the [PNG window skin guide](/docs/guides/png-window-skins/) when the
+  shape needs native click-through regions.
+
+Use one dominant metaphor. Build depth from a backing surface, a primary
+surface, and inset or raised controls instead of stacking generic cards.
+
+## Define the public theme
+
+Root `theme.ts` is the single source for editable colors and type choices. The
+builder turns it into immutable `assets/theme.css`.
+
+```ts title="theme.ts"
+import { defineTheme } from "@hitslop/runtime/theme";
+
+export default defineTheme({
+  surface: "#f7f4eb",
+  panel: "#e3e9df",
+  control: "#ede9df",
+  ink: "#182126",
+  muted: "#687276",
+  accent: "#db6648",
+  rule: "color-mix(in srgb, var(--slop-ink) 15%, transparent)",
+  font: '"Avenir Next", Avenir, sans-serif',
+});
+```
+
+Every key becomes a public `--slop-*` variable and a typed property on
+`theme.vars`. Do not also maintain an authored `assets/theme.css` when
+`theme.ts` exists.
+
+## Write structural styles
+
+Use Vanilla Extract for layout and component rules. Import the definition and
+refer to its typed variables:
+
+```ts title="src/styles.css.ts"
+import { globalStyle, style } from "@vanilla-extract/css";
+import definition from "../theme";
+
+const theme = definition.vars;
+
+globalStyle("html, body, #app", { width: "100%", minHeight: "100%", margin: 0 });
+globalStyle("body", { color: theme.ink, background: theme.surface });
+
+export const main = style({
+  minHeight: "100vh",
+  padding: "clamp(1rem, 5cqw, 2.5rem)",
+  background: theme.surface,
+  containerType: "inline-size",
+});
+```
+
+Use fluid dimensions, grid or flex reflow, container queries, visible focus,
+and reduced-motion styles. Test the manifest size and a smaller supported size.
+Keep important controls away from transparent or skinned window edges.
+
+## Keep captures intentional
+
+Editing controls should disappear from static output. The starter includes
+`IconTarget` and `ExportTarget`; pass them the same current data as the editor
+instead of opening a second store.
+
+```svelte
+<IconTarget><Icon count={state.current.count} /></IconTarget>
+<ExportTarget><Export count={state.current.count} /></ExportTarget>
+```
+
+Export content belongs in normal document flow with no nested scrolling or
+fixed viewport height. Without a dedicated export component, mark editing-only
+elements with `data-slop-export="hide"`.
+
+The [icons, previews, and exports guide](/docs/guides/icons-and-exports/) covers
+the full 512 × 512 icon workflow, Finder refresh behavior, static image flags,
+and PNG or PDF output.
+
+## Let document owners override the theme
+
+A writable document may contain `stores/theme.css`. It has one `:root` block
+and may override only variables already declared by the immutable default:
+
+```css title="stores/theme.css"
+:root {
+  --slop-accent: oklch(62% .18 285);
+  --slop-surface: oklch(97% .02 285);
+}
+```
+
+Keep layout and component selectors in source. Owner overrides change the
+theme contract; they do not rewrite the app's structure.

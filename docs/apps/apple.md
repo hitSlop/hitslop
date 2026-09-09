@@ -8,9 +8,8 @@ iOS 17.
 ## Targets
 
 - **HitSlopCore** validates packages/manifests, copies documents safely,
-  snapshots SQLite, and manages named media. It is platform-neutral apart from
-  system image/SQLite facilities.
-- **HitSlopRuntime** hosts the WebKit scheme/bridge, JSON and SQLite stores,
+  and manages named media. It is platform-neutral apart from system image facilities.
+- **HitSlopRuntime** hosts the WebKit scheme/bridge, JSON storage,
   working-copy/cloud coordination, document creation, and guest readiness.
 - **HitSlopFirebase** configures Analytics, Crashlytics, App Check, and the
   Firebase AI Logic foundation.

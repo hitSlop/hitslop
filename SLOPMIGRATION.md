@@ -61,8 +61,7 @@ primitives.
 - [ ] Rewrite `examples/slops/README.md` for the shared example workspace, disposable
       browser preview, built writable-document testing, current storage rules, theming,
       and the publish flow.
-- [ ] Correct the obsolete claim that Kanban uses SQLite unless a deliberate product
-      review establishes a real query/transaction need for SQLite.
+- [ ] Keep Kanban on the canonical JSON store.
 - [ ] Keep `_vibe/`, build output, dependencies, caches, source, authoring-only skills,
       seed stores, and private credentials out of runtime packages.
 
@@ -229,8 +228,7 @@ Set the editorial and export standards for documents people edit, share, and pri
 ## Batch 7 — Work and creative power tools
 
 - [ ] **kanban-board** — Clarify lanes, work-in-progress, card creation, and movement.
-      Retain JSON unless product review finds a concrete query or transactional reason
-      for SQLite.
+      Retain the canonical JSON store.
 - [ ] **pocket-sheet** — Improve selection, formula entry, keyboard navigation, and CSV
       workflows without replacing its custom grid with Bits UI.
 - [ ] **markdown-editor** — Refine the manuscript/typewriter personality, edit-preview

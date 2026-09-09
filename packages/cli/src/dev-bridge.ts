@@ -17,7 +17,7 @@ export const devHostJavaScript = `(() => {
       }, 0);
     }, {once:true});
   }
-  const listeners = { json: new Set(), sqlite: new Set(), media: new Set() };
+  const listeners = { json: new Set(), media: new Set() };
   let jsonValue;
   let jsonRevision = 0;
   let jsonOpened = false;
@@ -54,12 +54,6 @@ export const devHostJavaScript = `(() => {
         return result;
       },
       onChange: (callback) => watch('json', callback)
-    }),
-    db: Object.freeze({
-      query: async () => [],
-      execute: async () => { emit('sqlite', { source: 'app' }); return 0; },
-      transaction: async () => { emit('sqlite', { source: 'app' }); return 0; },
-      onChange: (callback) => watch('sqlite', callback)
     }),
     media: Object.freeze({
       open: async () => ({ exists: false, revision: null }),

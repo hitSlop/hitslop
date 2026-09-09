@@ -1,6 +1,6 @@
 ---
 name: hitslop-document
-description: Safely inspect, edit, validate, and export a built hitSlop .slop document. Use when changing its JSON data, SQLite records, named media, or theme overrides.
+description: Safely inspect, edit, validate, and export a built hitSlop .slop document. Use when changing its JSON data, named media, or theme overrides.
 metadata:
   hitslop-skill-version: "1"
 ---
@@ -23,8 +23,6 @@ for app-specific data and styling guidance.
 
 - For JSON, validate the complete value against the schema, write a temporary
   sibling file, then atomically replace `stores/data.json`.
-- For SQLite, use one connection for each transaction. Do not copy or directly
-  edit `data.sqlite-wal` or `data.sqlite-shm`.
 - Named attachments belong in `stores/media/`. Names start with a lowercase
   ASCII letter and contain only lowercase letters, digits, and hyphens. Replace
   a media file atomically; use only supported image or bounded ZIP content.

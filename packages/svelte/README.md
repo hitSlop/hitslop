@@ -6,7 +6,7 @@ Packaging uses this workspace's TypeScript 6 compiler API; checks use TypeScript
 of the packager's install directory. Keep the packager version pinned while the
 patch is needed, and recheck this resolution when upgrading it.
 
-Svelte 5 state adapters for JSON, SQLite, images, and named files in a hitSlop
+Svelte 5 state adapters for JSON, images, and named files in a hitSlop
 document.
 
 ```svelte
@@ -29,7 +29,7 @@ document.
 </button>
 ```
 
-Exports: `jsonStore`, `sqliteQuery`, `imageStore`, `fileStore`, and their
+Exports: `jsonStore`, `imageStore`, `fileStore`, and their
 class/type counterparts. JSON stores accept the default export of root TypeBox
 `schema.ts` directly, with data types inferred from that schema. No preparation
 or generated files are needed for editor types or typechecking. The adapter
@@ -120,8 +120,8 @@ Use `?capture=icon` or `?capture=export` in `slop dev` or the shared gallery to
 inspect disposable capture views. Reload to return to normal editing. Native
 capture remains the authority for image/PDF fidelity.
 
-Background captures operate on temporary snapshots, including a SQLite backup,
-and cannot initialize or modify the source stores. User exports use the current
+Background captures operate on temporary snapshots and cannot initialize or
+modify the source stores. User exports use the current
 session to preserve view state; captures are serialized and restore the editor
 on success or failure. Preview and icon failures are independent. Close-time
 refreshes keep the last successful images on failure; quit gives pending jobs

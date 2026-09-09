@@ -20,7 +20,7 @@ bun run publish
 ```
 
 `dev` is a disposable browser UI preview with in-memory JSON and forgiving
-SQLite/media stubs. A reload clears preview state. Register a local master and
+media stubs. A reload clears preview state. Register a local master and
 open a writable copy for real persistence, external-file, and native-window behavior.
 
 `build` emits `dist/<slug>.slop`. Inspect the result. `register` adds an

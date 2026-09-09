@@ -10,11 +10,6 @@ type PreviewSlop = {
     write: <T>(value: T, expectedRevision?: string) => Promise<{ revision: string }>;
     onChange: (callback: (event: Change) => void) => () => void;
   };
-  db: {
-    query: (sql: string) => Promise<unknown[]>;
-    execute: (sql: string) => Promise<number>;
-    transaction: (statements: Array<{ sql: string }>) => Promise<number>;
-  };
   media: {
     open: (name: string) => Promise<{ exists: boolean; revision: string | null }>;
     write: (name: string, data: string, mimeType: string) => Promise<{ revision: string }>;
@@ -64,12 +59,10 @@ test("browser preview keeps JSON in memory and emits local changes", async () =>
   expect(changes).toHaveLength(1);
 });
 
-test("browser preview supplies forgiving SQLite, media, window, and readiness stubs", async () => {
+test("browser preview supplies media, window, and readiness stubs", async () => {
   const host = previewHost();
   const slop = host.window.slop!;
-  expect(await slop.db.query("select 1")).toEqual([]);
-  expect(await slop.db.execute("create table ignored (id integer)")).toBe(0);
-  expect(await slop.db.transaction([{ sql: "insert into ignored values (1)" }])).toBe(0);
+  expect("db" in slop).toBe(false);
   expect(await slop.media.open("hero")).toEqual({ exists: false, revision: null });
   expect((await slop.media.write("hero", "", "image/png")).revision).toBe("dev-media:1");
   expect(await slop.media.remove("hero")).toEqual({ revision: null });

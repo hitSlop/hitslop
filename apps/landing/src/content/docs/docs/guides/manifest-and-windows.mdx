@@ -1,0 +1,109 @@
+---
+title: Manifest and windows
+description: Define a slop's identity, discovery metadata, initial window, and native window behavior.
+---
+
+Read `manifest.json` first. It is the package contract for a slop: its identity,
+author, catalog metadata, and initial native window. The manifest is immutable in
+a built template or document, so make changes in the source project and rebuild.
+Data and media stores are created by the app and are not declared here.
+
+## Start with a complete manifest
+
+```json title="manifest.json"
+{
+  "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "Your Name",
+    "url": "https://example.com"
+  },
+  "slug": "tiny-counter",
+  "title": "Tiny Counter",
+  "description": "A small counter that stays on your desktop.",
+  "categories": ["utilities"],
+  "presentation": {
+    "width": 420,
+    "height": 520,
+    "resizable": true,
+    "shape": "rounded"
+  }
+}
+```
+
+## Identity and discovery fields
+
+| Field | Rule |
+| --- | --- |
+| `$schema` | Must be `https://api.hitslop.com/schemas/v1/manifest.schema.json`. |
+| `author.name` | Required, 1–80 characters with at least one non-space character. This attribution travels with the signed artifact. |
+| `author.url` | Optional HTTP or HTTPS URL, up to 2,048 characters. |
+| `slug` | 2–64 lowercase letters or numbers in kebab case, such as `tiny-counter`. |
+| `title` | Required, 1–80 characters. |
+| `description` | Required, 1–240 characters. Explain the slop's specific job. |
+| `categories` | One or two unique catalog categories. |
+
+Categories are `productivity`, `utilities`, `finance`, `media`, `games`,
+`developer-tools`, `education`, `business`, `personal`, and `other`.
+
+## Set the initial window
+
+`presentation.width` must be an integer from 240 to 4,096 pixels. Height must
+be an integer from 180 to 4,096 pixels. Choose the smallest size at which the
+main job feels complete; this becomes the initial native window and the basis
+for capture work.
+
+Standard windows support these options:
+
+| Option | Values | Behavior |
+| --- | --- | --- |
+| `resizable` | `true` or `false` | Whether the user can resize the window. The host defaults to `true`. |
+| `shape` | `rounded`, `ellipse`, or `capsule` | Selects a built-in native silhouette. |
+| `background` | `transparent` | Makes the WebView background transparent for a custom HTML surface. |
+
+For a transparent window, make the document itself transparent and draw the
+visible surface in your app:
+
+```css
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  background: transparent;
+}
+```
+
+Keep controls inside the visible shape and test focus, resizing, and dragging
+at the smallest size you support.
+
+## Resize and drag from the app
+
+An unskinned app can request a new bounded native size at runtime. The host
+keeps the result on the visible screen; the manifest remains the next launch's
+initial size.
+
+```ts
+import { slop } from "@hitslop/runtime";
+
+await slop.window.resize({ width: 560, height: 680 });
+```
+
+Custom title bars and controls can begin native window dragging:
+
+```svelte
+<script lang="ts">
+  import { slop } from "@hitslop/runtime";
+</script>
+
+<button class="drag-handle" onpointerdown={() => void slop.window.drag()}>
+  Move window
+</button>
+```
+
+## Use a PNG skin for a custom silhouette
+
+A skinned presentation contains only `width`, `height`, and `skin`. It is fixed
+at that exact size and cannot also use `shape`, `background`, or `resizable`.
+See [PNG window skins](/docs/guides/png-window-skins/) for the full asset and
+hit-testing workflow.

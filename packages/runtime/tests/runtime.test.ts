@@ -5,7 +5,6 @@ test("delegates storage calls to the installed host", async () => {
   let value = { count: 1 }; let revision = "one";
   let dragged = false;
   const host: SlopHost = {
-    query: async () => [], execute: async () => 0, transaction: async () => 0,
     jsonOpen: async <T>(initial: T) => ({ value: (value ?? initial) as T, revision }),
     jsonRead: async <T>() => ({ value: value as T, revision }),
     jsonWrite: async <T>(next: T) => { value = next as typeof value; revision = "two"; return { revision }; },

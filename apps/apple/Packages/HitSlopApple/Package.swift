@@ -27,7 +27,7 @@ let package = Package(
                 .product(name: "DynamicJSON", package: "swift-dynamicjson"),
             ],
             resources: [.copy("Resources/manifest.schema.json"), .copy("Resources/hitslop-document.SKILL.md")],
-            linkerSettings: [.linkedLibrary("sqlite3"), .linkedFramework("ImageIO")]
+            linkerSettings: [.linkedFramework("ImageIO")]
         ),
         .target(
             name: "HitSlopFirebase",
@@ -42,7 +42,7 @@ let package = Package(
             name: "HitSlopRuntime",
             dependencies: ["HitSlopCore", .product(name: "DynamicJSON", package: "swift-dynamicjson")],
             resources: [.copy("Resources/host-bridge.js"), .copy("Resources/bridge-request.schema.json")],
-            linkerSettings: [.linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS])), .linkedLibrary("sqlite3")]
+            linkerSettings: [.linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS]))]
         ),
         .target(
             name: "HitSlopRegistry",

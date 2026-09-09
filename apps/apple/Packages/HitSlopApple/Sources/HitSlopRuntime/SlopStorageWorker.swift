@@ -10,7 +10,6 @@ struct SlopStorageResult: @unchecked Sendable {
 }
 struct SlopRevisions: Sendable {
     let json: String?
-    let sqlite: Int64?
     let media: String?
     let theme: String?
 }
@@ -23,7 +22,6 @@ final class SlopStorageWorker: @unchecked Sendable {
     private let json: SlopJSONStore
     private let media: SlopMediaStore
     private let theme: SlopThemeStore
-    private var sqlite: SlopDatabase?
     private var closed = false
 
     init(package: SlopPackage) {
@@ -32,12 +30,11 @@ final class SlopStorageWorker: @unchecked Sendable {
         media = SlopMediaStore(directoryURL: package.mediaStoresURL)
         theme = SlopThemeStore(url: package.themeOverrideURL)
     }
-    func close() { queue.sync { closed = true; sqlite?.close() } }
-    func checkpoint() { queue.sync { sqlite?.checkpoint() } }
+    func close() { queue.sync { closed = true } }
     func revisions() async -> SlopRevisions {
         await withCheckedContinuation { continuation in
             queue.async {
-                continuation.resume(returning: SlopRevisions(json: try? self.json.revision(), sqlite: try? self.sqlite?.dataVersion(), media: try? self.media.directoryRevision(), theme: try? self.theme.revision()))
+                continuation.resume(returning: SlopRevisions(json: try? self.json.revision(), media: try? self.media.directoryRevision(), theme: try? self.theme.revision()))
             }
         }
     }
@@ -53,16 +50,6 @@ final class SlopStorageWorker: @unchecked Sendable {
                 } catch { continuation.resume(throwing: error) }
             }
         }
-    }
-    private func database() throws -> SlopDatabase {
-        if let sqlite { return sqlite }
-        let database = try SlopDatabase(url: package.sqliteStoreURL)
-        sqlite = database
-        return database
-    }
-    private func statement(_ body: [String: Any]) throws -> (String, [Any]) {
-        guard let sql = body["sql"] as? String else { throw SlopBridgeFailure(.invalidRequest, "Missing SQL") }
-        return (sql, body["parameters"] as? [Any] ?? [])
     }
     private func field<T>(_ name: String, in body: [String: Any], as type: T.Type = T.self) throws -> T {
         guard let raw = body[name], let value = raw as? T else { throw SlopBridgeFailure(.invalidRequest, "Missing or invalid \(name)") }
@@ -83,14 +70,6 @@ final class SlopStorageWorker: @unchecked Sendable {
         case .jsonWrite:
             let revision = try json.write(field("value", in: body, as: Any.self), expectedRevision: body["expectedRevision"] as? String)
             return .init(value: ["revision": revision], kind: .json, revision: revision)
-        case .sqliteQuery:
-            let sql = try statement(body)
-            return .init(value: try database().query(sql.0, parameters: sql.1))
-        case .sqliteExecute:
-            return .init(value: try database().transaction([statement(body)]), kind: .sqlite)
-        case .sqliteTransaction:
-            let statements: [[String: Any]] = try field("statements", in: body)
-            return .init(value: try database().transaction(statements.map(statement)), kind: .sqlite)
         case .mediaOpen:
             let snapshot = try media.open(field("name", in: body))
             return .init(value: ["exists": snapshot.exists, "revision": snapshot.revision as Any? ?? NSNull()])

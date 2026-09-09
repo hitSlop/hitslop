@@ -22,14 +22,13 @@ init prompts for the required author name and optional public URL. In CI, pass
 `--yes --author-name "Your Name"` and optionally `--author-url https://example.com`.
 
 Development uses a disposable in-memory host fake. State lasts until the page
-reloads; SQLite and named media are forgiving UI-only stubs. Register a local
+reloads; named media uses a forgiving UI-only stub. Register a local
 master and open a writable document to test persistence, external edits, or native window behavior.
 
 ## Choose data deliberately
 
 - Start with no persistence for a pure utility.
 - Use one JSON object for settings or a compact document model.
-- Use SQLite for collections, filtering, ordering, or transactional updates.
 - Use named media for a known image/file role.
 
 Storage is implicit; do not add declarations to the manifest. See

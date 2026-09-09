@@ -1,0 +1,76 @@
+---
+title: Build and share
+description: Validate, install, export, and publish a finished slop.
+---
+
+## Validate and build
+
+```sh
+bun run check
+bun run build
+```
+
+`check` runs Svelte and TypeScript diagnostics. `build` validates the authoring
+contract, bundles the app, and validates the generated package. Use
+`bun run validate` when you want the manifest, skin, theme, schema, and document
+guidance checks without waiting for a bundle, or run
+`slop validate path/to/document.slop` to inspect an existing package.
+
+The builder writes `dist/<slug>.slop`. Inspect the result before sharing it. A
+runtime template may contain the manifest, generated `app.html`, generated data
+schema, immutable assets, embedded document guidance, and Quick Look artwork.
+It must not contain source, dependencies, build caches, or personal stores.
+
+With hitSlop installed, you can double-click `dist/<slug>.slop` on macOS for an
+immediate native test. Opening it directly may create local stores and refreshed
+Finder assets, so treat that copy as disposable and rebuild before registration
+or publishing. Use a registered template and writable copy for persistence
+testing.
+
+## Register and test locally
+
+```sh
+bun run register
+```
+
+Registration installs an immutable master in the local catalog. Open **My
+Templates** in hitSlop and choose a destination to create a writable copy.
+
+Before publishing, test keyboard and focus behavior, reduced motion, long and
+empty content, a smaller window, close and reopen persistence, duplication,
+Finder preview, icon legibility, and static export.
+
+See [Icons, previews, and exports](/docs/guides/icons-and-exports/) for dynamic
+capture targets, static `--icon` and `--preview` artwork, and browser capture
+modes.
+
+## Export a document
+
+Export a writable document as a full-height PNG or PDF:
+
+```sh
+slop export path/to/document.slop --format png --output document.png
+slop export path/to/document.slop --format pdf --output document.pdf
+```
+
+PDF preserves selectable text and vector output. PNG renders at high resolution.
+
+## Publish to the catalog
+
+```sh
+slop identity show
+bun run publish
+```
+
+Publishing builds and captures one immutable artifact, signs its hash and size,
+and sends it to the official catalog. Public author attribution comes from the
+signed `manifest.json`; the local Ed25519 key proves control of releases.
+
+Back up that identity before relying on it:
+
+```sh
+slop identity export hitslop-identity-backup.json
+```
+
+The export is encrypted with the passphrase you enter. Store it somewhere safe
+and never commit identity material to a source project.

@@ -59,7 +59,6 @@ public extension SlopRuntimeSessionDelegate {
         requestSchema = try JSONSchema(data: Data(contentsOf: Bundle.module.url(forResource: "bridge-request.schema", withExtension: "json")!))
     }
     func close() { storage.close() }
-    func checkpoint() { storage.checkpoint() }
     func revisions() async -> SlopRevisions { await storage.revisions() }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
@@ -160,7 +159,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     public private(set) var isReady = false
     private let bridge: SlopBridge
     private let schemeHandler: SlopSchemeHandler
-    private var timer: Timer?, sqliteVersion: Int64?, jsonRevision: String?, mediaRevision: String?, themeRevision: String?, sequence = 0, retryCount = 0, closed = false, lastError: Error?
+    private var timer: Timer?, jsonRevision: String?, mediaRevision: String?, themeRevision: String?, sequence = 0, retryCount = 0, closed = false, lastError: Error?
     private var refreshTask: Task<Void, Never>?
     #if os(macOS)
     private var packageWatcher: SlopPackageWatcher?
@@ -206,11 +205,9 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
 
     public func load() { isReady = false; webView.load(URLRequest(url: URL(string: "slop://app/")!)) }
     public func reload() { isReady = false; webView.reload() }
-    public func checkpoint() { bridge.checkpoint() }
     public func flush() async throws {
         guard !closed else { throw SlopBridgeFailure(.closed, "Document is closed") }
         _ = try await webView.callAsyncJavaScript("await window.__hitslopFlush?.(); await window.slop?.flush?.(); return true", arguments: [:], in: nil, contentWorld: .page)
-        bridge.checkpoint()
     }
     public func close() {
         guard !closed else { return }
@@ -236,7 +233,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     fileprivate func bridgeDidCommit(kind: SlopStoreKind, revision: String?, name: String? = nil) {
         switch kind {
         case .json: jsonRevision = revision
-        case .sqlite, .media: break
+        case .media: break
         }
         emit(kind: kind, revision: revision, source: "app", name: name); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
     }
@@ -271,7 +268,6 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         guard !closed else { return }
         guard requestedAtSequence == sequence else { scheduleExternalRefresh(); return }
         if revisions.json != jsonRevision { jsonRevision = revisions.json; emit(kind: .json, revision: revisions.json, source: "external") }
-        if revisions.sqlite != sqliteVersion { sqliteVersion = revisions.sqlite; emit(kind: .sqlite, revision: nil, source: "external") }
         if revisions.media != mediaRevision { mediaRevision = revisions.media; emit(kind: .media, revision: revisions.media, source: "external") }
         if revisions.theme != themeRevision { themeRevision = revisions.theme; reloadTheme(); onStoreCommit?() }
     }

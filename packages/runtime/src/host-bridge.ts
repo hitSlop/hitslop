@@ -17,7 +17,7 @@ declare global {
 const native = window.webkit.messageHandlers.hitslop;
 const invoke = createBridgeCall(request => native.postMessage(request));
 const pending = new Set<Promise<unknown>>();
-const listeners = { json: new Set<(event: SlopChange) => void>(), sqlite: new Set<(event: SlopChange) => void>(), media: new Set<(event: SlopChange) => void>() };
+const listeners = { json: new Set<(event: SlopChange) => void>(), media: new Set<(event: SlopChange) => void>() };
 let guestReady = false;
 let readySent = false;
 let readyScheduled = false;
@@ -57,12 +57,6 @@ const bridge: WindowSlop = {
     read: () => call("json.read", {}),
     write: (value, expectedRevision) => { assertJSON(value); return call("json.write", { value, ...(expectedRevision === undefined ? {} : { expectedRevision }) }); },
     onChange: (callback) => watch("json", callback),
-  },
-  db: {
-    query: (sql, parameters = []) => call("sqlite.query", { sql, parameters }),
-    execute: (sql, parameters = []) => call("sqlite.execute", { sql, parameters }),
-    transaction: (statements) => call("sqlite.transaction", { statements }),
-    onChange: (callback) => watch("sqlite", callback),
   },
   media: {
     open: (name) => call("media.open", { name }),

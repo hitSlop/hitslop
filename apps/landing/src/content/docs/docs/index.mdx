@@ -1,0 +1,58 @@
+---
+title: hitSlop Docs
+description: Build small local-first apps and documents that live on your desktop.
+template: splash
+hero:
+  title: Tiny apps. Ordinary files.
+  tagline: Build one focused app, keep its interface and data together, and hand the finished .slop to anyone without running a server.
+  actions:
+    - text: Create your first slop
+      link: /docs/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: Download hitSlop
+      link: https://github.com/hitSlop/hitslop/releases/latest/download/hitSlop.dmg
+      icon: download
+      variant: secondary
+---
+
+import { CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+hitSlop is a native home for small, personal web apps. A `.slop` is a document
+you can open, move, duplicate, share, commit, and keep. Its interface, local
+data, media, preview, and theme travel together on your Mac.
+
+The app owns the interface. The hitSlop host owns durable JSON, named
+media, export, and native window behavior. Published templates contain no
+personal data and need no hosted backend.
+
+<CardGrid>
+  <LinkCard title="Make a slop" href="/docs/getting-started/" description="Start with the supported Svelte template and build a working counter." />
+  <LinkCard title="Shape the window" href="/docs/guides/manifest-and-windows/" description="Set identity, discovery metadata, initial size, transparency, and native behavior." />
+  <LinkCard title="Style the object" href="/docs/guides/styling/" description="Define a typed theme, structural styles, and responsive behavior." />
+  <LinkCard title="Design its output" href="/docs/guides/icons-and-exports/" description="Create live Finder icons, Quick Look previews, and clean PNG or PDF exports." />
+  <LinkCard title="Use a custom silhouette" href="/docs/guides/png-window-skins/" description="Turn an exact-size RGBA PNG into a native backing and click-through mask." />
+  <LinkCard title="Model data and media" href="/docs/guides/data-and-schemas/" description="Use TypeBox JSON plus named images and files in the writable document." />
+  <LinkCard title="Edit an installed slop" href="/docs/guides/edit-installed-data/" description="Safely change a document with an editor or LLM." />
+</CardGrid>
+
+## The supported path today
+
+The first authoring path is **Bun + Svelte 5 + JSON**. The runtime package is
+framework-neutral, but the CLI starter gives new apps one maintained path with
+typed schemas, typed theme variables, local persistence, and export-ready
+components.
+
+Native testing and persistence require hitSlop on Apple silicon with macOS 14
+or newer. Browser preview is available anywhere Bun can run, but its data is
+disposable. SQLite storage, iOS, and iCloud sync are coming later.
+
+## Source and document are different things
+
+Your source project contains Svelte components, `schema.ts`, `theme.ts`, and
+development dependencies. `bun run build` turns it into a source-free
+`dist/<slug>.slop` template.
+
+When someone opens that template, hitSlop creates a writable document. Personal
+JSON, media, and theme overrides live only in the document's `stores/`
+directory. Learn the boundary in [How `.slop` files work](/docs/concepts/how-slop-files-work/).

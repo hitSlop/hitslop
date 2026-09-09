@@ -8,21 +8,6 @@ public enum SlopDuplicator {
         guard !fileManager.fileExists(atPath: destination.path) else { throw CocoaError(.fileWriteFileExists) }
         do {
             try fileManager.copyItem(at: source.rootURL, to: destination)
-            if fileManager.fileExists(atPath: source.sqliteStoreURL.path) {
-                let target = destination.appendingPathComponent("stores/data.sqlite")
-                let snapshot = target.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).sqlite")
-                try SlopSQLiteSnapshot.copy(from: source.sqliteStoreURL, to: snapshot)
-                if fileManager.fileExists(atPath: target.path) { try fileManager.removeItem(at: target) }
-                try fileManager.moveItem(at: snapshot, to: target)
-                // A stale WAL beside a freshly copied database is a corruption
-                // vector: SQLite would replay foreign frames into the snapshot.
-                for suffix in ["-wal", "-shm"] {
-                    let sidecar = target.path + suffix
-                    guard fileManager.fileExists(atPath: sidecar) else { continue }
-                    do { try fileManager.removeItem(atPath: sidecar) }
-                    catch { print("[hitSlop duplicate] Could not remove \(sidecar): \(error.localizedDescription)") }
-                }
-            }
             try makeWritable(destination)
             _ = try SlopPackage(rootURL: destination)
             return destination

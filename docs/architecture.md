@@ -12,7 +12,7 @@ author source ──CLI build──> immutable .slop template
                                   ▼
                          writable .slop document
                                   │
-             WebView bridge ◀──── host ────▶ JSON / SQLite / media / theme
+             WebView bridge ◀──── host ────▶ JSON / media / theme
                                   │
                            preview and export
 
@@ -26,13 +26,13 @@ publish ──signed ZIP──> Firebase Function ──artifact──> Cloud St
 The guest WebView is untrusted package code. It runs in an ephemeral WebKit data
 store behind the `slop://` scheme, which serves `app.html`, immutable `assets/`,
 named media, and the dedicated writable theme override endpoint. It cannot
-resolve the manifest, arbitrary stores, SQLite sidecars, Quick Look images, or
+resolve the manifest, arbitrary stores, Quick Look images, or
 arbitrary file URLs.
 
 The native host validates the manifest before loading, exposes a narrow message
 bridge, validates media by content, and owns every filesystem mutation. JSON is
-atomically replaced with an expected-revision check. SQLite transactions remain
-on one connection. Named media replacement is atomic.
+atomically replaced with an expected-revision check. Named media replacement is
+atomic.
 
 The publish gateway treats the submitted ZIP as hostile. It verifies the
 Ed25519 envelope, hash and byte count; rejects unsafe paths, duplicates,
@@ -68,11 +68,6 @@ slop.json.read()
 slop.json.write(value, expectedRevision?)
 slop.json.onChange(callback)
 
-slop.db.query(sql, parameters?)
-slop.db.execute(sql, parameters?)
-slop.db.transaction(statements)
-slop.db.onChange(callback)
-
 slop.media.open(name)
 slop.media.write(name, base64, mimeType)
 slop.media.remove(name)
@@ -86,7 +81,7 @@ slop.window.drag()
 to its reactive model; it does not define a second persistence system.
 
 `packages/schema/src/bridge.ts` defines the wire requests, reply envelope,
-error codes, host information, SQL values, and change events. One
+error codes, host information, and change events. One
 `BridgeMethods` registry pairs parameter and result schemas for each method.
 JavaScript calls infer their result from the method and validate the
 reply envelope and method-specific value before returning it. Generation emits

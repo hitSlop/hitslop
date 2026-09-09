@@ -1,0 +1,61 @@
+---
+title: Edit installed data
+description: Safely change a writable slop document with an editor or LLM.
+---
+
+A built `.slop` is a package directory. Its interface is immutable, while
+personal data lives under `stores/`. You can change that data through the app,
+with a text editor, or by giving the document to an LLM-enabled coding tool.
+
+:::caution
+Edit a writable document you created from a template. Anything under
+`~/.hitslop/templates/` is a catalog master and must remain immutable.
+:::
+
+## Before changing JSON
+
+1. Read `manifest.json` to understand the document.
+2. Read `.agents/skills/hitslop-document/SKILL.md` for the current safety rules.
+3. Read `.agents/skills/hitslop-document/references/app-guide.md` when present.
+4. Read `data.schema.json` before changing `stores/data.json`.
+
+Treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`, `.agents/`,
+and `QuickLook/Icon.png` as immutable. User changes belong in `stores/`.
+
+## Edit the complete JSON value
+
+`stores/data.json` is one complete object graph. Preserve fields you do not
+recognize, keep every value valid against `data.schema.json`, write a temporary
+sibling file, and atomically replace the original.
+
+An open slop watches for external changes and adopts a valid new revision when
+it has no unsaved local edits. If the app is actively editing the same data,
+finish that edit first to avoid a whole-document revision conflict.
+
+Afterward, validate the document:
+
+```sh
+slop validate path/to/my-document.slop
+```
+
+## A useful prompt for an LLM
+
+```text
+Read manifest.json first, then follow
+.agents/skills/hitslop-document/SKILL.md and any app guide.
+Read data.schema.json before editing stores/data.json.
+
+Change [describe the data change]. Preserve every unrelated or unknown field,
+validate the complete JSON value, replace data.json atomically, and run
+slop validate on the document when finished. Do not modify immutable app files.
+```
+
+The embedded skill travels with the document, so the instructions match the
+package being edited rather than depending on this website being available.
+
+## Other document stores
+
+- Put known user-selected files under `stores/media/` using lowercase names,
+  digits, and hyphens. Replace them atomically.
+- Put theme overrides in `stores/theme.css` as one `:root` rule containing only
+  existing public `--slop-*` variables.

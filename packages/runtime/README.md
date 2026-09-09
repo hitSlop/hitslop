@@ -3,10 +3,9 @@
 The framework-neutral browser bridge for hitSlop documents.
 
 ```ts
-import { capture, ready, slop, sql } from "@hitslop/runtime";
+import { capture, ready, slop } from "@hitslop/runtime";
 
 const snapshot = await slop.json.open({ count: 0 });
-await slop.db.execute(...sql`create table if not exists notes (body text)`);
 await slop.window.resize({ width: 560, height: 480 });
 ready();
 ```

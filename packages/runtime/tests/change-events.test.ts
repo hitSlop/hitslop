@@ -4,7 +4,7 @@ import type { SlopChange } from "../src/types.ts";
 
 test("invalid host events cannot break dispatch; listener failures are isolated", () => {
   const received: SlopChange[] = [], errors: unknown[] = [];
-  const listeners = { json: new Set<(event: SlopChange) => void>(), sqlite: new Set<(event: SlopChange) => void>(), media: new Set<(event: SlopChange) => void>() };
+  const listeners = { json: new Set<(event: SlopChange) => void>(), media: new Set<(event: SlopChange) => void>() };
   listeners.json.add(() => { throw new Error("listener failed"); });
   listeners.json.add(event => received.push(event));
   for (const value of [null, {}, { kind: "invented" }, { kind: "json", sequence: "1" }]) dispatchChange(value, listeners, error => errors.push(error));

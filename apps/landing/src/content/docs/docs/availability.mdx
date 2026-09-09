@@ -1,0 +1,28 @@
+---
+title: Availability
+description: What hitSlop supports today and what is coming next.
+---
+
+## Available today
+
+| Capability | Status |
+| --- | --- |
+| macOS host | Apple silicon, macOS 14 or newer |
+| Supported authoring path | Bun, Svelte 5, and TypeBox-backed JSON |
+| Runtime package | Framework-neutral generated HTML and immutable assets |
+| Local stores | JSON, named media, and theme overrides |
+| Native output | Finder previews and icons, full-height PNG, and vector PDF |
+| Distribution | Local templates and signed public catalog artifacts |
+
+The MVP path is deliberately narrower than the full runtime: start with Svelte
+and one compact JSON document, adding named media only when the job needs it.
+
+## Coming soon
+
+- **iOS release** for opening and using slops away from the Mac.
+- **Windows and Linux hosts** for opening slops on other desktop platforms.
+- **iCloud sync** for coordinated documents shared between Apple devices.
+- **SQLite support** for apps that need relational queries and transactions.
+
+These items do not have public dates yet. The docs describe released behavior;
+future work will move into the main guides when it becomes supported.

@@ -3,7 +3,7 @@
 Each directory is an authored web project with the same minimal manifest used
 by third-party slops. Svelte/Vite is the supported v1 authoring path;
 `react-counter` is the maintained React SDK integration example. Source CSS is compiled into `app.html`.
-Templates contain no seed stores; JSON, SQLite, and named media are initialized lazily through
+Templates contain no seed stores; JSON and named media are initialized lazily through
 the bridge.
 
 Static capture sets `data-slop-capture="static"` on the root. Examples can mark
@@ -40,7 +40,7 @@ bun slop dev examples/slops/bullet-journal
 Recent product templates: `eisenhower-matrix` is an urgent-vs-important priority desk blotter with a triage holding pen; `ivy-lee-method` is a strict 6-slot single-tasking ledger strip; `three-three-three` is Oliver Burkeman’s finite work docket (3h deep work + 3 urgent + 3 maintenance); `pros-cons-sheet` is Benjamin Franklin’s prudential algebra with a live balance scale; `five-minute-journal` is a mindful morning and evening linen bookend; `morning-pages` is a 750-word stream-of-consciousness feed with live odometer; `choice-point` is Dr. Russ Harris’s ACT fork diagram; `bullet-journal` is Ryder Carroll’s analog rapid logging on cream dot-grid paper; `cornell-notes` is a classic lecture pad with an active-recall study mask; `school-schedule` is a student timetable with period bells; `assignment-tracker` is a homework urgency pad; `semester-planner` is a macro term syllabus roadmap; `grade-calculator` is an academic gradebook; `expense-log` is a thermal receipt for purchases; `flashcards` is an index-card Leitner box; `pixel-art` is a 16×16 handheld sprite desk.
 
 `alien-radio` demonstrates a fixed exact-size RGBA skin. `kanban-board` uses
-the canonical SQLite store. Recipe combines JSON with a named image store; the
+the canonical JSON store. Recipe combines JSON with a named image store; the
 SomaAmp combines JSON with a persistent ZIP skin in named media; the other examples use the canonical JSON store.
 `svelte-counter` is the intentionally small Svelte SDK baseline;
 `react-counter` fills the same role for React without promising a CLI scaffold.

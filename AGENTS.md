@@ -1,7 +1,7 @@
 # hitSlop
 
 `.slop` packages are framework-neutral runtime web apps with optional host-owned
-JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
+JSON, named media, and theme override data. Read `manifest.json` first.
 
 - Active authored templates live in `examples/slops/`; paused examples live in
   `examples/slops/_backlog/` and older templates in `archive/templates/`.
@@ -17,12 +17,11 @@ JSON, SQLite, named media, and theme override data. Read `manifest.json` first.
 - A runtime package has `manifest.json`, generated `app.html`, optional immutable
   `assets/`, optional generated `data.schema.json`, the canonical embedded
   `.agents/skills/hitslop-document` skill, optional canonical
-  `stores/data.json`, `stores/data.sqlite`, `stores/theme.css`, and user-selected
+  `stores/data.json`, `stores/theme.css`, and user-selected
   supported media under `stores/media/`,
   and optional `QuickLook/Preview.png` and `QuickLook/Icon.png`.
-- Manifest storage is implicit. A slop can use JSON, SQLite, named media, or
-  any combination. Replace JSON and media atomically and keep SQLite
-  transactions on one connection.
+- Manifest storage is implicit. A slop can use JSON, named media, either, or
+  neither. Replace JSON and media atomically.
 - Manifest `author.name` is required and `author.url` may be an HTTP(S) URL.
   Attribution belongs to the signed artifact; the publisher identity is only a
   signing key.

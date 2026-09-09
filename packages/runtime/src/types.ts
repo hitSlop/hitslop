@@ -1,15 +1,11 @@
-export type SlopStoreKind = "json" | "sqlite" | "media";
-import type { HostInfo, SlopChange, SQLValue } from "@hitslop/schema/bridge";
-export type { HostInfo, SlopChange, SQLValue } from "@hitslop/schema/bridge";
-export type SlopStatement = { sql: string; parameters?: SQLValue[] };
+export type SlopStoreKind = "json" | "media";
+import type { HostInfo, SlopChange } from "@hitslop/schema/bridge";
+export type { HostInfo, SlopChange } from "@hitslop/schema/bridge";
 export type SlopSnapshot<T> = { value: T; revision: string };
 export type SlopMediaSnapshot = { exists: boolean; revision: string | null };
 export type SlopWindowSize = { width: number; height: number };
 
 export interface SlopHost {
-  query<T = Record<string, unknown>>(sql: string, params?: SQLValue[]): Promise<T[]>;
-  execute(sql: string, params?: SQLValue[]): Promise<number>;
-  transaction(statements: SlopStatement[]): Promise<number>;
   jsonOpen<T>(initialValue: T): Promise<SlopSnapshot<T>>;
   jsonRead<T>(): Promise<SlopSnapshot<T>>;
   jsonWrite<T>(value: T, expectedRevision?: string): Promise<{ revision: string }>;
@@ -23,12 +19,6 @@ export interface SlopHost {
 
 export type WindowSlop = {
   info?: () => Promise<HostInfo>;
-  db: {
-    query: (sql: string, parameters?: SQLValue[]) => Promise<unknown[]>;
-    execute: (sql: string, parameters?: SQLValue[]) => Promise<number>;
-    transaction: (statements: SlopStatement[]) => Promise<number>;
-    onChange: (callback: (event: SlopChange) => void) => () => void;
-  };
   json: {
     open: (initialValue: unknown) => Promise<SlopSnapshot<unknown>>;
     read: () => Promise<SlopSnapshot<unknown>>;

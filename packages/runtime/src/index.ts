@@ -1,6 +1,5 @@
-import type { SlopHost, SlopStatement, SlopWindowSize, WindowSlop, SQLValue } from "./types.ts";
-export type { SlopChange, SlopHost, SlopMediaSnapshot, SlopSnapshot, SlopStatement, SlopStoreKind, SlopWindowSize, WindowSlop } from "./types.ts";
-export { sql } from "./sql.js";
+import type { SlopHost, SlopWindowSize, WindowSlop } from "./types.ts";
+export type { SlopChange, SlopHost, SlopMediaSnapshot, SlopSnapshot, SlopStoreKind, SlopWindowSize, WindowSlop } from "./types.ts";
 export { flush } from "./lifecycle.js";
 export { SlopError } from "./errors.js";
 export async function hostInfo() {
@@ -11,9 +10,6 @@ export async function hostInfo() {
 let configuredHost: SlopHost | undefined;
 
 const fromBridge = (bridge: WindowSlop): SlopHost => ({
-  query: <T>(sql: string, params: SQLValue[] = []) => bridge.db.query(sql, params) as Promise<T[]>,
-  execute: (sql, params = []) => bridge.db.execute(sql, params),
-  transaction: (statements: SlopStatement[]) => bridge.db.transaction(statements),
   jsonOpen: async <T>(initialValue: T) => {
     const result = await bridge.json.open(initialValue);
     return { value: result.value as T, revision: result.revision };
@@ -32,7 +28,7 @@ const fromBridge = (bridge: WindowSlop): SlopHost => ({
   dragWindow: () => bridge.window?.drag
     ? bridge.window.drag()
     : Promise.reject(new Error("The hitSlop host does not support window dragging.")),
-  watch: (kind, callback) => kind === "json" ? bridge.json.onChange(callback) : kind === "sqlite" ? bridge.db.onChange(callback) : bridge.media.onChange(callback),
+  watch: (kind, callback) => kind === "json" ? bridge.json.onChange(callback) : bridge.media.onChange(callback),
 });
 
 export function installHost(host: SlopHost): () => void {
@@ -42,7 +38,7 @@ export function installHost(host: SlopHost): () => void {
 
 export function getHost(): SlopHost {
   if (configuredHost) return configuredHost;
-  if (typeof window !== "undefined" && window.slop?.json && window.slop.db && window.slop.media) return fromBridge(window.slop);
+  if (typeof window !== "undefined" && window.slop?.json && window.slop.media) return fromBridge(window.slop);
   throw new Error("hitSlop host bridge is unavailable. Run this project with `slop dev` or inside hitSlop.");
 }
 
@@ -52,12 +48,6 @@ export const slop = {
     read: <T>() => getHost().jsonRead<T>(),
     write: <T>(value: T, expectedRevision?: string) => getHost().jsonWrite(value, expectedRevision),
     onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("json", callback),
-  },
-  db: {
-    query: <T = Record<string, unknown>>(sql: string, params?: SQLValue[]) => getHost().query<T>(sql, params),
-    execute: (sql: string, params?: SQLValue[]) => getHost().execute(sql, params),
-    transaction: (statements: SlopStatement[]) => getHost().transaction(statements),
-    onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("sqlite", callback),
   },
   media: {
     open: (name: string) => getHost().mediaOpen(name),

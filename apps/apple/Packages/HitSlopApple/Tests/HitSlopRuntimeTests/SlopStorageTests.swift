@@ -15,26 +15,6 @@ import Testing
     #expect(throws: Error.self) { try store.write(["count": 2], expectedRevision: initial.revision) }
 }
 
-@Test func sqliteStoreOwnsTransactionsAndRejectsConnectionControl() throws {
-    let directory = temporaryDirectory()
-    defer { try? FileManager.default.removeItem(at: directory) }
-    let url = directory.appendingPathComponent("data.sqlite")
-    FileManager.default.createFile(atPath: url.path, contents: nil)
-    let database = try SlopDatabase(url: url)
-    defer { database.close() }
-
-    _ = try database.transaction([
-        ("CREATE TABLE items (id INTEGER PRIMARY KEY, title TEXT NOT NULL)", []),
-        ("INSERT INTO items (title) VALUES (?)", ["one"]),
-    ])
-    let rows = try database.query("SELECT count(*) AS count FROM items", parameters: [])
-    #expect(rows.first?["count"] as? Int64 == 1)
-    #expect(throws: Error.self) { try database.query("PRAGMA journal_mode", parameters: []) }
-    #expect(throws: Error.self) { try database.execute("BEGIN", parameters: []) }
-    #expect(throws: Error.self) { try database.execute("ATTACH DATABASE ':memory:' AS outside", parameters: []) }
-    #expect(throws: Error.self) { try database.query("SELECT 1; SELECT 2", parameters: []) }
-}
-
 private func temporaryDirectory() -> URL {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-storage-\(UUID().uuidString)", isDirectory: true)
     try! FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
@@ -78,25 +58,6 @@ private func temporaryDirectory() -> URL {
             }
         }
     }
-}
-
-@Test func sqliteAuthorizerRejectsCommentedControlAndPreservesTransactions() throws {
-    let directory = temporaryDirectory()
-    defer { try? FileManager.default.removeItem(at: directory) }
-    let database = try SlopDatabase(url: directory.appendingPathComponent("data.sqlite"))
-    defer { database.close() }
-    #expect(throws: Error.self) { _ = try database.query("/* guest */ PRAGMA journal_mode", parameters: []) }
-    #expect(throws: Error.self) { _ = try database.execute("/* guest */ COMMIT", parameters: []) }
-    _ = try database.transaction([("CREATE TABLE items (id INTEGER PRIMARY KEY, bytes BLOB)", [])])
-    #expect(throws: Error.self) { _ = try database.transaction([
-        ("INSERT INTO items VALUES (1, ?)", [["$blob": "AQID"]]),
-        ("INSERT INTO missing_table VALUES (1)", []),
-    ]) }
-    #expect(try database.query("SELECT * FROM items", parameters: []).isEmpty)
-    _ = try database.transaction([("INSERT INTO items VALUES (1, ?)", [["$blob": "AQID"]])])
-    #expect((try database.query("SELECT bytes FROM items", parameters: []).first?["bytes"] as? [String: String])?["$blob"] == "AQID")
-    #expect(throws: Error.self) { _ = try database.query("SELECT 9223372036854775807 AS unsafe", parameters: []) }
-    #expect(throws: Error.self) { _ = try database.query("WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<10001) SELECT x FROM n", parameters: []) }
 }
 
 @Test func nativeJSONSchemaRejectsInvalidWritesWithoutChangingFile() throws {

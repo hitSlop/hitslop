@@ -1,0 +1,88 @@
+---
+title: How .slop files work
+description: Understand source projects, immutable templates, writable documents, and local stores.
+---
+
+There are three related objects in the hitSlop workflow. Keeping them separate
+prevents personal data from leaking into a template and prevents tools from
+rewriting a signed app.
+
+## 1. The source project
+
+This is the directory you edit as an author:
+
+```text
+tiny-counter/
+├── manifest.json
+├── schema.ts
+├── theme.ts
+├── document-guide.md       optional
+├── package.json
+├── index.html
+├── src/
+└── assets/                 optional immutable assets
+```
+
+It contains source and dependencies. It must not contain a real document's
+`stores/` directory.
+
+## 2. The runtime template
+
+`bun run build` produces a source-free package:
+
+```text
+tiny-counter.slop/
+├── manifest.json
+├── app.html
+├── data.schema.json        optional, generated
+├── assets/                 optional, immutable
+├── .agents/skills/hitslop-document/
+└── QuickLook/
+    ├── Preview.png
+    └── Icon.png
+```
+
+The app files describe one fixed release. A registered master under
+`~/.hitslop/templates/` or a published catalog artifact is never a writable
+personal document.
+
+## 3. The writable document
+
+Opening a template creates a copy at a destination the user chooses. The host
+may add canonical stores lazily:
+
+```text
+my-counter.slop/
+├── …immutable runtime files…
+├── stores/
+│   ├── data.json
+│   ├── media/
+│   └── theme.css
+└── QuickLook/Preview.png
+```
+
+The interface, data, media, and preview now travel together as one Finder
+document. Copying or sharing this document includes its personal stores.
+Publishing the source project builds a clean template instead.
+
+## What may change
+
+| Area | Owner | Editable in a document? |
+| --- | --- | --- |
+| `manifest.json`, `app.html`, `data.schema.json` | App author | No |
+| `assets/`, `.agents/`, `QuickLook/Icon.png` | App author | No |
+| `stores/data.json` | Document owner | Yes |
+| `stores/media/`, `stores/theme.css` | Document owner | Yes |
+| `QuickLook/Preview.png` | Native host | Refreshed by the host |
+
+Finder may add a local `Icon\r` metadata file. It is not document content and
+must never appear in authored or published templates.
+
+## Use the native document controls
+
+Move the pointer near the window to reveal hitSlop's native toolbar. It can
+drag, close, minimize, or keep the document always on top. It also duplicates
+the document, exports PNG or PDF, opens the macOS share sheet, reveals the
+package in Finder, copies its path, and opens it in an installed supported code
+editor. Close, duplicate, and export coordinate pending writes so those results
+use stable saved data.

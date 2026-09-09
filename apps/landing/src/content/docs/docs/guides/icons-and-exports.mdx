@@ -1,0 +1,143 @@
+---
+title: Icons, previews, and exports
+description: Create live Finder icons, Quick Look previews, and clean PNG or PDF output.
+---
+
+hitSlop can render dedicated views from the same current data as the editor.
+This keeps Finder artwork and exported documents useful without putting editor
+controls into the result.
+
+## Build a dynamic icon
+
+Create an icon component at exactly 512 × 512 pixels. The outer canvas stays
+transparent; draw a simple, legible object inside it.
+
+```svelte title="src/Icon.svelte"
+<script lang="ts">
+  let { count }: { count: number } = $props();
+</script>
+
+<div class="icon" aria-label={`${count} counted`}>
+  <div class="tile">{count}</div>
+</div>
+
+<style>
+  .icon {
+    width: 512px;
+    height: 512px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+  }
+
+  .tile {
+    width: 420px;
+    height: 420px;
+    display: grid;
+    place-items: center;
+    border-radius: 112px;
+    color: var(--slop-ink);
+    background: var(--slop-accent);
+    font: 700 176px/1 var(--slop-font);
+    box-shadow: 0 28px 80px rgb(0 0 0 / 18%);
+  }
+</style>
+```
+
+Mount it with `IconTarget` beside the editor and pass the existing store data.
+Do not open a second store inside the icon.
+
+```svelte title="src/App.svelte"
+<script lang="ts">
+  import { IconTarget } from "@hitslop/svelte";
+  import Icon from "./Icon.svelte";
+
+  // `document` is the same jsonStore used by the editor.
+</script>
+
+<main>
+  <!-- editor UI -->
+</main>
+
+<IconTarget>
+  <Icon count={document.current.count} />
+</IconTarget>
+```
+
+`IconTarget` mounts only in the icon renderer and provides a transparent
+512 × 512 canvas. In browser development, open the preview with
+`?capture=icon` to inspect that view.
+
+Registration and publishing capture the initial `QuickLook/Icon.png`. After a
+writable document changes, a dynamic icon target can also refresh that
+document's Finder custom icon when it closes. The signed Quick Look asset stays
+immutable; Finder's local `Icon\r` metadata holds the refreshed document icon.
+
+## Provide a static icon
+
+If the icon never needs document data, provide an exact 512 × 512 PNG:
+
+```sh
+slop register . --icon path/to/icon.png
+slop publish . --icon path/to/icon.png
+```
+
+The same commands accept `--preview path/to/preview.png` for static Quick Look
+artwork. Without an icon target or `--icon`, the CLI derives a fallback icon
+from the preview.
+
+## Control the Quick Look preview
+
+The default preview captures the normal app at the manifest viewport. Keep the
+app in a stable, useful state for a new document. Mark transient controls or
+messages with `data-slop-export="hide"`, then hide them in capture CSS when the
+root has `data-slop-capture="static"`. Registration and publishing write the
+result to immutable `QuickLook/Preview.png`; the host refreshes the writable
+document's preview after its saved data changes.
+
+```css
+html[data-slop-capture="static"] [data-slop-export="hide"] {
+  display: none !important;
+}
+```
+
+Use `--preview` when a hand-authored image communicates the app better or when
+capture is unavailable in CI. Supplying static artwork replaces that capture
+input. A static preview must be a valid PNG no larger than 5 MiB; a static icon
+must be exactly 512 × 512 pixels.
+
+## Create a dedicated export view
+
+Use normal document flow in `Export.svelte`: no fixed viewport height and no
+nested scrolling. Then mount it with the current app data.
+
+```svelte title="src/App.svelte"
+<script lang="ts">
+  import { ExportTarget } from "@hitslop/svelte";
+  import Export from "./Export.svelte";
+</script>
+
+<ExportTarget>
+  <Export title={document.current.title} items={document.current.items} />
+</ExportTarget>
+```
+
+When a dedicated component is unnecessary, hide editor-only elements:
+
+```svelte
+<nav data-slop-export="hide">…</nav>
+```
+
+Open the browser preview with `?capture=export` to inspect export mode. Capture
+uses the current window width and the full content height. PNG output renders
+at 2× resolution and is limited to 16,384 pixels per side and 24 megapixels.
+PDF keeps selectable text and vector content where the web content permits it
+and is better for very long documents.
+
+```sh
+slop export path/to/document.slop --format png --output document.png
+slop export path/to/document.slop --format pdf --output document.pdf
+```
+
+Wait for fonts and images before calling `ready()`, and test long, empty, and
+wrapped content before publishing.

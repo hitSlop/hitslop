@@ -1,7 +1,6 @@
 import CoreGraphics
 import Foundation
 import ImageIO
-import SQLite3
 import Testing
 @testable import HitSlopCore
 
@@ -71,16 +70,12 @@ import Testing
     let source = try fixture(), temporary = source.deletingLastPathComponent(); defer { try? FileManager.default.removeItem(at: temporary) }
     try FileManager.default.createDirectory(at: source.appendingPathComponent("stores"), withIntermediateDirectories: true)
     try Data(#"{"count":3}"#.utf8).write(to: source.appendingPathComponent("stores/data.json"))
-    let database = try SlopDatabaseFixture(url: source.appendingPathComponent("stores/data.sqlite"))
-    try database.write()
     let media = source.appendingPathComponent("stores/media", isDirectory: true)
     try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
     try writeSkin(to: media.appendingPathComponent("hero"), width: 2, height: 2)
     let destination = temporary.appendingPathComponent("document-copy.slop")
     try SlopDuplicator.duplicate(from: source, to: destination)
     #expect(try Data(contentsOf: destination.appendingPathComponent("stores/data.json")) == Data(#"{"count":3}"#.utf8))
-    #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/data.sqlite").path))
-    #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/data.sqlite-wal").path))
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/media/hero").path))
 }
 
@@ -231,21 +226,4 @@ private func writeSkin(to url: URL, width: Int, height: Int) throws {
           let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else { throw SlopPackageError.invalid("could not create test skin") }
     CGImageDestinationAddImage(destination, image, nil)
     guard CGImageDestinationFinalize(destination) else { throw SlopPackageError.invalid("could not write test skin") }
-}
-
-private final class SlopDatabaseFixture {
-    private var handle: OpaquePointer?
-
-    init(url: URL) throws {
-        guard sqlite3_open(url.path, &handle) == SQLITE_OK else { throw SlopPackageError.invalid("could not create test database") }
-        guard sqlite3_exec(handle, "PRAGMA journal_mode=WAL", nil, nil, nil) == SQLITE_OK else { throw SlopPackageError.invalid("could not enable test WAL") }
-    }
-
-    deinit { sqlite3_close(handle) }
-
-    func write() throws {
-        guard sqlite3_exec(handle, "CREATE TABLE items (value INTEGER); INSERT INTO items VALUES (3)", nil, nil, nil) == SQLITE_OK else {
-            throw SlopPackageError.invalid("could not write test database")
-        }
-    }
 }

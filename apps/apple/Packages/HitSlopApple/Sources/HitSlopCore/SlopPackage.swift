@@ -11,7 +11,7 @@ public enum SlopPackageError: LocalizedError {
     }
 }
 
-public enum SlopStoreKind: String, Sendable { case json, sqlite, media }
+public enum SlopStoreKind: String, Sendable { case json, media }
 
 public struct SlopPackage: Sendable {
     public let rootURL: URL
@@ -55,7 +55,6 @@ public struct SlopPackage: Sendable {
     public var iconURL: URL { rootURL.appendingPathComponent("QuickLook/Icon.png") }
     public var storesURL: URL { rootURL.appendingPathComponent("stores", isDirectory: true) }
     public var jsonStoreURL: URL { storesURL.appendingPathComponent("data.json") }
-    public var sqliteStoreURL: URL { storesURL.appendingPathComponent("data.sqlite") }
     public var mediaStoresURL: URL { storesURL.appendingPathComponent("media", isDirectory: true) }
     public var themeOverrideURL: URL { storesURL.appendingPathComponent("theme.css") }
     public var isSkinned: Bool { manifest.presentation.skin != nil }
@@ -75,10 +74,6 @@ public struct SlopPackage: Sendable {
         guard image.colorSpace?.model == .rgb else { throw SlopPackageError.invalid("window skin must be an RGBA PNG") }
         guard ![.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo) else { throw SlopPackageError.invalid("window skin must contain alpha") }
         return url
-    }
-
-    public func storeURL(kind: SlopStoreKind) -> URL {
-        switch kind { case .json: jsonStoreURL; case .sqlite: sqliteStoreURL; case .media: mediaStoresURL }
     }
 
     public func validateAsTemplate(requirePreview: Bool = true) throws {
@@ -158,7 +153,7 @@ public struct SlopPackage: Sendable {
     private func validateStores() throws {
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: storesURL.path) else { return }
-        let allowed = Set(["data.json", "data.sqlite", "data.sqlite-wal", "data.sqlite-shm", "media", "theme.css"])
+        let allowed = Set(["data.json", "media", "theme.css"])
         for url in try fileManager.contentsOfDirectory(at: storesURL, includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey]) {
             guard allowed.contains(url.lastPathComponent) else { throw SlopPackageError.invalid("unexpected store file \(url.lastPathComponent)") }
             let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])

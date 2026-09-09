@@ -14,8 +14,8 @@ description: Work on hitSlop Apple hosting, local storage, iCloud coordination, 
 - `DocumentFactory` verifies SHA-256, caches hosted artifacts at
   `cache/<publisher>/<slug>/<release>.slop`, and copies locally. Never silently
   update an existing document.
-- JSON is atomic. Every SQLite transaction stays on one connection. Both fixed
-  stores are lazy and neither is declared by the manifest.
+- JSON replacement is atomic. The structured data store is lazy and is not
+  declared by the manifest.
 - Generated Swift manifest models and the bundled validation schema come from
   `bun run schema:generate`; never edit them directly.
 - That command also generates bridge request validation, method/error enums,
@@ -38,6 +38,6 @@ description: Work on hitSlop Apple hosting, local storage, iCloud coordination, 
 - On iOS, surface iCloud coordination and flush failures; do not silently lose
   a store update.
 
-- Background captures use disposable snapshots, including SQLite backup. Never
+- Background captures use disposable snapshots. Never
   point a rendering runtime at original writable stores. Interactive exports
   serialize and restore editor state; runtime capture preparation is shared JS.

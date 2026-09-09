@@ -2,8 +2,6 @@ import * as Type from "typebox";
 
 export const protocolVersion = 1;
 export const BridgeErrorCodeSchema = Type.Enum(["invalid_request", "unsupported", "revision_conflict", "validation_failed", "storage_error", "limit_exceeded", "closed"]);
-export const BlobSchema = Type.Object({ $blob: Type.String() }, { additionalProperties: false });
-export const SQLValueSchema = Type.Union([Type.Null(), Type.Boolean(), Type.Number({ minimum: -Number.MAX_SAFE_INTEGER, maximum: Number.MAX_SAFE_INTEGER }), Type.String(), BlobSchema]);
 export type JSONValue = null | boolean | number | string | JSONValue[] | { [key: string]: JSONValue };
 const jsonDefinitions = { json: { anyOf: [
   { type: "null" }, { type: "boolean" }, { type: "number" }, { type: "string" },
@@ -14,7 +12,6 @@ export const JSONValueSchema = Type.Unsafe<JSONValue>({ $defs: jsonDefinitions, 
 const json = Type.Unsafe<JSONValue>({ $ref: "#/$defs/json" });
 const object = <P extends Type.TProperties>(properties: P) => Type.Object(properties, { additionalProperties: false, $defs: jsonDefinitions });
 const method = <P extends Type.TProperties, R extends Type.TSchema>(params: P, response: R) => ({ params: object(params), response });
-const statement = { sql: Type.String({ minLength: 1 }), parameters: Type.Optional(Type.Array(SQLValueSchema)) };
 const mediaName = Type.String({ pattern: "^[a-z][a-z0-9-]{0,63}$" });
 const revision = object({ revision: Type.String() });
 const snapshot = object({ value: json, revision: Type.String() });
@@ -29,9 +26,6 @@ export const BridgeMethods = {
   "json.open": method({ value: json }, snapshot),
   "json.read": method({}, snapshot),
   "json.write": method({ value: json, expectedRevision: Type.Optional(Type.String()) }, revision),
-  "sqlite.query": method(statement, Type.Array(Type.Record(Type.String(), SQLValueSchema))),
-  "sqlite.execute": method(statement, Type.Integer()),
-  "sqlite.transaction": method({ statements: Type.Array(object(statement), { minItems: 1 }) }, Type.Integer()),
   "media.open": method({ name: mediaName }, object({ exists: Type.Boolean(), revision: Type.Union([Type.String(), Type.Null()]) })),
   "media.write": method({ name: mediaName, data: Type.String(), mimeType: Type.String() }, revision),
   "media.remove": method({ name: mediaName }, object({ revision: Type.Null() })),
@@ -56,9 +50,8 @@ export const BridgeReplySchema = Type.Union([
   object({ ok: Type.Literal(true), value: json }),
   object({ ok: Type.Literal(false), error: object({ code: BridgeErrorCodeSchema, message: Type.String() }) }),
 ], { $defs: jsonDefinitions });
-export const ChangeSchema = object({ kind: Type.Enum(["json", "sqlite", "media"]), source: Type.Enum(["app", "external", "dev"]), revision: Type.Optional(Type.Union([Type.String(), Type.Null()])), sequence: Type.Optional(Type.Integer()), name: Type.Optional(mediaName) });
+export const ChangeSchema = object({ kind: Type.Enum(["json", "media"]), source: Type.Enum(["app", "external", "dev"]), revision: Type.Optional(Type.Union([Type.String(), Type.Null()])), sequence: Type.Optional(Type.Integer()), name: Type.Optional(mediaName) });
 export type BridgeReply = Type.Static<typeof BridgeReplySchema>;
 export type BridgeErrorCode = Type.Static<typeof BridgeErrorCodeSchema>;
 export type HostInfo = Type.Static<typeof HostInfoSchema>;
-export type SQLValue = Type.Static<typeof SQLValueSchema>;
 export type SlopChange = Type.Static<typeof ChangeSchema>;

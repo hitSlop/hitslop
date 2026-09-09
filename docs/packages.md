@@ -22,7 +22,7 @@ files.
 ## @hitslop/runtime
 
 Application-facing exports are `slop`, `ready`, `capture`, and `sql`.
-They cover JSON, SQLite, named media, window resize/drag, host readiness,
+They cover JSON, named media, window resize/drag, host readiness,
 renderer detection, and parameterized statement composition.
 
 `@hitslop/runtime/adapter` exposes lower-level persistence/media primitives
@@ -35,7 +35,6 @@ the main application API.
 Svelte 5 rune-aware classes/functions:
 
 - `jsonStore` / `JsonStore`
-- `sqliteQuery` / `SqliteQuery`
 - `imageStore` / `ImageStore`
 - `fileStore` / `FileStore`
 

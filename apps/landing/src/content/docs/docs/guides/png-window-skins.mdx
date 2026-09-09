@@ -1,0 +1,75 @@
+---
+title: PNG window skins
+description: Give a fixed-size slop a custom native silhouette and click-through transparent areas.
+---
+
+Use a PNG skin when the outer shape is part of the app: a dial, toy, ticket,
+device, or other fixed-size object. For ordinary panels, start with a built-in
+`rounded`, `ellipse`, or `capsule` shape. Use `background: "transparent"` when
+HTML and CSS can draw the surface cleanly.
+
+## Create the mask asset
+
+Add an RGBA PNG under `assets/`. Its pixel dimensions must exactly match the
+manifest window. Alpha defines both the native backing and where the window
+accepts pointer input.
+
+```json title="manifest.json"
+{
+  "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "author": { "name": "Your Name" },
+  "slug": "pocket-dial",
+  "title": "Pocket Dial",
+  "description": "A compact desktop dial.",
+  "categories": ["utilities"],
+  "presentation": {
+    "width": 480,
+    "height": 480,
+    "skin": "assets/window-mask.png"
+  }
+}
+```
+
+A skinned presentation contains only `width`, `height`, and `skin`. It cannot
+also specify `shape`, `background`, or `resizable`, and the native window stays
+at the skin's fixed size.
+
+## Align the WebView to the skin
+
+Make the page transparent and fill the exact window dimensions. Align visible
+controls with the opaque areas of the image.
+
+```css
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.app {
+  position: relative;
+  width: 480px;
+  height: 480px;
+}
+```
+
+Pixels below 10% alpha are click-through. Feathered edge pixels may still
+receive or reject clicks depending on their alpha, so keep important controls
+well inside opaque regions. Transparent holes can intentionally expose and
+click the content behind the window.
+
+## Test the physical behavior
+
+- Confirm the PNG is RGBA and exactly matches the manifest dimensions.
+- Test clicks around curved edges, transparent holes, and soft shadows.
+- Give users an obvious opaque drag region or call `slop.window.drag()` from a
+  custom handle.
+- Check that focus rings and menus stay inside the usable silhouette.
+- Preview at native size; a skin is not a responsive window treatment.
+
+The PNG belongs to immutable `assets/`. User data and named media still belong
+in `stores/` and do not alter the native mask.

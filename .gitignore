@@ -36,9 +36,6 @@ xcuserdata/
 *.xcuserstate
 coverage/
 *.log
-*.sqlite-wal
-*.sqlite-shm
-*.sqlite-journal
 Icon?
 node_modules/
 dist/

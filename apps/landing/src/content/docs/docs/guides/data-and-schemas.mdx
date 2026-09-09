@@ -1,0 +1,159 @@
+---
+title: Data and media
+description: Define validated JSON data and named images or files in a Svelte slop.
+---
+
+Use JSON for one compact object graph such as a checklist, settings object, or
+small document model. The supported starter connects a root TypeBox schema
+directly to the Svelte store.
+
+## Define the data shape
+
+Author `schema.ts` at the project root. Keep it deterministic because the app
+and package builder evaluate it separately.
+
+```ts title="schema.ts"
+import * as Type from "typebox";
+
+export default Type.Object({
+  title: Type.String(),
+  items: Type.Array(Type.Object({
+    id: Type.String(),
+    text: Type.String(),
+    done: Type.Boolean(),
+  }, { additionalProperties: true })),
+}, { additionalProperties: true });
+```
+
+`additionalProperties: true` preserves fields added by future versions or
+external tools. Validation never coerces values, inserts defaults, or removes
+unknown properties.
+
+## Open the JSON store
+
+Import the schema directly. TypeScript infers the state shape, and no generated
+file or running development server is required for editor types.
+
+```svelte title="src/App.svelte"
+<script lang="ts">
+  import { ready } from "@hitslop/runtime";
+  import { jsonStore } from "@hitslop/svelte";
+  import { onDestroy } from "svelte";
+  import dataSchema from "../schema";
+
+  const document = jsonStore({
+    schema: dataSchema,
+    initial: { title: "My list", items: [] },
+  });
+
+  $effect(() => { if (document.isReady) ready(); });
+  onDestroy(() => document.destroy());
+</script>
+```
+
+The explicit initial value must satisfy the schema. It is used when a writable
+document has no JSON store yet; builds never ship seed stores.
+
+## Update data from the interface
+
+Mutate `document.current` directly. Nested changes are observed and saved as
+one validated JSON document.
+
+```ts
+document.current.items.push({
+  id: crypto.randomUUID(),
+  text: "Ship the first useful version",
+  done: false,
+});
+
+document.current.items[0].done = true;
+document.current.title = "Launch list";
+```
+
+The adapter batches ordinary edits automatically. Use
+`await document.flush()` before an app-controlled transition that must wait for
+disk. Normal close, quit, duplicate, and export already ask the host to flush
+pending guest writes.
+
+## Show loading and save failures
+
+Disable editing until `isReady` and `isLoading` allow it. Display `error` and
+offer `flush()` to retry a failed save or `reload()` to retry a failed initial
+load. Invalid in-memory values are never written.
+
+Browser development uses in-memory JSON and resets on reload. Register the
+template and open a writable copy to test persistence and external changes.
+
+## Add named media
+
+Use named media for a small set of known image or file roles. Storage is
+implicit: do not add storage declarations to `manifest.json`.
+
+Names must match `[a-z][a-z0-9-]{0,63}`, such as `cover-image` or
+`source-document`. A store is created lazily when the app uses it, and the
+writable file lives under the document's `stores/media/` directory.
+
+### Let the user choose an image
+
+`imageStore` displays an immutable bundled fallback until the owner chooses a
+replacement. Its reactive `src` switches automatically when the media changes.
+
+```svelte title="src/CoverImage.svelte"
+<script lang="ts">
+  import { imageStore } from "@hitslop/svelte";
+  import { onDestroy } from "svelte";
+
+  const cover = imageStore("cover-image", {
+    fallback: "/assets/cover-placeholder.png",
+  });
+
+  onDestroy(() => cover.destroy());
+</script>
+
+<img src={cover.src} alt="Document cover" />
+
+<button onclick={() => cover.choose()} disabled={cover.isLoading}>
+  Choose image
+</button>
+
+{#if cover.hasCustomImage}
+  <button onclick={() => void cover.remove()} disabled={cover.isLoading}>
+    Use default
+  </button>
+{/if}
+
+{#if cover.error}
+  <p role="alert">{cover.error}</p>
+{/if}
+```
+
+Use `choose()` for the native file picker or `await replace(file)` when your UI
+already has a browser `File`, such as from a drop target. `remove()` deletes the
+owner replacement and restores the image fallback.
+
+### Store another known file role
+
+`fileStore` uses the same lifecycle and can suggest accepted file types to the
+picker:
+
+```ts
+import { fileStore } from "@hitslop/svelte";
+
+const attachment = fileStore("source-document", {
+  accept: ".pdf,.txt,text/markdown",
+});
+
+attachment.choose();
+```
+
+The reactive `src` is `null` until a custom file exists. Check
+`hasCustomFile`, `isLoading`, and `error` when drawing the interface.
+
+Both store types provide `choose()`, `replace(file)`, `remove()`, `reload()`,
+and `flush()`. Call `destroy()` when their component is destroyed. Normal close,
+quit, duplicate, capture, and export already join registered flush work, but
+you can `await store.flush()` before an app-controlled transition that must
+wait for an in-flight replacement.
+
+Named media suits stable roles known by the interface. Keep arbitrary lists of
+records in JSON and store only their small metadata there.

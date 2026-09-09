@@ -1,5 +1,4 @@
 import CryptoKit
-import Darwin
 import Foundation
 import HitSlopCore
 
@@ -79,27 +78,17 @@ enum SlopWorkingCopy {
         try coordinate(reading: presented) { url in
             try FileManager.default.copyItem(at: url, to: destination)
         }
-        try snapshotSQLite(in: destination)
         return destination
     }
 
     static func pushStores(from working: URL, to presented: URL) throws {
         let package = try SlopPackage(rootURL: working)
         try coordinate(writing: presented) { destination in
-            for kind in [SlopStoreKind.json, .sqlite] {
-                let source = package.storeURL(kind: kind)
-                guard FileManager.default.fileExists(atPath: source.path) else { continue }
-                let target = destination.appendingPathComponent("stores/data.\(kind == .json ? "json" : "sqlite")")
+            let sourceJSON = package.jsonStoreURL
+            if FileManager.default.fileExists(atPath: sourceJSON.path) {
+                let target = destination.appendingPathComponent("stores/data.json")
                 try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-                if kind == .sqlite {
-                    let temp = target.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).sqlite")
-                    try SlopSQLiteSnapshot.copy(from: source, to: temp)
-                    guard Darwin.rename(temp.path, target.path) == 0 else { throw SlopPackageError.invalid("could not replace SQLite store: \(String(cString: strerror(errno)))") }
-                    try? FileManager.default.removeItem(at: URL(fileURLWithPath: target.path + "-wal"))
-                    try? FileManager.default.removeItem(at: URL(fileURLWithPath: target.path + "-shm"))
-                } else {
-                    try Data(contentsOf: source).write(to: target, options: .atomic)
-                }
+                try Data(contentsOf: sourceJSON).write(to: target, options: .atomic)
             }
             let sourceTheme = package.themeOverrideURL
             let targetTheme = destination.appendingPathComponent("stores/theme.css")
@@ -119,17 +108,6 @@ enum SlopWorkingCopy {
                 try FileManager.default.moveItem(at: temporary, to: targetMedia)
             }
         }
-    }
-
-    private static func snapshotSQLite(in root: URL) throws {
-        let package = try SlopPackage(rootURL: root)
-        let url = package.sqliteStoreURL
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
-        let temp = url.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).sqlite")
-        try SlopSQLiteSnapshot.copy(from: url, to: temp)
-        guard Darwin.rename(temp.path, url.path) == 0 else { throw SlopPackageError.invalid("could not install SQLite working copy: \(String(cString: strerror(errno)))") }
-        try? FileManager.default.removeItem(at: URL(fileURLWithPath: url.path + "-wal"))
-        try? FileManager.default.removeItem(at: URL(fileURLWithPath: url.path + "-shm"))
     }
 
     private static func sha256(_ value: String) -> String {
@@ -197,7 +175,6 @@ enum SlopWorkingCopy {
     public func flush() throws {
         guard usesWorkingCopy else { return }
         flushWork?.cancel()
-        session.checkpoint()
         try SlopWorkingCopy.pushStores(from: session.package.rootURL, to: presentedURL)
     }
 

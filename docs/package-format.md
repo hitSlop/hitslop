@@ -55,16 +55,13 @@ A writable document may lazily add canonical data:
 
 ```text
 stores/data.json
-stores/data.sqlite
-stores/data.sqlite-wal         transient while SQLite is open
-stores/data.sqlite-shm         transient while SQLite is open
 stores/media/<safe-name>
 stores/theme.css               optional owner theme overrides
 Icon\r                         Finder-managed local metadata on macOS
 ```
 
-Templates and published artifacts must never contain `stores/`, SQLite
-sidecars, `Icon\r`, source, `node_modules`, build directories,
+Templates and published artifacts must never contain `stores/`, `Icon\r`,
+source, `node_modules`, build directories,
 `style.css`, or `document.json`.
 
 ## Manifest

@@ -30,7 +30,7 @@ import Testing
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let worker = SlopStorageWorker(package: try SlopPackage(rootURL: root))
     defer { worker.close() }
-    for request in ["[]", #"{"method":"json.open"}"#, #"{"method":"json.write"}"#, #"{"method":"sqlite.transaction","statements":4}"#, #"{"method":"media.open","name":4}"#, #"{"method":"media.write","name":"hero"}"#, #"{"method":"media.remove"}"#] {
+    for request in ["[]", #"{"method":"json.open"}"#, #"{"method":"json.write"}"#, #"{"method":"legacy.query","sql":"SELECT 1"}"#, #"{"method":"media.open","name":4}"#, #"{"method":"media.write","name":"hero"}"#, #"{"method":"media.remove"}"#] {
         await #expect(throws: SlopBridgeFailure.self) { _ = try await worker.perform(Data(request.utf8)) }
     }
     // JSON null is a value, not a missing field.

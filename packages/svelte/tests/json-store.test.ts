@@ -27,9 +27,6 @@ test("jsonStore validates initial, loaded, external, and outgoing values", async
   let writes = 0;
   let listener: ((change: SlopChange) => void) | undefined;
   const host: SlopHost = {
-    query: async () => [],
-    execute: async () => 0,
-    transaction: async () => 0,
     jsonOpen: async <T>() => ({ value: stored as T, revision }),
     jsonRead: async <T>() => ({ value: stored as T, revision }),
     jsonWrite: async (value) => { stored = value; writes += 1; revision = `write-${writes}`; return { revision }; },
@@ -139,7 +136,6 @@ function hostHarness() {
     listener: undefined as ((change: SlopChange) => void) | undefined,
   };
   const host: SlopHost = {
-    query: async () => [], execute: async () => 0, transaction: async () => 0,
     jsonOpen: async <T>() => { await state.openGate; return { value: structuredClone(state.stored) as T, revision: "initial" }; },
     jsonRead: async <T>() => ({ value: structuredClone(state.stored) as T, revision: "external" }),
     jsonWrite: async value => {

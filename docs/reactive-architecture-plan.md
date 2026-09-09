@@ -11,7 +11,6 @@ It does not create development stores, expose HTTP storage routes, or poll.
 
 - JSON operations retain a cloned value until the page reloads and emit local
   change events immediately.
-- SQLite queries return no rows and mutations report zero changes.
 - Named media reports missing files and accepts writes as no-op preview events.
 - Window resize returns the requested size; window drag is a no-op.
 
@@ -63,9 +62,9 @@ skill resources do not cross into the runtime package.
 
 On macOS, one recursive FSEvents stream watches each open `.slop`. Events are
 wake-up signals: after a short debounce, the runtime compares canonical JSON,
-SQLite, media, and theme revisions and notifies the guest only when a value
+media, and theme revisions and notifies the guest only when a value
 actually changed. Theme changes replace the override `<link>` after the new
 stylesheet loads, preserving page state.
 
 iOS retains its existing timer fallback for now. Coordinated working copies
-flush JSON, SQLite, media, and theme overrides back to the presented document.
+flush JSON, media, and theme overrides back to the presented document.

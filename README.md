@@ -5,7 +5,7 @@
 hitSlop is a native home for small, personal, local-first web apps. Each
 `.slop` is a document you can open, move, duplicate, share, commit, and keep—not
 an account you have to maintain. The app owns its interface; the host owns
-durable JSON, SQLite, named media, previews, export, and native window behavior.
+durable JSON, named media, previews, export, and native window behavior.
 
 <p align="center">
   <img src="apps/landing/public/assets/desktop-hero-current.png" width="80%" alt="hitSlop on macOS">
@@ -19,7 +19,7 @@ plain HTML plus host data.
 ## Same file, same truth
 
 Slops are designed for bidirectional editing. Change a value in the rendered
-interface and its local store updates. Change the JSON or SQLite data on disk
+interface and its local store updates. Change the JSON data on disk
 and an open slop can follow the new revision. You and your AI can work on the
 same ordinary local data without a proprietary cloud record in the middle.
 
@@ -68,7 +68,6 @@ tiny-app.slop/
 ├── .agents/skills/hitslop-document/
 ├── stores/                    optional, host-owned document data
 │   ├── data.json
-│   ├── data.sqlite
 │   ├── media/
 │   └── theme.css
 └── QuickLook/
@@ -77,9 +76,9 @@ tiny-app.slop/
 ```
 
 Authored templates and published artifacts never contain source, dependencies,
-build caches, seed stores, editable stylesheets, SQLite sidecars, or Finder's
-local `Icon\r` metadata. Storage is implicit: use JSON, SQLite, named media,
-any combination, or none. See [Package format](docs/package-format.md) and
+build caches, seed stores, editable stylesheets, unsupported stores, or Finder's
+local `Icon\r` metadata. Storage is implicit: use JSON, named media, either,
+or neither. See [Package format](docs/package-format.md) and
 [Storage](docs/storage.md).
 
 ## The system at a glance
@@ -119,7 +118,7 @@ and [Contributing](CONTRIBUTING.md).
 
 The MVP authoring path is macOS + Svelte + JSON, demonstrated by Quick Checklist.
 The macOS app is at `1.0.4` and public npm packages are at `0.3.0`.
-iOS remains at `0.1.0`; iOS, iCloud sync, and SQLite improvements are deferred.
+iOS remains at `0.1.0`; iOS, iCloud sync, and SQLite support are coming later.
 
 ## License
 
