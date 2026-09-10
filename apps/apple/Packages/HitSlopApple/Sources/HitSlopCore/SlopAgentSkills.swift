@@ -1,3 +1,4 @@
+#if os(macOS)
 import Darwin
 import Foundation
 
@@ -101,3 +102,4 @@ public enum SlopAgentSkills {
         throw POSIXError(.EAGAIN)
     }
 }
+#endif

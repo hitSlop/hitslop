@@ -1,3 +1,4 @@
+#if os(macOS)
 import Darwin
 import Foundation
 import Testing
@@ -115,3 +116,4 @@ private final class FailingActivationFileManager: FileManager {
         try super.moveItem(at: srcURL, to: dstURL)
     }
 }
+#endif
