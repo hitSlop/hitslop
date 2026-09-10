@@ -1,8 +1,7 @@
 # Active examples
 
-Quick Checklist is the current supported TypeBox/Svelte pilot. Other examples
-are preserved in [_backlog](_backlog/README.md), outside active discovery,
-type-checks, tests, and builds. They are not maintained integration examples yet.
+Supported TypeBox/Svelte examples live at the top of this folder. Other projects
+remain in [_backlog](_backlog/README.md) until they are promoted.
 
 ```sh
 bun slop dev examples/slops/quick-checklist

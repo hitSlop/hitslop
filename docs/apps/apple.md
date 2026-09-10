@@ -38,7 +38,13 @@ Every catalog path duplicates a validated immutable master to a user-selected
 location. The destination becomes writable only after the copy is complete.
 Cache keys include publisher, slug, and release; downloads are hash-verified
 before becoming masters. Nothing under `~/.hitslop/templates` is a writable
-user document.
+user document. After each app update, macOS refreshes
+`~/.hitslop/skills` from bundled `hitslop-authoring`, `hitslop-design`, and
+`hitslop-document` and links those names into `~/.agents/skills` and
+`~/.claude/skills`. Subsequent launches only repair missing skills and links,
+preserving explicit CLI updates. Refresh runs in the background; failures are
+logged and retried on a later launch without blocking documents. Existing user
+directories and unrelated links are never replaced.
 
 ## iOS
 
@@ -53,6 +59,6 @@ swift test --package-path apps/apple/Packages/HitSlopApple
 swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native
 ```
 
-The macOS app is version `1.0.4`; iOS remains `0.1.0`. Release signing,
+The macOS app is version `1.0.5`; iOS remains `0.1.0`. Release signing,
 notarization, Sparkle, and App Store credentials are local/CI secrets, never
 repository files.

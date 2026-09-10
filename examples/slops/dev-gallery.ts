@@ -5,6 +5,12 @@ import { fileURLToPath } from "node:url";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { createServer, type Plugin } from "vite";
+import {
+  loadReview,
+  reviewHTML,
+  reviewFingerprint,
+  type ReviewInfo,
+} from "./review-workbench";
 import { injectHost } from "../../packages/cli/src/dev-bridge.ts";
 import { readThemeCSS } from "../../packages/cli/src/theme.ts";
 
@@ -62,9 +68,19 @@ export async function discoverSlops(directory = root): Promise<GallerySlop[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const slops: GallerySlop[] = [];
   for (const entry of entries) {
-    if (!entry.isDirectory() || entry.name.startsWith(".") || entry.name.startsWith("_") || entry.name === "node_modules") continue;
+    if (
+      !entry.isDirectory() ||
+      entry.name.startsWith(".") ||
+      entry.name.startsWith("_") ||
+      entry.name === "node_modules"
+    )
+      continue;
     const child = join(directory, entry.name);
-    if (!await exists(join(child, "manifest.json")) || !await exists(join(child, "index.html"))) continue;
+    if (
+      !(await exists(join(child, "manifest.json"))) ||
+      !(await exists(join(child, "index.html")))
+    )
+      continue;
     const manifest = await readGalleryManifest(join(child, "manifest.json"));
     slops.push({
       directory: entry.name,
@@ -73,25 +89,37 @@ export async function discoverSlops(directory = root): Promise<GallerySlop[]> {
       description: manifest.description,
       width: manifest.presentation.width,
       height: manifest.presentation.height,
-      hasTheme: await exists(join(child, "theme.ts")) || await exists(join(child, "assets", "theme.css")),
-      migrated: await exists(join(child, "src", "main.ts")) || await exists(join(child, "src", "main.tsx")),
+      hasTheme:
+        (await exists(join(child, "theme.ts"))) ||
+        (await exists(join(child, "assets", "theme.css"))),
+      migrated:
+        (await exists(join(child, "src", "main.ts"))) ||
+        (await exists(join(child, "src", "main.tsx"))),
     });
   }
   return slops.sort((a, b) => a.title.localeCompare(b.title));
 }
 
 const escapeHTML = (value: string): string =>
-  value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 
 export function galleryHTML(slops: GallerySlop[]): string {
-  const cards = slops.map((slop) => `
+  const cards = slops
+    .map(
+      (slop) => `
     <article class="slop-card">
       <div class="card-meta"><span>${escapeHTML(slop.slug)}</span><em>${slop.migrated ? "migrated" : "source → src"}</em></div>
       <strong>${escapeHTML(slop.title)}</strong>
       <p>${escapeHTML(slop.description)}</p>
       <small>${slop.width} × ${slop.height}</small>
-      <nav><a href="/${encodeURIComponent(slop.slug)}/">Live</a> · <a href="/${encodeURIComponent(slop.slug)}/?capture=icon">Icon</a> · <a href="/${encodeURIComponent(slop.slug)}/?capture=export">Export</a></nav>
-    </article>`).join("");
+      <nav><a href="/${encodeURIComponent(slop.slug)}/">Live</a> · <a href="/${encodeURIComponent(slop.slug)}/?capture=icon">Icon</a> · <a href="/${encodeURIComponent(slop.slug)}/?capture=export">Export</a> · <a href="/__review/${encodeURIComponent(slop.slug)}">Review</a></nav>
+    </article>`,
+    )
+    .join("");
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -128,26 +156,109 @@ export function galleryHTML(slops: GallerySlop[]): string {
 }
 
 const prefixRootPaths = (html: string, slug: string): string =>
-  html.replace(/\b(src|href)=(["'])\/(?!\/)([^"']+)\2/g, (_match, attribute, quote, path) =>
-    `${attribute}=${quote}/${slug}/${path}${quote}`
+  html.replace(
+    /\b(src|href)=(["'])\/(?!\/)([^"']+)\2/g,
+    (_match, attribute, quote, path) =>
+      `${attribute}=${quote}/${slug}/${path}${quote}`,
   );
 
 export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
   const bySlug = new Map(slops.map((slop) => [slop.slug, slop]));
+  const reviews = new Map<string, Promise<ReviewInfo>>();
+  const getReview = (slop: GallerySlop) => {
+    let value = reviews.get(slop.slug);
+    if (!value) {
+      value = loadReview(join(directory, slop.directory));
+      reviews.set(slop.slug, value);
+      value.catch(() => reviews.delete(slop.slug));
+    }
+    return value;
+  };
   return {
     name: "hitslop-slop-gallery",
     configureServer(server) {
+      server.watcher.on("all", (_event, path) => {
+        const affected = slops.find((slop) =>
+          path.startsWith(join(directory, slop.directory) + "/"),
+        );
+        if (
+          path.includes("/dist/") ||
+          path.includes("/.impeccable/") ||
+          /\/(README|DESIGN)\.md$/.test(path)
+        )
+          return;
+        if (affected) {
+          const previous = reviews.get(affected.slug);
+          if (!previous) return;
+          void previous
+            .then(async (info) => {
+              if (
+                (await reviewFingerprint(
+                  join(directory, affected.directory),
+                )) === info.fingerprint
+              )
+                return;
+              reviews.delete(affected.slug);
+              server.ws.send({
+                type: "custom",
+                event: "hitslop:review-stale",
+                data: { slug: affected.slug },
+              });
+            })
+            .catch(() => reviews.delete(affected.slug));
+        } else if (
+          (_event === "change" || _event === "unlink") &&
+          (/\/packages\/[^/]+\/src\//.test(path) ||
+            path.endsWith("review-workbench.ts"))
+        ) {
+          reviews.clear();
+          server.ws.send({
+            type: "custom",
+            event: "hitslop:review-stale",
+            data: { slug: "*" },
+          });
+        }
+      });
       server.middlewares.use(async (request, response, next) => {
         if (!request.url || request.method !== "GET") return next();
-        const pathname = new URL(request.url, "http://localhost").pathname;
+        const requestURL = new URL(request.url, "http://localhost");
+        const pathname = requestURL.pathname;
+        const reviewMatch = pathname.match(/^\/__review\/([^/]+)$/);
+        if (reviewMatch) {
+          const slop = bySlug.get(decodeURIComponent(reviewMatch[1]!));
+          if (!slop) {
+            response.statusCode = 404;
+            response.end("Unknown slop");
+            return;
+          }
+          try {
+            const html = await server.transformIndexHtml(
+              pathname,
+              reviewHTML(slop, await getReview(slop)),
+            );
+            response.setHeader("content-type", "text/html; charset=utf-8");
+            response.end(html);
+          } catch (error) {
+            response.statusCode = 400;
+            response.setHeader("content-type", "text/plain");
+            response.end(String(error));
+          }
+          return;
+        }
         const themeMatch = pathname.match(/^\/([^/]+)\/assets\/theme\.css$/);
         if (themeMatch) {
           const slop = bySlug.get(themeMatch[1]!);
           if (slop) {
             try {
               const css = await readThemeCSS(join(directory, slop.directory));
-              if (css !== undefined) { response.setHeader("content-type", "text/css; charset=utf-8"); response.end(css); return; }
-            } catch (error) { return next(error as Error); }
+              if (css !== undefined) {
+                response.setHeader("content-type", "text/css; charset=utf-8");
+                response.end(css);
+                return;
+              }
+            } catch (error) {
+              return next(error as Error);
+            }
           }
         }
         if (pathname === healthPath) {
@@ -172,9 +283,38 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
           response.end();
           return;
         }
-        const source = await readFile(join(directory, slop.directory, "index.html"), "utf8");
+        const source = await readFile(
+          join(directory, slop.directory, "index.html"),
+          "utf8",
+        );
         const prefixed = prefixRootPaths(source, slug);
-        const hosted = injectHost(prefixed, slop.hasTheme ? { themeHref: `/${slug}/assets/theme.css` } : {});
+        let review;
+        if (requestURL.searchParams.has("reviewPane")) {
+          try {
+            const info = await getReview(slop);
+            const id = requestURL.searchParams.get("reviewCase");
+            const fixture = info.cases.find((item) => item.id === id);
+            if (!fixture && !(id === "default" && !info.cases.length))
+              throw new Error("Unknown review fixture");
+            const pane = requestURL.searchParams.get("reviewPane")!;
+            if (!["editor", "narrow", "export", "icon"].includes(pane))
+              throw new Error("Unknown review pane");
+            review = {
+              pane,
+              run: requestURL.searchParams.get("reviewRun") ?? "0",
+              fingerprint: info.fingerprint,
+              ...(fixture ? { data: fixture.data } : {}),
+            };
+          } catch (error) {
+            response.statusCode = 400;
+            response.end(String(error));
+            return;
+          }
+        }
+        const hosted = injectHost(prefixed, {
+          ...(slop.hasTheme ? { themeHref: `/${slug}/assets/theme.css` } : {}),
+          ...(review ? { review } : {}),
+        });
         const html = await server.transformIndexHtml(`/${slug}/`, hosted);
         response.setHeader("content-type", "text/html; charset=utf-8");
         response.end(html);
@@ -183,8 +323,14 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
   };
 }
 
-const requestedSlug = process.argv.slice(2).find((argument: string) => !argument.startsWith("-"));
-const requestedPath = requestedSlug ? `/${encodeURIComponent(requestedSlug)}/` : "/";
+const requestedSlug = process.argv
+  .slice(2)
+  .find((argument: string) => !argument.startsWith("-"));
+const requestedPath = requestedSlug
+  ? process.argv.includes("--review")
+    ? `/__review/${encodeURIComponent(requestedSlug)}`
+    : `/${encodeURIComponent(requestedSlug)}/`
+  : "/";
 const requestedURL = `http://localhost:${port}${requestedPath}`;
 
 async function openURL(url: string): Promise<void> {
@@ -194,8 +340,10 @@ async function openURL(url: string): Promise<void> {
 
 async function reuseRunningGallery(): Promise<boolean> {
   try {
-    const response = await fetch(`http://localhost:${port}${healthPath}`, { signal: AbortSignal.timeout(400) });
-    if (response.ok && await response.text() === healthValue) {
+    const response = await fetch(`http://localhost:${port}${healthPath}`, {
+      signal: AbortSignal.timeout(400),
+    });
+    if (response.ok && (await response.text()) === healthValue) {
       console.log(`hitSlop gallery already running: ${requestedURL}`);
       await openURL(requestedURL);
       return true;
@@ -206,20 +354,29 @@ async function reuseRunningGallery(): Promise<boolean> {
   return false;
 }
 
-const isMain = process.argv[1] ? resolve(process.argv[1]) === fileURLToPath(import.meta.url) : false;
+const isMain = process.argv[1]
+  ? resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+  : false;
 
 if (isMain) {
   const slops = await discoverSlops();
   if (requestedSlug && !slops.some((slop) => slop.slug === requestedSlug)) {
     throw new Error(`Unknown slop slug: ${requestedSlug}`);
   }
-  if (!await reuseRunningGallery()) {
+  if (!(await reuseRunningGallery())) {
     const server = await createServer({
       root,
       configFile: false,
       appType: "mpa",
       plugins: [galleryPlugin(slops), vanillaExtractPlugin(), svelte()],
-      server: { host: "localhost", port, strictPort: true },
+      server: {
+        host: "localhost",
+        port,
+        strictPort: true,
+        watch: {
+          ignored: (path) => /(?:^|\/)(?:dist|\.impeccable)(?:\/|$)/.test(path),
+        },
+      },
     });
     await server.listen();
     console.log(`hitSlop gallery: http://localhost:${port}/`);

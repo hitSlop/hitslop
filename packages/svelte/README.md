@@ -98,9 +98,11 @@ Share presentation components and theme variables to avoid visual drift.
 `Export.svelte` is optional: without a target, the existing app is captured with
 `data-slop-capture="static"` and `data-slop-export="hide"` controls omitted.
 
-Preview stays at the manifest viewport. Export uses the current window width
-and full content height. Dedicated exports have their own rectangular content
-surface rather than a stretched window mask. PNG is 2×, limited to 16,384 pixels
+A dedicated `ExportTarget` is the catalog/Quick Look preview: native capture
+snapshots that object’s rectangle at 2×, not the empty editor window. Without
+an export target, preview stays at the manifest viewport. Export uses the
+current window width and full content height. Dedicated exports have their own
+rectangular content surface rather than a stretched window mask. PNG is 2×, limited to 16,384 pixels
 per side and 24 megapixels; use PDF for longer documents. PDF is one page sized
 to the content, with selectable text. Very long PDFs combine WebKit's pages and
 scale uniformly to a maximum 14,400-point page dimension, preserving all content

@@ -13,7 +13,16 @@ bun run dev
 ```
 
 The generated scripts wrap `slop dev`, `validate`, `build`, `register`, and
-`publish`. New projects start with Svelte 5, Bits UI, a TypeBox-backed JSON store,
+`publish`. `init` also installs missing coding-agent skills into `~/.hitslop/skills`
+and links them from `~/.agents/skills` and `~/.claude/skills`, preserving existing
+installations. The Mac app refreshes its managed skills once per app update.
+Run `slop skills sync` to deliberately replace them with the current CLI's bundle.
+Skill installation supports macOS and Linux (using the system `flock` utility);
+failure never prevents project creation. Conflicting user directories or links
+are left untouched. Keep project-specific notes in `AGENTS.md`; do not vendor
+platform skills into the source tree.
+
+New projects start with Svelte 5, Bits UI, a TypeBox-backed JSON store,
 and Vanilla Extract for structural styles.
 Both `--template svelte` and `--template svelte-counter` create the same
 JSON counter starter. Edit `manifest.json` before the interface: it fixes the
@@ -67,11 +76,12 @@ and embeds the canonical `hitslop-document` Agent Skill. If root
 than 32 KiB and includes it as the skill's one app-specific reference. The
 result is written to `dist/<slug>.slop`; it must be source-free and store-free.
 
-Keep stable public theme defaults in `assets/theme.css` as one `:root` block of
-`--slop-*` variables. Vanilla Extract consumes those variables through a global
-theme contract and emits ordinary structural CSS into `app.html`. This gives
-authors type-checked token names while keeping document overrides plain CSS and
-framework-neutral.
+Define public `--slop-*` tokens in root `theme.ts` with `defineTheme` from
+`@hitslop/runtime/theme`. Vanilla Extract uses `theme.vars` for structural
+styles; the builder generates immutable `assets/theme.css`. Plain authored
+`assets/theme.css` is also supported — never define both. Owners still edit
+`stores/theme.css` with a subset of those names. Structural selectors stay
+compiled into `app.html` and are not part of the editable theme surface.
 
 ## Preview and icon
 

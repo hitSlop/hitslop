@@ -36,7 +36,7 @@ export function createCaptureController() {
     const target = states.get(token)?.target?.element;
     if (target) {
       const rect = target.getBoundingClientRect();
-      return { x: rect.x, y: rect.y, width: Math.ceil(rect.width), height: Math.ceil(Math.max(rect.height, target.scrollHeight)), dedicated: true };
+      return { x: rect.x, y: rect.y, width: Math.ceil(Math.max(rect.width, target.scrollWidth)), height: Math.ceil(Math.max(rect.height, target.scrollHeight)), dedicated: true };
     }
     const root = document.documentElement;
     const body = document.body;

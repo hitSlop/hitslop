@@ -7,7 +7,8 @@ runtime contract is framework-neutral; UI adapters are intentionally thin.
 
 The `slop` executable owns project lifecycle:
 
-- `init` scaffolds the supported Svelte project and portable agent skills.
+- `init` scaffolds the supported Svelte project and installs missing machine-level agent skills.
+- `skills sync` writes `hitslop-authoring`, `hitslop-design`, and `hitslop-document` into `~/.hitslop/skills` and links them for coding agents.
 - `validate` parses the authoritative manifest.
 - `dev` runs Vite with a disposable in-memory host fake for UI work.
 - `build` emits a source/store-free runtime directory and optional schema metadata.

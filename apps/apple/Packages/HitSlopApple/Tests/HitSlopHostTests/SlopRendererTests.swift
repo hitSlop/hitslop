@@ -242,6 +242,72 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     #expect(try await session.webView.evaluateJavaScript("document.querySelector('button').textContent") as? String == "Control")
 }
 
+@Test @MainActor func dedicatedPreviewCapturesTheExportTargetNotTheWindow() async throws {
+    func preview(size: Int) async throws -> CGImage {
+        let root = try rendererPackage()
+        defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+        let session = try SlopRuntimeSession(packageURL: root)
+        defer { session.close() }
+        let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = session.webView
+        session.load(); try await session.waitUntilReady()
+        _ = try await session.webView.evaluateJavaScript(#"""
+          const target = document.createElement('section');
+          target.style.display = 'none';
+          document.body.append(target);
+          window.__hitslopCapture.registerTarget('export', {
+            element: target,
+            prepare: () => { target.style.cssText = 'display:block;width:\#(size)px;height:\#(size)px;background:#00c853'; },
+            restore: () => { target.style.display = 'none'; }
+          }); void 0;
+        """#)
+        let data = try await SlopRenderer.previewPNGData(session: session)
+        #expect(session.webView.frame.size == CGSize(width: 320, height: 240))
+        return try #require(CGImageSourceCreateWithData(data as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    }
+
+    let short = try await preview(size: 120)
+    #expect(short.width == 240)
+    #expect(short.height == 240)
+    #expect(try rgba(short, x: 10, y: 10).green > 180)
+    #expect(try rgba(short, x: 10, y: 10).red < 80)
+
+    let large = try await preview(size: 512)
+    #expect(large.width == 1024)
+    #expect(large.height == 1024)
+    #expect(try rgba(large, x: 16, y: 16).green > 180)
+}
+
+@Test @MainActor func dedicatedPreviewAllowsAHangingDecorationWithoutGrowingForever() async throws {
+    let root = try rendererPackage()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = session.webView
+    session.load(); try await session.waitUntilReady()
+    _ = try await session.webView.evaluateJavaScript(#"""
+      const target = document.createElement('section');
+      target.style.display = 'none';
+      document.body.append(target);
+      window.__hitslopCapture.registerTarget('export', {
+        element: target,
+        prepare: () => {
+          target.style.cssText = 'display:block;position:relative;width:100%;height:160px;background:#00c853';
+          const tab = document.createElement('span');
+          tab.style.cssText = 'position:absolute;top:20px;right:-18px;width:22px;height:40px;background:#111';
+          target.append(tab);
+        },
+        restore: () => { target.style.display = 'none'; target.replaceChildren(); }
+      }); void 0;
+    """#)
+    let data = try await SlopRenderer.previewPNGData(session: session)
+    let image = try #require(CGImageSourceCreateWithData(data as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+    #expect(image.width == 640)
+    #expect(image.height == 320)
+    #expect(session.webView.frame.size == CGSize(width: 320, height: 240))
+}
+
 @Test @MainActor func longVectorExportIsNotSubjectToRasterLimits() async throws {
     let root = try rendererPackage()
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }

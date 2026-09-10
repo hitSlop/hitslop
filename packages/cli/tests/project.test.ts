@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encode } from "fast-png";
-import { manifestSchemaURL } from "@hitslop/schema";
+import { documentSkillContent, manifestSchemaURL } from "@hitslop/schema";
 import { compileDataSchema } from "@hitslop/schema";
 import { loadDataSchema } from "../src/data-schema.ts";
 import { buildSlop, loadManifest, scaffold } from "../src/project.ts";
@@ -84,7 +84,7 @@ describe("immutable artifacts", () => {
     expect(JSON.parse(await readFile(join(built.directory, "data.schema.json"), "utf8"))).toMatchObject({ properties: { count: { type: "number" } } });
     await expect(readFile(join(built.directory, "schema.json"))).rejects.toThrow();
     await expect(readFile(join(built.directory, "SCHEMA.md"))).rejects.toThrow();
-    expect(await readFile(join(built.directory, ".agents/skills/hitslop-document/SKILL.md"), "utf8")).toContain("Read `manifest.json` first");
+    expect(await readFile(join(built.directory, ".agents/skills/hitslop-document/SKILL.md"), "utf8")).toBe(documentSkillContent);
     await expect(readFile(join(built.directory, "stores", "theme.css"))).rejects.toThrow();
   });
 
@@ -158,7 +158,7 @@ describe("immutable artifacts", () => {
 });
 
 describe("authoring scaffold", () => {
-  test("includes portable skills, complete scripts, Bits UI, and export-aware starter", async () => {
+  test("includes agent notes, complete scripts, Bits UI, and export-aware starter", async () => {
     const root = await mkdtemp(join(tmpdir(), "hitslop-scaffold-")); roots.push(root);
     await scaffold(root, { title: "Tiny Tally", description: "Counts a tiny thing.", categories: ["utilities"], author: { name: "Jordan Singer", url: "https://example.com/jordan" } });
     const packageJSON = JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { dependencies: Record<string, string>; devDependencies: Record<string, string>; scripts: Record<string, string> };
@@ -173,17 +173,13 @@ describe("authoring scaffold", () => {
     expect(packageJSON.scripts).toMatchObject({ validate: "slop validate", register: "slop register" });
     expect(packageJSON.scripts.install).toBeUndefined();
     expect(JSON.parse(await readFile(join(root, "manifest.json"), "utf8")).author).toEqual({ name: "Jordan Singer", url: "https://example.com/jordan" });
-    const authoringSkill = await readFile(join(root, ".agents/skills/hitslop-authoring/SKILL.md"), "utf8");
-    expect(authoringSkill).toContain("Storage is implicit and ID-free");
-    const storageGuide = await readFile(join(root, ".agents/skills/hitslop-authoring/references/storage-and-packages.md"), "utf8");
-    expect(storageGuide).toContain("Use JSON for structured data");
-    const designSkill = await readFile(join(root, ".agents/skills/hitslop-design/SKILL.md"), "utf8");
-    expect(designSkill).toContain("data-slop-export");
-    expect(designSkill).toContain("host window be the outer object boundary");
-    expect(await readFile(join(root, ".agents/skills/hitslop-design/references/presentation-and-export.md"), "utf8")).toContain("Transparent backgrounds");
+    await expect(readFile(join(root, ".agents/skills/hitslop-authoring/SKILL.md"))).rejects.toThrow();
+    await expect(readFile(join(root, ".agents/skills/hitslop-design/SKILL.md"))).rejects.toThrow();
     const agents = await readFile(join(root, "AGENTS.md"), "utf8");
     expect(agents).toContain("hitslop-authoring");
     expect(agents).toContain("hitslop-design");
+    expect(agents).toContain("slop skills sync");
+    expect(agents).toContain("## This app");
     const app = await readFile(join(root, "src/App.svelte"), "utf8");
     expect(app).toContain('const title = "Tiny Tally"');
     expect(app).toContain("jsonStore({ schema: counterSchema, initial:");
@@ -213,18 +209,3 @@ test("starter schema checks without mutating data or stripping unknown fields", 
   }
 });
 
-test("bundled authoring skills stay in sync with canonical guidance", async () => {
-  const bundled = new URL("../templates/svelte/.agents/skills/", import.meta.url).pathname;
-  // Resolve from repository root (tests live three directories below it).
-  const source = new URL("../../../.agents/skills/", import.meta.url).pathname;
-  for (const skill of ["hitslop-authoring", "hitslop-design"]) {
-    const walk = async (relative: string): Promise<void> => {
-      for (const entry of await readdir(join(source, relative), { withFileTypes: true })) {
-        const path = join(relative, entry.name);
-        if (entry.isDirectory()) await walk(path);
-        else expect(await readFile(join(bundled, path), "utf8")).toBe(await readFile(join(source, path), "utf8"));
-      }
-    };
-    await walk(skill);
-  }
-});

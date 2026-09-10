@@ -24,7 +24,7 @@ export const title = style({ display: "block", width: "100%", minWidth: 0, borde
 export const progress = style({ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 8, margin: "17px 0 8px", fontSize: 11, color: t.muted, fontVariantNumeric: "tabular-nums" });
 globalStyle(`${progress} > span:first-child`, { color: t.accent, fontWeight: 700 });
 export const track = style({ height: 4, borderRadius: 3, background: t.control, marginBottom: 6, overflow: "hidden" });
-globalStyle(`${track} > div`, { height: "100%", background: t.success, transition: "width 180ms ease-out" });
+globalStyle(`${track} > div`, { height: "100%", width: "100%", transformOrigin: "left center", background: t.success });
 export const composer = style({ display: "grid", gridTemplateColumns: "1fr 42px", gap: 9, alignItems: "center", margin: "12px 20px 8px", padding: "5px 5px 5px 14px", border: 0, borderRadius: 12, background: t.control, boxShadow: `inset 0 0 0 1px ${t.controlBorder}`, "@container": { "(max-width: 350px)": { marginInline: 14 } } });
 globalStyle(`${composer} input`, { minWidth: 0, width: "100%", background: "transparent", border: 0, padding: "7px 0", fontSize: 13 });
 globalStyle(`${composer} input::placeholder`, { color: t.muted });

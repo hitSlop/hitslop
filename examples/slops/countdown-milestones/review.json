@@ -1,0 +1,314 @@
+{
+  "cases": [
+    {
+      "id": "typical",
+      "label": "The next big thing",
+      "data": {
+        "title": "The big trip",
+        "createdAt": "2026-09-01",
+        "targetDate": "2027-01-12",
+        "targetTime": "09:00",
+        "milestones": [
+          {
+            "id": "stay",
+            "title": "Book the stay",
+            "done": true
+          },
+          {
+            "id": "explore",
+            "title": "Plan a few adventures",
+            "done": false
+          },
+          {
+            "id": "pack",
+            "title": "Pack the essentials",
+            "done": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long titles",
+      "data": {
+        "title": "A long-awaited adventure with our favorite people",
+        "createdAt": "2026-09-01",
+        "targetDate": "2027-01-12",
+        "targetTime": "09:00",
+        "milestones": [
+          {
+            "id": "stay",
+            "title": "Book the stay",
+            "done": true
+          },
+          {
+            "id": "explore",
+            "title": "Find a quiet place by the water and plan a day with absolutely nothing scheduled",
+            "done": false
+          },
+          {
+            "id": "pack",
+            "title": "Pack the essentials",
+            "done": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty",
+      "label": "No milestones",
+      "data": {
+        "title": "The big trip",
+        "createdAt": "2026-09-01",
+        "targetDate": "2027-01-12",
+        "targetTime": "09:00",
+        "milestones": []
+      }
+    },
+    {
+      "id": "full",
+      "label": "25 milestones",
+      "data": {
+        "title": "The big trip",
+        "createdAt": "2026-09-01",
+        "targetDate": "2027-01-12",
+        "targetTime": "09:00",
+        "milestones": [
+          {
+            "id": "0",
+            "title": "Adventure checklist step 1",
+            "done": true
+          },
+          {
+            "id": "1",
+            "title": "Adventure checklist step 2",
+            "done": true
+          },
+          {
+            "id": "2",
+            "title": "Adventure checklist step 3",
+            "done": true
+          },
+          {
+            "id": "3",
+            "title": "Adventure checklist step 4",
+            "done": true
+          },
+          {
+            "id": "4",
+            "title": "Adventure checklist step 5",
+            "done": true
+          },
+          {
+            "id": "5",
+            "title": "Adventure checklist step 6",
+            "done": true
+          },
+          {
+            "id": "6",
+            "title": "Adventure checklist step 7",
+            "done": true
+          },
+          {
+            "id": "7",
+            "title": "Adventure checklist step 8",
+            "done": true
+          },
+          {
+            "id": "8",
+            "title": "Adventure checklist step 9",
+            "done": false
+          },
+          {
+            "id": "9",
+            "title": "Adventure checklist step 10",
+            "done": false
+          },
+          {
+            "id": "10",
+            "title": "Adventure checklist step 11",
+            "done": false
+          },
+          {
+            "id": "11",
+            "title": "Adventure checklist step 12",
+            "done": false
+          },
+          {
+            "id": "12",
+            "title": "Adventure checklist step 13",
+            "done": false
+          },
+          {
+            "id": "13",
+            "title": "Adventure checklist step 14",
+            "done": false
+          },
+          {
+            "id": "14",
+            "title": "Adventure checklist step 15",
+            "done": false
+          },
+          {
+            "id": "15",
+            "title": "Adventure checklist step 16",
+            "done": false
+          },
+          {
+            "id": "16",
+            "title": "Adventure checklist step 17",
+            "done": false
+          },
+          {
+            "id": "17",
+            "title": "Adventure checklist step 18",
+            "done": false
+          },
+          {
+            "id": "18",
+            "title": "Adventure checklist step 19",
+            "done": false
+          },
+          {
+            "id": "19",
+            "title": "Adventure checklist step 20",
+            "done": false
+          },
+          {
+            "id": "20",
+            "title": "Adventure checklist step 21",
+            "done": false
+          },
+          {
+            "id": "21",
+            "title": "Adventure checklist step 22",
+            "done": false
+          },
+          {
+            "id": "22",
+            "title": "Adventure checklist step 23",
+            "done": false
+          },
+          {
+            "id": "23",
+            "title": "Adventure checklist step 24",
+            "done": false
+          },
+          {
+            "id": "24",
+            "title": "Adventure checklist step 25",
+            "done": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "today",
+      "label": "Arrival day",
+      "data": {
+        "title": "The big trip",
+        "createdAt": "2026-09-01",
+        "targetDate": "2026-09-10",
+        "targetTime": "00:00",
+        "milestones": [
+          {
+            "id": "stay",
+            "title": "Book the stay",
+            "done": true
+          },
+          {
+            "id": "explore",
+            "title": "Plan a few adventures",
+            "done": false
+          },
+          {
+            "id": "pack",
+            "title": "Pack the essentials",
+            "done": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "since",
+      "label": "Days since",
+      "data": {
+        "title": "The big trip",
+        "createdAt": "2026-09-01",
+        "targetDate": "2026-08-10",
+        "targetTime": "09:00",
+        "milestones": [
+          {
+            "id": "stay",
+            "title": "Book the stay",
+            "done": true
+          },
+          {
+            "id": "explore",
+            "title": "Plan a few adventures",
+            "done": false
+          },
+          {
+            "id": "pack",
+            "title": "Pack the essentials",
+            "done": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid",
+      "label": "Invalid date",
+      "data": {
+        "title": "The big trip",
+        "createdAt": "2026-09-01",
+        "targetDate": "2026-02-30",
+        "targetTime": "09:00",
+        "milestones": [
+          {
+            "id": "stay",
+            "title": "Book the stay",
+            "done": true
+          },
+          {
+            "id": "explore",
+            "title": "Plan a few adventures",
+            "done": false
+          },
+          {
+            "id": "pack",
+            "title": "Pack the essentials",
+            "done": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "large",
+      "label": "Large countdown",
+      "data": {
+        "title": "The big trip",
+        "createdAt": "2026-09-01",
+        "targetDate": "2040-01-12",
+        "targetTime": "09:00",
+        "milestones": [
+          {
+            "id": "stay",
+            "title": "Book the stay",
+            "done": true
+          },
+          {
+            "id": "explore",
+            "title": "Plan a few adventures",
+            "done": false
+          },
+          {
+            "id": "pack",
+            "title": "Pack the essentials",
+            "done": false
+          }
+        ]
+      }
+    }
+  ]
+}

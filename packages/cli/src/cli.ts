@@ -11,6 +11,7 @@ import { installTemplate } from "./install.ts";
 import { exportIdentity, getIdentity, importIdentity } from "./identity.ts";
 import { validateRuntimePackage } from "./runtime-package.ts";
 import { exportDocument, screenshotDocument } from "./render.ts";
+import { syncAgentSkills } from "./skills.ts";
 
 const titleFor = (directory: string): string => directory.split("/").filter(Boolean).at(-1)?.split(/[-_ ]+/).map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" ") || "My Slop";
 
@@ -51,7 +52,16 @@ app = app.command("init", (command) => command.meta({ description: "Create a Sve
   title: { type: "string", description: "Manifest title." }, description: { type: "string", description: "Manifest description." },
   "author-name": { type: "string", description: "Required manifest author name." }, "author-url": { type: "string", description: "Optional manifest author URL." },
   category: { type: "string", multiple: true, description: "Manifest category; pass once or twice." }, yes: { type: "boolean", description: "Accept manifest defaults without prompting." },
-}).run(async ({ args, flags }) => { const metadata = await initMetadata(args.directory, flags); await scaffold(args.directory, { template: flags.template ?? "svelte-counter", ...metadata }); console.log(`Created ${args.directory}`); }));
+}).run(async ({ args, flags }) => {
+  const metadata = await initMetadata(args.directory, flags);
+  try {
+    const result = await syncAgentSkills({ missingOnly: true });
+    for (const path of result.conflicts) console.error(`Left existing skill at ${path} unchanged.`);
+  }
+  catch (error) { console.error(`Could not install coding-agent skills: ${error instanceof Error ? error.message : error}\nRun slop skills sync.`); }
+  await scaffold(args.directory, { template: flags.template ?? "svelte-counter", ...metadata });
+  console.log(`Created ${args.directory}`);
+}));
 app = app.command("validate", (command) => command.meta({ description: "Validate an authoring project or built .slop document." }).args([{ name: "path", type: "path", default: "." }] as const).run(async ({ args }) => {
   const runtime = await stat(join(args.path, "app.html")).then((value) => value.isFile()).catch(() => false);
   const manifest = runtime ? await validateRuntimePackage(args.path) : await validateAuthoringProject(args.path);
@@ -116,4 +126,16 @@ async function runIdentity(arguments_: string[]): Promise<boolean> {
   throw new Error(`Unknown identity command: ${action}`);
 }
 
-if (!await runIdentity(process.argv.slice(2))) await app.execute();
+async function runSkills(arguments_: string[]): Promise<boolean> {
+  if (arguments_[0] !== "skills") return false;
+  const action = arguments_[1] ?? "sync";
+  if (action === "sync") {
+    const result = await syncAgentSkills();
+    console.log(`Installed coding-agent skills at ${result.cache}`);
+    for (const path of result.conflicts) console.error(`Left existing skill at ${path} unchanged. Remove it yourself if you want hitSlop to link its managed skill here.`);
+    return true;
+  }
+  throw new Error("Usage: slop skills sync");
+}
+
+if (!await runIdentity(process.argv.slice(2)) && !await runSkills(process.argv.slice(2))) await app.execute();

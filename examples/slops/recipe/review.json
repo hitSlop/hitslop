@@ -1,0 +1,121 @@
+{
+  "cases": [
+    {
+      "id": "typical",
+      "label": "Lemon garlic pasta",
+      "data": {
+        "title": "Lemon garlic pasta",
+        "description": "Silky, bright, and ready before the table is set.",
+        "difficulty": "Easy",
+        "servings": 2,
+        "prepMinutes": 10,
+        "cookMinutes": 20,
+        "ingredients": [
+          {
+            "id": "spaghetti",
+            "text": "200g spaghetti",
+            "checked": false
+          },
+          {
+            "id": "garlic",
+            "text": "4 garlic cloves, thinly sliced",
+            "checked": false
+          },
+          {
+            "id": "olive-oil",
+            "text": "2 tbsp extra-virgin olive oil",
+            "checked": false
+          },
+          {
+            "id": "lemon",
+            "text": "1 lemon, zest and juice",
+            "checked": false
+          },
+          {
+            "id": "parmesan",
+            "text": "½ cup finely grated parmesan",
+            "checked": false
+          },
+          {
+            "id": "seasoning",
+            "text": "Salt, pepper, and parsley",
+            "checked": false
+          }
+        ],
+        "steps": [
+          {
+            "id": "boil",
+            "title": "Boil the pasta",
+            "text": "Cook the pasta in well-salted water until just al dente.",
+            "minutes": 10
+          },
+          {
+            "id": "sizzle",
+            "title": "Sizzle the garlic",
+            "text": "Gently sizzle the garlic in olive oil until fragrant.",
+            "minutes": 3
+          },
+          {
+            "id": "toss",
+            "title": "Build the sauce",
+            "text": "Add pasta, lemon zest, juice, and a splash of pasta water.",
+            "minutes": 2
+          },
+          {
+            "id": "finish",
+            "title": "Finish and serve",
+            "text": "Toss with parmesan until glossy. Season and serve.",
+            "minutes": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty",
+      "label": "Empty recipe",
+      "data": {
+        "title": "",
+        "description": "",
+        "difficulty": "Easy",
+        "servings": 2,
+        "prepMinutes": null,
+        "cookMinutes": null,
+        "ingredients": [],
+        "steps": []
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long recipe",
+      "data": {
+        "title": "Slow-roasted tomatoes with whipped ricotta and toasted sourdough",
+        "description": "Prepare the ingredients, then follow each step at your own pace.",
+        "difficulty": "Easy",
+        "servings": 2,
+        "prepMinutes": null,
+        "cookMinutes": null,
+        "ingredients": [
+          {
+            "id": "tomatoes",
+            "text": "500g mixed tomatoes, halved lengthways, with all their juices reserved for serving",
+            "checked": false
+          }
+        ],
+        "steps": [
+          {
+            "id": "roast",
+            "title": "Roast the tomatoes",
+            "text": "Spread the tomatoes in a single layer. Turn halfway through cooking, then keep roasting until the edges soften and the juices thicken. Rest before spooning over the ricotta.",
+            "minutes": 25
+          },
+          {
+            "id": "serve",
+            "title": "Assemble and serve",
+            "text": "Spoon the ricotta onto toast and top with the warm tomatoes and their juices.",
+            "minutes": null
+          }
+        ]
+      }
+    }
+  ]
+}

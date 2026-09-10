@@ -1,5 +1,0 @@
-{
-  "extends": "../tsconfig.json",
-  "include": ["src/**/*.svelte", "src/**/*.ts", "schema.ts", "vite.config.ts"],
-  "exclude": ["dist"]
-}

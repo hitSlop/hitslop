@@ -1,0 +1,327 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-10T14:54:33.049662+00:00",
+  "title": "Design System: Pomodoro",
+  "extensions": {
+    "colorMeta": {
+      "surface": {
+        "role": "primary",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.1836 30.87)",
+          "oklch(26.43% 0.1836 30.87)",
+          "oklch(37.86% 0.1836 30.87)",
+          "oklch(49.29% 0.1836 30.87)",
+          "oklch(60.71% 0.1836 30.87)",
+          "oklch(72.14% 0.1836 30.87)",
+          "oklch(83.57% 0.1836 30.87)",
+          "oklch(95.00% 0.1836 30.87)"
+        ]
+      },
+      "surface-light": {
+        "role": "primary",
+        "displayName": "Surface Light",
+        "tonalRamp": [
+          "oklch(15.00% 0.1732 32.93)",
+          "oklch(26.43% 0.1732 32.93)",
+          "oklch(37.86% 0.1732 32.93)",
+          "oklch(49.29% 0.1732 32.93)",
+          "oklch(60.71% 0.1732 32.93)",
+          "oklch(72.14% 0.1732 32.93)",
+          "oklch(83.57% 0.1732 32.93)",
+          "oklch(95.00% 0.1732 32.93)"
+        ]
+      },
+      "surface-rest": {
+        "role": "primary",
+        "displayName": "Surface Rest",
+        "tonalRamp": [
+          "oklch(15.00% 0.1836 30.87)",
+          "oklch(26.43% 0.1836 30.87)",
+          "oklch(37.86% 0.1836 30.87)",
+          "oklch(49.29% 0.1836 30.87)",
+          "oklch(60.71% 0.1836 30.87)",
+          "oklch(72.14% 0.1836 30.87)",
+          "oklch(83.57% 0.1836 30.87)",
+          "oklch(95.00% 0.1836 30.87)"
+        ]
+      },
+      "surface-deep": {
+        "role": "primary",
+        "displayName": "Surface Deep",
+        "tonalRamp": [
+          "oklch(15.00% 0.1640 28.75)",
+          "oklch(26.43% 0.1640 28.75)",
+          "oklch(37.86% 0.1640 28.75)",
+          "oklch(49.29% 0.1640 28.75)",
+          "oklch(60.71% 0.1640 28.75)",
+          "oklch(72.14% 0.1640 28.75)",
+          "oklch(83.57% 0.1640 28.75)",
+          "oklch(95.00% 0.1640 28.75)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "tonalRamp": [
+          "oklch(15.00% 0.0266 87.85)",
+          "oklch(26.43% 0.0266 87.85)",
+          "oklch(37.86% 0.0266 87.85)",
+          "oklch(49.29% 0.0266 87.85)",
+          "oklch(60.71% 0.0266 87.85)",
+          "oklch(72.14% 0.0266 87.85)",
+          "oklch(83.57% 0.0266 87.85)",
+          "oklch(95.00% 0.0266 87.85)"
+        ]
+      },
+      "panel-shade": {
+        "role": "neutral",
+        "displayName": "Panel Shade",
+        "tonalRamp": [
+          "oklch(15.00% 0.0354 87.08)",
+          "oklch(26.43% 0.0354 87.08)",
+          "oklch(37.86% 0.0354 87.08)",
+          "oklch(49.29% 0.0354 87.08)",
+          "oklch(60.71% 0.0354 87.08)",
+          "oklch(72.14% 0.0354 87.08)",
+          "oklch(83.57% 0.0354 87.08)",
+          "oklch(95.00% 0.0354 87.08)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0098 80.65)",
+          "oklch(26.43% 0.0098 80.65)",
+          "oklch(37.86% 0.0098 80.65)",
+          "oklch(49.29% 0.0098 80.65)",
+          "oklch(60.71% 0.0098 80.65)",
+          "oklch(72.14% 0.0098 80.65)",
+          "oklch(83.57% 0.0098 80.65)",
+          "oklch(95.00% 0.0098 80.65)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0296 78.68)",
+          "oklch(26.43% 0.0296 78.68)",
+          "oklch(37.86% 0.0296 78.68)",
+          "oklch(49.29% 0.0296 78.68)",
+          "oklch(60.71% 0.0296 78.68)",
+          "oklch(72.14% 0.0296 78.68)",
+          "oklch(83.57% 0.0296 78.68)",
+          "oklch(95.00% 0.0296 78.68)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.1660 30.68)",
+          "oklch(26.43% 0.1660 30.68)",
+          "oklch(37.86% 0.1660 30.68)",
+          "oklch(49.29% 0.1660 30.68)",
+          "oklch(60.71% 0.1660 30.68)",
+          "oklch(72.14% 0.1660 30.68)",
+          "oklch(83.57% 0.1660 30.68)",
+          "oklch(95.00% 0.1660 30.68)"
+        ]
+      },
+      "rest-accent": {
+        "role": "secondary",
+        "displayName": "Rest Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.0603 155.22)",
+          "oklch(26.43% 0.0603 155.22)",
+          "oklch(37.86% 0.0603 155.22)",
+          "oklch(49.29% 0.0603 155.22)",
+          "oklch(60.71% 0.0603 155.22)",
+          "oklch(72.14% 0.0603 155.22)",
+          "oklch(83.57% 0.0603 155.22)",
+          "oklch(95.00% 0.0603 155.22)"
+        ]
+      },
+      "action": {
+        "role": "neutral",
+        "displayName": "Action",
+        "tonalRamp": [
+          "oklch(15.00% 0.0266 87.85)",
+          "oklch(26.43% 0.0266 87.85)",
+          "oklch(37.86% 0.0266 87.85)",
+          "oklch(49.29% 0.0266 87.85)",
+          "oklch(60.71% 0.0266 87.85)",
+          "oklch(72.14% 0.0266 87.85)",
+          "oklch(83.57% 0.0266 87.85)",
+          "oklch(95.00% 0.0266 87.85)"
+        ]
+      },
+      "focus": {
+        "role": "neutral",
+        "displayName": "Focus",
+        "tonalRamp": [
+          "oklch(15.00% 0.0373 95.44)",
+          "oklch(26.43% 0.0373 95.44)",
+          "oklch(37.86% 0.0373 95.44)",
+          "oklch(49.29% 0.0373 95.44)",
+          "oklch(60.71% 0.0373 95.44)",
+          "oklch(72.14% 0.0373 95.44)",
+          "oklch(83.57% 0.0373 95.44)",
+          "oklch(95.00% 0.0373 95.44)"
+        ]
+      },
+      "on-surface": {
+        "role": "neutral",
+        "displayName": "On Surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.0293 80.66)",
+          "oklch(26.43% 0.0293 80.66)",
+          "oklch(37.86% 0.0293 80.66)",
+          "oklch(49.29% 0.0293 80.66)",
+          "oklch(60.71% 0.0293 80.66)",
+          "oklch(72.14% 0.0293 80.66)",
+          "oklch(83.57% 0.0293 80.66)",
+          "oklch(95.00% 0.0293 80.66)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Countdown",
+        "purpose": "Tabular live time; bundled Barlow SemiBold."
+      },
+      "body": {
+        "displayName": "Supporting status",
+        "purpose": "Quiet readable status text."
+      },
+      "label": {
+        "displayName": "Mode",
+        "purpose": "Focus and Break controls."
+      },
+      "action": {
+        "displayName": "Primary action",
+        "purpose": "Start, Pause, and Resume."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shell",
+        "value": "inset 0 2px 3px #ffffff70, inset 3px 0 5px #ffffff25, inset -4px -7px 12px #651b173b",
+        "purpose": "Satin tomato shell."
+      },
+      {
+        "name": "dial",
+        "value": "0 -3px 4px #73251b80, 0 3px 2px #ffba926b, inset 0 2px 6px #7c5c3133",
+        "purpose": "Recessed cream face."
+      },
+      {
+        "name": "primary",
+        "value": "0 4px 6px #661b1b42, inset 0 2px 1px #fffdf2b3",
+        "purpose": "Raised primary action."
+      },
+      {
+        "name": "primary-pressed",
+        "value": "0 1px 2px #661b1b42, inset 0 1px 2px #78644930",
+        "purpose": "Compressed primary action."
+      },
+      {
+        "name": "reset",
+        "value": "inset 0 1px 2px #73251b42, 0 1px 1px #ffba9259",
+        "purpose": "Recessed reset."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-response",
+        "value": "120ms ease-out",
+        "purpose": "Hover and compression transitions."
+      },
+      {
+        "name": "remaining-arc",
+        "value": "350ms cubicOut",
+        "purpose": "Svelte remaining-ratio tween; snaps for capture and reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-container",
+        "value": "380px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "description": "Start, Pause, and Resume use this raised cream control.",
+      "html": "<button class=\"ds-primary\"><svg viewBox=\"0 0 24 24\" fill=\"currentColor\" stroke=\"currentColor\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 3 14 9-14 9V3Z\"/></svg>Start</button>",
+      "css": ".ds-primary{display:flex;align-items:center;justify-content:center;gap:10px;width:160px;min-width:136px;height:48px;border:0;border-radius:24px;color:#302d28;background:linear-gradient(#f5edda,#e8ddc4);box-shadow:0 4px 6px #661b1b42,inset 0 2px 1px #fffdf2b3;font-family:\"Avenir Next\",Avenir,sans-serif;font-size:16px;font-weight:600;cursor:pointer;transition:transform 120ms ease-out,box-shadow 120ms ease-out,filter 120ms ease-out}.ds-primary svg{width:18px;height:18px;stroke-width:1.6}.ds-primary:hover{filter:brightness(1.04)}.ds-primary:active{transform:translateY(2px);box-shadow:0 1px 2px #661b1b42,inset 0 1px 2px #78644930}.ds-primary:focus-visible{outline:3px solid #fff8dc;outline-offset:4px;}@media(prefers-reduced-motion:reduce){.ds-primary,.ds-reset,.ds-tab{transition-duration:0s}}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Reset",
+      "kind": "button",
+      "description": "Recessed reset on the tomato shell.",
+      "html": "<div class=\"ds-reset-demo\"><button class=\"ds-reset\" aria-label=\"Reset timer\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 11a9 9 0 1 1 2.4 6.3M3 4v7h7\"/></svg></button></div>",
+      "css": ".ds-reset{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;color:#fff3df;background:#5b160b12;box-shadow:inset 0 1px 2px #73251b42,0 1px 1px #ffba9259;cursor:pointer;transition:background 120ms ease-out,transform 120ms ease-out}.ds-reset svg{width:19px;height:19px;stroke-width:1.8}.ds-reset:hover{background:#fff3da26}.ds-reset:active{transform:translateY(1px)}.ds-reset:focus-visible{outline:3px solid #fff8dc;outline-offset:4px;}.ds-reset-demo{display:grid;place-items:center;padding:16px;background:#d94935}@media(prefers-reduced-motion:reduce){.ds-primary,.ds-reset,.ds-tab{transition-duration:0s}}",
+      "refersTo": "button-reset"
+    },
+    {
+      "name": "Mode tabs",
+      "kind": "nav",
+      "description": "Selected and idle modes at the native size.",
+      "html": "<div class=\"ds-modes\" role=\"tablist\" aria-label=\"Timer mode\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"true\">Focus <span>25m</span></button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Break <span>5m</span></button></div>",
+      "css": ".ds-modes{display:flex;gap:2px;background:#f5edda;padding:12px;width:max-content}.ds-tab{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;padding:0 9px;border:0;border-radius:8px;font-family:\"Avenir Next\",Avenir,sans-serif;font-size:14px;line-height:1;font-weight:600;background:transparent;color:#6b604f;cursor:pointer;transition:background 120ms ease-out,color 120ms ease-out}.ds-tab span{font-size:12px;font-weight:500}.ds-tab[aria-selected=\"true\"]{color:#302d28;background:#fffdf280;box-shadow:0 1px 2px #60492c20}.ds-tab:hover{background:#fffdf2b3;color:#302d28}.ds-tab:focus-visible{outline:3px solid #bd3e2d;outline-offset:1px}@media(prefers-reduced-motion:reduce){.ds-primary,.ds-reset,.ds-tab{transition-duration:0s}}",
+      "refersTo": "mode-tab"
+    },
+    {
+      "name": "Inset dial",
+      "kind": "custom",
+      "description": "Static shared dial at the native size; Barlow uses its fallback if the preview does not load the bundled face.",
+      "html": "<div class=\"ds-dial\"><svg viewBox=\"0 0 260 260\" aria-hidden=\"true\"><g stroke=\"#6b604f\"><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(0 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(6 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(12 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(18 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(24 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(30 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(36 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(42 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(48 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(54 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(60 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(66 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(72 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(78 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(84 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(90 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(96 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(102 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(108 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(114 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(120 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(126 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(132 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(138 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(144 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(150 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(156 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(162 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(168 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(174 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(180 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(186 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(192 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(198 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(204 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(210 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(216 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(222 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(228 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(234 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(240 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(246 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(252 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(258 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(264 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(270 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(276 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(282 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(288 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(294 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(300 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(306 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(312 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(318 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(324 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"23\" transform=\"rotate(330 130 130)\" stroke-width=\"1.5\" opacity=\"0.85\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(336 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(342 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(348 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/><line x1=\"130\" y1=\"12\" x2=\"130\" y2=\"17\" transform=\"rotate(354 130 130)\" stroke-width=\"0.9\" opacity=\"0.5\"/></g><circle cx=\"130\" cy=\"130\" r=\"103\" fill=\"none\" stroke=\"#bd3e2d\" stroke-width=\"3\"/></svg><div class=\"ds-readout\"><p>Focus</p><output aria-label=\"25 minutes remaining\">25:00</output><small>Ready when you are</small></div></div>",
+      "css": ".ds-dial{position:relative;width:260px;height:260px;border-radius:50%;color:#302d28;background:linear-gradient(160deg,#f5edda,#e8ddc4);box-shadow:0 -3px 4px #73251b80,0 3px 2px #ffba926b,inset 0 2px 6px #7c5c3133;font-family:\"Avenir Next\",Avenir,sans-serif;}.ds-dial svg{width:100%;height:100%;display:block}.ds-readout{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding-top:5px;text-align:center}.ds-readout p{margin:0 0 12px;color:#6b604f;font-size:16px;font-weight:600;line-height:28px}.ds-readout output{font-family:\"Barlow Timer\",\"Avenir Next\",sans-serif;font-size:72px;font-weight:600;line-height:1.03;letter-spacing:-.025em;font-variant-numeric:tabular-nums}.ds-readout small{margin:8px 0 0;color:#6b604f;font-size:12px;line-height:1.4;font-weight:500}@media(prefers-reduced-motion:reduce){.ds-primary,.ds-reset,.ds-tab{transition-duration:0s}}",
+      "refersTo": "dial"
+    },
+    {
+      "name": "Leaf",
+      "kind": "custom",
+      "description": "Decorative CSS geometry, shared across all three views.",
+      "html": "<div class=\"ds-leaf\" aria-hidden=\"true\"><i></i><i></i><i></i><b></b></div>",
+      "css": ".ds-leaf{position:relative;width:64px;height:35px;filter:drop-shadow(0 2px 1px #74291b44)}.ds-leaf i{position:absolute;width:27px;height:16px;top:9px;background:#3e654c;border-radius:2px 90% 2px 90%;box-shadow:inset 0 2px 2px #ffffff36;transform-origin:right bottom}.ds-leaf i:nth-child(1){left:6px;transform:rotate(14deg)}.ds-leaf i:nth-child(2){left:28px;transform:rotate(74deg)}.ds-leaf i:nth-child(3){left:19px;top:1px;width:24px;height:15px;transform:rotate(50deg)}.ds-leaf b{position:absolute;left:32px;top:1px;width:5px;height:18px;border-radius:3px;background:#3e654c;transform:rotate(15deg)}@media(prefers-reduced-motion:reduce){.ds-primary,.ds-reset,.ds-tab{transition-duration:0s}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Tomato Desk Timer",
+    "overview": "A tactile tomato desk timer with a readable instrument face. Satin red material, a muted green leaf, a warm cream recess, and graphite numerals make the purpose visible before any interaction. This is Focus Timer\u2019s own identity; other slops choose their own worlds.",
+    "keyCharacteristics": [
+      "One dominant, tabular time readout.",
+      "Code-drawn shell, leaf, dial, and compressed controls.",
+      "Quiet idle state; explicit words for running, paused, and complete."
+    ],
+    "rules": [
+      {
+        "name": "The Readout Rule",
+        "body": "Keep time in Barlow and supporting controls in the quieter body face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Material Rule",
+        "body": "Use soft directional depth to distinguish shell, recess, and pressable control.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the cream dial and graphite readout dominant.",
+      "Do preserve the same shell, leaf, and numerals in export and icon views.",
+      "Do keep timer state readable in words and snap motion for reduced-motion preferences.",
+      "Do use the on-surface token for footer text and the reset icon."
+    ],
+    "donts": [
+      "Don\u2019t copy this palette or shell into other slops as a shared theme.",
+      "Don\u2019t ship inspiration-board imagery or replace the approved code-drawn object with a raster skin.",
+      "Don\u2019t turn the decorative leaf or dial ticks into apparent controls."
+    ]
+  }
+}

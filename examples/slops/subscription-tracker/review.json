@@ -1,0 +1,90 @@
+{
+  "cases": [
+    {
+      "id": "mixed",
+      "label": "Mixed billing & long names",
+      "data": {
+        "currency": "USD",
+        "subscriptions": [
+          {
+            "id": "studio",
+            "name": "Design studio & cloud storage for the whole household",
+            "amount": 240,
+            "cadence": "annual",
+            "nextRenewal": "2026-09-20",
+            "category": "Work",
+            "note": "Annual family plan, shared across several projects and devices",
+            "active": true
+          },
+          {
+            "id": "music",
+            "name": "Music",
+            "amount": 12,
+            "cadence": "monthly",
+            "nextRenewal": "2026-09-05",
+            "category": "Entertainment",
+            "note": "",
+            "active": true
+          },
+          {
+            "id": "pause",
+            "name": "Paused fitness membership",
+            "amount": 29,
+            "cadence": "monthly",
+            "nextRenewal": "2026-10-01",
+            "category": "Health",
+            "note": "Resume when ready",
+            "active": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty",
+      "label": "Empty",
+      "data": {
+        "currency": "USD",
+        "subscriptions": []
+      }
+    },
+    {
+      "id": "paused",
+      "label": "All paused",
+      "data": {
+        "currency": "USD",
+        "subscriptions": [
+          {
+            "id": "studio",
+            "name": "Design studio & cloud storage for the whole household",
+            "amount": 240,
+            "cadence": "annual",
+            "nextRenewal": "2026-09-20",
+            "category": "Work",
+            "note": "Annual family plan, shared across several projects and devices",
+            "active": false
+          },
+          {
+            "id": "music",
+            "name": "Music",
+            "amount": 12,
+            "cadence": "monthly",
+            "nextRenewal": "2026-09-05",
+            "category": "Entertainment",
+            "note": "",
+            "active": false
+          },
+          {
+            "id": "pause",
+            "name": "Paused fitness membership",
+            "amount": 29,
+            "cadence": "monthly",
+            "nextRenewal": "2026-10-01",
+            "category": "Health",
+            "note": "Resume when ready",
+            "active": false
+          }
+        ]
+      }
+    }
+  ]
+}

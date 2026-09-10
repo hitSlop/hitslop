@@ -1,0 +1,82 @@
+{
+  "slug": "assignment-tracker",
+  "fixture": "typical",
+  "fingerprint": "704c4cb8058856ec",
+  "preparedAt": "2026-09-10T21:31:01.677Z",
+  "design": "examples/slops/assignment-tracker/DESIGN.md",
+  "brief": "examples/slops/.impeccable/surfaces/assignment-tracker-src-app-svelte.md",
+  "panes": [
+    {
+      "id": "editor",
+      "label": "Editor",
+      "width": 620,
+      "height": 700,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1465,
+      "measurement": {
+        "viewportWidth": 620,
+        "viewportHeight": 700,
+        "width": 620,
+        "height": 700,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow editor",
+      "width": 360,
+      "height": 700,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1461,
+      "measurement": {
+        "viewportWidth": 360,
+        "viewportHeight": 700,
+        "width": 360,
+        "height": 700,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "width": 620,
+      "height": 700,
+      "mode": "export",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1629,
+      "measurement": {
+        "viewportWidth": 620,
+        "viewportHeight": 871,
+        "width": 620,
+        "height": 871,
+        "overflowX": false,
+        "dedicated": true
+      }
+    },
+    {
+      "id": "icon",
+      "label": "Icon",
+      "width": 512,
+      "height": 512,
+      "mode": "icon",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1595,
+      "measurement": {
+        "viewportWidth": 512,
+        "viewportHeight": 512,
+        "width": 512,
+        "height": 512,
+        "overflowX": false,
+        "dedicated": true
+      }
+    }
+  ]
+}

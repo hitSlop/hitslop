@@ -1,5 +1,10 @@
-import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
-import { parseManifest, type CatalogTemplate, type SlopManifest } from "@hitslop/schema";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
+import {
+  RegistryTemplateSchema, RegistryReleaseDocumentSchema, RegistryPublisherSchema,
+  RegistryPublishRequestSchema, CatalogTemplateSchema, validate,
+  type RegistryAsset, type RegistryPublishResult, type CatalogTemplate, type SlopManifest,
+} from "@hitslop/schema";
+import { readRegistryDocument, writeRegistryDocument } from "./registry-codec.js";
 
 type StorageFile = {
   exists(): Promise<[boolean]>;
@@ -11,8 +16,8 @@ type StorageBucket = {
   file(key: string): StorageFile;
 };
 
-export type PublishResult = { templateId: string; releaseId: string; releaseNumber: number };
-type RegistryCatalogAsset = Omit<CatalogTemplate["preview"], "url"> & { key: string };
+export type PublishResult = RegistryPublishResult;
+type RegistryCatalogAsset = RegistryAsset;
 export type RegistryCatalogTemplate = Omit<CatalogTemplate, "preview" | "icon" | "download"> & {
   preview: RegistryCatalogAsset;
   icon: RegistryCatalogAsset;
@@ -42,21 +47,6 @@ export interface RegistryBackend {
   finalizePublish(input: FinalizePublishInput): Promise<PublishResult>;
   listTemplates(): Promise<RegistryCatalogTemplate[]>;
   recordCreation(templateId: string): Promise<boolean>;
-}
-
-function catalogAsset(value: unknown): RegistryCatalogAsset {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("invalid catalog asset");
-  const asset = value as Record<string, unknown>;
-  if (typeof asset.key !== "string" || typeof asset.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(asset.sha256)
-    || typeof asset.bytes !== "number" || !Number.isSafeInteger(asset.bytes) || asset.bytes < 1) {
-    throw new Error("invalid catalog asset");
-  }
-  return { key: asset.key, sha256: asset.sha256, bytes: asset.bytes };
-}
-
-function isoTimestamp(value: unknown): string {
-  if (!(value instanceof Timestamp)) throw new Error("invalid catalog timestamp");
-  return value.toDate().toISOString();
 }
 
 export class FirebaseRegistryBackend implements RegistryBackend {
@@ -96,31 +86,29 @@ export class FirebaseRegistryBackend implements RegistryBackend {
     return this.firestore.runTransaction(async (transaction) => {
       const previous = await transaction.get(requestRef);
       if (previous.exists) {
-        const data = previous.data()!;
+        const data = readRegistryDocument(RegistryPublishRequestSchema, previous.data());
         if (data.publisherKeyId !== input.publisherKeyId || data.artifactSha256 !== input.artifactSha256) {
           throw new Error("Publish request id was reused with different content");
         }
-        return {
-          templateId: String(data.result.templateId),
-          releaseId: String(data.result.releaseId),
-          releaseNumber: Number(data.result.releaseNumber),
-        };
+        return data.result;
       }
 
       const [publisher, template] = await Promise.all([
         transaction.get(publisherRef),
         transaction.get(templateRef),
       ]);
-      if (publisher.exists && publisher.get("publicKey") !== input.publicKey) {
+      const existingPublisher = publisher.exists ? readRegistryDocument(RegistryPublisherSchema, publisher.data()) : undefined;
+      const existingTemplate = template.exists ? readRegistryDocument(RegistryTemplateSchema, template.data()) : undefined;
+      if (existingPublisher && existingPublisher.publicKey !== input.publicKey) {
         throw new Error("Publisher key does not match its key id");
       }
 
-      const now = Timestamp.now();
-      const releaseNumber = template.exists ? Number(template.get("currentRelease.number") ?? 0) + 1 : 1;
-      const publisherCreatedAt = publisher.exists ? publisher.get("createdAt") ?? now : now;
-      const firstPublishedAt = template.exists ? template.get("firstPublishedAt") ?? now : now;
-      const creationCount = template.exists ? Number(template.get("creationCount") ?? 0) : 0;
-      const visibility = template.exists ? String(template.get("visibility") ?? "public") : "public";
+      const now = new Date().toISOString();
+      const releaseNumber = (existingTemplate?.currentRelease.number ?? 0) + 1;
+      const publisherCreatedAt = existingPublisher?.createdAt ?? now;
+      const firstPublishedAt = existingTemplate?.firstPublishedAt ?? now;
+      const creationCount = existingTemplate?.creationCount ?? 0;
+      const visibility = existingTemplate?.visibility ?? "public";
       const manifestJSON = JSON.stringify(input.manifest);
       const artifact = { key: input.artifactKey, sha256: input.artifactSha256, bytes: input.artifactBytes };
       const preview = { key: input.previewKey, sha256: input.previewSha256, bytes: input.previewBytes };
@@ -135,13 +123,13 @@ export class FirebaseRegistryBackend implements RegistryBackend {
         manifestJSON,
       };
 
-      transaction.set(publisherRef, {
+      transaction.set(publisherRef, writeRegistryDocument(RegistryPublisherSchema, {
         keyId: input.publisherKeyId,
         publicKey: input.publicKey,
         createdAt: publisherCreatedAt,
         updatedAt: now,
-      });
-      transaction.set(releaseRef, {
+      }));
+      transaction.set(releaseRef, writeRegistryDocument(RegistryReleaseDocumentSchema, {
         id: releaseRef.id,
         templateId,
         publisherKeyId: input.publisherKeyId,
@@ -152,8 +140,8 @@ export class FirebaseRegistryBackend implements RegistryBackend {
         icon,
         manifestJSON,
         publishedAt: now,
-      });
-      transaction.set(templateRef, {
+      }));
+      transaction.set(templateRef, writeRegistryDocument(RegistryTemplateSchema, {
         id: templateId,
         publisherKeyId: input.publisherKeyId,
         authorName: input.manifest.author.name,
@@ -162,20 +150,19 @@ export class FirebaseRegistryBackend implements RegistryBackend {
         title: input.manifest.title,
         description: input.manifest.description,
         categories: input.manifest.categories,
-        searchText: [input.manifest.title, input.manifest.description, input.manifest.author.name, ...input.manifest.categories].join(" ").toLocaleLowerCase(),
         currentRelease,
         creationCount,
         firstPublishedAt,
         visibility,
-      });
-      transaction.set(requestRef, {
+      }));
+      transaction.set(requestRef, writeRegistryDocument(RegistryPublishRequestSchema, {
         requestId: input.requestId,
         publisherKeyId: input.publisherKeyId,
         artifactSha256: input.artifactSha256,
         result: { templateId, releaseId: releaseRef.id, releaseNumber },
         createdAt: now,
-        expiresAt: Timestamp.fromMillis(now.toMillis() + 7 * 24 * 60 * 60 * 1_000),
-      });
+        expiresAt: new Date(Date.parse(now) + 7 * 24 * 60 * 60 * 1_000).toISOString(),
+      }));
       return { templateId, releaseId: releaseRef.id, releaseNumber };
     });
   }
@@ -190,28 +177,26 @@ export class FirebaseRegistryBackend implements RegistryBackend {
     const templates: RegistryCatalogTemplate[] = [];
     for (const document of snapshot.docs) {
       try {
-        const data = document.data();
-        const release = data.currentRelease as Record<string, unknown>;
-        const manifest = parseManifest(JSON.parse(String(release.manifestJSON)));
-        const author = manifest.author.url ? { name: manifest.author.name, url: manifest.author.url } : { name: manifest.author.name };
-        const creationCount = Number(data.creationCount);
-        const releaseNumber = Number(release.number);
-        if (!Number.isSafeInteger(creationCount) || creationCount < 0 || !Number.isSafeInteger(releaseNumber) || releaseNumber < 1) {
-          throw new Error("invalid catalog counters");
-        }
-        templates.push({
+        const data = readRegistryDocument(RegistryTemplateSchema, document.data());
+        if (data.id !== document.id) throw new Error("Registry template id does not match document id");
+        const release = data.currentRelease;
+        const author = data.authorURL ? { name: data.authorName, url: data.authorURL } : { name: data.authorName };
+        const metadata = {
           id: document.id,
-          slug: manifest.slug,
-          title: manifest.title,
-          description: manifest.description,
-          categories: manifest.categories,
+          slug: data.slug,
+          title: data.title,
+          description: data.description,
+          categories: data.categories,
           author,
-          creationCount,
-          release: { number: releaseNumber, publishedAt: isoTimestamp(release.publishedAt) },
-          preview: catalogAsset(release.preview),
-          icon: catalogAsset(release.icon),
-          download: catalogAsset(release.artifact),
+          creationCount: data.creationCount,
+          release: { number: release.number, publishedAt: release.publishedAt },
+        };
+        // Validate the public projection independently of the retained manifest string.
+        const publicAsset = (asset: RegistryAsset) => ({ url: this.mediaURL(asset.key), sha256: asset.sha256, bytes: asset.bytes });
+        const projection = validate(CatalogTemplateSchema, {
+          ...metadata, preview: publicAsset(release.preview), icon: publicAsset(release.icon), download: publicAsset(release.artifact),
         });
+        templates.push({ ...projection, preview: release.preview, icon: release.icon, download: release.artifact });
       } catch (error) {
         console.error(`Skipping invalid public template ${document.id}`, error);
       }

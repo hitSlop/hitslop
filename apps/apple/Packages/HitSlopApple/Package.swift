@@ -26,7 +26,7 @@ let package = Package(
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
                 .product(name: "DynamicJSON", package: "swift-dynamicjson"),
             ],
-            resources: [.copy("Resources/manifest.schema.json"), .copy("Resources/hitslop-document.SKILL.md")],
+            resources: [.copy("Resources/manifest.schema.json"), .copy("Resources/hitslop-document.SKILL.md"), .copy("Resources/skills")],
             linkerSettings: [.linkedFramework("ImageIO")]
         ),
         .target(
@@ -74,6 +74,10 @@ let package = Package(
             linkerSettings: [.linkedFramework("AppKit")]
         ),
         .testTarget(name: "HitSlopCoreTests", dependencies: ["HitSlopCore"]),
+        .testTarget(name: "HitSlopRegistryTests", dependencies: [
+            "HitSlopRegistry",
+            .product(name: "FirebaseFirestore", package: "firebase-ios-sdk"),
+        ]),
         .testTarget(name: "HitSlopRuntimeTests", dependencies: ["HitSlopRuntime", "HitSlopCore"], resources: [.copy("Fixtures")]),
         .testTarget(name: "HitSlopHostTests", dependencies: ["HitSlopHost", "HitSlopCore"]),
         .testTarget(

@@ -25,7 +25,8 @@
     "firebase:dev": "bun run --cwd apps/firebase dev",
     "firebase:deploy": "bun run --cwd apps/firebase deploy",
     "landing:dev": "bun run --cwd apps/landing dev",
-    "swift:build": "swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native"
+    "swift:build": "swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native",
+    "slops:review": "bun run --cwd examples/slops dev --review"
   },
   "devDependencies": {
     "@types/bun": "latest",

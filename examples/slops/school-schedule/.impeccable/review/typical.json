@@ -1,0 +1,82 @@
+{
+  "slug": "school-schedule",
+  "fixture": "typical",
+  "fingerprint": "1230bfcefaa83c0d",
+  "preparedAt": "2026-09-10T20:59:04.946Z",
+  "design": "examples/slops/school-schedule/DESIGN.md",
+  "brief": "examples/slops/.impeccable/surfaces/school-schedule-src-app-svelte.md",
+  "panes": [
+    {
+      "id": "editor",
+      "label": "Editor",
+      "width": 880,
+      "height": 640,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 2929,
+      "measurement": {
+        "viewportWidth": 880,
+        "viewportHeight": 640,
+        "width": 880,
+        "height": 640,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow editor",
+      "width": 360,
+      "height": 640,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 2940,
+      "measurement": {
+        "viewportWidth": 360,
+        "viewportHeight": 640,
+        "width": 360,
+        "height": 640,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "width": 880,
+      "height": 640,
+      "mode": "export",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 3018,
+      "measurement": {
+        "viewportWidth": 880,
+        "viewportHeight": 1086,
+        "width": 880,
+        "height": 1086,
+        "overflowX": false,
+        "dedicated": true
+      }
+    },
+    {
+      "id": "icon",
+      "label": "Icon",
+      "width": 512,
+      "height": 512,
+      "mode": "icon",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 3111,
+      "measurement": {
+        "viewportWidth": 512,
+        "viewportHeight": 512,
+        "width": 512,
+        "height": 512,
+        "overflowX": false,
+        "dedicated": true
+      }
+    }
+  ]
+}

@@ -11,6 +11,7 @@ A source project normally contains:
 my-app/
 ├── manifest.json
 ├── package.json
+├── AGENTS.md                    portable coding-agent notes; platform skills live in ~/.hitslop/skills
 ├── schema.ts                    required when using Svelte jsonStore
 ├── theme.ts                     optional single-source theme definition
 ├── document-guide.md            optional app-specific agent guidance

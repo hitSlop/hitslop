@@ -1,0 +1,17 @@
+import { defineTheme } from "@hitslop/runtime/theme";
+
+export default defineTheme({
+  paper: "#f7f1e3",
+  paperShade: "#efe6d2",
+  ticket: "#fffdf8",
+  ink: "#1c1917",
+  muted: "#5c564e",
+  dim: "#8a847a",
+  accent: "#c2410c",
+  onAccent: "#fff7ed",
+  danger: "#b91c1c",
+  error: "#7b2630",
+  rule: "color-mix(in srgb, var(--slop-ink) 18%, transparent)",
+  ruleStrong: "color-mix(in srgb, var(--slop-ink) 42%, transparent)",
+  font: '"SF Mono", "IBM Plex Mono", "Courier New", Courier, monospace',
+});

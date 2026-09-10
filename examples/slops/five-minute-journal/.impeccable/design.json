@@ -1,0 +1,353 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-10T15:22:54.714070+00:00",
+  "title": "Design System: Five Minute Journal",
+  "extensions": {
+    "colorMeta": {
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15.00% 0.0201 84.59)",
+          "oklch(26.43% 0.0201 84.59)",
+          "oklch(37.86% 0.0201 84.59)",
+          "oklch(49.29% 0.0201 84.59)",
+          "oklch(60.71% 0.0201 84.59)",
+          "oklch(72.14% 0.0201 84.59)",
+          "oklch(83.57% 0.0201 84.59)",
+          "oklch(95.00% 0.0201 84.59)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.0139 88.68)",
+          "oklch(26.43% 0.0139 88.68)",
+          "oklch(37.86% 0.0139 88.68)",
+          "oklch(49.29% 0.0139 88.68)",
+          "oklch(60.71% 0.0139 88.68)",
+          "oklch(72.14% 0.0139 88.68)",
+          "oklch(83.57% 0.0139 88.68)",
+          "oklch(95.00% 0.0139 88.68)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0169 74.88)",
+          "oklch(26.43% 0.0169 74.88)",
+          "oklch(37.86% 0.0169 74.88)",
+          "oklch(49.29% 0.0169 74.88)",
+          "oklch(60.71% 0.0169 74.88)",
+          "oklch(72.14% 0.0169 74.88)",
+          "oklch(83.57% 0.0169 74.88)",
+          "oklch(95.00% 0.0169 74.88)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0307 74.43)",
+          "oklch(26.43% 0.0307 74.43)",
+          "oklch(37.86% 0.0307 74.43)",
+          "oklch(49.29% 0.0307 74.43)",
+          "oklch(60.71% 0.0307 74.43)",
+          "oklch(72.14% 0.0307 74.43)",
+          "oklch(83.57% 0.0307 74.43)",
+          "oklch(95.00% 0.0307 74.43)"
+        ]
+      },
+      "dim": {
+        "role": "neutral",
+        "displayName": "Dim",
+        "tonalRamp": [
+          "oklch(15.00% 0.0303 74.47)",
+          "oklch(26.43% 0.0303 74.47)",
+          "oklch(37.86% 0.0303 74.47)",
+          "oklch(49.29% 0.0303 74.47)",
+          "oklch(60.71% 0.0303 74.47)",
+          "oklch(72.14% 0.0303 74.47)",
+          "oklch(83.57% 0.0303 74.47)",
+          "oklch(95.00% 0.0303 74.47)"
+        ]
+      },
+      "morning": {
+        "role": "primary",
+        "displayName": "Morning",
+        "tonalRamp": [
+          "oklch(15.00% 0.0370 84.59)",
+          "oklch(26.43% 0.0370 84.59)",
+          "oklch(37.86% 0.0370 84.59)",
+          "oklch(49.29% 0.0370 84.59)",
+          "oklch(60.71% 0.0370 84.59)",
+          "oklch(72.14% 0.0370 84.59)",
+          "oklch(83.57% 0.0370 84.59)",
+          "oklch(95.00% 0.0370 84.59)"
+        ]
+      },
+      "morningDeep": {
+        "role": "primary",
+        "displayName": "Morning Deep",
+        "tonalRamp": [
+          "oklch(15.00% 0.0675 85.31)",
+          "oklch(26.43% 0.0675 85.31)",
+          "oklch(37.86% 0.0675 85.31)",
+          "oklch(49.29% 0.0675 85.31)",
+          "oklch(60.71% 0.0675 85.31)",
+          "oklch(72.14% 0.0675 85.31)",
+          "oklch(83.57% 0.0675 85.31)",
+          "oklch(95.00% 0.0675 85.31)"
+        ]
+      },
+      "morningInk": {
+        "role": "primary",
+        "displayName": "Morning Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0823 75.76)",
+          "oklch(26.43% 0.0823 75.76)",
+          "oklch(37.86% 0.0823 75.76)",
+          "oklch(49.29% 0.0823 75.76)",
+          "oklch(60.71% 0.0823 75.76)",
+          "oklch(72.14% 0.0823 75.76)",
+          "oklch(83.57% 0.0823 75.76)",
+          "oklch(95.00% 0.0823 75.76)"
+        ]
+      },
+      "morningAccent": {
+        "role": "primary",
+        "displayName": "Morning Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.1110 71.70)",
+          "oklch(26.43% 0.1110 71.70)",
+          "oklch(37.86% 0.1110 71.70)",
+          "oklch(49.29% 0.1110 71.70)",
+          "oklch(60.71% 0.1110 71.70)",
+          "oklch(72.14% 0.1110 71.70)",
+          "oklch(83.57% 0.1110 71.70)",
+          "oklch(95.00% 0.1110 71.70)"
+        ]
+      },
+      "evening": {
+        "role": "secondary",
+        "displayName": "Evening",
+        "tonalRamp": [
+          "oklch(15.00% 0.0046 258.33)",
+          "oklch(26.43% 0.0046 258.33)",
+          "oklch(37.86% 0.0046 258.33)",
+          "oklch(49.29% 0.0046 258.33)",
+          "oklch(60.71% 0.0046 258.33)",
+          "oklch(72.14% 0.0046 258.33)",
+          "oklch(83.57% 0.0046 258.33)",
+          "oklch(95.00% 0.0046 258.33)"
+        ]
+      },
+      "eveningDeep": {
+        "role": "secondary",
+        "displayName": "Evening Deep",
+        "tonalRamp": [
+          "oklch(15.00% 0.0110 256.70)",
+          "oklch(26.43% 0.0110 256.70)",
+          "oklch(37.86% 0.0110 256.70)",
+          "oklch(49.29% 0.0110 256.70)",
+          "oklch(60.71% 0.0110 256.70)",
+          "oklch(72.14% 0.0110 256.70)",
+          "oklch(83.57% 0.0110 256.70)",
+          "oklch(95.00% 0.0110 256.70)"
+        ]
+      },
+      "eveningInk": {
+        "role": "secondary",
+        "displayName": "Evening Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0355 245.68)",
+          "oklch(26.43% 0.0355 245.68)",
+          "oklch(37.86% 0.0355 245.68)",
+          "oklch(49.29% 0.0355 245.68)",
+          "oklch(60.71% 0.0355 245.68)",
+          "oklch(72.14% 0.0355 245.68)",
+          "oklch(83.57% 0.0355 245.68)",
+          "oklch(95.00% 0.0355 245.68)"
+        ]
+      },
+      "eveningAccent": {
+        "role": "secondary",
+        "displayName": "Evening Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.0448 248.80)",
+          "oklch(26.43% 0.0448 248.80)",
+          "oklch(37.86% 0.0448 248.80)",
+          "oklch(49.29% 0.0448 248.80)",
+          "oklch(60.71% 0.0448 248.80)",
+          "oklch(72.14% 0.0448 248.80)",
+          "oklch(83.57% 0.0448 248.80)",
+          "oklch(95.00% 0.0448 248.80)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "tonalRamp": [
+          "oklch(15.00% 0.0169 74.88)",
+          "oklch(26.43% 0.0169 74.88)",
+          "oklch(37.86% 0.0169 74.88)",
+          "oklch(49.29% 0.0169 74.88)",
+          "oklch(60.71% 0.0169 74.88)",
+          "oklch(72.14% 0.0169 74.88)",
+          "oklch(83.57% 0.0169 74.88)",
+          "oklch(95.00% 0.0169 74.88)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Period headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Journal masthead."
+      },
+      "prompt": {
+        "displayName": "Prompt",
+        "purpose": "Writing prompts."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Owner entries and static export text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Bookmark labels."
+      }
+    },
+    "shadows": [
+      {
+        "name": "binding",
+        "value": "inset 14px 0 0 var(--slop-morning-accent), inset 17px 0 7px -5px rgba(78, 53, 25, 0.24)",
+        "purpose": "Ochre spine and paper crease."
+      },
+      {
+        "name": "calendar",
+        "value": "0 12px 36px rgba(51,38,22,0.24)",
+        "purpose": "Temporary overlay."
+      },
+      {
+        "name": "checked",
+        "value": "inset 0 1px 3px rgba(78,53,25,0.15)",
+        "purpose": "Manual written checkbox."
+      },
+      {
+        "name": "icon",
+        "value": "inset 21px 0 0 var(--slop-morning-accent), inset 25px 0 8px -4px rgba(78,53,25,0.25), 0 16px 28px rgba(51,38,22,0.2)",
+        "purpose": "Bound book icon."
+      }
+    ],
+    "motion": [
+      {
+        "name": "bookmarks",
+        "value": "160ms ease",
+        "purpose": "Background and inset edge response; removed for reduced motion."
+      },
+      {
+        "name": "checkbox",
+        "value": "180ms ease",
+        "purpose": "Checked background and inset shadow; removed for reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-container",
+        "value": "420px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bound paper",
+      "kind": "custom",
+      "refersTo": "paper",
+      "description": "Open writing paper with the shared ochre binding.",
+      "html": "<article class=\"ds-paper\"><h2>Morning</h2><p>A little intention for the day ahead.</p></article>",
+      "css": ".ds-paper{padding:25px 32px 25px 44px;background:var(--slop-paper, #faf6ec);color:var(--slop-ink, #2a241c);box-shadow:inset 14px 0 0 var(--slop-morning-accent, #ba843b),inset 17px 0 7px -5px rgba(78,53,25,.24);font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;}.ds-paper h2{margin:0;font-family:\"Journal Lora\", Georgia, \"Times New Roman\", serif;font-size:36px;font-weight:500;line-height:1.15;letter-spacing:-.03em}.ds-paper p{font-size:14px;color:var(--slop-muted, #726554)}"
+    },
+    {
+      "name": "Period bookmarks",
+      "kind": "nav",
+      "refersTo": "bookmark",
+      "description": "Morning and Evening share the bookmark form; Day uses an underline.",
+      "html": "<nav class=\"ds-tabs\" aria-label=\"Journal view\"><button class=\"ds-tab\" aria-current=\"page\">Morning</button><button class=\"ds-tab\">Evening</button><button class=\"ds-day\">Day</button></nav>",
+      "css": ".ds-tabs{display:flex;gap:9px;background:var(--slop-paper, #faf6ec);padding:12px;border-bottom:1px solid var(--slop-rule, color-mix(in srgb, var(--slop-ink) 14%, transparent))}.ds-tab,.ds-day{min-height:46px;border:0;border-radius:7px 7px 0 0;padding:8px 12px;font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:500;background:var(--slop-surface, #f1eadc);color:var(--slop-muted, #726554);cursor:pointer;transition:background-color 160ms ease,box-shadow 160ms ease}.ds-tab[aria-current]{background:var(--slop-morning-deep, #eed7a7);color:var(--slop-morning-ink, #6b4a12);box-shadow:inset 0 3px 0 var(--slop-morning-accent, #ba843b)}.ds-day{background:transparent}.ds-tab:hover:not([aria-current]),.ds-day:hover{background:var(--slop-morning, #f7ead0)}.ds-tab:focus-visible,.ds-day:focus-visible{outline:2px solid var(--slop-evening-accent, #475d73);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-tab,.ds-day{transition:none}}"
+    },
+    {
+      "name": "Writing line",
+      "kind": "input",
+      "refersTo": "writing-field",
+      "description": "A growing textarea on one fine rule; Lora uses its fallback when the preview has not loaded the bundled font.",
+      "html": "<label class=\"ds-field-label\">I am grateful for…<textarea class=\"ds-field\" rows=\"1\" placeholder=\"A small comfort…\"></textarea></label>",
+      "css": ".ds-field-label{display:block;padding:12px;background:var(--slop-paper, #faf6ec);color:var(--slop-ink, #2a241c);font-family:\"Journal Lora\", Georgia, \"Times New Roman\", serif;font-size:17px;font-weight:500;line-height:23px}.ds-field{display:block;width:100%;min-height:23px;border:0;border-bottom:1px solid var(--slop-rule, color-mix(in srgb, var(--slop-ink) 14%, transparent));border-radius:0;padding:11px 0 10px;resize:none;field-sizing:content;overflow:hidden;background:transparent;color:var(--slop-ink, #2a241c);font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;font-size:16px;line-height:23px;overflow-wrap:anywhere}.ds-field::placeholder{color:var(--slop-dim, #796c5b);opacity:1;font-size:14px}.ds-field:focus-visible{outline:none;box-shadow:0 2px 0 var(--slop-morning-ink, #6b4a12)}"
+    },
+    {
+      "name": "Written toggle",
+      "kind": "button",
+      "refersTo": "written",
+      "description": "Manual completion with a labeled checkbox.",
+      "html": "<label class=\"ds-written\"><input type=\"checkbox\" checked><span>Written</span></label>",
+      "css": ".ds-written{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:6px 0;font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;font-size:14px;color:var(--slop-morning-ink, #6b4a12);cursor:pointer}.ds-written input{appearance:none;width:21px;height:21px;margin:0;border:1px solid currentColor;border-radius:3px;color:inherit;cursor:pointer;transition:background-color 180ms ease,box-shadow 180ms ease}.ds-written input:checked{background:var(--slop-morning-deep, #eed7a7);box-shadow:inset 0 1px 3px rgba(78,53,25,.15)}.ds-written input:checked::after{content:\"\";display:block;width:9px;height:5px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:translate(4px,5px) rotate(-45deg)}.ds-written:hover{color:var(--slop-ink, #2a241c)}.ds-written input:focus-visible{outline:2px solid var(--slop-evening-accent, #475d73);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-written input{transition:none}}"
+    },
+    {
+      "name": "Calendar day",
+      "kind": "button",
+      "refersTo": "calendar-day-selected",
+      "description": "Selected calendar day, with a visible keyboard focus state.",
+      "html": "<button class=\"ds-calendar-day\" aria-pressed=\"true\">10</button>",
+      "css": ".ds-calendar-day{width:44px;height:44px;border:0;border-radius:5px;padding:0;background:var(--slop-morning-ink, #6b4a12);color:var(--slop-paper, #faf6ec);font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}.ds-calendar-day:focus-visible{outline:2px solid var(--slop-evening-accent, #475d73);outline-offset:3px;outline-offset:-2px}"
+    },
+    {
+      "name": "Calendar overlay",
+      "kind": "custom",
+      "refersTo": "calendar",
+      "description": "Warm paper overlay with ambient depth.",
+      "html": "<section class=\"ds-calendar\"><h3>September 2026</h3><button>Today</button></section>",
+      "css": ".ds-calendar{width:280px;padding:12px;border-radius:12px;background:var(--slop-paper, #faf6ec);color:var(--slop-ink, #2a241c);box-shadow:0 12px 36px rgba(51,38,22,.24);font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;}.ds-calendar h3{font-family:\"Journal Lora\", Georgia, \"Times New Roman\", serif;font-size:17px;font-weight:500;margin:0 0 8px}.ds-calendar button{width:100%;min-height:44px;margin-top:8px;border:0;border-top:1px solid var(--slop-rule, color-mix(in srgb, var(--slop-ink) 14%, transparent));background:transparent;color:var(--slop-morning-ink, #6b4a12);font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif;font-size:14px;cursor:pointer}.ds-calendar button:hover{background:var(--slop-morning, #f7ead0)}.ds-calendar button:focus-visible{outline:2px solid var(--slop-evening-accent, #475d73);outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Personal Daybook",
+    "overview": "An ivory daybook with an ochre binding and two colored bookmarks. Serif prompts give the writing a quiet, personal voice; generous ruled fields leave the page open for the owner’s words.\n\nThe material belongs to Five Minute Journal. Familiar tabs, a calendar, and a manual checkbox make the object understandable without learning a metaphor.",
+    "keyCharacteristics": [
+      "Warm paper and an ochre binding frame the writing.",
+      "Morning and Evening have distinct bookmarks, words, and sun or moon marks.",
+      "Growing fields, visible focus, and restrained state transitions support unhurried use."
+    ],
+    "rules": [
+      {
+        "name": "The Period Rule",
+        "body": "Pair each period’s color with its name and sun or moon mark.",
+        "section": "colors"
+      },
+      {
+        "name": "The Writing Rule",
+        "body": "Set prompts in Lora and the owner’s writing in the readable sans-serif body face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Binding Rule",
+        "body": "Keep material depth at the book edge and temporary overlays; writing stays on one open paper surface.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the warm paper, ochre binding, and two bookmark colors recognizable across editor, export, and icon.",
+      "Do let writing wrap and grow while keeping labels and focus visible.",
+      "Do preserve the public theme token names when refining the palette."
+    ],
+    "donts": [
+      "Don’t turn written status into a score or infer it from filled fields.",
+      "Don’t use placeholder suggestions as saved journal entries.",
+      "Don’t copy this daybook’s palette into other slops as a collection theme."
+    ]
+  }
+}

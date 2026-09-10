@@ -1,0 +1,507 @@
+{
+  "cases": [
+    {
+      "id": "typical",
+      "label": "A balanced week",
+      "data": {
+        "week": "Week of Oct 12 \u2014 18",
+        "focus": "Make something good. Leave room to breathe.",
+        "days": [
+          {
+            "id": "MON",
+            "name": "MON",
+            "date": "12",
+            "tasks": [
+              {
+                "id": "0",
+                "title": "Focus time",
+                "time": "09:00",
+                "done": false,
+                "durationMinutes": 120,
+                "color": "sky"
+              },
+              {
+                "id": "1",
+                "title": "Lunch walk",
+                "time": "12:30",
+                "done": false,
+                "durationMinutes": 45,
+                "color": "mint"
+              }
+            ]
+          },
+          {
+            "id": "TUE",
+            "name": "TUE",
+            "date": "13",
+            "tasks": [
+              {
+                "id": "2",
+                "title": "Team catch-up",
+                "time": "10:00",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "coral"
+              }
+            ]
+          },
+          {
+            "id": "WED",
+            "name": "WED",
+            "date": "14",
+            "tasks": [
+              {
+                "id": "3",
+                "title": "Make & explore",
+                "time": "09:30",
+                "done": false,
+                "durationMinutes": 150,
+                "color": "lilac"
+              }
+            ]
+          },
+          {
+            "id": "THU",
+            "name": "THU",
+            "date": "15",
+            "tasks": [
+              {
+                "id": "4",
+                "title": "Coffee with Sam",
+                "time": "11:00",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "coral"
+              }
+            ]
+          },
+          {
+            "id": "FRI",
+            "name": "FRI",
+            "date": "16",
+            "tasks": [
+              {
+                "id": "5",
+                "title": "Wrap up the week",
+                "time": "14:00",
+                "done": false,
+                "durationMinutes": 90,
+                "color": "sky"
+              }
+            ]
+          },
+          {
+            "id": "SAT",
+            "name": "SAT",
+            "date": "17",
+            "tasks": [
+              {
+                "id": "6",
+                "title": "Slow morning",
+                "time": "09:00",
+                "done": false,
+                "durationMinutes": 120,
+                "color": "mint"
+              }
+            ]
+          },
+          {
+            "id": "SUN",
+            "name": "SUN",
+            "date": "18",
+            "tasks": [
+              {
+                "id": "7",
+                "title": "Plan next week",
+                "time": "",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "lilac"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty",
+      "label": "Open week",
+      "data": {
+        "week": "Week of Oct 12 \u2014 18",
+        "focus": "Make something good. Leave room to breathe.",
+        "days": [
+          {
+            "id": "MON",
+            "name": "MON",
+            "date": "12",
+            "tasks": []
+          },
+          {
+            "id": "TUE",
+            "name": "TUE",
+            "date": "13",
+            "tasks": []
+          },
+          {
+            "id": "WED",
+            "name": "WED",
+            "date": "14",
+            "tasks": []
+          },
+          {
+            "id": "THU",
+            "name": "THU",
+            "date": "15",
+            "tasks": []
+          },
+          {
+            "id": "FRI",
+            "name": "FRI",
+            "date": "16",
+            "tasks": []
+          },
+          {
+            "id": "SAT",
+            "name": "SAT",
+            "date": "17",
+            "tasks": []
+          },
+          {
+            "id": "SUN",
+            "name": "SUN",
+            "date": "18",
+            "tasks": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "overlap",
+      "label": "Overlaps & short blocks",
+      "data": {
+        "week": "Week of Oct 12 \u2014 18",
+        "focus": "Make something good. Leave room to breathe.",
+        "days": [
+          {
+            "id": "MON",
+            "name": "MON",
+            "date": "12",
+            "tasks": [
+              {
+                "id": "0",
+                "title": "Focus time",
+                "time": "09:00",
+                "done": false,
+                "durationMinutes": 120,
+                "color": "sky"
+              },
+              {
+                "id": "1",
+                "title": "Lunch walk",
+                "time": "12:30",
+                "done": false,
+                "durationMinutes": 45,
+                "color": "mint"
+              },
+              {
+                "id": "overlap",
+                "title": "Quick call",
+                "time": "09:30",
+                "done": false,
+                "durationMinutes": 30,
+                "color": "coral"
+              },
+              {
+                "id": "short",
+                "title": "Stretch",
+                "time": "11:15",
+                "done": false,
+                "durationMinutes": 15,
+                "color": "mint"
+              }
+            ]
+          },
+          {
+            "id": "TUE",
+            "name": "TUE",
+            "date": "13",
+            "tasks": [
+              {
+                "id": "2",
+                "title": "Team catch-up",
+                "time": "10:00",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "coral"
+              }
+            ]
+          },
+          {
+            "id": "WED",
+            "name": "WED",
+            "date": "14",
+            "tasks": [
+              {
+                "id": "3",
+                "title": "Make & explore",
+                "time": "09:30",
+                "done": false,
+                "durationMinutes": 150,
+                "color": "lilac"
+              }
+            ]
+          },
+          {
+            "id": "THU",
+            "name": "THU",
+            "date": "15",
+            "tasks": [
+              {
+                "id": "4",
+                "title": "Coffee with Sam",
+                "time": "11:00",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "coral"
+              }
+            ]
+          },
+          {
+            "id": "FRI",
+            "name": "FRI",
+            "date": "16",
+            "tasks": [
+              {
+                "id": "5",
+                "title": "Wrap up the week",
+                "time": "14:00",
+                "done": false,
+                "durationMinutes": 90,
+                "color": "sky"
+              }
+            ]
+          },
+          {
+            "id": "SAT",
+            "name": "SAT",
+            "date": "17",
+            "tasks": [
+              {
+                "id": "6",
+                "title": "Slow morning",
+                "time": "09:00",
+                "done": false,
+                "durationMinutes": 120,
+                "color": "mint"
+              }
+            ]
+          },
+          {
+            "id": "SUN",
+            "name": "SUN",
+            "date": "18",
+            "tasks": [
+              {
+                "id": "7",
+                "title": "Plan next week",
+                "time": "",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "lilac"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long titles",
+      "data": {
+        "week": "Week of Oct 12 \u2014 18",
+        "focus": "Make something good. Leave room to breathe.",
+        "days": [
+          {
+            "id": "MON",
+            "name": "MON",
+            "date": "12",
+            "tasks": [
+              {
+                "id": "0",
+                "title": "Focus time",
+                "time": "09:00",
+                "done": false,
+                "durationMinutes": 120,
+                "color": "sky"
+              },
+              {
+                "id": "1",
+                "title": "Lunch walk",
+                "time": "12:30",
+                "done": false,
+                "durationMinutes": 45,
+                "color": "mint"
+              }
+            ]
+          },
+          {
+            "id": "TUE",
+            "name": "TUE",
+            "date": "13",
+            "tasks": [
+              {
+                "id": "2",
+                "title": "Team catch-up",
+                "time": "10:00",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "coral"
+              }
+            ]
+          },
+          {
+            "id": "WED",
+            "name": "WED",
+            "date": "14",
+            "tasks": [
+              {
+                "id": "3",
+                "title": "A longer creative session to work through the ideas we have been collecting all week",
+                "time": "09:30",
+                "done": false,
+                "durationMinutes": 150,
+                "color": "lilac"
+              }
+            ]
+          },
+          {
+            "id": "THU",
+            "name": "THU",
+            "date": "15",
+            "tasks": [
+              {
+                "id": "4",
+                "title": "Coffee with Sam",
+                "time": "11:00",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "coral"
+              }
+            ]
+          },
+          {
+            "id": "FRI",
+            "name": "FRI",
+            "date": "16",
+            "tasks": [
+              {
+                "id": "5",
+                "title": "Wrap up the week",
+                "time": "14:00",
+                "done": false,
+                "durationMinutes": 90,
+                "color": "sky"
+              }
+            ]
+          },
+          {
+            "id": "SAT",
+            "name": "SAT",
+            "date": "17",
+            "tasks": [
+              {
+                "id": "6",
+                "title": "Slow morning",
+                "time": "09:00",
+                "done": false,
+                "durationMinutes": 120,
+                "color": "mint"
+              }
+            ]
+          },
+          {
+            "id": "SUN",
+            "name": "SUN",
+            "date": "18",
+            "tasks": [
+              {
+                "id": "7",
+                "title": "Plan next week",
+                "time": "",
+                "done": false,
+                "durationMinutes": 60,
+                "color": "lilac"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "legacy",
+      "label": "Existing document",
+      "data": {
+        "week": "Week of Oct 12 \u2014 18",
+        "focus": "Make something good. Leave room to breathe.",
+        "days": [
+          {
+            "id": "MON",
+            "name": "MON",
+            "date": "12",
+            "tasks": [
+              {
+                "id": "old",
+                "title": "Original task",
+                "time": "09:00",
+                "done": true,
+                "custom": "preserved"
+              },
+              {
+                "id": "invalid",
+                "title": "Loose timing",
+                "time": "after lunch",
+                "done": false
+              }
+            ]
+          },
+          {
+            "id": "TUE",
+            "name": "TUE",
+            "date": "13",
+            "tasks": []
+          },
+          {
+            "id": "WED",
+            "name": "WED",
+            "date": "14",
+            "tasks": []
+          },
+          {
+            "id": "THU",
+            "name": "THU",
+            "date": "15",
+            "tasks": []
+          },
+          {
+            "id": "FRI",
+            "name": "FRI",
+            "date": "16",
+            "tasks": []
+          },
+          {
+            "id": "SAT",
+            "name": "SAT",
+            "date": "17",
+            "tasks": []
+          },
+          {
+            "id": "SUN",
+            "name": "SUN",
+            "date": "18",
+            "tasks": []
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -121,6 +121,21 @@ and arbitrary resources are rejected by authoring validation. Guidance is
 optional when opening a document; its contents are not compared with the host's
 current copy.
 
+The CLI and macOS app also install the current `hitslop-authoring`,
+`hitslop-design`, and `hitslop-document` skills into `~/.hitslop/skills` and
+link those names into `~/.agents/skills` and `~/.claude/skills`. That machine
+cache is the updatable source of truth for coding agents; runtime packages still
+embed `hitslop-document` so a copied `.slop` stays self-describing.
+
+The app refreshes once per app version; CLI initialization only fills missing
+skills, and `slop skills sync` explicitly replaces the bundle. Both installers
+stage the complete tree before activation and use an OS file lock to serialize
+replacement. A sibling backup restores the previous installation after failed
+or interrupted activation. Discovery links never replace user directories or
+unrelated links. Installation errors do not block documents or source creation.
+Global document guidance resolves app-specific instructions inside the target
+`.slop`, not inside its own installation directory.
+
 ## Capture and export
 
 Background capture uses a hidden WebView with a disposable package snapshot.

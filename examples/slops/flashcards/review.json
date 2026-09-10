@@ -1,0 +1,124 @@
+{
+  "cases": [
+    {
+      "id": "question",
+      "label": "Question",
+      "data": {
+        "decks": [
+          {
+            "id": "review",
+            "name": "Little lessons",
+            "cards": [
+              {
+                "id": "a",
+                "front": "What makes a habit stick?",
+                "back": "A clear cue, an achievable action, and a reward that makes you want to repeat it.",
+                "box": 1,
+                "lastReviewed": null
+              },
+              {
+                "id": "b",
+                "front": "Retrieval practice",
+                "back": "Trying to recall information before checking the answer strengthens learning more than rereading alone.",
+                "box": 1,
+                "lastReviewed": null
+              },
+              {
+                "id": "c",
+                "front": "Spacing",
+                "back": "Spread review sessions over time.",
+                "box": 2,
+                "lastReviewed": null
+              }
+            ]
+          }
+        ],
+        "selectedDeckId": "review",
+        "selectedBox": 0,
+        "cardIndex": 0,
+        "flipped": false
+      }
+    },
+    {
+      "id": "answer",
+      "label": "Answer",
+      "data": {
+        "decks": [
+          {
+            "id": "review",
+            "name": "Little lessons",
+            "cards": [
+              {
+                "id": "a",
+                "front": "What makes a habit stick?",
+                "back": "A clear cue, an achievable action, and a reward that makes you want to repeat it.",
+                "box": 1,
+                "lastReviewed": null
+              },
+              {
+                "id": "b",
+                "front": "Retrieval practice",
+                "back": "Trying to recall information before checking the answer strengthens learning more than rereading alone.",
+                "box": 1,
+                "lastReviewed": null
+              },
+              {
+                "id": "c",
+                "front": "Spacing",
+                "back": "Spread review sessions over time.",
+                "box": 2,
+                "lastReviewed": null
+              }
+            ]
+          }
+        ],
+        "selectedDeckId": "review",
+        "selectedBox": 0,
+        "cardIndex": 0,
+        "flipped": true
+      }
+    },
+    {
+      "id": "empty",
+      "label": "Empty deck",
+      "data": {
+        "decks": [
+          {
+            "id": "review",
+            "name": "Little lessons",
+            "cards": []
+          }
+        ],
+        "selectedDeckId": "review",
+        "selectedBox": 0,
+        "cardIndex": 0,
+        "flipped": false
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long answer",
+      "data": {
+        "decks": [
+          {
+            "id": "review",
+            "name": "Little lessons",
+            "cards": [
+              {
+                "id": "a",
+                "front": "What makes a habit stick?",
+                "back": "Explain the concept in your own words.\n\nConnect the idea to something familiar, then test yourself without looking at the answer. Connect the idea to something familiar, then test yourself without looking at the answer. Connect the idea to something familiar, then test yourself without looking at the answer. Connect the idea to something familiar, then test yourself without looking at the answer. Connect the idea to something familiar, then test yourself without looking at the answer. Connect the idea to something familiar, then test yourself without looking at the answer. Connect the idea to something familiar, then test yourself without looking at the answer. Connect the idea to something familiar, then test yourself without looking at the answer. ",
+                "box": 1,
+                "lastReviewed": null
+              }
+            ]
+          }
+        ],
+        "selectedDeckId": "review",
+        "selectedBox": 0,
+        "cardIndex": 0,
+        "flipped": true
+      }
+    }
+  ]
+}

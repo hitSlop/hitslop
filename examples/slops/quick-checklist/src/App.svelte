@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { ready } from "@hitslop/runtime";
+  import { capture, ready } from "@hitslop/runtime";
   import { jsonStore, IconTarget, ExportTarget } from "@hitslop/svelte";
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount, tick, untrack } from "svelte";
+  import { Tween, prefersReducedMotion } from "svelte/motion";
+  import { cubicOut } from "svelte/easing";
+  import { flip } from "svelte/animate";
   import { Checkbox, DropdownMenu, Tabs } from "bits-ui";
   import Check from "@lucide/svelte/icons/check";
   import Plus from "@lucide/svelte/icons/plus";
@@ -31,13 +34,29 @@
   const visible = $derived(checklist.current.tasks.filter(task => !task.archived));
   const filed = $derived(checklist.current.tasks.filter(task => task.archived));
   const finished = $derived(visible.filter(task => task.done).length);
+  const ratio = $derived(visible.length ? finished / visible.length * 100 : 0);
+  const fill = new Tween(untrack(() => ratio), { duration: 280, easing: cubicOut });
+  let initialized = false;
   $effect(() => { if (checklist.isReady) ready(); });
+  $effect(() => {
+    const instant = !initialized || !checklist.isReady || prefersReducedMotion.current;
+    void fill.set(ratio, { duration: instant ? 0 : 280, delay: 0 });
+    initialized = checklist.isReady;
+  });
+  onMount(() => capture.onPrepare(async () => {
+    await fill.set(ratio, { duration: 0, delay: 0 });
+    await tick();
+  }));
   $effect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => { notice = ""; undo = null; }, 4000);
     return () => window.clearTimeout(timer);
   });
-  onDestroy(() => checklist.destroy());
+  onDestroy(() => {
+    void fill.set(fill.target, { duration: 0, delay: 0 });
+    checklist.destroy();
+  });
+  const flipMs = $derived(prefersReducedMotion.current ? 0 : 240);
 
   function addTask() {
     const text = draft.trim();
@@ -108,7 +127,7 @@
         <span aria-live="polite">{visible.length && finished === visible.length ? "All done. Nicely done." : `${visible.length - finished} left to do`}</span>
         <span>{finished} / {visible.length} done</span>
       </div>
-      <div class={s.track} aria-hidden="true"><div style:width={`${visible.length ? finished / visible.length * 100 : 0}%`}></div></div>
+      <div class={s.track} aria-hidden="true"><div style:transform={`scaleX(${fill.current / 100})`}></div></div>
     </div>
     <form class={s.composer} data-slop-export="hide" onsubmit={event => { event.preventDefault(); addTask(); }}>
       <input bind:this={composer} bind:value={draft} aria-label="New task" placeholder="Add a little thing…" disabled={checklist.isLoading} />
@@ -124,7 +143,7 @@
       {#if activeView === "tasks"}
         <ol class={s.list}>
           {#each visible as task, index (task.id)}
-            <li class={s.row} data-done={task.done}>
+            <li class={s.row} data-done={task.done} animate:flip={{ duration: flipMs }}>
               <Checkbox.Root checked={task.done} onCheckedChange={checked => task.done = checked} aria-label={`Mark ${task.text || "untitled task"} ${task.done ? "incomplete" : "complete"}`}>
                 {#snippet children({ checked })}{#if checked}<Check size={17} strokeWidth={3} />{/if}{/snippet}
               </Checkbox.Root>

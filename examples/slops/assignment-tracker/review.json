@@ -1,0 +1,351 @@
+{
+  "cases": [
+    {
+      "id": "typical",
+      "label": "A school week",
+      "data": {
+        "studentName": "Alex Rivera",
+        "term": "Fall Semester 2026",
+        "courses": [
+          {
+            "id": "c1",
+            "code": "BIO",
+            "name": "AP Biology",
+            "colorHex": "#3b7a57"
+          },
+          {
+            "id": "c2",
+            "code": "CALC",
+            "name": "Pre-Calculus",
+            "colorHex": "#4f46e5"
+          },
+          {
+            "id": "c3",
+            "code": "LIT",
+            "name": "Honors Lit",
+            "colorHex": "#4a5d6e"
+          },
+          {
+            "id": "c4",
+            "code": "HIST",
+            "name": "World History",
+            "colorHex": "#d97706"
+          },
+          {
+            "id": "c5",
+            "code": "SPAN",
+            "name": "Spanish III",
+            "colorHex": "#c2410c"
+          }
+        ],
+        "assignments": [
+          {
+            "id": "a1",
+            "courseCode": "BIO",
+            "title": "Cellular Respiration Lab Writeup",
+            "dueDate": "2026-09-10",
+            "category": "Lab Report",
+            "points": 50,
+            "completed": false,
+            "notes": "Include graph for trial 3 enzyme rate"
+          },
+          {
+            "id": "a2",
+            "courseCode": "CALC",
+            "title": "Problem Set 2.4: Trigonometric Identities #1\u201324",
+            "dueDate": "2026-09-10",
+            "category": "Problem Set",
+            "points": 20,
+            "completed": false,
+            "notes": "Show all unit circle substitutions"
+          },
+          {
+            "id": "a3",
+            "courseCode": "LIT",
+            "title": "Read The Great Gatsby Chapters 1\u20133",
+            "dueDate": "2026-09-12",
+            "category": "Reading",
+            "points": 15,
+            "completed": false,
+            "notes": "Annotate the green light motif"
+          },
+          {
+            "id": "a4",
+            "courseCode": "HIST",
+            "title": "DBQ Outline: Industrial Revolution",
+            "dueDate": "2026-09-14",
+            "category": "Essay",
+            "points": 40,
+            "completed": false,
+            "notes": "Draft a thesis before Friday"
+          },
+          {
+            "id": "a5",
+            "courseCode": "SPAN",
+            "title": "Subjunctive workbook p.42\u201345",
+            "dueDate": "2026-09-11",
+            "category": "Homework",
+            "points": 10,
+            "completed": true,
+            "notes": ""
+          },
+          {
+            "id": "a6",
+            "courseCode": "BIO",
+            "title": "Unit 1 Quiz Prep: Macromolecules",
+            "dueDate": "2026-09-15",
+            "category": "Quiz Prep",
+            "points": 30,
+            "completed": false,
+            "notes": "Review Leitner box 2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty",
+      "label": "First assignment",
+      "data": {
+        "studentName": "Alex Rivera",
+        "term": "Fall Semester 2026",
+        "courses": [
+          {
+            "id": "c1",
+            "code": "BIO",
+            "name": "AP Biology",
+            "colorHex": "#3b7a57"
+          },
+          {
+            "id": "c2",
+            "code": "CALC",
+            "name": "Pre-Calculus",
+            "colorHex": "#4f46e5"
+          },
+          {
+            "id": "c3",
+            "code": "LIT",
+            "name": "Honors Lit",
+            "colorHex": "#4a5d6e"
+          },
+          {
+            "id": "c4",
+            "code": "HIST",
+            "name": "World History",
+            "colorHex": "#d97706"
+          },
+          {
+            "id": "c5",
+            "code": "SPAN",
+            "name": "Spanish III",
+            "colorHex": "#c2410c"
+          }
+        ],
+        "assignments": []
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long titles and notes",
+      "data": {
+        "studentName": "Alexandra Rivera-Washington",
+        "term": "Fall Semester 2026",
+        "courses": [
+          {
+            "id": "c1",
+            "code": "BIO",
+            "name": "AP Biology",
+            "colorHex": "#3b7a57"
+          },
+          {
+            "id": "c2",
+            "code": "CALC",
+            "name": "Pre-Calculus",
+            "colorHex": "#4f46e5"
+          },
+          {
+            "id": "c3",
+            "code": "LIT",
+            "name": "Honors Lit",
+            "colorHex": "#4a5d6e"
+          },
+          {
+            "id": "c4",
+            "code": "HIST",
+            "name": "World History",
+            "colorHex": "#d97706"
+          },
+          {
+            "id": "c5",
+            "code": "SPAN",
+            "name": "Spanish III",
+            "colorHex": "#c2410c"
+          }
+        ],
+        "assignments": [
+          {
+            "id": "a1",
+            "courseCode": "BIO",
+            "title": "Cellular respiration investigation: compare every trial and explain unexpected changes in enzyme activity",
+            "dueDate": "2026-09-10",
+            "category": "Lab Report",
+            "points": 50,
+            "completed": false,
+            "notes": "Explain the anomalous trial.\nInclude a full graph and citations.\nDetailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. Detailed instructions and observations. "
+          },
+          {
+            "id": "a2",
+            "courseCode": "CALC",
+            "title": "Problem Set 2.4: Trigonometric Identities #1\u201324",
+            "dueDate": "2026-09-10",
+            "category": "Problem Set",
+            "points": 20,
+            "completed": false,
+            "notes": "Show all unit circle substitutions"
+          },
+          {
+            "id": "a3",
+            "courseCode": "LIT",
+            "title": "Read The Great Gatsby Chapters 1\u20133",
+            "dueDate": "2026-09-12",
+            "category": "Reading",
+            "points": 15,
+            "completed": false,
+            "notes": "Annotate the green light motif"
+          },
+          {
+            "id": "a4",
+            "courseCode": "HIST",
+            "title": "DBQ Outline: Industrial Revolution",
+            "dueDate": "2026-09-14",
+            "category": "Essay",
+            "points": 40,
+            "completed": false,
+            "notes": "Draft a thesis before Friday"
+          },
+          {
+            "id": "a5",
+            "courseCode": "SPAN",
+            "title": "Subjunctive workbook p.42\u201345",
+            "dueDate": "2026-09-11",
+            "category": "Homework",
+            "points": 10,
+            "completed": true,
+            "notes": ""
+          },
+          {
+            "id": "a6",
+            "courseCode": "BIO",
+            "title": "Unit 1 Quiz Prep: Macromolecules",
+            "dueDate": "2026-09-15",
+            "category": "Quiz Prep",
+            "points": 30,
+            "completed": false,
+            "notes": "Review Leitner box 2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dates",
+      "label": "Overdue and missing dates",
+      "data": {
+        "studentName": "Alex Rivera",
+        "term": "Fall Semester 2026",
+        "courses": [
+          {
+            "id": "c1",
+            "code": "BIO",
+            "name": "AP Biology",
+            "colorHex": "#3b7a57"
+          },
+          {
+            "id": "c2",
+            "code": "CALC",
+            "name": "Pre-Calculus",
+            "colorHex": "#4f46e5"
+          },
+          {
+            "id": "c3",
+            "code": "LIT",
+            "name": "Honors Lit",
+            "colorHex": "#4a5d6e"
+          },
+          {
+            "id": "c4",
+            "code": "HIST",
+            "name": "World History",
+            "colorHex": "#d97706"
+          },
+          {
+            "id": "c5",
+            "code": "SPAN",
+            "name": "Spanish III",
+            "colorHex": "#c2410c"
+          }
+        ],
+        "assignments": [
+          {
+            "id": "a1",
+            "courseCode": "BIO",
+            "title": "Cellular Respiration Lab Writeup",
+            "dueDate": "2026-02-30",
+            "category": "Lab Report",
+            "points": 50,
+            "completed": false,
+            "notes": "Include graph for trial 3 enzyme rate"
+          },
+          {
+            "id": "a2",
+            "courseCode": "CALC",
+            "title": "Problem Set 2.4: Trigonometric Identities #1\u201324",
+            "dueDate": "",
+            "category": "Problem Set",
+            "points": 20,
+            "completed": false,
+            "notes": "Show all unit circle substitutions"
+          },
+          {
+            "id": "a3",
+            "courseCode": "LIT",
+            "title": "Read The Great Gatsby Chapters 1\u20133",
+            "dueDate": "2026-09-07",
+            "category": "Reading",
+            "points": 15,
+            "completed": false,
+            "notes": "Annotate the green light motif"
+          },
+          {
+            "id": "a4",
+            "courseCode": "HIST",
+            "title": "DBQ Outline: Industrial Revolution",
+            "dueDate": "2026-10-10",
+            "category": "Essay",
+            "points": 40,
+            "completed": false,
+            "notes": "Draft a thesis before Friday"
+          },
+          {
+            "id": "a5",
+            "courseCode": "SPAN",
+            "title": "Subjunctive workbook p.42\u201345",
+            "dueDate": "2026-09-11",
+            "category": "Homework",
+            "points": 10,
+            "completed": true,
+            "notes": ""
+          },
+          {
+            "id": "a6",
+            "courseCode": "BIO",
+            "title": "Unit 1 Quiz Prep: Macromolecules",
+            "dueDate": "2026-09-15",
+            "category": "Quiz Prep",
+            "points": 30,
+            "completed": false,
+            "notes": "Review Leitner box 2"
+          }
+        ]
+      }
+    }
+  ]
+}

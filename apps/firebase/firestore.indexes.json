@@ -46,12 +46,7 @@
     },
     {
       "collectionGroup": "templates",
-      "fieldPath": "searchText",
-      "indexes": []
-    },
-    {
-      "collectionGroup": "templates",
-      "fieldPath": "currentRelease.manifestJSON",
+      "fieldPath": "currentRelease",
       "indexes": []
     },
     {

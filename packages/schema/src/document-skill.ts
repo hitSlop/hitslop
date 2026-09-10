@@ -13,9 +13,12 @@ metadata:
 
 # Work with this hitSlop document
 
-Read \`manifest.json\` first. This directory is a built, framework-neutral web
-document, not a source project. If \`references/app-guide.md\` exists, read it
-for app-specific data and styling guidance.
+Locate the target \`.slop\` directory and read its \`manifest.json\` first.
+It is a built, framework-neutral web document, not a source project. All document
+paths and commands below are relative to that target directory, not this skill's
+installation directory. If the target contains
+\`.agents/skills/hitslop-document/references/app-guide.md\`, read it for
+app-specific data and styling guidance.
 
 ## Inspect
 

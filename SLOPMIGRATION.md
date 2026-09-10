@@ -1,8 +1,7 @@
 # Slop Migration Plan
 
-Current platform pilot: only Quick Checklist is active. Other example projects
-are preserved in `examples/slops/_backlog/`; the historical checklist below
-does not certify compatibility with the current TypeBox/runtime contracts.
+Current platform pilot: Quick Checklist plus two promoted waves. Remaining examples
+stay in `examples/slops/_backlog/`.
 Promote and migrate one project at a time before marking it supported again.
 
 This document tracks the structural and design migration of every existing authored
@@ -32,7 +31,7 @@ primitives.
       consistency, without imposing a shared visual style.
 - [ ] Use Vanilla Extract for compiled structural styling and plain CSS variables for
       the owner-editable theme surface.
-- [ ] Treat Zod as the authoritative definition of JSON document state.
+- [ ] Treat TypeBox as the authoritative definition of JSON document state.
 - [ ] Use the shared browser gallery for a focused visual and interaction smoke test.
 - [ ] Build and validate each migrated slop without registering or installing it.
 
@@ -73,8 +72,8 @@ primitives.
 - [ ] Inventory controls, consult the local Bits UI reference, and use appropriate
       Bits primitives without imposing a shared visual theme.
 - [ ] Move implementation into `src/`, update entry paths, and delete `source/`.
-- [ ] Use root Zod `schema.ts`, schema-backed JSON state, Vanilla Extract structure,
-      and semantic theme variables where applicable.
+- [ ] Use root TypeBox `schema.ts`, schema-backed JSON state, Vanilla Extract structure,
+      and `theme.ts` via `defineTheme` where applicable.
 - [ ] Run a short gallery smoke test at `http://localhost:4177/<slug>/`: inspect the
       default-size UI, exercise the primary workflow and new Bits controls, and check
       the console.
@@ -128,9 +127,9 @@ Establish repeatable patterns for compact, immediately understandable control su
 - [x] **metronome-tapper** — Preserve its mechanical instrument character while
       improving tempo entry, Bits slider/radio/toggle behavior, audio state, and
       reduced-motion handling.
-- [ ] **water-tracker** — Create a tactile hydration gauge with an accessible target,
+- [x] **water-tracker** — Create a tactile hydration gauge with an accessible target,
       quick increments, and meaningful progress feedback.
-- [ ] **pixel-art** — Clarify the canvas, palette, and tool model while preserving its
+- [x] **pixel-art** — Clarify the canvas, palette, and tool model while preserving its
       playful cartridge-like personality and keyboard-accessible controls.
 
 - [ ] Complete the batch gate and publish all six releases.
@@ -139,50 +138,50 @@ Establish repeatable patterns for compact, immediately understandable control su
 
 Set the editorial and export standards for documents people edit, share, and print.
 
-- [ ] **invoice** — Build a restrained warm-paper invoice with effortless line-item
+- [x] **invoice** — Build a restrained warm-paper invoice with effortless line-item
       editing, clear totals, and clean PDF output.
-- [ ] **resume** — Use an editorial paper layout with direct editing, strong typography,
+- [x] **resume** — Use an editorial paper layout with direct editing, strong typography,
       content-heavy resilience, and export-first behavior.
-- [ ] **recipe** — Combine recipe-card warmth with clear ingredients, steps, timing,
+- [x] **recipe** — Combine recipe-card warmth with clear ingredients, steps, timing,
       difficulty, and named hero-image handling. Replace the remaining native select
       and checkbox with appropriate Bits primitives.
-- [ ] **meeting-notes** — Organize agenda, notes, decisions, and action items into a
+- [x] **meeting-notes** — Organize agenda, notes, decisions, and action items into a
       compact meeting memo whose editing controls disappear cleanly in export.
-- [ ] **daily-planner** — Make scheduling blocks and editing obvious at the initial and
+- [x] **daily-planner** — Make scheduling blocks and editing obvious at the initial and
       narrow window sizes using accessible date, time, select, and popover behavior.
-- [ ] **weekly-planner** — Simplify the week overview and direct task scheduling without
+- [x] **weekly-planner** — Simplify the week overview and direct task scheduling without
       turning the document into a dashboard.
 
 - [ ] Complete the batch gate and publish all six releases.
 
 ## Batch 3 — Lists and life logistics
 
-- [ ] **grocery-list** — Refine the fridge-memo personality, optimize rapid entry and
+- [x] **grocery-list** — Refine the fridge-memo personality, optimize rapid entry and
       checking, and replace the native section select.
-- [ ] **packing-list** — Clarify trip setup, categories, completion, and archive behavior;
+- [x] **packing-list** — Clarify trip setup, categories, completion, and archive behavior;
       replace both remaining native selects.
-- [ ] **trip-itinerary** — Present a clear chronological itinerary with accessible tabs,
+- [x] **trip-itinerary** — Present a clear chronological itinerary with accessible tabs,
       selects, checkboxes, and time fields.
-- [ ] **reading-tracker** — Refine the library-card feel, replace the remaining native
+- [x] **reading-tracker** — Refine the library-card feel, replace the remaining native
       select, and use an accessible rating primitive if ratings remain part of the job.
-- [ ] **workout-planner** — Make exercises, sets, reps, completion, and rest flow
+- [x] **workout-planner** — Make exercises, sets, reps, completion, and rest flow
       immediately understandable.
-- [ ] **subscription-tracker** — Turn it into a focused renewal ledger and replace its
+- [x] **subscription-tracker** — Turn it into a focused renewal ledger and replace its
       remaining native selects with purpose-styled Bits controls.
 
 - [ ] Complete the batch gate and publish all six releases.
 
 ## Batch 4 — Money and decisions
 
-- [ ] **expense-log** — Optimize rapid entry and receipt-like totals with an obvious,
+- [x] **expense-log** — Optimize rapid entry and receipt-like totals with an obvious,
       accessible category workflow.
-- [ ] **personal-budget** — Present income, allocations, spending, and remaining funds
+- [x] **personal-budget** — Present income, allocations, spending, and remaining funds
       as a coherent calculator-led ledger.
 - [ ] **grade-calculator** — Reduce interaction density and clarify classes, weights,
       current grades, and target calculations without defaulting to a walkthrough.
-- [ ] **eisenhower-matrix** — Improve quick capture and movement between quadrants while
+- [x] **eisenhower-matrix** — Improve quick capture and movement between quadrants while
       retaining a physical desk-blotter feel.
-- [ ] **pros-cons-sheet** — Focus the canvas on the decision, evidence, and resulting
+- [x] **pros-cons-sheet** — Focus the canvas on the decision, evidence, and resulting
       balance instead of decorative scoring or dashboard furniture.
 - [ ] **ivy-lee-method** — Reinforce the strict six-task constraint and one-task-at-a-time
       focus.
@@ -191,13 +190,13 @@ Set the editorial and export standards for documents people edit, share, and pri
 
 ## Batch 5 — Journals and reflective methods
 
-- [ ] **bullet-journal** — Refine the dot-grid paper language and replace the remaining
+- [x] **bullet-journal** — Refine the dot-grid paper language and replace the remaining
       native signifier select while keeping capture fast.
-- [ ] **five-minute-journal** — Make morning and evening prompts gentle, immediate, and
+- [x] **five-minute-journal** — Make morning and evening prompts gentle, immediate, and
       visually distinct.
-- [ ] **morning-pages** — Create a distraction-free writing sheet with subtle progress,
+- [x] **morning-pages** — Create a distraction-free writing sheet with subtle progress,
       content-heavy resilience, and clean export.
-- [ ] **mood-log** — Keep logging calm and non-gamified with accessible slider labels
+- [x] **mood-log** — Keep logging calm and non-gamified with accessible slider labels
       and useful history.
 - [ ] **three-three-three** — Make the 3/3/3 structure self-explanatory through hierarchy
       and a concise inline explanation.
@@ -209,35 +208,35 @@ Set the editorial and export standards for documents people edit, share, and pri
 
 ## Batch 6 — Education and complex scheduling
 
-- [ ] **assignment-tracker** — Reduce interaction density and make setup,
+- [x] **assignment-tracker** — Reduce interaction density and make setup,
       prioritization, due dates, and completion easy to scan.
-- [ ] **school-schedule** — Clarify timetable creation and editing; adopt Bits time,
+- [x] **school-schedule** — Clarify timetable creation and editing; adopt Bits time,
       select, and popover primitives where they improve behavior.
 - [ ] **semester-planner** — Clarify term dates, courses, and milestones as a natural
       sequence. Add contextual guidance only if the redesigned empty state is
       insufficient.
 - [ ] **cornell-notes** — Make cues, notes, summary, and study masking obvious from the
       paper itself, with optional help for the unfamiliar study method.
-- [ ] **flashcards** — Strengthen deck creation, card editing, review flow, keyboard
+- [x] **flashcards** — Strengthen deck creation, card editing, review flow, keyboard
       support, and the index-card personality.
-- [ ] **habit-tracker** — Simplify habit creation and daily completion while retaining
+- [x] **habit-tracker** — Simplify habit creation and daily completion while retaining
       its playful pocket-object character.
 
 - [ ] Complete the batch gate and publish all six releases.
 
 ## Batch 7 — Work and creative power tools
 
-- [ ] **kanban-board** — Clarify lanes, work-in-progress, card creation, and movement.
+- [x] **kanban-board** — Clarify lanes, work-in-progress, card creation, and movement.
       Retain the canonical JSON store.
-- [ ] **pocket-sheet** — Improve selection, formula entry, keyboard navigation, and CSV
+- [x] **pocket-sheet** — Improve selection, formula entry, keyboard navigation, and CSV
       workflows without replacing its custom grid with Bits UI.
-- [ ] **markdown-editor** — Refine the manuscript/typewriter personality, edit-preview
+- [x] **markdown-editor** — Refine the manuscript/typewriter personality, edit-preview
       flow, shortcuts, long documents, and export.
 - [ ] **slide-deck** — Clarify slide creation, layout choice, editing, reordering, and
       presentation. Prefer contextual empty-state instruction over a forced tour.
-- [ ] **harada-method** — Explain the central goal, supporting themes, and actions with
+- [x] **harada-method** — Explain the central goal, supporting themes, and actions with
       rare progressive guidance while preserving the complete exportable chart.
-- [ ] **contact-card** — Polish the compact Rolodex/pager personality, named avatar
+- [x] **contact-card** — Polish the compact Rolodex/pager personality, named avatar
       handling, direct editing, and link actions.
 
 - [ ] Complete the batch gate and publish all six releases.
@@ -247,16 +246,17 @@ Set the editorial and export standards for documents people edit, share, and pri
 These slops deliberately exercise unusual runtime behavior. Preserve their purpose-built
 surfaces rather than normalizing them into ordinary app layouts.
 
-- [ ] **alien-radio** — Preserve the fixed PNG-skinned radio, alpha hit testing, tuning,
-      audio state, and favorites while keeping its Bits slider accessible.
-- [ ] **ambient-sound-mixer** — Refine its hi-fi mixer hierarchy, preset selection,
+- [x] **alien-radio** — Preserve the fixed PNG-skinned radio, alpha hit testing, tuning,
+      audio state, and favorites. Station browser uses Bits Popover; favorite uses Bits
+      Toggle; gain stays a Bits Slider.
+- [x] **ambient-sound-mixer** — Refine its hi-fi mixer hierarchy, preset selection,
       accessible faders, mute/solo behavior, and audio initialization.
-- [ ] **soma-amp** — Preserve Webamp and ZIP-skin behavior. Migrate its wrapper,
+- [x] **soma-amp** — Preserve Webamp and ZIP-skin behavior. Migrate its wrapper,
       storage/file contract, package boundary, capture, and icon behavior without
       forcing Bits UI or Vanilla Extract into the third-party-rendered surface.
-- [ ] **codex-pet** — Preserve the sprite-led personality, validate named-file behavior,
+- [x] **codex-pet** — Preserve the sprite-led personality, validate named-file behavior,
       add a deliberate template icon, and avoid unnecessary general-purpose controls.
-- [ ] **wordle** — Improve physical keyboard and on-screen keyboard feedback, accessible
+- [x] **wordle** — Improve physical keyboard and on-screen keyboard feedback, accessible
       state announcements, deterministic capture state, and completion dialog.
 
 - [ ] Complete the batch gate and publish all five releases.

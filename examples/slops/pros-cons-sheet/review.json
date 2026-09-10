@@ -1,0 +1,168 @@
+{
+  "cases": [
+    {
+      "id": "empty",
+      "label": "Empty",
+      "data": {
+        "question": "",
+        "date": "10 September 2026",
+        "status": "evaluating",
+        "pros": [],
+        "cons": [],
+        "verdict": ""
+      }
+    },
+    {
+      "id": "typical",
+      "label": "Typical \u00b7 former example",
+      "data": {
+        "question": "accept the lead robotics architect role",
+        "date": "12 May 2025",
+        "status": "leaning_pro",
+        "pros": [
+          {
+            "id": "p1",
+            "text": "Chance to design physical hardware from scratch",
+            "weight": 5
+          },
+          {
+            "id": "p2",
+            "text": "25% salary increase plus equity package",
+            "weight": 4
+          },
+          {
+            "id": "p3",
+            "text": "Talented and disciplined founding team",
+            "weight": 4
+          },
+          {
+            "id": "p4",
+            "text": "Modern lab within bike-commute distance",
+            "weight": 3
+          }
+        ],
+        "cons": [
+          {
+            "id": "c1",
+            "text": "Higher daily stress and tight quarterly deadlines",
+            "weight": 4
+          },
+          {
+            "id": "c2",
+            "text": "Will need to leave current close-knit team",
+            "weight": 3
+          },
+          {
+            "id": "c3",
+            "text": "Early-stage startup runway risk (18 months)",
+            "weight": 3
+          }
+        ],
+        "verdict": "The engineering growth and upside significantly surpass the risk profile. Prepare acceptance terms on Monday."
+      }
+    },
+    {
+      "id": "tied",
+      "label": "Even balance",
+      "data": {
+        "question": "take a week away from work",
+        "date": "10 September 2026",
+        "status": "evaluating",
+        "pros": [
+          {
+            "id": "p1",
+            "text": "Time to rest and see family",
+            "weight": 4
+          }
+        ],
+        "cons": [
+          {
+            "id": "c1",
+            "text": "A project needs my attention",
+            "weight": 4
+          }
+        ],
+        "verdict": ""
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long content",
+      "data": {
+        "question": "move to a smaller city while keeping my current role and spending more time with family",
+        "date": "12 May 2025",
+        "status": "leaning_pro",
+        "pros": [
+          {
+            "id": "p0",
+            "text": "More room to think, a shorter walk to the park, and enough space to invite friends and family to stay for a weekend without rearranging the whole house.",
+            "weight": 1
+          },
+          {
+            "id": "p1",
+            "text": "A reason in favor worth considering (2)",
+            "weight": 2
+          },
+          {
+            "id": "p2",
+            "text": "A reason in favor worth considering (3)",
+            "weight": 3
+          },
+          {
+            "id": "p3",
+            "text": "A reason in favor worth considering (4)",
+            "weight": 4
+          },
+          {
+            "id": "p4",
+            "text": "A reason in favor worth considering (5)",
+            "weight": 5
+          },
+          {
+            "id": "p5",
+            "text": "A reason in favor worth considering (6)",
+            "weight": 1
+          },
+          {
+            "id": "p6",
+            "text": "A reason in favor worth considering (7)",
+            "weight": 2
+          }
+        ],
+        "cons": [
+          {
+            "id": "c0",
+            "text": "Maintaining friendships will take more deliberate planning, especially during busy stretches when a spontaneous evening together would otherwise be easy.",
+            "weight": 1
+          },
+          {
+            "id": "c1",
+            "text": "A concern to discuss before deciding (2)",
+            "weight": 2
+          },
+          {
+            "id": "c2",
+            "text": "A concern to discuss before deciding (3)",
+            "weight": 3
+          },
+          {
+            "id": "c3",
+            "text": "A concern to discuss before deciding (4)",
+            "weight": 4
+          },
+          {
+            "id": "c4",
+            "text": "A concern to discuss before deciding (5)",
+            "weight": 5
+          },
+          {
+            "id": "c5",
+            "text": "A concern to discuss before deciding (6)",
+            "weight": 1
+          }
+        ],
+        "verdict": "The engineering growth and upside significantly surpass the risk profile. Prepare acceptance terms on Monday."
+      }
+    }
+  ]
+}

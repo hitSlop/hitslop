@@ -1,0 +1,124 @@
+{
+  "cases": [
+    {
+      "id": "typical",
+      "label": "Reading shelf",
+      "data": {
+        "memberName": "Jamie Park",
+        "memberSince": "Notes from my bookshelf",
+        "books": [
+          {
+            "id": "1",
+            "title": "The Creative Act",
+            "author": "Rick Rubin",
+            "rating": 0,
+            "status": "Reading"
+          },
+          {
+            "id": "2",
+            "title": "A Psalm for the Wild-Built",
+            "author": "Becky Chambers",
+            "rating": 5,
+            "status": "Read"
+          },
+          {
+            "id": "3",
+            "title": "Braiding Sweetgrass",
+            "author": "Robin Wall Kimmerer",
+            "rating": 0,
+            "status": "To Read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty",
+      "label": "Empty shelf",
+      "data": {
+        "memberName": "Jamie Park",
+        "memberSince": "Notes from my bookshelf",
+        "books": []
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long titles",
+      "data": {
+        "memberName": "Jamie Park",
+        "memberSince": "Notes from my bookshelf",
+        "books": [
+          {
+            "id": "1",
+            "title": "The Very Long Book Title That Needs More Than One Line to Tell Its Story",
+            "author": "An Author With a Long Name",
+            "rating": 0,
+            "status": "Reading"
+          }
+        ]
+      }
+    },
+    {
+      "id": "finished",
+      "label": "All finished",
+      "data": {
+        "memberName": "Jamie Park",
+        "memberSince": "Notes from my bookshelf",
+        "books": [
+          {
+            "id": "1",
+            "title": "The Creative Act",
+            "author": "Rick Rubin",
+            "rating": 4,
+            "status": "Read"
+          },
+          {
+            "id": "2",
+            "title": "A Psalm for the Wild-Built",
+            "author": "Becky Chambers",
+            "rating": 4,
+            "status": "Read"
+          },
+          {
+            "id": "3",
+            "title": "Braiding Sweetgrass",
+            "author": "Robin Wall Kimmerer",
+            "rating": 4,
+            "status": "Read"
+          }
+        ]
+      }
+    },
+    {
+      "id": "notes",
+      "label": "Book notes",
+      "data": {
+        "memberName": "Jamie Park",
+        "memberSince": "Notes from my bookshelf",
+        "books": [
+          {
+            "id": "1",
+            "title": "The Creative Act",
+            "author": "Rick Rubin",
+            "rating": 0,
+            "status": "Reading",
+            "notes": "A reminder to keep making things.\n\nReturn to the chapter on attention."
+          },
+          {
+            "id": "2",
+            "title": "A Psalm for the Wild-Built",
+            "author": "Becky Chambers",
+            "rating": 5,
+            "status": "Read"
+          },
+          {
+            "id": "3",
+            "title": "Braiding Sweetgrass",
+            "author": "Robin Wall Kimmerer",
+            "rating": 0,
+            "status": "To Read"
+          }
+        ]
+      }
+    }
+  ]
+}

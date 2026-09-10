@@ -11,8 +11,11 @@ bun run check
 bun run dev
 ```
 
-The supported v1 scaffold uses Svelte 5 and includes portable
-`hitslop-authoring` and `hitslop-design` skills. Root `schema.ts` uses TypeBox;
+The supported v1 scaffold uses Svelte 5. `init` installs missing skills; `slop skills sync`
+explicitly replaces `hitslop-authoring`, `hitslop-design`, and `hitslop-document`
+in `~/.hitslop/skills` and links them for coding agents. Existing user directories and
+unrelated links are preserved. Skill installation supports macOS and Linux
+(system `flock` required) and is optional for project creation. Root `schema.ts` uses TypeBox;
 root `theme.ts` supplies typed CSS variables and generated default CSS. Editor
 inference and `bun run check` need no generated files or running dev server.
 Optional icon/export components share the editor's store. `slop build` emits a

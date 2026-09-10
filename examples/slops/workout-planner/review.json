@@ -1,0 +1,267 @@
+{
+  "cases": [
+    {
+      "id": "fresh",
+      "label": "Ready to train",
+      "data": {
+        "title": "Leg day",
+        "restPreset": 90,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Barbell back squat",
+            "sets": 4,
+            "reps": 8,
+            "weight": "225 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "rdl",
+            "name": "Romanian deadlift",
+            "sets": 4,
+            "reps": 10,
+            "weight": "185 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "press",
+            "name": "Leg press",
+            "sets": 3,
+            "reps": 12,
+            "weight": "360 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "curl",
+            "name": "Lying leg curl",
+            "sets": 3,
+            "reps": 12,
+            "weight": "90 lbs",
+            "completedSets": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "partial",
+      "label": "Mid-workout",
+      "data": {
+        "title": "Leg day",
+        "restPreset": 90,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Barbell back squat",
+            "sets": 4,
+            "reps": 8,
+            "weight": "225 lbs",
+            "completedSets": 4
+          },
+          {
+            "id": "rdl",
+            "name": "Romanian deadlift",
+            "sets": 4,
+            "reps": 10,
+            "weight": "185 lbs",
+            "completedSets": 2,
+            "completedSetIndices": [0, 2]
+          },
+          {
+            "id": "press",
+            "name": "Leg press",
+            "sets": 3,
+            "reps": 12,
+            "weight": "360 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "curl",
+            "name": "Lying leg curl",
+            "sets": 3,
+            "reps": 12,
+            "weight": "90 lbs",
+            "completedSets": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "finished",
+      "label": "Workout complete",
+      "data": {
+        "title": "Leg day",
+        "restPreset": 90,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Barbell back squat",
+            "sets": 4,
+            "reps": 8,
+            "weight": "225 lbs",
+            "completedSets": 4
+          },
+          {
+            "id": "rdl",
+            "name": "Romanian deadlift",
+            "sets": 4,
+            "reps": 10,
+            "weight": "185 lbs",
+            "completedSets": 4
+          },
+          {
+            "id": "press",
+            "name": "Leg press",
+            "sets": 3,
+            "reps": 12,
+            "weight": "360 lbs",
+            "completedSets": 3
+          },
+          {
+            "id": "curl",
+            "name": "Lying leg curl",
+            "sets": 3,
+            "reps": 12,
+            "weight": "90 lbs",
+            "completedSets": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty",
+      "label": "New routine",
+      "data": {
+        "title": "Leg day",
+        "restPreset": 90,
+        "exercises": []
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long names & weights",
+      "data": {
+        "title": "Leg day",
+        "restPreset": 90,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Single-leg Romanian deadlift with a controlled eccentric",
+            "sets": 4,
+            "reps": 8,
+            "weight": "2 \u00d7 22.5 kg dumbbells",
+            "completedSets": 0
+          },
+          {
+            "id": "rdl",
+            "name": "Romanian deadlift",
+            "sets": 4,
+            "reps": 10,
+            "weight": "185 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "press",
+            "name": "Leg press",
+            "sets": 3,
+            "reps": 12,
+            "weight": "360 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "curl",
+            "name": "Lying leg curl",
+            "sets": 3,
+            "reps": 12,
+            "weight": "90 lbs",
+            "completedSets": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "twelve",
+      "label": "Twelve sets",
+      "data": {
+        "title": "Leg day",
+        "restPreset": 90,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Barbell back squat",
+            "sets": 12,
+            "reps": 8,
+            "weight": "225 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "rdl",
+            "name": "Romanian deadlift",
+            "sets": 4,
+            "reps": 10,
+            "weight": "185 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "press",
+            "name": "Leg press",
+            "sets": 3,
+            "reps": 12,
+            "weight": "360 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "curl",
+            "name": "Lying leg curl",
+            "sets": 3,
+            "reps": 12,
+            "weight": "90 lbs",
+            "completedSets": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "legacy",
+      "label": "Existing document",
+      "data": {
+        "title": "Leg day",
+        "restPreset": 90,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Barbell back squat",
+            "sets": 4,
+            "reps": 8,
+            "weight": "225 lbs",
+            "completedSets": 2,
+            "customField": "preserve me"
+          },
+          {
+            "id": "rdl",
+            "name": "Romanian deadlift",
+            "sets": 4,
+            "reps": 10,
+            "weight": "185 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "press",
+            "name": "Leg press",
+            "sets": 3,
+            "reps": 12,
+            "weight": "360 lbs",
+            "completedSets": 0
+          },
+          {
+            "id": "curl",
+            "name": "Lying leg curl",
+            "sets": 3,
+            "reps": 12,
+            "weight": "90 lbs",
+            "completedSets": 0
+          }
+        ]
+      }
+    }
+  ]
+}

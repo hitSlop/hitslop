@@ -1,0 +1,36 @@
+{
+  "id": "publisher-key-id_counter",
+  "publisherKeyId": "publisher-key-id",
+  "slug": "counter",
+  "title": "Counter",
+  "description": "Count one useful thing.",
+  "categories": [
+    "utilities"
+  ],
+  "authorName": "Counter Author",
+  "authorURL": "https://example.com/counter",
+  "creationCount": 4,
+  "firstPublishedAt": "2026-09-01T12:00:00.000Z",
+  "visibility": "public",
+  "currentRelease": {
+    "id": "release-one",
+    "number": 1,
+    "publishedAt": "2026-09-01T12:00:00.000Z",
+    "manifestJSON": "{\"$schema\":\"https://api.hitslop.com/schemas/v1/manifest.schema.json\",\"author\":{\"name\":\"Counter Author\",\"url\":\"https://example.com/counter\"},\"slug\":\"counter\",\"title\":\"Counter\",\"description\":\"Count one useful thing.\",\"categories\":[\"utilities\"],\"presentation\":{\"width\":360,\"height\":480}}",
+    "artifact": {
+      "key": "artifacts/sha256/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.slop.zip",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bytes": 1024
+    },
+    "preview": {
+      "key": "previews/sha256/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.png",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "bytes": 512
+    },
+    "icon": {
+      "key": "icons/sha256/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.png",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "bytes": 256
+    }
+  }
+}

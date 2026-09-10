@@ -5,36 +5,10 @@ import Foundation
 import HitSlopCore
 import HitSlopFirebase
 
-public struct RegistryAsset: Decodable, Sendable {
-    public let key: String
-    public let sha256: String
-    public let bytes: Int
-}
-
-public struct RegistryRelease: Decodable, Sendable {
-    public let id: String
-    public let number: Int
-    public let publishedAt: Date
-    public let artifact: RegistryAsset
-    public let preview: RegistryAsset
-    public let icon: RegistryAsset
-    public let manifestJSON: String
-}
-
-public struct RegistryTemplate: Decodable, Identifiable, Sendable {
-    public let id: String
-    public let publisherKeyId: String
-    public let slug: String
-    public let title: String
-    public let description: String
-    public let categories: [String]
-    public let authorName: String
-    public let authorURL: String?
-    public let currentRelease: RegistryRelease
-    public let creationCount: Int
-    public let firstPublishedAt: Date
-    public let visibility: String
-    public let searchText: String
+extension RegistryTemplate: Identifiable {
+    public var searchText: String {
+        ([title, description, authorName] + categories).joined(separator: " ").localizedLowercase
+    }
 
     public var currentManifest: SlopManifest? {
         guard let data = currentRelease.manifestJSON.data(using: .utf8) else { return nil }
@@ -43,7 +17,7 @@ public struct RegistryTemplate: Decodable, Identifiable, Sendable {
 
     public func remoteTemplate() -> SlopRemoteTemplate {
         SlopRemoteTemplate(
-            publisherKeyID: publisherKeyId,
+            publisherKeyID: publisherKeyID,
             slug: slug,
             release: currentRelease.number,
             artifactKey: currentRelease.artifact.key,
@@ -68,7 +42,7 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
     private let firestore: Firestore
     private let functions: Functions
     private var listener: ListenerRegistration?
-    private var catalog: [RegistryTemplate] = []
+    private var catalog: [(template: RegistryTemplate, searchText: String)] = []
     private var term = ""
     private var category: String?
     private var sort: RegistrySort = .popular
@@ -140,7 +114,13 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
                     }
                     var invalidCount = 0
                     self.catalog = (snapshot?.documents ?? []).compactMap { document in
-                        do { return try document.data(as: RegistryTemplate.self) }
+                        do {
+                            let template = try document.data(as: RegistryTemplate.self)
+                            guard template.id == document.documentID else {
+                                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Registry template id does not match document id"))
+                            }
+                            return (template: template, searchText: template.searchText)
+                        }
                         catch {
                             invalidCount += 1
                             HitSlopFirebase.record(error)
@@ -155,8 +135,6 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
     }
 
     private func applyFilters() {
-        templates = catalog.filter { template in
-            term.isEmpty || template.searchText.localizedLowercase.contains(term)
-        }
+        templates = catalog.filter { term.isEmpty || $0.searchText.contains(term) }.map(\.template)
     }
 }

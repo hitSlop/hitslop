@@ -23,11 +23,14 @@ the user explicitly asks.
 1. Move implementation files from `source/` to `src/`, update
    `index.html` and imports, then delete the old `source/` directory.
 2. Keep reusable state schemas in root `schema.ts`. JSON-backed Svelte slops
-   must default-export a Zod 4 schema and pass the same schema to
-   `jsonStore({ schema, initial })`.
-3. Put structural styles in Vanilla Extract `.css.ts` files. Define semantic
-   public `--slop-*` variables with `createGlobalThemeContract` and their
-   defaults in `assets/theme.css`.
+   must default-export a TypeBox schema (`import * as Type from "typebox"`)
+   and pass the same schema to `jsonStore({ schema, initial })`. Preserve
+   unknown fields with `additionalProperties: true`. Validation never coerces,
+   inserts defaults, or strips fields.
+3. Put structural styles in Vanilla Extract `.css.ts` files. Define public
+   `--slop-*` tokens in root `theme.ts` with `defineTheme` from
+   `@hitslop/runtime/theme`, and use `theme.vars` in Vanilla Extract. Builds
+   generate immutable `assets/theme.css`. Never maintain both defaults files.
 4. Keep the current manifest schema URL and required author attribution.
 5. Never copy `_vibe/` material into authored source or runtime output.
 

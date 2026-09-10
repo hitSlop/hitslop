@@ -18,8 +18,7 @@ callable Function.
 
 The catalog has four root collections:
 
-- `templates` is the public, query-ready projection. It owns author attribution, search
-  fields, `firstPublishedAt`, lifetime `creationCount`, `visibility`, and a
+- `templates` is the public, query-ready projection. It owns listing metadata, author attribution, `firstPublishedAt`, lifetime `creationCount`, `visibility`, and a
   nested snapshot of `currentRelease`.
 - `publishers` is the public signing-key record. It does not own display metadata.
 - `releases` is private, immutable release history used by trusted backend
@@ -27,12 +26,25 @@ The catalog has four root collections:
 - `publishRequests` is private idempotency state. Its `expiresAt` field has a
   seven-day Firestore TTL.
 
-Publishing a new release creates a release document and atomically replaces the
+After uploading Storage objects, publishing creates a release document and atomically replaces the
 template's `currentRelease` snapshot. It preserves `firstPublishedAt`,
 `creationCount`, and `visibility`. Existing `.slop` documents remain pinned to
 the bytes they were created from; only future creates use the new release.
 "Popular" sorts by lifetime successful creates, while "New" sorts by first
 publication—not by the most recent update.
+
+Registry contracts live in `packages/schema/src/registry.ts`. TypeBox validates
+portable records; the Firebase adapter converts ISO dates to native Firestore
+timestamps. `bun run schema:generate` generates the Apple registry models.
+The Functions build bundles the current workspace schema into its Node entry
+point; cloud deployment installs dependencies without rebuilding that bundle.
+Web and Apple read top-level listing fields. Native text search is derived
+locally; category filtering and sorting use Firestore queries. The full
+`currentRelease` map is exempt from indexing.
+
+Storage uploads are outside the metadata transaction. A failed metadata commit
+can leave unreferenced immutable objects. See [the backend guide](../../docs/apps/firebase.md)
+for the model, Firestore decision, and pre-release cleanup procedure.
 
 App Check is enforced only on native-only callable operations, not on public
 catalog reads or artifact downloads. `recordCreation` requires an App Check

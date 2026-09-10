@@ -62,7 +62,10 @@ async function assertTextHygiene(files: string[]): Promise<void> {
   const privateKeys: string[] = [];
   for (const path of files) {
     if (!extensions.has(extname(path)) && ![".gitignore", "SLOPS.todo"].includes(basename(path))) continue;
-    const text = await Bun.file(resolve(root, path)).text();
+    const bytes = new Uint8Array(await Bun.file(resolve(root, path)).arrayBuffer());
+    // Extensionless bundled executables are not release text.
+    if (bytes.includes(0)) continue;
+    const text = new TextDecoder().decode(bytes);
     if (/\/Users\/|\/Volumes\//.test(text)) privatePaths.push(path);
     if (/BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY/.test(text)) privateKeys.push(path);
   }
@@ -78,7 +81,9 @@ async function assertDocumentationLinks(files: string[]): Promise<void> {
   const markdown = files.filter((path) => path.endsWith(".md"));
   const failures: string[] = [];
   for (const path of markdown) {
-    const text = await readFile(resolve(root, path), "utf8");
+    const markdownText = await readFile(resolve(root, path), "utf8");
+    // Example markup inside code fences is not a documentation link.
+    const text = markdownText.replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[ \t]*$/gm, "").replace(/(`+)[\s\S]*?\1/g, "");
     const destinations = [
       ...[...text.matchAll(/\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g)].map((match) => match[1]!),
       ...[...text.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]!),

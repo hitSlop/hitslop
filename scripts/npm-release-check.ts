@@ -74,7 +74,7 @@ async function main(): Promise<void> {
       const tarball = join(tarballs, `${name}.tgz`);
       await command(["bun", "pm", "pack", "--filename", tarball, "--quiet"], join(root, "packages", name), true);
       const entries = (await command(["tar", "-tzf", tarball], root, true)).trim().split("\n");
-      const allowed = new Set(["package.json", "README.md", "LICENSE", "dist", ...(name === "cli" ? ["templates"] : []), ...(name === "schema" ? ["generated"] : [])]);
+      const allowed = new Set(["package.json", "README.md", "LICENSE", "dist", ...(name === "cli" ? ["templates", "skills"] : []), ...(name === "schema" ? ["generated"] : [])]);
       for (const entry of entries) {
         const path = entry.replace(/^package\//, "").replace(/\/$/, "");
         if (!path) continue;

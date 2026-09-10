@@ -1,0 +1,82 @@
+{
+  "slug": "daily-planner",
+  "fixture": "typical",
+  "fingerprint": "e0afe5cdb96c3f45",
+  "preparedAt": "2026-09-10T20:39:25.294Z",
+  "design": "examples/slops/daily-planner/DESIGN.md",
+  "brief": "examples/slops/.impeccable/surfaces/daily-planner-src-app-svelte.md",
+  "panes": [
+    {
+      "id": "editor",
+      "label": "Editor",
+      "width": 400,
+      "height": 900,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 4439,
+      "measurement": {
+        "viewportWidth": 400,
+        "viewportHeight": 900,
+        "width": 400,
+        "height": 900,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow editor",
+      "width": 360,
+      "height": 900,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 4403,
+      "measurement": {
+        "viewportWidth": 360,
+        "viewportHeight": 900,
+        "width": 360,
+        "height": 900,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "width": 400,
+      "height": 900,
+      "mode": "export",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 4534,
+      "measurement": {
+        "viewportWidth": 400,
+        "viewportHeight": 964,
+        "width": 400,
+        "height": 964,
+        "overflowX": false,
+        "dedicated": true
+      }
+    },
+    {
+      "id": "icon",
+      "label": "Icon",
+      "width": 512,
+      "height": 512,
+      "mode": "icon",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 4584,
+      "measurement": {
+        "viewportWidth": 512,
+        "viewportHeight": 512,
+        "width": 512,
+        "height": 512,
+        "overflowX": false,
+        "dedicated": true
+      }
+    }
+  ]
+}

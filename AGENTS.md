@@ -14,6 +14,13 @@ JSON, named media, and theme override data. Read `manifest.json` first.
   `SLOPMIGRATIONRUNNER.md` before editing a slop.
 - Use `_vibe/` as local visual reference material. It is inspiration-only and
   must not be copied into source, runtime packages, or the open-source release.
+- For example design work, read `examples/slops/PRODUCT.md` and the shared
+  language guide in `docs/presentation.md`, then the target's own `DESIGN.md`
+  when present. Each slop owns its visual identity; do not reuse another slop's
+  palette or shell as a collection-wide theme.
+- Use exported Vanilla Extract `style()` classes for owned UI elements, with
+  state selectors and size queries beside the base style. Reserve `globalStyle()`
+  for document defaults and necessary scoped descendants; see the design guide.
 - A runtime package has `manifest.json`, generated `app.html`, optional immutable
   `assets/`, optional generated `data.schema.json`, the canonical embedded
   `.agents/skills/hitslop-document` skill, optional canonical

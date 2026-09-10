@@ -46,6 +46,14 @@ private struct UpdateSettingsView: View {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular); installMenus()
+        let skillVersion = "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development")-\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0")"
+        Task.detached(priority: .utility) {
+            do {
+                for conflict in try SlopAgentSkills.sync(appVersion: skillVersion) {
+                    NSLog("Left existing agent skill unchanged: %@", conflict.path)
+                }
+            } catch { NSLog("Could not refresh agent skills: %@", error.localizedDescription) }
+        }
         let urls = CommandLine.arguments.dropFirst().filter { $0.hasSuffix(".slop") }.map(URL.init(fileURLWithPath:))
         if urls.isEmpty { showCatalog() } else { urls.forEach(openDocument) }
     }

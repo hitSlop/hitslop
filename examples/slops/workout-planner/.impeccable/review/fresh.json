@@ -1,0 +1,82 @@
+{
+  "slug": "workout-planner",
+  "fixture": "fresh",
+  "fingerprint": "037a5ab1b109af9b",
+  "preparedAt": "2026-09-10T20:03:09.210Z",
+  "design": "examples/slops/workout-planner/DESIGN.md",
+  "brief": "examples/slops/.impeccable/surfaces/workout-planner-src-app-svelte.md",
+  "panes": [
+    {
+      "id": "editor",
+      "label": "Editor",
+      "width": 440,
+      "height": 620,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 947,
+      "measurement": {
+        "viewportWidth": 440,
+        "viewportHeight": 620,
+        "width": 440,
+        "height": 620,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow editor",
+      "width": 360,
+      "height": 620,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1164,
+      "measurement": {
+        "viewportWidth": 360,
+        "viewportHeight": 620,
+        "width": 360,
+        "height": 620,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "width": 440,
+      "height": 620,
+      "mode": "export",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1365,
+      "measurement": {
+        "viewportWidth": 440,
+        "viewportHeight": 771,
+        "width": 440,
+        "height": 771,
+        "overflowX": false,
+        "dedicated": true
+      }
+    },
+    {
+      "id": "icon",
+      "label": "Icon",
+      "width": 512,
+      "height": 512,
+      "mode": "icon",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1272,
+      "measurement": {
+        "viewportWidth": 512,
+        "viewportHeight": 512,
+        "width": 512,
+        "height": 512,
+        "overflowX": false,
+        "dedicated": true
+      }
+    }
+  ]
+}

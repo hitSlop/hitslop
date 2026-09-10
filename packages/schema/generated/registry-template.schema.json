@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "id",
+    "publisherKeyId",
+    "slug",
+    "title",
+    "description",
+    "categories",
+    "authorName",
+    "currentRelease",
+    "creationCount",
+    "firstPublishedAt",
+    "visibility"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "publisherKeyId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "slug": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true
+    },
+    "authorName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "\\S"
+    },
+    "authorURL": {
+      "type": "string",
+      "maxLength": 2048,
+      "format": "uri",
+      "pattern": "^https?://[^/?#\\s]+"
+    },
+    "currentRelease": {
+      "$ref": "#/definitions/RegistryRelease"
+    },
+    "creationCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "firstPublishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "visibility": {
+      "type": "string",
+      "pattern": "^(public|hidden)$"
+    }
+  },
+  "additionalProperties": false,
+  "title": "RegistryTemplate",
+  "definitions": {
+    "RegistryAsset": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "required": [
+        "key",
+        "sha256",
+        "bytes"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^(?:artifacts/sha256/[a-f0-9]{64}\\.slop\\.zip|(?:previews|icons)/sha256/[a-f0-9]{64}\\.png)$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false,
+      "title": "RegistryAsset"
+    },
+    "RegistryRelease": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "required": [
+        "id",
+        "number",
+        "publishedAt",
+        "artifact",
+        "preview",
+        "icon",
+        "manifestJSON"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "publishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "artifact": {
+          "$ref": "#/definitions/RegistryAsset"
+        },
+        "preview": {
+          "$ref": "#/definitions/RegistryAsset"
+        },
+        "icon": {
+          "$ref": "#/definitions/RegistryAsset"
+        },
+        "manifestJSON": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "title": "RegistryRelease"
+    }
+  }
+}

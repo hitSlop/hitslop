@@ -1,0 +1,667 @@
+{
+  "cases": [
+    {
+      "id": "typical",
+      "label": "Partly packed",
+      "data": {
+        "tripTitle": "TOKYO & KYOTO AUTUMN",
+        "destination": "HND / TOKYO",
+        "departureDate": "2026-10-14",
+        "traveler": "JORDAN / TRAVELER",
+        "bagTag": "HS-9402",
+        "flag": "\ud83c\uddef\ud83c\uddf5",
+        "categories": [
+          {
+            "id": "docs",
+            "name": "Documents & Valuables",
+            "tagCode": "DOCS",
+            "color": "cobalt"
+          },
+          {
+            "id": "carry",
+            "name": "Carry-on Essentials",
+            "tagCode": "CARRY",
+            "color": "vermilion"
+          },
+          {
+            "id": "tech",
+            "name": "Tech & Electronics",
+            "tagCode": "TECH",
+            "color": "emerald"
+          },
+          {
+            "id": "toiletries",
+            "name": "Toiletries & Meds",
+            "tagCode": "TOILET",
+            "color": "amber"
+          },
+          {
+            "id": "clothing",
+            "name": "Clothing & Footwear",
+            "tagCode": "WEAR",
+            "color": "plum"
+          },
+          {
+            "id": "gear",
+            "name": "Gear & Misc",
+            "tagCode": "GEAR",
+            "color": "slate"
+          }
+        ],
+        "items": [
+          {
+            "id": "1",
+            "categoryId": "docs",
+            "text": "Passport & International Driver Permit",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "2",
+            "categoryId": "docs",
+            "text": "JR Rail Pass Exchange Order",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "3",
+            "categoryId": "docs",
+            "text": "Credit Cards with No Foreign Fee",
+            "quantity": 2,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "4",
+            "categoryId": "carry",
+            "text": "Noise-Canceling Headphones",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "5",
+            "categoryId": "carry",
+            "text": "Travel Neck Pillow & Eye Mask",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          },
+          {
+            "id": "6",
+            "categoryId": "carry",
+            "text": "Empty Collapsible Water Bottle",
+            "quantity": 1,
+            "packed": false,
+            "essential": false
+          },
+          {
+            "id": "7",
+            "categoryId": "carry",
+            "text": "Emergency Cash (Yen)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "8",
+            "categoryId": "tech",
+            "text": "Universal Plug Adapter (Japan Type A)",
+            "quantity": 2,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "9",
+            "categoryId": "tech",
+            "text": "High-Capacity Power Bank (20,000mAh)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "10",
+            "categoryId": "tech",
+            "text": "Laptop & USB-C Fast Charger",
+            "quantity": 1,
+            "packed": false,
+            "essential": true
+          },
+          {
+            "id": "11",
+            "categoryId": "tech",
+            "text": "Camera & Extra Memory Cards",
+            "quantity": 1,
+            "packed": false,
+            "essential": false
+          },
+          {
+            "id": "12",
+            "categoryId": "toiletries",
+            "text": "TSA Quart Clear Liquids Bag",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "13",
+            "categoryId": "toiletries",
+            "text": "Prescription Meds & Ibuprofen",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "14",
+            "categoryId": "toiletries",
+            "text": "Sunscreen & Moisturizer",
+            "quantity": 1,
+            "packed": false,
+            "essential": false
+          },
+          {
+            "id": "15",
+            "categoryId": "clothing",
+            "text": "Walking Sneakers (Break-in Tested)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "16",
+            "categoryId": "clothing",
+            "text": "Light Packable Rain Shell",
+            "quantity": 1,
+            "packed": false,
+            "essential": true
+          },
+          {
+            "id": "17",
+            "categoryId": "clothing",
+            "text": "Merino Wool Tops & Underwear",
+            "quantity": 4,
+            "packed": false,
+            "essential": true
+          },
+          {
+            "id": "18",
+            "categoryId": "gear",
+            "text": "Compact Travel Umbrella",
+            "quantity": 1,
+            "packed": false,
+            "essential": false
+          },
+          {
+            "id": "19",
+            "categoryId": "gear",
+            "text": "Coin Pouch for Vending Machines",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty",
+      "label": "Empty tag",
+      "data": {
+        "tripTitle": "TOKYO & KYOTO AUTUMN",
+        "destination": "HND / TOKYO",
+        "departureDate": "2026-10-14",
+        "traveler": "JORDAN / TRAVELER",
+        "bagTag": "HS-9402",
+        "flag": "\ud83c\uddef\ud83c\uddf5",
+        "categories": [
+          {
+            "id": "docs",
+            "name": "Documents & Valuables",
+            "tagCode": "DOCS",
+            "color": "cobalt"
+          },
+          {
+            "id": "carry",
+            "name": "Carry-on Essentials",
+            "tagCode": "CARRY",
+            "color": "vermilion"
+          },
+          {
+            "id": "tech",
+            "name": "Tech & Electronics",
+            "tagCode": "TECH",
+            "color": "emerald"
+          },
+          {
+            "id": "toiletries",
+            "name": "Toiletries & Meds",
+            "tagCode": "TOILET",
+            "color": "amber"
+          },
+          {
+            "id": "clothing",
+            "name": "Clothing & Footwear",
+            "tagCode": "WEAR",
+            "color": "plum"
+          },
+          {
+            "id": "gear",
+            "name": "Gear & Misc",
+            "tagCode": "GEAR",
+            "color": "slate"
+          }
+        ],
+        "items": []
+      }
+    },
+    {
+      "id": "complete",
+      "label": "Ready to go",
+      "data": {
+        "tripTitle": "TOKYO & KYOTO AUTUMN",
+        "destination": "HND / TOKYO",
+        "departureDate": "2026-10-14",
+        "traveler": "JORDAN / TRAVELER",
+        "bagTag": "HS-9402",
+        "flag": "\ud83c\uddef\ud83c\uddf5",
+        "categories": [
+          {
+            "id": "docs",
+            "name": "Documents & Valuables",
+            "tagCode": "DOCS",
+            "color": "cobalt"
+          },
+          {
+            "id": "carry",
+            "name": "Carry-on Essentials",
+            "tagCode": "CARRY",
+            "color": "vermilion"
+          },
+          {
+            "id": "tech",
+            "name": "Tech & Electronics",
+            "tagCode": "TECH",
+            "color": "emerald"
+          },
+          {
+            "id": "toiletries",
+            "name": "Toiletries & Meds",
+            "tagCode": "TOILET",
+            "color": "amber"
+          },
+          {
+            "id": "clothing",
+            "name": "Clothing & Footwear",
+            "tagCode": "WEAR",
+            "color": "plum"
+          },
+          {
+            "id": "gear",
+            "name": "Gear & Misc",
+            "tagCode": "GEAR",
+            "color": "slate"
+          }
+        ],
+        "items": [
+          {
+            "id": "1",
+            "categoryId": "docs",
+            "text": "Passport & International Driver Permit",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "2",
+            "categoryId": "docs",
+            "text": "JR Rail Pass Exchange Order",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "3",
+            "categoryId": "docs",
+            "text": "Credit Cards with No Foreign Fee",
+            "quantity": 2,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "4",
+            "categoryId": "carry",
+            "text": "Noise-Canceling Headphones",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "5",
+            "categoryId": "carry",
+            "text": "Travel Neck Pillow & Eye Mask",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          },
+          {
+            "id": "6",
+            "categoryId": "carry",
+            "text": "Empty Collapsible Water Bottle",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          },
+          {
+            "id": "7",
+            "categoryId": "carry",
+            "text": "Emergency Cash (Yen)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "8",
+            "categoryId": "tech",
+            "text": "Universal Plug Adapter (Japan Type A)",
+            "quantity": 2,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "9",
+            "categoryId": "tech",
+            "text": "High-Capacity Power Bank (20,000mAh)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "10",
+            "categoryId": "tech",
+            "text": "Laptop & USB-C Fast Charger",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "11",
+            "categoryId": "tech",
+            "text": "Camera & Extra Memory Cards",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          },
+          {
+            "id": "12",
+            "categoryId": "toiletries",
+            "text": "TSA Quart Clear Liquids Bag",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "13",
+            "categoryId": "toiletries",
+            "text": "Prescription Meds & Ibuprofen",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "14",
+            "categoryId": "toiletries",
+            "text": "Sunscreen & Moisturizer",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          },
+          {
+            "id": "15",
+            "categoryId": "clothing",
+            "text": "Walking Sneakers (Break-in Tested)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "16",
+            "categoryId": "clothing",
+            "text": "Light Packable Rain Shell",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "17",
+            "categoryId": "clothing",
+            "text": "Merino Wool Tops & Underwear",
+            "quantity": 4,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "18",
+            "categoryId": "gear",
+            "text": "Compact Travel Umbrella",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          },
+          {
+            "id": "19",
+            "categoryId": "gear",
+            "text": "Coin Pouch for Vending Machines",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "long",
+      "label": "Long trip & item names",
+      "data": {
+        "tripTitle": "TOKYO, KYOTO & THE JAPANESE ALPS \u2014 THREE WEEKS AWAY",
+        "destination": "HND / TOKYO",
+        "departureDate": "2026-10-14",
+        "traveler": "JORDAN / TRAVELER",
+        "bagTag": "HS-9402",
+        "flag": "\ud83c\uddef\ud83c\uddf5",
+        "categories": [
+          {
+            "id": "docs",
+            "name": "Travel documents, reservations & valuables",
+            "tagCode": "DOCS",
+            "color": "cobalt"
+          },
+          {
+            "id": "carry",
+            "name": "Carry-on Essentials",
+            "tagCode": "CARRY",
+            "color": "vermilion"
+          },
+          {
+            "id": "tech",
+            "name": "Tech & Electronics",
+            "tagCode": "TECH",
+            "color": "emerald"
+          },
+          {
+            "id": "toiletries",
+            "name": "Toiletries & Meds",
+            "tagCode": "TOILET",
+            "color": "amber"
+          },
+          {
+            "id": "clothing",
+            "name": "Clothing & Footwear",
+            "tagCode": "WEAR",
+            "color": "plum"
+          },
+          {
+            "id": "gear",
+            "name": "Gear & Misc",
+            "tagCode": "GEAR",
+            "color": "slate"
+          }
+        ],
+        "items": [
+          {
+            "id": "1",
+            "categoryId": "docs",
+            "text": "Passport, international driving permit, printed reservations, and a spare copy of every document",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "2",
+            "categoryId": "docs",
+            "text": "JR Rail Pass Exchange Order",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "3",
+            "categoryId": "docs",
+            "text": "Credit Cards with No Foreign Fee",
+            "quantity": 2,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "4",
+            "categoryId": "carry",
+            "text": "Noise-Canceling Headphones",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "5",
+            "categoryId": "carry",
+            "text": "Travel Neck Pillow & Eye Mask",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          },
+          {
+            "id": "6",
+            "categoryId": "carry",
+            "text": "Empty Collapsible Water Bottle",
+            "quantity": 1,
+            "packed": false,
+            "essential": false
+          },
+          {
+            "id": "7",
+            "categoryId": "carry",
+            "text": "Emergency Cash (Yen)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "8",
+            "categoryId": "tech",
+            "text": "Universal Plug Adapter (Japan Type A)",
+            "quantity": 2,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "9",
+            "categoryId": "tech",
+            "text": "High-Capacity Power Bank (20,000mAh)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "10",
+            "categoryId": "tech",
+            "text": "Laptop & USB-C Fast Charger",
+            "quantity": 1,
+            "packed": false,
+            "essential": true
+          },
+          {
+            "id": "11",
+            "categoryId": "tech",
+            "text": "Camera & Extra Memory Cards",
+            "quantity": 1,
+            "packed": false,
+            "essential": false
+          },
+          {
+            "id": "12",
+            "categoryId": "toiletries",
+            "text": "TSA Quart Clear Liquids Bag",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "13",
+            "categoryId": "toiletries",
+            "text": "Prescription Meds & Ibuprofen",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "14",
+            "categoryId": "toiletries",
+            "text": "Sunscreen & Moisturizer",
+            "quantity": 1,
+            "packed": false,
+            "essential": false
+          },
+          {
+            "id": "15",
+            "categoryId": "clothing",
+            "text": "Walking Sneakers (Break-in Tested)",
+            "quantity": 1,
+            "packed": true,
+            "essential": true
+          },
+          {
+            "id": "16",
+            "categoryId": "clothing",
+            "text": "Light Packable Rain Shell",
+            "quantity": 1,
+            "packed": false,
+            "essential": true
+          },
+          {
+            "id": "17",
+            "categoryId": "clothing",
+            "text": "Merino Wool Tops & Underwear",
+            "quantity": 4,
+            "packed": false,
+            "essential": true
+          },
+          {
+            "id": "18",
+            "categoryId": "gear",
+            "text": "Compact Travel Umbrella",
+            "quantity": 1,
+            "packed": false,
+            "essential": false
+          },
+          {
+            "id": "19",
+            "categoryId": "gear",
+            "text": "Coin Pouch for Vending Machines",
+            "quantity": 1,
+            "packed": true,
+            "essential": false
+          }
+        ]
+      }
+    }
+  ]
+}

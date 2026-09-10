@@ -204,15 +204,48 @@ struct SlopDocumentAssets: Sendable {
         do {
             var measurement = try await begin(session.webView, token: token, mode: isPreview ? "preview" : "export")
             let dedicated = measurement["dedicated"] as? Bool == true
-            let width = originalFrame.width
+            var width = originalFrame.width
             var height = isPreview ? originalFrame.height : max(dedicated ? 1 : originalFrame.height, try geometry(measurement).height)
-            // A dedicated export is normal document flow, independent of the native window mask.
+            var rect = CGRect(x: 0, y: 0, width: width, height: height)
+            // Dedicated exports are the object itself, independent of the native window mask.
             // Re-measure after resizing; reject viewport-dependent layouts that never settle.
             // PDF captures offscreen content directly; avoid an enormous backing view.
-            if output == .exportPNG {
+            if isPreview && dedicated {
+                var box = try geometry(measurement)
+                var viewWidth = originalFrame.width
+                var viewHeight = originalFrame.height
                 var settled = false
                 for _ in 0..<4 {
-                    try validateSize(width: width, height: height, output: output)
+                    if max(0, box.width - viewWidth, ceil(box.maxX) - viewWidth) >= 48 {
+                        viewWidth = max(viewWidth, box.width, ceil(box.maxX))
+                    }
+                    if max(0, box.height - viewHeight, ceil(box.maxY) - viewHeight) >= 1 {
+                        viewHeight = max(viewHeight, box.height, ceil(box.maxY))
+                    }
+                    try validateSize(width: max(min(box.width, viewWidth), 1), height: max(min(box.height, viewHeight), 1), output: output, scale: 2)
+                    session.webView.frame.size = CGSize(width: viewWidth, height: viewHeight)
+                    _ = try await session.webView.callAsyncJavaScript("await window.__hitslopCapture.settle(token)", arguments: ["token": token], in: nil, contentWorld: .page)
+                    measurement = try await measure(session.webView, token: token)
+                    let next = try geometry(measurement)
+                    let bounds = CGRect(x: 0, y: 0, width: viewWidth, height: viewHeight)
+                    let visible = next.intersection(bounds)
+                    if next.minX >= -0.5, next.minY >= -0.5,
+                       next.maxX <= viewWidth + 48, next.maxY <= viewHeight + 48,
+                       visible.width >= 8, visible.height >= 8 {
+                        settled = true
+                        box = visible
+                        break
+                    }
+                    box = next
+                }
+                guard settled else { throw SlopPackageError.invalid("Preview export layout keeps changing with viewport size; use normal flow in Export.svelte") }
+                width = max(box.width, 1)
+                height = max(box.height, 1)
+                rect = CGRect(x: box.minX, y: box.minY, width: width, height: height)
+            } else if output == .exportPNG {
+                var settled = false
+                for _ in 0..<4 {
+                    try validateSize(width: width, height: height, output: output, scale: 2)
                     session.webView.frame.size = CGSize(width: width, height: height)
                     _ = try await session.webView.callAsyncJavaScript("await window.__hitslopCapture.settle(token)", arguments: ["token": token], in: nil, contentWorld: .page)
                     measurement = try await measure(session.webView, token: token)
@@ -221,19 +254,19 @@ struct SlopDocumentAssets: Sendable {
                     height = next
                 }
                 guard settled else { throw SlopPackageError.invalid("Export layout keeps changing with viewport height; use normal flow in Export.svelte") }
+                rect = CGRect(x: 0, y: 0, width: width, height: height)
             }
-            try validateSize(width: width, height: height, output: output)
-            let rect = CGRect(x: 0, y: 0, width: width, height: height)
+            let scale: CGFloat = output == .exportPNG || (isPreview && dedicated) ? 2 : 1
+            try validateSize(width: width, height: height, output: output, scale: scale)
             let data: Data
             switch output {
             case .previewPNG, .exportPNG:
-                let scale: CGFloat = isPreview ? 1 : 2
                 let configuration = WKSnapshotConfiguration()
                 configuration.rect = rect
                 configuration.snapshotWidth = NSNumber(value: Double(width * scale))
-                if dedicated && !isPreview { session.webView.setValue(false, forKey: "drawsBackground") }
+                if dedicated { session.webView.setValue(false, forKey: "drawsBackground") }
                 let image = try await session.webView.takeSnapshot(configuration: configuration)
-                data = dedicated && !isPreview ? try SlopPreviewImage.png(from: image) : try SlopPreviewImage.png(from: image, package: session.package, scale: scale)
+                data = dedicated ? try SlopPreviewImage.png(from: image) : try SlopPreviewImage.png(from: image, package: session.package, scale: scale)
             case .pdf:
                 let configuration = WKPDFConfiguration()
                 configuration.rect = rect
@@ -290,11 +323,10 @@ struct SlopDocumentAssets: Sendable {
         return error
     }
 
-    private static func validateSize(width: CGFloat, height: CGFloat, output: CaptureOutput) throws {
+    private static func validateSize(width: CGFloat, height: CGFloat, output: CaptureOutput, scale: CGFloat) throws {
         guard width.isFinite, height.isFinite, width > 0, height > 0 else { throw SlopPackageError.invalid("Invalid capture dimensions") }
         // PDF is vector output: a raster pixel budget would reject valid long documents.
         guard output != .pdf else { return }
-        let scale: CGFloat = output == .exportPNG ? 2 : 1
         guard width * scale <= 16_384, height * scale <= 16_384, width * height * scale * scale <= 24_000_000 else {
             throw SlopPackageError.invalid("PNG exceeds 16384 pixels per side or 24 megapixels at \(Int(scale))×; export as PDF for longer documents")
         }

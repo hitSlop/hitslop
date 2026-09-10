@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-10T16:36:29.620249+00:00",
+  "title": "Design System: Decision Balance",
+  "extensions": {
+    "colorMeta": {
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15% 0.0195 153.31)",
+          "oklch(26% 0.0195 153.31)",
+          "oklch(38% 0.0195 153.31)",
+          "oklch(49% 0.0195 153.31)",
+          "oklch(61% 0.0195 153.31)",
+          "oklch(72% 0.0195 153.31)",
+          "oklch(84% 0.0195 153.31)",
+          "oklch(95% 0.0195 153.31)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "tonalRamp": [
+          "oklch(15% 0.0942 90.83)",
+          "oklch(26% 0.0942 90.83)",
+          "oklch(38% 0.0942 90.83)",
+          "oklch(49% 0.0942 90.83)",
+          "oklch(61% 0.0942 90.83)",
+          "oklch(72% 0.0942 90.83)",
+          "oklch(84% 0.0942 90.83)",
+          "oklch(95% 0.0942 90.83)"
+        ]
+      },
+      "paper-soft": {
+        "role": "neutral",
+        "displayName": "Paper Soft",
+        "tonalRamp": [
+          "oklch(15% 0.0655 99.71)",
+          "oklch(26% 0.0655 99.71)",
+          "oklch(38% 0.0655 99.71)",
+          "oklch(49% 0.0655 99.71)",
+          "oklch(61% 0.0655 99.71)",
+          "oklch(72% 0.0655 99.71)",
+          "oklch(84% 0.0655 99.71)",
+          "oklch(95% 0.0655 99.71)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0409 158.28)",
+          "oklch(26% 0.0409 158.28)",
+          "oklch(38% 0.0409 158.28)",
+          "oklch(49% 0.0409 158.28)",
+          "oklch(61% 0.0409 158.28)",
+          "oklch(72% 0.0409 158.28)",
+          "oklch(84% 0.0409 158.28)",
+          "oklch(95% 0.0409 158.28)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15% 0.0192 128.82)",
+          "oklch(26% 0.0192 128.82)",
+          "oklch(38% 0.0192 128.82)",
+          "oklch(49% 0.0192 128.82)",
+          "oklch(61% 0.0192 128.82)",
+          "oklch(72% 0.0192 128.82)",
+          "oklch(84% 0.0192 128.82)",
+          "oklch(95% 0.0192 128.82)"
+        ]
+      },
+      "pro": {
+        "role": "primary",
+        "displayName": "Pro",
+        "tonalRamp": [
+          "oklch(15% 0.1087 174.88)",
+          "oklch(26% 0.1087 174.88)",
+          "oklch(38% 0.1087 174.88)",
+          "oklch(49% 0.1087 174.88)",
+          "oklch(61% 0.1087 174.88)",
+          "oklch(72% 0.1087 174.88)",
+          "oklch(84% 0.1087 174.88)",
+          "oklch(95% 0.1087 174.88)"
+        ]
+      },
+      "pro-soft": {
+        "role": "primary",
+        "displayName": "Pro Soft",
+        "tonalRamp": [
+          "oklch(15% 0.0786 156.66)",
+          "oklch(26% 0.0786 156.66)",
+          "oklch(38% 0.0786 156.66)",
+          "oklch(49% 0.0786 156.66)",
+          "oklch(61% 0.0786 156.66)",
+          "oklch(72% 0.0786 156.66)",
+          "oklch(84% 0.0786 156.66)",
+          "oklch(95% 0.0786 156.66)"
+        ]
+      },
+      "con": {
+        "role": "secondary",
+        "displayName": "Con",
+        "tonalRamp": [
+          "oklch(15% 0.1638 31.88)",
+          "oklch(26% 0.1638 31.88)",
+          "oklch(38% 0.1638 31.88)",
+          "oklch(49% 0.1638 31.88)",
+          "oklch(61% 0.1638 31.88)",
+          "oklch(72% 0.1638 31.88)",
+          "oklch(84% 0.1638 31.88)",
+          "oklch(95% 0.1638 31.88)"
+        ]
+      },
+      "con-soft": {
+        "role": "secondary",
+        "displayName": "Con Soft",
+        "tonalRamp": [
+          "oklch(15% 0.1081 45.13)",
+          "oklch(26% 0.1081 45.13)",
+          "oklch(38% 0.1081 45.13)",
+          "oklch(49% 0.1081 45.13)",
+          "oklch(61% 0.1081 45.13)",
+          "oklch(72% 0.1081 45.13)",
+          "oklch(84% 0.1081 45.13)",
+          "oklch(95% 0.1081 45.13)"
+        ]
+      },
+      "surface-focus": {
+        "role": "neutral",
+        "displayName": "Surface Focus",
+        "tonalRamp": [
+          "oklch(15% 0.1324 84.61)",
+          "oklch(26% 0.1324 84.61)",
+          "oklch(38% 0.1324 84.61)",
+          "oklch(49% 0.1324 84.61)",
+          "oklch(61% 0.1324 84.61)",
+          "oklch(72% 0.1324 84.61)",
+          "oklch(84% 0.1324 84.61)",
+          "oklch(95% 0.1324 84.61)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Decision statement",
+        "purpose": "Bundled Barlow Semibold for the editable decision."
+      },
+      "body": {
+        "displayName": "Reasons",
+        "purpose": "Direct text editing on ivory."
+      }
+    },
+    "shadows": [
+      {
+        "name": "thumb",
+        "value": "0 2px 4px rgba(30,37,29,.2)",
+        "purpose": "Raised slider grip."
+      },
+      {
+        "name": "menu",
+        "value": "0 8px 24px rgba(30,37,29,.2)",
+        "purpose": "Floating status menu."
+      },
+      {
+        "name": "add-hover",
+        "value": "inset 0 1px 4px rgba(30,37,29,.15)",
+        "purpose": "Pressed surface response on hover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "beam",
+        "value": "420ms cubic-out",
+        "purpose": "Balance changes; zero duration at initialization, during capture, or with reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stacked-container",
+        "value": "560px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Add Pro",
+      "kind": "button",
+      "refersTo": "add-pro",
+      "description": "Side-colored add action with an inset hover response.",
+      "html": "<button class=\"ds-add-pro\" aria-label=\"Add reason\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
+      "css": ".ds-add-pro{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:5px;color:#21564a;background:#e4eee8;cursor:pointer}.ds-add-pro:hover{box-shadow:inset 0 1px 4px rgba(30,37,29,.15)}.ds-add-pro:focus-visible{outline:2px solid #21564a;outline-offset:3px}"
+    },
+    {
+      "name": "Add Con",
+      "kind": "button",
+      "refersTo": "add-con",
+      "description": "Side-colored add action with an inset hover response.",
+      "html": "<button class=\"ds-add-con\" aria-label=\"Add reason\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M12 5v14M5 12h14\"/></svg></button>",
+      "css": ".ds-add-con{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:5px;color:#8a3324;background:#f3e6e0;cursor:pointer}.ds-add-con:hover{box-shadow:inset 0 1px 4px rgba(30,37,29,.15)}.ds-add-con:focus-visible{outline:2px solid #21564a;outline-offset:3px}"
+    },
+    {
+      "name": "Reason field",
+      "kind": "input",
+      "description": "Direct editing on the working bed.",
+      "html": "<textarea class=\"ds-reason\" aria-label=\"Reason for\">More time with family</textarea>",
+      "css": ".ds-reason{width:100%;min-height:44px;border:0;padding:10px 0;background:#f5f2e9;color:#29332d;font:15px/22px \"Avenir Next\",Avenir,\"Helvetica Neue\",sans-serif;resize:none;overflow-wrap:anywhere}.ds-reason:focus-visible{outline:none;box-shadow:0 2px 0 #21564a}"
+    },
+    {
+      "name": "Status selector",
+      "kind": "button",
+      "refersTo": "status",
+      "description": "Owner-selected verdict status. The snippet represents its trigger.",
+      "html": "<button class=\"ds-status\">Evaluating <svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 9 6 6 6-6\"/></svg></button>",
+      "css": ".ds-status{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;border:1px solid #62675d;border-radius:5px;padding:10px 12px;color:#29332d;background:#f5f2e9;font:14px \"Avenir Next\",Avenir,\"Helvetica Neue\",sans-serif;cursor:pointer}.ds-status:focus-visible{outline:2px solid #21564a;outline-offset:3px}"
+    },
+    {
+      "name": "Remove reason",
+      "kind": "button",
+      "description": "Quiet destructive action that gains rust on hover.",
+      "html": "<button class=\"ds-remove\" aria-label=\"Remove reason\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"><path d=\"M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6\"/></svg></button>",
+      "css": ".ds-remove{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:4px;padding:0;color:#62675d;background:transparent;cursor:pointer}.ds-remove:hover{color:#8a3324;background:#f3e6e0}.ds-remove:focus-visible{outline:2px solid #21564a;outline-offset:3px}"
+    },
+    {
+      "name": "Balance pans",
+      "kind": "custom",
+      "description": "Open upper edges and rounded lower corners form the scale vessels; the icon uses a larger lower radius.",
+      "html": "<div class=\"ds-pans\"><span class=\"ds-scale-pan\">4</span><span class=\"ds-icon-pan\" aria-label=\"Icon pan\"></span></div>",
+      "css": ".ds-pans{display:flex;align-items:center;gap:24px;padding:20px;background:#343935}.ds-scale-pan{display:grid;min-width:48px;min-height:30px;place-items:center;border:2px solid #c0d5b8;border-top:0;border-radius:0 0 16px 16px;padding:3px 8px 5px;color:#21564a;background:#e4eee8;font:600 18px \"Decision Barlow\",Georgia,serif}.ds-icon-pan{width:50px;height:34px;border:4px solid #8b937c;border-top:0;border-radius:0 0 18px 18px;background:#e4eee8}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The compact weighing instrument",
+    "overview": "Warm graphite holds an ivory working bed. A shallow moving balance makes the arithmetic visible while editable reasons remain the main working content. The owner supplies the conclusion.",
+    "keyCharacteristics": [
+      "A compact mechanical readout above direct text editing.",
+      "Green Pros and rust Cons, reinforced by words and point totals.",
+      "Quiet controls with visible focus and generous action targets."
+    ],
+    "rules": [
+      {
+        "name": "The Paired Sides Rule",
+        "body": "Keep each side's heading, slider range, and add control in its own accent family; retain text labels and totals.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do keep reasons editable and the arithmetic readable in words and numbers.",
+      "Do preserve the graphite, ivory, green, and rust relationships across capture views.",
+      "Do keep focus visible and settle beam motion for reduced motion and capture."
+    ],
+    "donts": [
+      "Don't turn the calculated balance into an automatic verdict.",
+      "Don't add sample reasons to a new owner's document; use author-only review fixtures."
+    ]
+  }
+}

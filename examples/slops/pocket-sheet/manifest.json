@@ -1,0 +1,19 @@
+{
+  "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "author": {
+    "name": "hitSlop",
+    "url": "https://hitslop.com"
+  },
+  "slug": "pocket-sheet",
+  "title": "Pocket Spreadsheet",
+  "description": "A graphite pocket spreadsheet for formulas, cell ranges, multi-cell selection, and CSV.",
+  "categories": [
+    "finance",
+    "productivity"
+  ],
+  "presentation": {
+    "width": 760,
+    "height": 600,
+    "shape": "rounded"
+  }
+}

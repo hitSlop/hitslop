@@ -9,12 +9,12 @@ export const devHostJavaScript = `(() => {
   if (captureMode === 'icon') document.documentElement.dataset.slopRenderer = 'true';
   if (captureMode === 'icon' || captureMode === 'export') {
     window.addEventListener('slop:ready', () => {
-      setTimeout(async () => {
+      window.__hitslopDevCapture = new Promise(resolve => setTimeout(async () => {
         try {
           if (captureMode === 'icon') document.documentElement.style.width = '512px';
-          await window.__hitslopCapture.begin('dev-preview', captureMode, {blockInteraction:false});
-        } catch (error) { console.error('Capture preview failed', error); }
-      }, 0);
+          resolve(await window.__hitslopCapture.begin('dev-preview', captureMode, {blockInteraction:false}));
+        } catch (error) { window.__hitslopDevCaptureError = String(error); console.error('Capture preview failed', error); resolve(undefined); }
+      }, 0));
     }, {once:true});
   }
   const listeners = { json: new Set(), media: new Set() };
@@ -39,7 +39,7 @@ export const devHostJavaScript = `(() => {
     flush: async () => undefined,
     json: Object.freeze({
       open: async (value) => {
-        if (!jsonOpened) { jsonValue = clone(value); jsonOpened = true; }
+        if (!jsonOpened) { jsonValue = clone(window.__hitslopReviewConfig && Object.hasOwn(window.__hitslopReviewConfig, 'data') ? window.__hitslopReviewConfig.data : value); jsonOpened = true; }
         return { value: clone(jsonValue), revision: revision() };
       },
       read: async () => {
@@ -79,12 +79,67 @@ export const devHostJavaScript = `(() => {
 
 export const bridgeScript = `<script>${devHostJavaScript}</script>`;
 
-export const injectHost = (html: string, options: { themeHref?: string } = {}): string => {
+export const injectHost = (
+  html: string,
+  options: {
+    themeHref?: string;
+    review?: { pane: string; run: string; fingerprint: string; data?: unknown };
+  } = {},
+): string => {
   const theme = options.themeHref
     ? `<link rel="stylesheet" href="${options.themeHref}" data-hitslop-theme-default>`
     : "";
-  const payload = hostStyle + theme + bridgeScript;
+  const reviewConfig = options.review
+    ? `<script>window.__hitslopReviewConfig=${JSON.stringify(options.review).replaceAll("<", "\\u003c").replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029")}</script>`
+    : "";
+  const payload =
+    hostStyle +
+    theme +
+    reviewConfig +
+    bridgeScript +
+    (options.review ? `<script>${reviewHostJavaScript}</script>` : "");
   return /<head(?:\s[^>]*)?>/i.test(html)
     ? html.replace(/<head(?:\s[^>]*)?>/i, (tag) => tag + payload)
     : payload + html;
 };
+
+/** Review-only diagnostics; no disk stores, polling, or production bridge changes. */
+export const reviewHostJavaScript = `(() => {
+  const config = window.__hitslopReviewConfig;
+  const errors = [];
+  let ready = false;
+  let scheduled = false;
+  const report = () => {
+    scheduled = false;
+    const bounds = window.__hitslopCapture?.measure('dev-preview');
+    const root = document.documentElement;
+    const measurement = { viewportWidth: innerWidth, viewportHeight: innerHeight,
+      width: bounds?.width ?? root.scrollWidth, height: bounds?.height ?? root.scrollHeight,
+      overflowX: root.scrollWidth > innerWidth, dedicated: bounds?.dedicated ?? false };
+    parent.postMessage({ type: 'hitslop:review', pane: config.pane, run: config.run,
+      fingerprint: config.fingerprint, ready, errors: [...errors], measurement }, location.origin);
+  };
+  const schedule = () => { if (!scheduled) { scheduled = true; requestAnimationFrame(report); } };
+  const fail = value => { errors.push(String(value)); schedule(); };
+  window.addEventListener('error', event => fail(event.message || 'Resource failed to load'), true);
+  window.addEventListener('unhandledrejection', event => fail(event.reason));
+  const originalError = console.error;
+  console.error = (...args) => { originalError.apply(console, args); fail(args.map(String).join(' ')); };
+  const timeout = setTimeout(() => { if (!ready) fail('Preview did not become ready within 15 seconds'); }, 15000);
+  window.addEventListener('slop:ready', async () => {
+    try {
+      await window.__hitslopDevCapture;
+      if (window.__hitslopDevCaptureError) throw new Error(window.__hitslopDevCaptureError);
+      await document.fonts.ready;
+      await Promise.all([...document.images].filter(image => image.getClientRects().length).map(image => image.decode()));
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+      ready = true; clearTimeout(timeout); report();
+      const observer = new ResizeObserver(schedule);
+      observer.observe(document.documentElement);
+      if (document.body) observer.observe(document.body);
+      window.addEventListener('resize', schedule);
+      window.addEventListener('pagehide', () => { observer.disconnect(); clearTimeout(timeout); }, { once: true });
+    } catch (error) { clearTimeout(timeout); fail(error); }
+  }, { once: true });
+})();`;

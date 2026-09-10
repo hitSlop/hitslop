@@ -2,7 +2,7 @@
 
 ## Version policy
 
-The macOS release candidate is `1.0.4` (build `22`). The npm platform packages
+The macOS release candidate is `1.0.5` (build `23`). The npm platform packages
 use `0.3.x` for JSON persistence improvements and the adapter error callback
 change; iOS remains at `0.1.0`.
 Do not force unrelated products to share one version.

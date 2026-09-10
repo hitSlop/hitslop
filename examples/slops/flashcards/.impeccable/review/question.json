@@ -1,0 +1,82 @@
+{
+  "slug": "flashcards",
+  "fixture": "question",
+  "fingerprint": "94d9eab3504bcc60",
+  "preparedAt": "2026-09-10T18:28:24.183Z",
+  "design": "examples/slops/flashcards/DESIGN.md",
+  "brief": "examples/slops/.impeccable/surfaces/flashcards-src-app-svelte.md",
+  "panes": [
+    {
+      "id": "editor",
+      "label": "Editor",
+      "width": 540,
+      "height": 440,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 428,
+      "measurement": {
+        "viewportWidth": 540,
+        "viewportHeight": 440,
+        "width": 540,
+        "height": 440,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow editor",
+      "width": 360,
+      "height": 440,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 490,
+      "measurement": {
+        "viewportWidth": 360,
+        "viewportHeight": 440,
+        "width": 360,
+        "height": 440,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "width": 540,
+      "height": 440,
+      "mode": "export",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 725,
+      "measurement": {
+        "viewportWidth": 540,
+        "viewportHeight": 371,
+        "width": 540,
+        "height": 371,
+        "overflowX": false,
+        "dedicated": true
+      }
+    },
+    {
+      "id": "icon",
+      "label": "Icon",
+      "width": 512,
+      "height": 512,
+      "mode": "icon",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 764,
+      "measurement": {
+        "viewportWidth": 512,
+        "viewportHeight": 512,
+        "width": 512,
+        "height": 512,
+        "overflowX": false,
+        "dedicated": true
+      }
+    }
+  ]
+}

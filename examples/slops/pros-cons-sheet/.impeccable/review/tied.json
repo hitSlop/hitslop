@@ -1,0 +1,83 @@
+{
+  "slug": "pros-cons-sheet",
+  "fixture": "tied",
+  "fingerprint": "c52c41c4a97717c2",
+  "preparedAt": "2026-09-10T16:42:08.698Z",
+  "design": "examples/slops/pros-cons-sheet/DESIGN.md",
+  "brief": "examples/slops/.impeccable/surfaces/pros-cons-sheet-src-app-svelte.md",
+  "panes": [
+    {
+      "id": "editor",
+      "label": "Editor",
+      "width": 720,
+      "height": 680,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1433,
+      "measurement": {
+        "viewportWidth": 720,
+        "viewportHeight": 680,
+        "width": 720,
+        "height": 694,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow editor",
+      "width": 360,
+      "height": 680,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1425,
+      "measurement": {
+        "viewportWidth": 360,
+        "viewportHeight": 680,
+        "width": 360,
+        "height": 1129,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "width": 720,
+      "height": 680,
+      "mode": "export",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1557,
+      "measurement": {
+        "viewportWidth": 720,
+        "viewportHeight": 573,
+        "width": 720,
+        "height": 573,
+        "overflowX": false,
+        "dedicated": true
+      }
+    },
+    {
+      "id": "icon",
+      "label": "Icon",
+      "width": 512,
+      "height": 512,
+      "mode": "icon",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 1556,
+      "measurement": {
+        "viewportWidth": 512,
+        "viewportHeight": 512,
+        "width": 512,
+        "height": 512,
+        "overflowX": false,
+        "dedicated": true
+      }
+    }
+  ],
+  "screenshot": "tied.jpg"
+}

@@ -1,0 +1,82 @@
+{
+  "slug": "reading-tracker",
+  "fixture": "typical",
+  "fingerprint": "bde7d8577f18d420",
+  "preparedAt": "2026-09-10T19:25:29.414Z",
+  "design": "examples/slops/reading-tracker/DESIGN.md",
+  "brief": "examples/slops/.impeccable/surfaces/reading-tracker-src-app-svelte.md",
+  "panes": [
+    {
+      "id": "editor",
+      "label": "Editor",
+      "width": 560,
+      "height": 600,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 2242,
+      "measurement": {
+        "viewportWidth": 560,
+        "viewportHeight": 600,
+        "width": 560,
+        "height": 610,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow editor",
+      "width": 360,
+      "height": 600,
+      "mode": "live",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 2243,
+      "measurement": {
+        "viewportWidth": 360,
+        "viewportHeight": 600,
+        "width": 360,
+        "height": 678,
+        "overflowX": false,
+        "dedicated": false
+      }
+    },
+    {
+      "id": "export",
+      "label": "Export",
+      "width": 560,
+      "height": 600,
+      "mode": "export",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 2386,
+      "measurement": {
+        "viewportWidth": 560,
+        "viewportHeight": 484,
+        "width": 560,
+        "height": 484,
+        "overflowX": false,
+        "dedicated": true
+      }
+    },
+    {
+      "id": "icon",
+      "label": "Icon",
+      "width": 512,
+      "height": 512,
+      "mode": "icon",
+      "ready": true,
+      "errors": [],
+      "previewReadyMs": 2422,
+      "measurement": {
+        "viewportWidth": 512,
+        "viewportHeight": 512,
+        "width": 512,
+        "height": 512,
+        "overflowX": false,
+        "dedicated": true
+      }
+    }
+  ]
+}

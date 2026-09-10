@@ -536,11 +536,7 @@ private struct CatalogDetail: View {
                         }
 
                         CatalogImageView(urls: previewURLs(for: entry), fallback: .preview)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: 250, maxHeight: 520)
-                            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 16))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.09)))
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(alignment: .leading, spacing: 0) {
                             Text("At a glance").font(.headline).padding(.bottom, 9)
@@ -682,18 +678,38 @@ private struct CatalogImageView: View {
     let urls: [URL]
     let fallback: CatalogImageFallback
     @State private var image: NSImage?
+    private let maxPreviewWidth: CGFloat = 560
+    private let maxPreviewHeight: CGFloat = 420
 
     var body: some View {
         Group {
             if let image {
-                Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
+                let preview = Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
+                if fallback == .preview {
+                    preview.frame(maxWidth: min(maxPreviewWidth, image.size.width), maxHeight: min(maxPreviewHeight, image.size.height))
+                } else {
+                    preview
+                }
             } else if fallback == .applicationIcon {
                 Image(nsImage: NSApplication.shared.applicationIconImage).resizable().interpolation(.high).scaledToFit().padding(8)
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "photo").font(.title2)
                     Text("Preview unavailable").font(.caption.weight(.medium))
-                }.foregroundStyle(.secondary)
+                }
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, minHeight: 180)
+            }
+        }
+        .padding(fallback == .preview ? 10 : 0)
+        .background {
+            if fallback == .preview {
+                RoundedRectangle(cornerRadius: 16).fill(Color(nsColor: .controlBackgroundColor))
+            }
+        }
+        .overlay {
+            if fallback == .preview {
+                RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.09))
             }
         }
         .task(id: urls.map(\.absoluteString).joined(separator: "|")) {

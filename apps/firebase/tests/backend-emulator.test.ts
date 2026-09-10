@@ -69,6 +69,7 @@ if (!emulator) {
     expect(firstTemplate.authorName).toBe("Counter Author");
     expect(firstTemplate.authorURL).toBe("https://example.com/counter");
     expect(firstTemplate.creationCount).toBe(0);
+    expect(firstTemplate).not.toHaveProperty("searchText");
     expect(firstTemplate.firstPublishedAt).toBeInstanceOf(Timestamp);
     expect(firstTemplate.currentRelease.number).toBe(1);
     expect(firstTemplate.currentRelease.artifact.sha256).toBe(hash("a"));
@@ -119,7 +120,40 @@ if (!emulator) {
 
     await templateRef.update({ visibility: "hidden" });
     expect(await backend.recordCreation(first.templateId)).toBe(false);
+    await backend.finalizePublish({ ...firstInput, requestId: crypto.randomUUID() });
+    const hiddenUpdate = (await templateRef.get()).data()!;
+    expect(hiddenUpdate.visibility).toBe("hidden");
+    expect(hiddenUpdate.creationCount).toBe(1);
+    expect(hiddenUpdate.firstPublishedAt).toEqual(firstTemplate.firstPublishedAt);
     expect(await backend.listTemplates()).toEqual([]);
     expect(await backend.recordCreation("missing")).toBe(false);
   });
+
+  test("catalog projection is independent of manifest parsing and author URL is removed on update", async () => {
+    const first = await backend.finalizePublish(input({
+      requestId: crypto.randomUUID(),
+      manifest: parseManifest({ ...input().manifest, slug: "projection" }),
+    }));
+    const ref = firestore.collection("templates").doc(first.templateId);
+    await ref.update({ title: "Projected title", "currentRelease.manifestJSON": "not JSON" });
+    expect((await backend.listTemplates()).find(item => item.id === first.templateId)?.title).toBe("Projected title");
+    await backend.finalizePublish(input({
+      requestId: crypto.randomUUID(),
+      manifest: parseManifest({ ...input().manifest, slug: "projection", author: { name: "New Author" } }),
+    }));
+    expect((await ref.get()).data()).not.toHaveProperty("authorURL");
+    expect((await backend.listTemplates()).find(item => item.id === first.templateId)?.author).toEqual({ name: "New Author" });
+    await ref.update({ "currentRelease.artifact.bytes": -1 });
+    expect((await backend.listTemplates()).find(item => item.id === first.templateId)).toBeUndefined();
+  });
+
+  test("concurrent publications serialize release numbers and concurrent retries create one release", async () => {
+    const base = input({ requestId: crypto.randomUUID(), manifest: parseManifest({ ...input().manifest, slug: "concurrent" }) });
+    const retries = await Promise.all([backend.finalizePublish(base), backend.finalizePublish(base)]);
+    expect(retries[0]).toEqual(retries[1]);
+    const updates = await Promise.all([1, 2].map(() => backend.finalizePublish({ ...base, requestId: crypto.randomUUID() })));
+    expect(updates.map(result => result.releaseNumber).sort()).toEqual([2, 3]);
+    const releases = await firestore.collection("releases").where("templateId", "==", retries[0]!.templateId).get();
+    expect(releases.size).toBe(3);
+  }, 30_000);
 }

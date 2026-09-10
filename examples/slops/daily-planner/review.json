@@ -1,0 +1,187 @@
+{
+  "cases": [
+    {
+      "id": "typical",
+      "label": "A little structure",
+      "data": {
+        "date": "2026-09-10",
+        "priorities": [
+          {
+            "text": "Finish the quarterly summary",
+            "done": false
+          },
+          {
+            "text": "Call the framer back",
+            "done": true
+          },
+          {
+            "text": "Leave time for a swim",
+            "done": false
+          }
+        ],
+        "blocks": [
+          {
+            "id": "a",
+            "title": "Reading & coffee",
+            "start": "07:00",
+            "end": "08:00",
+            "kind": "personal"
+          },
+          {
+            "id": "b",
+            "title": "Quarterly summary",
+            "start": "09:00",
+            "end": "11:00",
+            "kind": "focus"
+          },
+          {
+            "id": "c",
+            "title": "Team stand-up",
+            "start": "11:00",
+            "end": "11:30",
+            "kind": "meeting"
+          },
+          {
+            "id": "d",
+            "title": "Lunch away from the desk",
+            "start": "12:30",
+            "end": "13:15",
+            "kind": "break"
+          },
+          {
+            "id": "e",
+            "title": "Call the framer",
+            "start": "14:00",
+            "end": "14:30",
+            "kind": "meeting"
+          },
+          {
+            "id": "f",
+            "title": "Edits & inbox",
+            "start": "15:00",
+            "end": "17:00",
+            "kind": "focus"
+          },
+          {
+            "id": "g",
+            "title": "Swim",
+            "start": "18:30",
+            "end": "19:30",
+            "kind": "personal"
+          }
+        ],
+        "notes": "Book the van for Saturday. Ask about the delivery window."
+      }
+    },
+    {
+      "id": "long",
+      "label": "Overlaps & long notes",
+      "data": {
+        "date": "2026-09-09",
+        "priorities": [
+          {
+            "text": "Finish the quarterly summary",
+            "done": false
+          },
+          {
+            "text": "Call the framer back",
+            "done": true
+          },
+          {
+            "text": "Leave time for a swim",
+            "done": false
+          }
+        ],
+        "blocks": [
+          {
+            "id": "a",
+            "title": "Reading & coffee",
+            "start": "07:00",
+            "end": "08:00",
+            "kind": "personal"
+          },
+          {
+            "id": "b",
+            "title": "Finish the quarterly summary and bring the whole team up to speed before the review",
+            "start": "09:00",
+            "end": "11:00",
+            "kind": "focus"
+          },
+          {
+            "id": "c",
+            "title": "Team stand-up",
+            "start": "11:00",
+            "end": "11:30",
+            "kind": "meeting"
+          },
+          {
+            "id": "d",
+            "title": "Lunch away from the desk",
+            "start": "12:30",
+            "end": "13:15",
+            "kind": "break"
+          },
+          {
+            "id": "e",
+            "title": "Call the framer",
+            "start": "14:00",
+            "end": "14:30",
+            "kind": "meeting"
+          },
+          {
+            "id": "f",
+            "title": "Edits & inbox",
+            "start": "15:00",
+            "end": "17:00",
+            "kind": "focus"
+          },
+          {
+            "id": "g",
+            "title": "Swim",
+            "start": "18:30",
+            "end": "19:30",
+            "kind": "personal"
+          },
+          {
+            "id": "overlap",
+            "title": "Design check-in with the team",
+            "start": "09:30",
+            "end": "10:30",
+            "kind": "meeting"
+          },
+          {
+            "id": "short",
+            "title": "Quick check-in",
+            "start": "17:00",
+            "end": "17:15",
+            "kind": "meeting"
+          }
+        ],
+        "notes": "Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. Long notes stay readable. "
+      }
+    },
+    {
+      "id": "empty",
+      "label": "A clear day",
+      "data": {
+        "date": "2026-09-09",
+        "priorities": [
+          {
+            "text": "",
+            "done": false
+          },
+          {
+            "text": "",
+            "done": false
+          },
+          {
+            "text": "",
+            "done": false
+          }
+        ],
+        "blocks": [],
+        "notes": ""
+      }
+    }
+  ]
+}
