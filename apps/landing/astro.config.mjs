@@ -1,9 +1,11 @@
 import { defineConfig } from "astro/config";
 import svelte from "@astrojs/svelte";
 import starlight from "@astrojs/starlight";
+import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 
 export default defineConfig({
   site: "https://hitslop.com",
+  vite: { plugins: [vanillaExtractPlugin()] },
   integrations: [
     svelte(),
     starlight({

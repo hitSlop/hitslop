@@ -1,0 +1,32 @@
+---
+import * as s from "./TerminalWalkthrough.css";
+
+const steps = [
+  { note: "Create a starter. Follow the setup questions.", commands: ["bunx @hitslop/cli init my-slop"] },
+  { note: "Step into your project.", commands: ["cd my-slop", "bun install"] },
+  { note: "Make it yours with your coding agent. Preview as you go.", commands: ["bun run dev"] },
+  { note: "Stop the preview with Ctrl+C, then build your app.", commands: ["bun run build"] },
+];
+---
+
+<figure class={s.terminal} aria-label="Create a slop in your terminal">
+  <div class={s.bar}>
+    <span class={s.lights} aria-hidden="true"><i class={s.red}></i><i class={s.yellow}></i><i class={s.green}></i></span>
+    <span class={s.windowTitle}>Terminal</span>
+    <span class={s.example}>Example workflow</span>
+  </div>
+  <div class={s.transcript}>
+    {steps.map((step) => (
+      <div class={s.step}>
+        <p class={s.note}># {step.note}</p>
+        {step.commands.map((command) => (
+          <div class={s.commandLine}><span class={s.prompt} aria-hidden="true">$</span><code class={s.command}>{command}</code></div>
+        ))}
+      </div>
+    ))}
+  </div>
+  <figcaption class={s.result}>
+    <svg class={s.fileIcon} aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z" /><path d="M14 3v6h6M8 14h8M8 17h5" /></svg>
+    <div class={s.resultCopy}><code class={s.output}>dist/my-slop.slop</code><span class={s.resultHint}>Your app, ready to open in hitSlop.</span></div>
+  </figcaption>
+</figure>

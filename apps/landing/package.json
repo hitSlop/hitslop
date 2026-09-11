@@ -20,6 +20,8 @@
     "svelte": "^5.57.0"
   },
   "devDependencies": {
+    "@vanilla-extract/css": "^1.21.2",
+    "@vanilla-extract/vite-plugin": "^5.2.6",
     "@astrojs/check": "^0.9.10",
     "typescript": "^6.0.3",
     "wrangler": "^4.130.0"

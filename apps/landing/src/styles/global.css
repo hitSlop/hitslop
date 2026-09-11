@@ -156,21 +156,6 @@ h2 { font-size: clamp(2.65rem, 10.5vw, 5rem); font-weight: 650; line-height: .98
 .make-section { width: min(1320px, 100%); margin: 0 auto; padding: clamp(96px, 13vw, 170px) 18px; display: grid; gap: 64px; scroll-margin-top: 72px; }
 .make-copy > p:not(.eyebrow) { max-width: 42rem; margin: 26px 0 0; color: var(--muted); font-size: 1.04rem; line-height: 1.65; }
 .text-link { margin-top: 24px; display: inline-flex; align-items: center; gap: 8px; border-bottom: 1px solid currentColor; font-size: .83rem; font-weight: 650; }
-.fork-row { padding-top: 64px; display: grid; gap: 22px; border-top: 1px solid var(--rule); }
-.fork-object { display: grid; gap: 9px; }
-.fork-object > small { color: var(--faint); font-size: .65rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
-.fork-object > div { min-height: 260px; padding: 24px; display: grid; align-content: start; gap: 12px; border: 1px solid var(--rule); box-shadow: var(--shadow-md); }
-.fork-object span { color: var(--muted); font-family: "Newsreader", Georgia, serif; font-size: 1.2rem; }
-.fork-object strong { font-size: 2.4rem; letter-spacing: -.06em; }
-.fork-object i { min-height: 34px; border-bottom: 1px solid var(--rule); color: oklch(49% .11 72); font-size: .73rem; font-style: normal; letter-spacing: .1em; }
-.fork-before > div { border-radius: 10px; background: var(--raised); }
-.fork-before i { position: relative; }
-.fork-before i::after { position: absolute; top: 12px; left: 0; width: 62%; height: 6px; border-radius: 3px; background: oklch(82% .012 255); content: ""; }
-.fork-prompt { align-self: center; padding: 22px; border: 1px solid var(--rule); border-radius: 14px; background: oklch(94% .04 263); }
-.fork-prompt span { font-size: .64rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.fork-prompt p { margin: 8px 0 0; font-family: "Newsreader", Georgia, serif; font-size: 1.25rem; font-weight: 600; line-height: 1.2; }
-.fork-prompt b { margin-top: 15px; display: block; font-size: 1.3rem; }
-.fork-after > div { border-radius: 4px; background: oklch(95% .035 79); box-shadow: 8px 8px 0 oklch(42% .05 70 / .14), var(--shadow-md); transform: rotate(.6deg); }
 
 .publish-section { display: grid; gap: 64px; background: var(--yellow); }
 .publish-copy > p:not(.eyebrow) { max-width: 42rem; margin: 26px 0 0; color: oklch(31% .045 75); font-size: 1.04rem; line-height: 1.65; }
@@ -207,7 +192,7 @@ h2 { font-size: clamp(2.65rem, 10.5vw, 5rem); font-weight: 650; line-height: .98
 .format-png { right: 2%; top: 15%; transform: rotate(5deg); }
 .format-pdf { left: 0; bottom: 13%; transform: rotate(-6deg); background: oklch(50% .16 28); }
 
-.catalog-section { width: min(1420px, calc(100% - 24px)); margin: 0 auto; padding: clamp(88px, 12vw, 155px) clamp(18px, 5.2vw, 74px); scroll-margin-top: 72px; border: 1px solid var(--rule); border-radius: 32px; background: oklch(97.7% .006 250); }
+.catalog-section { width: min(1800px, calc(100% - 24px)); margin: 0 auto; padding: clamp(88px, 12vw, 155px) clamp(18px, 5.2vw, 74px); scroll-margin-top: 72px; border: 1px solid var(--rule); border-radius: 32px; background: oklch(97.7% .006 250); }
 .catalog-heading { margin-bottom: clamp(48px, 7vw, 82px); display: grid; gap: 25px; }
 .catalog-heading > p { max-width: 35rem; margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.65; }
 
@@ -242,8 +227,6 @@ a:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outlin
   .make-section, .faq-section { padding-inline: clamp(28px, 5vw, 64px); }
   .site-footer { padding-inline: clamp(28px, 5vw, 64px); grid-template-columns: auto 1fr; }
   .site-footer nav { grid-column: 1 / -1; }
-  .fork-row { grid-template-columns: 1fr .74fr 1fr; align-items: center; }
-  .fork-prompt b { transform: rotate(0); }
   .publish-flow { grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; }
   .publish-flow > i { transform: none; }
 }
@@ -262,7 +245,6 @@ a:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outlin
   .export-copy { order: 2; }
   .export-art { order: 1; }
   .make-section { grid-template-columns: .72fr 1.28fr; align-items: center; }
-  .fork-row { grid-column: 1 / -1; }
   .faq-section { grid-template-columns: .72fr 1.28fr; align-items: start; }
   .catalog-heading { grid-template-columns: 1fr minmax(320px,.7fr); align-items: end; gap: 60px; }
   .catalog-heading > p { margin-bottom: 8px; }

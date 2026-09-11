@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import type { CatalogTemplate } from "@hitslop/schema";
   import { SITE_LINKS } from "../constants";
+  import * as s from "./TemplateBrowser.css";
 
   type Category = CatalogTemplate["categories"][number];
   type LoadState = "loading" | "ready" | "error";
@@ -118,21 +119,21 @@
     {/if}
     <div class="result-heading" aria-live="polite"><h3>{heading}</h3><span>{filtered.length} {filtered.length === 1 ? "result" : "results"}</span></div>
     {#if filtered.length}
-      <div class="template-grid">
-        {#each filtered as template, index}
-          <article class="template-card" class:lead={index === 0 && filtered.length > 3}>
-            <a class="preview-stage" href={template.download.url} download={`${template.slug}.slop.zip`} aria-label={`Download ${template.title}`}>
-              <img src={template.preview.url} alt={`Preview of ${template.title}`} loading="lazy" />
-              <span>Download .slop <b aria-hidden="true">↓</b></span>
+      <div class={s.grid}>
+        {#each filtered as template}
+          <article class={s.card}>
+            <a class={s.previewStage} href={template.download.url} download={`${template.slug}.slop.zip`} aria-label={`Download ${template.title}`}>
+              <img class={s.previewImage} src={template.preview.url} alt={`Preview of ${template.title}`} loading="lazy" />
+              <span class={s.previewAction}>Download .slop <b aria-hidden="true">↓</b></span>
             </a>
-            <div class="template-copy">
-              <div class="title-row"><img src={template.icon.url} alt="" loading="lazy" /><div><small>{template.categories.join(" · ")}</small><h4>{template.title}</h4></div></div>
-              <p>{template.description}</p>
-              <div class="byline">
-                <span>By {#if template.author.url}<a href={template.author.url} target="_blank" rel="noreferrer">{template.author.name}</a>{:else}{template.author.name}{/if}</span>
+            <div class={s.copy}>
+              <div class={s.titleRow}><img class={s.icon} src={template.icon.url} alt="" loading="lazy" /><div class={s.identity}><small class={s.categories}>{template.categories.join(" · ")}</small><h4 class={s.title}>{template.title}</h4></div></div>
+              <p class={s.description}>{template.description}</p>
+              <div class={s.byline}>
+                <span>By {#if template.author.url}<a class={s.authorLink} href={template.author.url} target="_blank" rel="noreferrer">{template.author.name}</a>{:else}{template.author.name}{/if}</span>
                 <span>Release {template.release.number} · {formatDate(template.release.publishedAt)}</span>
               </div>
-              <div class="template-footer"><span>{formatBytes(template.download.bytes)}</span><a href={template.download.url} download={`${template.slug}.slop.zip`}>Download template <b aria-hidden="true">↓</b></a></div>
+              <div class={s.footer}><span class={s.fileSize}>{formatBytes(template.download.bytes)}</span><a class={s.download} href={template.download.url} download={`${template.slug}.slop.zip`}>Download template <b class={s.downloadArrow} aria-hidden="true">↓</b></a></div>
             </div>
           </article>
         {/each}
@@ -162,17 +163,6 @@
   .category-list button.active { border-color: var(--rule); color: var(--ink); background: oklch(99.8% .002 250); box-shadow: 0 4px 12px oklch(20% .03 65 / .06); }
   .result-heading { margin-top: 45px; min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-block: 1px solid var(--rule); }
   .result-heading h3 { margin: 0; font-size: 1rem; }.result-heading span { color: var(--faint); font-size: .7rem; }
-  .template-grid { margin-top: 34px; display: grid; gap: 42px 22px; }.template-card { min-width: 0; display: grid; align-content: start; }
-  .preview-stage { position: relative; min-height: 350px; padding: 24px; display: grid; place-items: center; overflow: hidden; border: 1px solid color-mix(in oklch, var(--ink), transparent 87%); border-radius: 22px; background: oklch(93% .025 250); }
-  .preview-stage img { width: auto; height: auto; max-width: 96%; max-height: 315px; object-fit: contain; filter: drop-shadow(0 18px 24px oklch(18% .03 65 / .18)); transition: transform 280ms cubic-bezier(.22,1,.36,1); }
-  .preview-stage > span { position: absolute; right: 13px; bottom: 13px; min-height: 37px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; border-radius: 7px; color: oklch(98% .004 250); background: var(--ink); font-size: .64rem; font-weight: 750; box-shadow: 0 7px 18px oklch(20% .03 65 / .16); transform: translateY(4px); opacity: 0; transition: transform 220ms cubic-bezier(.22,1,.36,1), opacity 180ms ease-out; }
-  .template-copy { padding: 16px 2px 0; }.title-row { display: grid; grid-template-columns: 38px 1fr; align-items: center; gap: 11px; }
-  .title-row > img { width: 38px; height: 38px; border-radius: 9px; box-shadow: 0 4px 10px oklch(20% .03 65 / .13); }.title-row > div { display: grid; gap: 2px; }
-  .title-row small { color: var(--faint); font-size: .56rem; font-weight: 700; letter-spacing: .08em; text-transform: capitalize; }.title-row h4 { margin: 0; font-size: 1.1rem; letter-spacing: -.025em; }
-  .template-copy > p { min-height: 3.2em; margin: 11px 0 0; color: var(--muted); font-size: .76rem; line-height: 1.58; }
-  .byline { margin-top: 13px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px 14px; color: var(--faint); font-size: .58rem; }.byline a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
-  .template-footer { margin-top: 13px; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-top: 1px solid var(--rule); }.template-footer > span { color: var(--faint); font-size: .59rem; }
-  .template-footer a { min-height: 40px; display: inline-flex; align-items: center; gap: 7px; font-size: .66rem; font-weight: 750; }.template-footer b { font-size: .85rem; }
   .loading-state { min-height: 430px; display: grid; place-content: center; gap: 24px; color: var(--muted); text-align: center; }.loading-state > div { display: flex; justify-content: center; gap: 8px; }
   .loading-state span { width: 10px; height: 10px; border-radius: 50%; background: oklch(70% .18 35); animation: loading 900ms ease-in-out infinite alternate; }.loading-state span:nth-child(2) { animation-delay: 150ms; }.loading-state span:nth-child(3) { animation-delay: 300ms; }.loading-state p { margin: 0; font-size: .8rem; }
   .load-message, .empty-state { min-height: 340px; display: flex; align-items: center; gap: 19px; border-block: 1px solid var(--rule); }.load-message > span, .empty-state > span { color: oklch(70% .18 35); font-size: 2rem; }
@@ -182,13 +172,6 @@
   .catalog-note i { width: 7px; height: 7px; border-radius: 50%; background: oklch(62% .14 145); box-shadow: 0 0 0 4px oklch(62% .14 145 / .13); }
   button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid oklch(57% .2 260); outline-offset: 3px; }
   @keyframes loading { to { transform: translateY(-7px); opacity: .45; } }
-  @media (min-width: 680px) {
-    .template-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .template-card.lead { grid-column: 1 / -1; grid-template-columns: 1.18fr .82fr; align-items: stretch; border: 1px solid var(--rule); border-radius: 24px; overflow: hidden; background: oklch(99.8% .002 250); }
-    .template-card.lead .preview-stage { min-height: 460px; border: 0; border-radius: 0; }.template-card.lead .template-copy { padding: 36px; display: grid; align-content: end; }.template-card.lead .template-copy > p { min-height: 0; font-size: .86rem; }.template-card.lead .title-row h4 { font-size: 1.65rem; }
-  }
-  @media (min-width: 1040px) { .template-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }.template-card.lead { grid-column: span 2; }.template-card:nth-child(2) .preview-stage { min-height: 460px; } }
-  @media (hover: hover) and (pointer: fine) { .preview-stage:hover img { transform: translateY(-4px); }.preview-stage:hover > span { transform: translateY(0); opacity: 1; }.category-list button:hover { color: var(--ink); } }
-  .preview-stage:focus-visible > span { transform: translateY(0); opacity: 1; }
-  @media (prefers-reduced-motion: reduce) { .preview-stage img, .preview-stage > span { transition: none; }.loading-state span { animation: none; } }
+  @media (hover: hover) and (pointer: fine) { .category-list button:hover { color: var(--ink); } }
+  @media (prefers-reduced-motion: reduce) { .loading-state span { animation: none; } }
 </style>
