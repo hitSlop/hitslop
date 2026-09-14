@@ -9,8 +9,8 @@ iOS 17.
 
 - **HitSlopCore** validates packages/manifests, copies documents safely,
   and manages named media. It is platform-neutral apart from system image facilities.
-- **HitSlopRuntime** hosts the WebKit scheme/bridge, JSON storage,
-  working-copy/cloud coordination, document creation, and guest readiness.
+- **HitSlopRuntime** hosts the WebKit scheme/bridge, journaled local document storage,
+  document creation, and guest readiness. See [document architecture](../sync-v1.md).
 - **HitSlopFirebase** configures Analytics, Crashlytics, App Check, and the
   Firebase AI Logic foundation.
 - **HitSlopRegistry** is the Firestore catalog and Functions client.
@@ -39,7 +39,7 @@ location. The destination becomes writable only after the copy is complete.
 Cache keys include publisher, slug, and release; downloads are hash-verified
 before becoming masters. Nothing under `~/.hitslop/templates` is a writable
 user document. After each app update, macOS refreshes
-`~/.hitslop/skills` from bundled `hitslop-authoring`, `hitslop-design`, and
+`~/.hitslop/skills` from bundled `hitslop`, `hitslop-authoring`, `hitslop-design`, and
 `hitslop-document` and links those names into `~/.agents/skills` and
 `~/.claude/skills`. Subsequent launches only repair missing skills and links,
 preserving explicit CLI updates. Refresh runs in the background; failures are
@@ -48,9 +48,9 @@ directories and unrelated links are never replaced.
 
 ## iOS
 
-iOS documents use the user's iCloud container. Runtime changes are staged in a
-working copy and explicitly coordinated back. Errors propagate to the UI; a
-failed coordination must never be reported as saved.
+Document creation and editing are currently supported only on macOS with local
+files. The iOS app displays an unavailable state. There is no iCloud working-copy
+synchronization, and known iCloud document locations are rejected.
 
 ## Development
 
@@ -62,3 +62,11 @@ swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-na
 The macOS app is version `1.0.5`; iOS remains `0.1.0`. Release signing,
 notarization, Sparkle, and App Store credentials are local/CI secrets, never
 repository files.
+
+
+The bundled native helper also supports `create --from <built.slop> --output
+<document.slop>`, verified catalog creation via `--catalog-entry <descriptor.json>`,
+and `open <document.slop>`. The public `slop` CLI resolves catalog IDs and supplies
+the descriptor. Local source-free builds may omit Quick Look captures; published
+catalog artifacts still require them. `HITSLOP_TEMPLATES_ROOT` overrides the CLI
+creation cache for isolated tests. Opening delegates to the installed Mac app.

@@ -156,4 +156,29 @@ if (!emulator) {
     const releases = await firestore.collection("releases").where("templateId", "==", retries[0]!.templateId).get();
     expect(releases.size).toBe(3);
   }, 30_000);
+
+  test("document-ID pagination traverses the full public catalog", async () => {
+    const published = await backend.finalizePublish(input({ requestId: crypto.randomUUID(), manifest: parseManifest({ ...input().manifest, slug: "pagination-seed" }) }));
+    const seed = (await firestore.collection("templates").doc(published.templateId).get()).data()!;
+    const batch = firestore.batch();
+    for (let index = 0; index < 205; index++) {
+      const id = `zz-pagination-${String(index).padStart(3, "0")}`;
+      batch.set(firestore.collection("templates").doc(id), { ...seed, id });
+    }
+    await batch.commit();
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    let pages = 0;
+    do {
+      const page = await backend.listTemplatePage(cursor);
+      seen.push(...page.templates.map(entry => entry.id));
+      cursor = page.nextCursor ?? undefined;
+      pages++;
+      expect(pages).toBeLessThan(10);
+    } while (cursor);
+    expect(seen.filter(id => id.startsWith("zz-pagination-"))).toHaveLength(205);
+    expect(new Set(seen).size).toBe(seen.length);
+    expect(pages).toBeGreaterThan(1);
+  });
+
 }

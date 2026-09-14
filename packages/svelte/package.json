@@ -40,7 +40,8 @@
   "dependencies": {
     "@hitslop/runtime": "^0.3.0",
     "@hitslop/schema": "^0.3.0",
-    "typebox": "^1.3.26"
+    "typebox": "^1.3.26",
+    "@hitslop/sync": "^0.3.0"
   },
   "peerDependencies": {
     "svelte": "^5.0.0"

@@ -25,6 +25,7 @@ test("Checklist retains its UI and uses interpreted validation without compilers
   expect(modules.some(path => path.includes("/typebox/") && /\/compile\//.test(path))).toBe(false);
   expect(modules.some(path => path.includes("/.hitslop/generated/"))).toBe(false);
   expect(code).not.toContain("new Function(");
-  expect(Buffer.byteLength(code)).toBeLessThan(269_000);
-  expect(gzipSync(code).length).toBeLessThan(84_000);
+  // The self-contained Loro WASM is bundled; validation compilers remain excluded.
+  expect(Buffer.byteLength(code)).toBeLessThan(5_000_000);
+  expect(gzipSync(code).length).toBeLessThan(1_800_000);
 }, 30_000);

@@ -10,7 +10,7 @@ import HitSlopCore
         self.templatesRoot = templatesRoot
     }
 
-    public static var defaultTemplatesRoot: URL {
+    nonisolated public static var defaultTemplatesRoot: URL {
         #if os(macOS)
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hitslop/templates", isDirectory: true)
         #else
@@ -25,7 +25,7 @@ import HitSlopCore
 
     /// Catalog masters live under the templates root. Resolve POSIX symlinks so
     /// a link outside the tree cannot open one as a document.
-    public static func isManagedTemplatePackage(_ url: URL, templatesRoot: URL = defaultTemplatesRoot) -> Bool {
+    nonisolated public static func isManagedTemplatePackage(_ url: URL, templatesRoot: URL = defaultTemplatesRoot) -> Bool {
         let candidate = url.standardizedFileURL.resolvingSymlinksInPath().pathComponents
         let root = templatesRoot.standardizedFileURL.resolvingSymlinksInPath().pathComponents
         guard candidate.count > root.count else { return false }
@@ -33,6 +33,7 @@ import HitSlopCore
     }
 
     @discardableResult public func create(from template: SlopRemoteTemplate, at destination: URL) async throws -> Bool {
+        try SlopLocalDocuments.requireLocal(destination)
         let cached = templatesRoot.appendingPathComponent("cache/\(template.publisherKeyID)/\(template.slug)/\(template.release).slop", isDirectory: true)
         var downloaded = false
         if (try? SlopPackage(rootURL: cached)) == nil {
@@ -50,8 +51,9 @@ import HitSlopCore
         return downloaded
     }
 
-    public func create(fromLocalPackage packageURL: URL, at destination: URL) throws {
-        try SlopPackage(rootURL: packageURL).validateAsTemplate()
+    public func create(fromLocalPackage packageURL: URL, at destination: URL, requirePreview: Bool = true) throws {
+        try SlopLocalDocuments.requireLocal(destination)
+        try SlopPackage(rootURL: packageURL).validateAsTemplate(requirePreview: requirePreview)
         try SlopDuplicator.duplicate(from: packageURL, to: destination)
     }
 }

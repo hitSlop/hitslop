@@ -1,6 +1,5 @@
 import "./capture.js";
 import type { BridgeMethod, BridgeParams, BridgeResult } from "@hitslop/schema/bridge";
-import { assertJSON } from "@hitslop/schema/validation";
 import { createThemeReload } from "./theme-reload.js";
 import { dispatchChange } from "./change-events.js";
 import { createBridgeCall } from "./bridge-call.js";
@@ -17,7 +16,7 @@ declare global {
 const native = window.webkit.messageHandlers.hitslop;
 const invoke = createBridgeCall(request => native.postMessage(request));
 const pending = new Set<Promise<unknown>>();
-const listeners = { json: new Set<(event: SlopChange) => void>(), media: new Set<(event: SlopChange) => void>() };
+const listeners = { sync: new Set<(event: SlopChange) => void>(), media: new Set<(event: SlopChange) => void>() };
 let guestReady = false;
 let readySent = false;
 let readyScheduled = false;
@@ -52,11 +51,16 @@ window.__hitslopEmit = value => dispatchChange(value, listeners, error => consol
 const bridge: WindowSlop = {
   info: () => call("host.info", {}),
   flush: drain,
-  json: {
-    open: (value) => { assertJSON(value); return call("json.open", { value }); },
-    read: () => call("json.read", {}),
-    write: (value, expectedRevision) => { assertJSON(value); return call("json.write", { value, ...(expectedRevision === undefined ? {} : { expectedRevision }) }); },
-    onChange: (callback) => watch("json", callback),
+  sync: {
+    open: () => call("sync.open", {}),
+    commit: value => call("sync.commit", value),
+    readExternal: () => call("sync.readExternal", {}),
+    review: value => call("sync.review", value),
+    onChange: callback => watch("sync", callback),
+  },
+  errors: {
+    report: value => call("errors.report", value),
+    clear: value => call("errors.clear", value),
   },
   media: {
     open: (name) => call("media.open", { name }),

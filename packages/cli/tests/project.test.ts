@@ -74,14 +74,14 @@ describe("immutable artifacts", () => {
   test("builds immutable theme and schema metadata without document stores", async () => {
     const root = await fixture();
     await writeFile(join(root, "index.html"), '<main style="color:var(--slop-accent)">Themed</main>');
-    await writeFile(join(root, "schema.ts"), `import * as Type from ${JSON.stringify(import.meta.resolve("typebox"))};\nexport default Type.Object({ count: Type.Number({ default: 0, description: "Current count" }) });\n`);
+    await writeFile(join(root, "schema.ts"), `import * as Type from ${JSON.stringify(import.meta.resolve("@hitslop/schema/document"))};\nexport default Type.Document({ count: Type.Number({ default: 0, description: "Current count" }) });\n`);
     await writeFile(join(root, "assets", "theme.css"), ":root { --slop-accent: tomato; }\n");
     const built = await buildSlop(root);
     const html = await readFile(join(built.directory, "app.html"), "utf8");
     expect(html).toContain('href="assets/theme.css" data-hitslop-theme-default');
     expect(html).toContain('href="theme.css" data-hitslop-theme');
     expect(await readFile(join(built.directory, "assets", "theme.css"), "utf8")).toContain("--slop-accent");
-    expect(JSON.parse(await readFile(join(built.directory, "data.schema.json"), "utf8"))).toMatchObject({ properties: { count: { type: "number" } } });
+    expect(JSON.parse(await readFile(join(built.directory, "data.schema.json"), "utf8"))).toMatchObject({ properties: { data: { properties: { count: { type: "number" } } } } });
     await expect(readFile(join(built.directory, "schema.json"))).rejects.toThrow();
     await expect(readFile(join(built.directory, "SCHEMA.md"))).rejects.toThrow();
     expect(await readFile(join(built.directory, ".agents/skills/hitslop-document/SKILL.md"), "utf8")).toBe(documentSkillContent);
@@ -91,21 +91,38 @@ describe("immutable artifacts", () => {
   test("validates document data, theme overrides, and the canonical skill", async () => {
     const root = await fixture();
     await writeFile(join(root, "index.html"), '<main style="color:var(--slop-accent)">Themed</main>');
-    await writeFile(join(root, "schema.ts"), `import * as Type from ${JSON.stringify(import.meta.resolve("typebox"))};\nexport default Type.Object({ count: Type.Integer() });\n`);
+    await writeFile(join(root, "schema.ts"), `import * as Type from ${JSON.stringify(import.meta.resolve("@hitslop/schema/document"))};\nexport default Type.Document({ count: Type.Integer() });\n`);
     await writeFile(join(root, "assets", "theme.css"), ":root { --slop-accent: tomato; }\n");
     const built = await buildSlop(root);
     await mkdir(join(built.directory, "stores"));
-    await writeFile(join(built.directory, "stores/data.json"), '{"count":2}\n');
+    await writeFile(join(built.directory, "stores/data.json"), '{"$slop":{"format":1,"baseRevision":"test"},"data":{"count":2}}\n');
     await writeFile(join(built.directory, "stores/theme.css"), ":root { --slop-accent: hotpink; }\n");
     await expect(validateRuntimePackage(built.directory)).resolves.toMatchObject({ slug: "skin-test" });
-    await writeFile(join(built.directory, "stores/data.json"), '{"count":"two"}\n');
+    await writeFile(join(built.directory, "stores/data.json"), '{"$slop":{"format":1,"baseRevision":"test"},"data":{"count":"two"}}\n');
     await expect(validateRuntimePackage(built.directory)).rejects.toThrow("validation failed");
-    await writeFile(join(built.directory, "stores/data.json"), '{"count":2}\n');
+    await writeFile(join(built.directory, "stores/data.json"), '{"$slop":{"format":1,"baseRevision":"test"},"data":{"count":2}}\n');
     await writeFile(join(built.directory, "stores/theme.css"), ":root { --slop-unknown: hotpink; }\n");
     await expect(validateRuntimePackage(built.directory)).rejects.toThrow("unknown theme variable");
     await writeFile(join(built.directory, "stores/theme.css"), ":root { --slop-accent: hotpink; }\n");
     await writeFile(join(built.directory, ".agents/skills/hitslop-document/SKILL.md"), "changed\n");
     await expect(validateRuntimePackage(built.directory)).resolves.toMatchObject({ slug: "skin-test" });
+  });
+
+  test("allows host-owned state on documents and forbids it on templates", async () => {
+    const built = await buildSlop(await fixture());
+    await mkdir(join(built.directory, "state"));
+    await writeFile(join(built.directory, "state/identity.json"), JSON.stringify({ format: 1, documentId: "doc-a", peerId: "1" }));
+    await writeFile(join(built.directory, "state/checkpoint.loro"), new Uint8Array([1, 2, 3]));
+    await expect(validateRuntimePackage(built.directory)).resolves.toMatchObject({ slug: "skin-test" });
+    await expect(validateRuntimePackage(built.directory, { template: true })).rejects.toThrow("cannot contain state");
+    await mkdir(join(built.directory, "state/journal"));
+    await mkdir(join(built.directory, "stores"), { recursive: true });
+    for (const name of ["state/journal/pending.json", "state/journal/recovery.tmp"]) {
+      await writeFile(join(built.directory, name), "partial recovery bytes");
+    }
+    await expect(validateRuntimePackage(built.directory)).resolves.toBeDefined();
+    await writeFile(join(built.directory, "state/extra.bin"), new Uint8Array([0]));
+    await expect(validateRuntimePackage(built.directory)).rejects.toThrow("Unexpected state entry");
   });
 
   test("opens a runtime package without document guidance", async () => {
@@ -182,8 +199,8 @@ describe("authoring scaffold", () => {
     expect(agents).toContain("## This app");
     const app = await readFile(join(root, "src/App.svelte"), "utf8");
     expect(app).toContain('const title = "Tiny Tally"');
-    expect(app).toContain("jsonStore({ schema: counterSchema, initial:");
-    expect(await readFile(join(root, "schema.ts"), "utf8")).toContain("Type.Object");
+    expect(app).toContain("documentStore({ schema: counterSchema, initial:");
+    expect(await readFile(join(root, "schema.ts"), "utf8")).toContain("S.Document");
     const styles = await readFile(join(root, "src/styles.css.ts"), "utf8");
     expect(styles).toContain('from "../theme"');
     expect(styles).not.toContain("boxShadow");
@@ -199,7 +216,8 @@ describe("authoring scaffold", () => {
 
 test("starter schema checks without mutating data or stripping unknown fields", async () => {
   const schema = await loadDataSchema(new URL("../templates/svelte/schema.ts", import.meta.url).pathname);
-  const validate = compileDataSchema(schema);
+  const validateData = compileDataSchema(schema);
+  const validate = (data: unknown) => validateData({$slop: {format: 1, baseRevision: "test"}, data});
   const value = { count: 7, future: { field: true } };
   const before = structuredClone(value);
   validate(value);

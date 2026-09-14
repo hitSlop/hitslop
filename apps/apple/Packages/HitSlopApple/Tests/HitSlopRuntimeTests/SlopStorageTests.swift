@@ -1,75 +1,25 @@
 import Foundation
 import Testing
+import DynamicJSON
+import HitSlopCore
 @testable import HitSlopRuntime
 
-@Test func jsonStoreUsesOptimisticRevisionsAndAtomicWrites() throws {
-    let directory = temporaryDirectory()
-    defer { try? FileManager.default.removeItem(at: directory) }
-    let url = directory.appendingPathComponent("data.json")
-    let store = SlopJSONStore(url: url)
-
-    let initial = try store.open(["count": 0])
-    let revision = try store.write(["count": 1], expectedRevision: initial.revision)
-    #expect(revision != initial.revision)
-    #expect((try store.read().value as? [String: Int])?["count"] == 1)
-    #expect(throws: Error.self) { try store.write(["count": 2], expectedRevision: initial.revision) }
-}
-
 private func temporaryDirectory() -> URL {
-    let url = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-storage-\(UUID().uuidString)", isDirectory: true)
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-storage-\(UUID())", isDirectory: true)
     try! FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
 }
-
 @Test func sharedDataConformanceFixtures() throws {
     let url = try #require(Bundle.module.url(forResource: "data-conformance", withExtension: "json", subdirectory: "Fixtures"))
     let fixtures = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [[String: Any]])
     for fixture in fixtures {
-        let directory = temporaryDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let schemaURL = directory.appendingPathComponent("schema.json")
-        try JSONSerialization.data(withJSONObject: fixture["schema"]!).write(to: schemaURL)
-        let cases = try #require(fixture["cases"] as? [[String: Any]])
-        let validValue = try #require(cases.first { $0["valid"] as? Bool == true }?["value"])
-        for (index, item) in cases.enumerated() {
-            let dataURL = directory.appendingPathComponent("case-\(index).json")
-            let store = SlopJSONStore(url: dataURL, schemaURL: schemaURL)
-            let value = item["value"]!
-            if item["valid"] as? Bool == true {
-                let result = try store.open(value)
-                let expected = try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .fragmentsAllowed])
-                let actual = try JSONSerialization.data(withJSONObject: result.value, options: [.sortedKeys, .fragmentsAllowed])
-                #expect(actual == expected)
-                let revision = try store.write(value, expectedRevision: result.revision)
-                let read = try store.read()
-                #expect(read.revision == revision)
-                #expect(try JSONSerialization.data(withJSONObject: read.value, options: [.sortedKeys, .fragmentsAllowed]) == expected)
-            } else {
-                #expect(throws: Error.self) { _ = try store.open(value) }
-                #expect(!FileManager.default.fileExists(atPath: dataURL.path))
-                let baseline = try store.open(validValue)
-                let original = try Data(contentsOf: dataURL)
-                #expect(throws: Error.self) { _ = try store.write(value, expectedRevision: baseline.revision) }
-                #expect(try Data(contentsOf: dataURL) == original)
-                let invalid = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])
-                try invalid.write(to: dataURL, options: .atomic)
-                #expect(throws: Error.self) { _ = try store.read() }
-                #expect(try Data(contentsOf: dataURL) == invalid)
-            }
+        let schema = try JSONSchema(data: JSONSerialization.data(withJSONObject: fixture["schema"]!))
+        for item in fixture["cases"] as! [[String: Any]] {
+            let data = try JSONSerialization.data(withJSONObject: item["value"]!, options: [.fragmentsAllowed])
+            let result = try JSON(data: data).validate(with: schema, dialect: SlopJSONValidation.dialect)
+            #expect(result.isValid == (item["valid"] as! Bool))
         }
     }
-}
-
-@Test func nativeJSONSchemaRejectsInvalidWritesWithoutChangingFile() throws {
-    let directory = temporaryDirectory()
-    defer { try? FileManager.default.removeItem(at: directory) }
-    let schema = directory.appendingPathComponent("data.schema.json")
-    try Data(#"{"type":"object","properties":{"count":{"type":"integer"}},"required":["count"]}"#.utf8).write(to: schema)
-    let url = directory.appendingPathComponent("data.json")
-    let store = SlopJSONStore(url: url, schemaURL: schema)
-    let snapshot = try store.open(["count": 2])
-    #expect(throws: Error.self) { _ = try store.write(["count": "wrong"], expectedRevision: snapshot.revision) }
-    #expect((try store.read().value as? [String: Int])?["count"] == 2)
 }
 
 @Test func invalidThemeKeepsLastValidStylesheet() throws {
@@ -87,4 +37,17 @@ private func temporaryDirectory() -> URL {
     #expect(store.stylesheet() == valid)
     try FileManager.default.removeItem(at: override)
     #expect(store.stylesheet().isEmpty)
+}
+
+@Test func watcherRefreshDetectsReplacementWithUnchangedSizeAndTimestamp() throws {
+    let directory = temporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let url = directory.appendingPathComponent("data.json")
+    try Data(#"{"count":1}"#.utf8).write(to: url)
+    let store = SlopProjectionObserver(url: url)
+    let before = try store.revision()
+    let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+    try Data(#"{"count":2}"#.utf8).write(to: url, options: .atomic)
+    try FileManager.default.setAttributes([.modificationDate: attributes[.modificationDate]!], ofItemAtPath: url.path)
+    #expect(try store.revision(refresh: true) != before)
 }

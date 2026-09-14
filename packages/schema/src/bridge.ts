@@ -1,5 +1,7 @@
 import * as Type from "typebox";
 
+import { SyncSnapshotSchema, SyncCommitSchema } from "./sync.js";
+
 export const protocolVersion = 1;
 export const BridgeErrorCodeSchema = Type.Enum(["invalid_request", "unsupported", "revision_conflict", "validation_failed", "storage_error", "limit_exceeded", "closed"]);
 export type JSONValue = null | boolean | number | string | JSONValue[] | { [key: string]: JSONValue };
@@ -14,7 +16,6 @@ const object = <P extends Type.TProperties>(properties: P) => Type.Object(proper
 const method = <P extends Type.TProperties, R extends Type.TSchema>(params: P, response: R) => ({ params: object(params), response });
 const mediaName = Type.String({ pattern: "^[a-z][a-z0-9-]{0,63}$" });
 const revision = object({ revision: Type.String() });
-const snapshot = object({ value: json, revision: Type.String() });
 // Capabilities may contain methods introduced by a newer host.
 export const HostInfoSchema = object({ protocolVersion: Type.Literal(protocolVersion), capabilities: Type.Array(Type.String()) });
 
@@ -23,9 +24,12 @@ export const BridgeMethods = {
   "host.info": method({}, HostInfoSchema),
   log: method({ message: Type.String() }, Type.Null()),
   ready: method({}, Type.Null()),
-  "json.open": method({ value: json }, snapshot),
-  "json.read": method({}, snapshot),
-  "json.write": method({ value: json, expectedRevision: Type.Optional(Type.String()) }, revision),
+  "sync.open": method({}, SyncSnapshotSchema),
+  "sync.commit": method(SyncCommitSchema.properties, SyncSnapshotSchema),
+  "sync.readExternal": method({}, SyncSnapshotSchema),
+  "sync.review": method({ proposal: Type.String(), canApply: Type.Boolean() }, Type.Enum(["apply", "keep", "cancel"])),
+  "errors.report": method({ instance: Type.String(), id: Type.String({minLength: 1}), revision: Type.Integer({minimum: 1}), message: Type.String(), details: Type.String(), action: Type.Union([Type.String(), Type.Null()]), busy: Type.Boolean(), dismissible: Type.Boolean() }, Type.Null()),
+  "errors.clear": method({ instance: Type.String(), id: Type.String(), revision: Type.Integer({minimum: 1}) }, Type.Null()),
   "media.open": method({ name: mediaName }, object({ exists: Type.Boolean(), revision: Type.Union([Type.String(), Type.Null()]) })),
   "media.write": method({ name: mediaName, data: Type.String(), mimeType: Type.String() }, revision),
   "media.remove": method({ name: mediaName }, object({ revision: Type.Null() })),
@@ -50,7 +54,7 @@ export const BridgeReplySchema = Type.Union([
   object({ ok: Type.Literal(true), value: json }),
   object({ ok: Type.Literal(false), error: object({ code: BridgeErrorCodeSchema, message: Type.String() }) }),
 ], { $defs: jsonDefinitions });
-export const ChangeSchema = object({ kind: Type.Enum(["json", "media"]), source: Type.Enum(["app", "external", "dev"]), revision: Type.Optional(Type.Union([Type.String(), Type.Null()])), sequence: Type.Optional(Type.Integer()), name: Type.Optional(mediaName) });
+export const ChangeSchema = object({ kind: Type.Enum(["media", "sync"]), source: Type.Enum(["app", "external", "dev"]), revision: Type.Optional(Type.Union([Type.String(), Type.Null()])), sequence: Type.Optional(Type.Integer()), name: Type.Optional(mediaName) });
 export type BridgeReply = Type.Static<typeof BridgeReplySchema>;
 export type BridgeErrorCode = Type.Static<typeof BridgeErrorCodeSchema>;
 export type HostInfo = Type.Static<typeof HostInfoSchema>;

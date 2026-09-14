@@ -1,0 +1,13 @@
+{
+  "commit": {
+    "expectedGeneration": "bb61ad8930673f08d4779ace11640d041c708efbf4c781c6ad10d4b2842be276",
+    "expectedExternal": null,
+    "identity": "eyJmb3JtYXQiOjEsImRvY3VtZW50SWQiOiJ0cmFuc2FjdGlvbi1maXh0dXJlIiwicGVlcklkIjoiMSJ9Cg==",
+    "checkpoint": "b3BhcXVlIGNoZWNrcG9pbnQgYnl0ZXM=",
+    "metadata": "eyJmb3JtYXQiOjIsInNjaGVtYSI6ImZpeHR1cmUiLCJtYXRlcmlhbGl6ZWQiOm51bGwsInJlY2VpcHRzIjp7fX0K",
+    "projection": "eyIkc2xvcCI6eyJmb3JtYXQiOjEsImJhc2VSZXZpc2lvbiI6ImZpeHR1cmUifSwiZGF0YSI6eyJ0aXRsZSI6IkZpeHR1cmUifX0K",
+    "preserveExternal": false
+  },
+  "generation": "994438c33581792d9c72643f011e7fadcfb06095ac4c26eb21ca7365cbcb3564",
+  "externalHash": "e16470ced50335258191ffb2be60eba3a4e1c8b1e7fd1cbfdde5d7ca8f9b23bf"
+}

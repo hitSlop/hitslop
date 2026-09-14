@@ -1,4 +1,4 @@
-import { FieldValue, type Firestore } from "firebase-admin/firestore";
+import { FieldPath, FieldValue, type QueryDocumentSnapshot, type Firestore } from "firebase-admin/firestore";
 import {
   RegistryTemplateSchema, RegistryReleaseDocumentSchema, RegistryPublisherSchema,
   RegistryPublishRequestSchema, CatalogTemplateSchema, validate,
@@ -46,6 +46,7 @@ export interface RegistryBackend {
   mediaURL(key: string): string;
   finalizePublish(input: FinalizePublishInput): Promise<PublishResult>;
   listTemplates(): Promise<RegistryCatalogTemplate[]>;
+  listTemplatePage(cursor?: string): Promise<{ templates: RegistryCatalogTemplate[]; nextCursor: string | null }>;
   recordCreation(templateId: string): Promise<boolean>;
 }
 
@@ -174,8 +175,23 @@ export class FirebaseRegistryBackend implements RegistryBackend {
       .orderBy("firstPublishedAt", "desc")
       .limit(200)
       .get();
+    return this.projectTemplates(snapshot.docs);
+  }
+
+  async listTemplatePage(cursor?: string): Promise<{ templates: RegistryCatalogTemplate[]; nextCursor: string | null }> {
+    let query = this.firestore.collection("templates")
+      .where("visibility", "==", "public").orderBy(FieldPath.documentId()).limit(200);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
+    return {
+      templates: this.projectTemplates(snapshot.docs),
+      nextCursor: snapshot.size === 200 ? snapshot.docs.at(-1)!.id : null,
+    };
+  }
+
+  private projectTemplates(documents: QueryDocumentSnapshot[]): RegistryCatalogTemplate[] {
     const templates: RegistryCatalogTemplate[] = [];
-    for (const document of snapshot.docs) {
+    for (const document of documents) {
       try {
         const data = readRegistryDocument(RegistryTemplateSchema, document.data());
         if (data.id !== document.id) throw new Error("Registry template id does not match document id");

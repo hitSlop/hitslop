@@ -6,7 +6,7 @@ import { validate } from "../src/validation.ts";
 test("bridge requests retain nested JSON without defaults", () => {
   const packaged = compileDataSchema(dataSchemaFromJSON(BridgeRequestSchema));
   for (const value of [
-    { method: "json.write", value: { list: [null, true, 3, { future: "keep" }] } },
+    { method: "errors.report", instance: "test-runtime", id: "test", revision: 1, message: "Failed", details: "", action: null, busy: false, dismissible: true },
     { method: "media.open", name: "hero-image" },
   ]) {
     const before = JSON.stringify(value);
@@ -16,7 +16,7 @@ test("bridge requests retain nested JSON without defaults", () => {
   }
   for (const value of [
     { method: "unknown" },
-    { method: "json.write" },
+    { method: "errors.report" },
     { method: "host.info", extra: true },
     { method: "window.resize", width: 1, height: 300 },
   ]) {

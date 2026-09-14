@@ -66,3 +66,12 @@ bun run firebase:deploy
 The default Firestore database is `nam5`, the Storage bucket is US
 multi-region, and Functions run in `us-central1`. Production requires the Blaze
 plan. Run `bun run schema:generate` before deploying a schema change.
+
+
+Catalog pagination for agents uses `GET /api/catalog?page=true` and continues
+with `GET /api/catalog?cursor=<nextCursor>`. Pages contain at most 200 entries and
+`nextCursor: null` marks completion. Pagination orders public documents by ID
+so popularity changes do not reorder an ongoing scan. Invalid catalog entries
+are skipped while the cursor still advances through the underlying documents.
+The existing request without pagination retains the popular listing. Deploy
+the API changes before expecting CLI searches to cover more than 200 entries.

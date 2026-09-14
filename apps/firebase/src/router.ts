@@ -20,8 +20,15 @@ function artifactURL(request: Request, key: string): string {
 }
 
 async function handleCatalog(request: Request, backend: RegistryBackend): Promise<Response> {
+  const url = new URL(request.url);
+  const paginated = url.searchParams.get("page") === "true" || url.searchParams.has("cursor");
+  const cursor = url.searchParams.get("cursor") ?? undefined;
+  if (cursor !== undefined && (!cursor || cursor.length > 160 || cursor.includes("/") || cursor === "." || cursor === "..")) {
+    return Response.json({ error: "Invalid catalog cursor" }, { status: 400, headers: catalogHeaders });
+  }
   try {
-    const templates = (await backend.listTemplates()).map((template) => ({
+    const page = paginated ? await backend.listTemplatePage(cursor) : { templates: await backend.listTemplates() };
+    const templates = page.templates.map((template) => ({
       ...template,
       preview: { ...template.preview, url: artifactURL(request, template.preview.key) },
       icon: { ...template.icon, url: artifactURL(request, template.icon.key) },
@@ -32,7 +39,7 @@ async function handleCatalog(request: Request, backend: RegistryBackend): Promis
       icon: { url: icon.url, sha256: icon.sha256, bytes: icon.bytes },
       download: { url: download.url, sha256: download.sha256, bytes: download.bytes },
     }));
-    const catalog = { version: 1, templates } satisfies CatalogResponse;
+    const catalog = { version: 1, templates, ...("nextCursor" in page ? { nextCursor: page.nextCursor } : {}) } satisfies CatalogResponse;
     return Response.json(catalog, { headers: catalogHeaders });
   } catch (error) {
     console.error("Public catalog load failed", error);

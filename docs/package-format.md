@@ -12,7 +12,7 @@ my-app/
 ├── manifest.json
 ├── package.json
 ├── AGENTS.md                    portable coding-agent notes; platform skills live in ~/.hitslop/skills
-├── schema.ts                    required when using Svelte jsonStore
+├── schema.ts                    required when using Svelte documentStore
 ├── theme.ts                     optional single-source theme definition
 ├── document-guide.md            optional app-specific agent guidance
 ├── index.html
@@ -58,10 +58,13 @@ A writable document may lazily add canonical data:
 stores/data.json
 stores/media/<safe-name>
 stores/theme.css               optional owner theme overrides
+state/identity.json            optional host-owned sync identity
+state/checkpoint.loro          optional canonical Loro snapshot
+state/journal/                 optional committed update bytes
 Icon\r                         Finder-managed local metadata on macOS
 ```
 
-Templates and published artifacts must never contain `stores/`, `Icon\r`,
+Templates and published artifacts must never contain `stores/`, `state/`, `Icon\r`,
 source, `node_modules`, build directories,
 `style.css`, or `document.json`.
 
@@ -104,3 +107,13 @@ In a document, treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`,
 `.agents/`, and `QuickLook/Icon.png` as immutable. The host may atomically
 update stores, refresh `QuickLook/Preview.png`, and manage local filesystem
 metadata.
+
+## Versioned document pilot
+
+Quick Checklist's `stores/data.json` contains `$slop` revision metadata plus
+application `data`; `data.schema.json` validates that complete envelope.
+Host-owned `state/materialization.json` stores projection metadata and durable
+import receipts alongside the checkpoint and identity. `state/journal/` may
+contain pending transactions and preserved originals from explicit review.
+None of `state/` belongs in templates or published artifacts. document compiled
+apps retain their original format. See [Sync v1](sync-v1.md).

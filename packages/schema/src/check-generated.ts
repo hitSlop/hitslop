@@ -5,6 +5,7 @@ import { $ } from "bun";
 
 const root = resolve(import.meta.dir, "../../..");
 const generatedFiles = [
+  "apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/sync-transaction.json",
   "packages/schema/generated/registry-template.schema.json",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopRegistry/Generated/RegistryTemplate.generated.swift",
   "packages/schema/generated/manifest.schema.json",

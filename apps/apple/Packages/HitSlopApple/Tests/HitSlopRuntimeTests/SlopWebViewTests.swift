@@ -30,12 +30,12 @@ import Testing
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let worker = SlopStorageWorker(package: try SlopPackage(rootURL: root))
     defer { worker.close() }
-    for request in ["[]", #"{"method":"json.open"}"#, #"{"method":"json.write"}"#, #"{"method":"legacy.query","sql":"SELECT 1"}"#, #"{"method":"media.open","name":4}"#, #"{"method":"media.write","name":"hero"}"#, #"{"method":"media.remove"}"#] {
+    for request in ["[]", #"{"method":"sync.commit"}"#, #"{"method":"unknown"}"#, #"{"method":"media.open","name":4}"#, #"{"method":"media.write","name":"hero"}"#, #"{"method":"media.remove"}"#] {
         await #expect(throws: SlopBridgeFailure.self) { _ = try await worker.perform(Data(request.utf8)) }
     }
-    // JSON null is a value, not a missing field.
-    let result = try await worker.perform(Data(#"{"method":"json.open","value":null}"#.utf8))
-    #expect((result.value as? [String: Any])?["value"] is NSNull)
+    // Fresh byte snapshots have nullable checkpoint fields.
+    let result = try await worker.perform(Data(#"{"method":"sync.open"}"#.utf8))
+    #expect((result.value as? [String: Any])?["checkpoint"] is NSNull)
 }
 
 @MainActor private final class WindowResizeDelegate: SlopRuntimeSessionDelegate {

@@ -25,7 +25,7 @@ case "$build_arch" in
 esac
 
 echo "Building development-signed hitSlop Release for ${build_arch}…"
-/usr/bin/xcodebuild \
+/usr/bin/xcodebuild -skipMacroValidation \
   -quiet \
   -allowProvisioningUpdates \
   -project "$project" \

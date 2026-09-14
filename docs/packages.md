@@ -20,11 +20,16 @@ Capture is delegated to `hitslop-native`, keeping WebKit behavior consistent
 with the app. Identity export is encrypted and private keys are never project
 files.
 
+## @hitslop/sync
+
+Loro replicas, versioned JSON imports, and durable document state.
+`documentStore.change()` sends application edits through this engine. See [Sync v1](sync-v1.md).
+
 ## @hitslop/runtime
 
-Application-facing exports are `slop`, `ready`, `capture`, and `sql`.
-They cover JSON, named media, window resize/drag, host readiness,
-renderer detection, and parameterized statement composition.
+Application-facing exports include `slop`, `errors`, `ready`, and `capture`.
+They cover named media, host errors, window resize/drag, host readiness,
+and document capture.
 
 `@hitslop/runtime/adapter` exposes lower-level persistence/media primitives
 for framework adapter authors. Ordinary slops should use the root package or a
@@ -35,13 +40,13 @@ the main application API.
 
 Svelte 5 rune-aware classes/functions:
 
-- `jsonStore` / `JsonStore`
+- `documentStore` / `DocumentStore`
 - `imageStore` / `ImageStore`
 - `fileStore` / `FileStore`
 
 These expose reactive value/loading/error/persistence state while delegating all
-durability to the runtime host. `jsonStore` accepts the schema directly
-from root TypeBox `schema.ts`, alongside its initial value, and
+durability to the runtime host. `documentStore` accepts the schema directly
+from root `S.Document` in `schema.ts`, alongside its initial value, and
 validates data at the persistence boundary. Quick Checklist
 and the CLI counter starter share this workflow; backlog examples remain deferred.
 

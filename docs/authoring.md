@@ -3,6 +3,20 @@
 The supported v1 path is Bun + Svelte 5. The runtime format is framework-neutral,
 with the React adapter archived while supported authoring focuses on Svelte.
 
+## Use a template as a document
+
+Use `slop catalog search "invoice" --json`, then `slop create <template-id>
+--output ./Invoice.slop`. `slop inspect ./Invoice.slop --json` returns the schema,
+saved data, and document guidance. Edit JSON directly, validate, open, and export:
+`slop validate ./Invoice.slop`, `slop open ./Invoice.slop`, and
+`slop export ./Invoice.slop --format pdf --output ./Invoice.pdf`.
+
+For local builds use `slop create --from dist/<slug>.slop --output ./My.slop`.
+It creates a writable copy without requiring registration or publication.
+The installed `hitslop` skill handles task requests and loads authoring/design
+skills when a new template is needed. See [CLI](../packages/cli/README.md) for
+machine-readable output and [Storage](storage.md) for direct-edit behavior.
+
 ## Create and preview
 
 ```sh
@@ -44,13 +58,13 @@ Storage is implicit; do not add declarations to the manifest. See
 [Storage](storage.md) for concurrency and copy semantics.
 
 Quick Checklist's current JSON-store contract uses a root `schema.ts` that
-default-exports a TypeBox schema (`import * as Type from "typebox"`).
+default-exports a TypeBox schema (`import * as S from "@hitslop/schema/document"`).
 Import that schema directly where the store is created:
 
 ```ts
 import dataSchema from "../schema";
 
-const document = jsonStore({
+const document = documentStore({
   schema: dataSchema,
   initial: { count: 0 },
 });

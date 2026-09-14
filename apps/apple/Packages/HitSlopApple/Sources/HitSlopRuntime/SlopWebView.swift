@@ -27,7 +27,30 @@ private func hostBridgeSource() throws -> String {
     """#
 }
 
+public struct SlopHostError: Sendable {
+    public let instance: String
+    public let id: String
+    public let revision: Int
+    public let message: String
+    public let details: String
+    public let action: String?
+    public let busy: Bool
+    public let dismissible: Bool
+    init(_ body: [String: Any]) {
+        instance = body["instance"] as? String ?? ""
+        id = body["id"] as? String ?? ""
+        revision = body["revision"] as? Int ?? 0
+        message = body["message"] as? String ?? ""
+        details = body["details"] as? String ?? ""
+        action = body["action"] as? String
+        busy = body["busy"] as? Bool ?? false
+        dismissible = body["dismissible"] as? Bool ?? false
+    }
+}
+
 @MainActor public protocol SlopRuntimeSessionDelegate: AnyObject {
+    func runtimeSession(_ session: SlopRuntimeSession, errorsChanged errors: [SlopHostError])
+    func runtimeSession(_ session: SlopRuntimeSession, review proposal: String, canApply: Bool) async -> String
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind)
     func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize
@@ -36,6 +59,8 @@ private func hostBridgeSource() throws -> String {
 }
 
 public extension SlopRuntimeSessionDelegate {
+    func runtimeSession(_ session: SlopRuntimeSession, errorsChanged errors: [SlopHostError]) {}
+    func runtimeSession(_ session: SlopRuntimeSession, review proposal: String, canApply: Bool) async -> String { "cancel" }
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {}
     func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind) {}
     func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize {
@@ -59,7 +84,7 @@ public extension SlopRuntimeSessionDelegate {
         requestSchema = try JSONSchema(data: Data(contentsOf: Bundle.module.url(forResource: "bridge-request.schema", withExtension: "json")!))
     }
     func close() { storage.close() }
-    func revisions() async -> SlopRevisions { await storage.revisions() }
+    func revisions() async -> SlopRevisions { await storage.revisions(refreshJSON: true) }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
         func failure(_ error: Error) {
@@ -70,6 +95,9 @@ public extension SlopRuntimeSessionDelegate {
             guard message.frameInfo.isMainFrame, message.frameInfo.securityOrigin.protocol == "slop",
                   let body = message.body as? [String: Any], let raw = body["method"] as? String,
                   let method = SlopBridgeMethod(rawValue: raw) else { throw SlopBridgeFailure(.invalidRequest, "Malformed document request") }
+            #if !os(macOS)
+            if raw.hasPrefix("sync.") { throw SlopBridgeFailure(.unsupported, "Document sync is currently a macOS pilot") }
+            #endif
             let data = try JSONSerialization.data(withJSONObject: body)
             guard data.count <= 36 * 1024 * 1024 else { throw SlopBridgeFailure(.limitExceeded, "Host request exceeds 36 MiB") }
             let validation = try JSON(data: data).validate(with: requestSchema)
@@ -79,10 +107,23 @@ public extension SlopRuntimeSessionDelegate {
             case .hostInfo:
                 var capabilities = SlopBridgeMethod.allCases.map(\.rawValue)
                 #if !os(macOS)
-                capabilities.removeAll { $0 == "window.drag" || $0 == "window.resize" }
+                capabilities.removeAll { $0 == "window.drag" || $0 == "window.resize" || $0.hasPrefix("sync.") }
                 #endif
                 if package.isSkinned { capabilities.removeAll { $0 == "window.resize" } }
                 value = ["protocolVersion": slopProtocolVersion, "capabilities": capabilities]
+            case .errorsReport:
+                session?.reportError(SlopHostError(body)); value = NSNull()
+            case .errorsClear:
+                session?.clearError(id: body["id"] as! String, revision: body["revision"] as! Int); value = NSNull()
+            case .syncReview:
+                Task {
+                    let action = session?.delegate
+                    if let session, let action {
+                        let result = await action.runtimeSession(session, review: body["proposal"] as! String, canApply: body["canApply"] as! Bool)
+                        replyHandler(["ok": true, "value": result], nil)
+                    } else { replyHandler(["ok": true, "value": "cancel"], nil) }
+                }
+                return
             case .log: print("[slop guest] \(body["message"] as? String ?? "")"); value = NSNull()
             case .ready: session?.bridgeDidBecomeReady(); value = NSNull()
             case .windowResize:
@@ -155,7 +196,6 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     public let webView: WKWebView
     let usesTransparentBackground: Bool
     public weak var delegate: (any SlopRuntimeSessionDelegate)?
-    public var onStoreCommit: (() -> Void)?
     public private(set) var isReady = false
     private let bridge: SlopBridge
     private let schemeHandler: SlopSchemeHandler
@@ -203,8 +243,8 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         #endif
     }
 
-    public func load() { isReady = false; webView.load(URLRequest(url: URL(string: "slop://app/")!)) }
-    public func reload() { isReady = false; webView.reload() }
+    public func load() { resetReports(); isReady = false; webView.load(URLRequest(url: URL(string: "slop://app/")!)) }
+    public func reload() { resetReports(); isReady = false; webView.reload() }
     public func flush() async throws {
         guard !closed else { throw SlopBridgeFailure(.closed, "Document is closed") }
         _ = try await webView.callAsyncJavaScript("await window.__hitslopFlush?.(); await window.slop?.flush?.(); return true", arguments: [:], in: nil, contentWorld: .page)
@@ -220,6 +260,22 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         bridge.close()
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "hitslop", contentWorld: .page)
     }
+    private func resetReports() { hostErrors.removeAll(); errorRevisions.removeAll(); delegate?.runtimeSession(self, errorsChanged: []) }
+    private var hostErrors: [String: SlopHostError] = [:]
+    private var errorRevisions: [String: Int] = [:]
+    fileprivate func reportError(_ error: SlopHostError) {
+        guard error.revision >= (errorRevisions[error.id] ?? 0) else { return }
+        errorRevisions[error.id] = error.revision; hostErrors[error.id] = error
+        delegate?.runtimeSession(self, errorsChanged: hostErrors.values.sorted { $0.id < $1.id })
+    }
+    fileprivate func clearError(id: String, revision: Int) {
+        guard revision >= (errorRevisions[id] ?? 0) else { return }
+        errorRevisions[id] = revision; hostErrors.removeValue(forKey: id)
+        delegate?.runtimeSession(self, errorsChanged: hostErrors.values.sorted { $0.id < $1.id })
+    }
+    public func performErrorAction(id: String, revision: Int, instance: String, dismiss: Bool = false) async throws -> Bool {
+        try await webView.callAsyncJavaScript("return await window.__hitslopAction(id, revision, instance, dismiss)", arguments: ["id": id, "revision": revision, "instance": instance, "dismiss": dismiss], in: nil, contentWorld: .page) as? Bool ?? false
+    }
     public func waitUntilReady(timeout: Duration = .seconds(15)) async throws {
         if isReady { return }
         let clock = ContinuousClock(), deadline = clock.now.advanced(by: timeout)
@@ -232,10 +288,10 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     fileprivate func bridgeDidBecomeReady() { guard !isReady else { return }; isReady = true; retryCount = 0; delegate?.runtimeSessionDidBecomeReady(self) }
     fileprivate func bridgeDidCommit(kind: SlopStoreKind, revision: String?, name: String? = nil) {
         switch kind {
-        case .json: jsonRevision = revision
+        case .sync: jsonRevision = revision
         case .media: break
         }
-        emit(kind: kind, revision: revision, source: "app", name: name); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
+        emit(kind: kind, revision: revision, source: "app", name: name); delegate?.runtimeSession(self, didCommit: kind)
     }
     fileprivate func bridgeDidRequestResize(_ size: CGSize) throws -> CGSize {
         guard let delegate else { throw SlopPackageError.invalid("the host does not support dynamic window sizing") }
@@ -267,9 +323,9 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         let revisions = await bridge.revisions()
         guard !closed else { return }
         guard requestedAtSequence == sequence else { scheduleExternalRefresh(); return }
-        if revisions.json != jsonRevision { jsonRevision = revisions.json; emit(kind: .json, revision: revisions.json, source: "external") }
+        if revisions.json != jsonRevision { jsonRevision = revisions.json; emit(kind: .sync, revision: revisions.json, source: "external") }
         if revisions.media != mediaRevision { mediaRevision = revisions.media; emit(kind: .media, revision: revisions.media, source: "external") }
-        if revisions.theme != themeRevision { themeRevision = revisions.theme; reloadTheme(); onStoreCommit?() }
+        if revisions.theme != themeRevision { themeRevision = revisions.theme; reloadTheme() }
     }
     private func reloadTheme() {
         let value = themeRevision ?? "default-\(Date().timeIntervalSince1970)"

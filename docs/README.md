@@ -7,7 +7,8 @@
 - [Design and presentation](presentation.md) — Paper/Instrument/Skin, responsive
   layout, transparent windows, resizing, icon art, and static export.
 - [Package format](package-format.md) — the exact source/runtime boundary.
-- [Storage](storage.md) — JSON, named media, concurrency, and iCloud.
+- [Storage](storage.md) — versioned document persistence, named media, and recovery.
+- [Document architecture](sync-v1.md) — the shared engine, disk format, and host errors.
 - [Framework packages](packages.md) — CLI, runtime, schema, and Svelte.
 
 ## Understand the platform
@@ -20,8 +21,15 @@
 - [Repository guide](repository.md) — workspace map and change discipline.
 - [Releasing](releasing.md) — versions, checks, npm, services, and macOS.
 
+## Design proposals
+
+- [Sync v1: JSON, Loro, files, and Firebase](sync-v1.md) — `S.*` schemas, Loro
+  merge, agent baselines, and encrypted Firebase rooms. JS proof of concept in
+  `Prototypes/sync-loro`; not the production storage contract yet.
+
 ## Historical decisions
 
 [Swift to web runtime](SWIFTTOSVELTE.md) and [the v1 contract
 refactor](v1-refactor.md) preserve design history. They are context, not the
-current operating manual; the documents above are authoritative.
+current operating manual. The build and platform guides above describe current
+behavior; design proposals describe possible future changes.

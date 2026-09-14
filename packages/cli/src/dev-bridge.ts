@@ -17,10 +17,14 @@ export const devHostJavaScript = `(() => {
       }, 0));
     }, {once:true});
   }
-  const listeners = { json: new Set(), media: new Set() };
-  let jsonValue;
-  let jsonRevision = 0;
-  let jsonOpened = false;
+  const listeners = { media: new Set(), sync: new Set() };
+  let syncValue = { identity: null, checkpoint: null, metadata: null, external: null, generation: 'dev-sync:0', externalHash: null };
+  let syncGeneration = 0;
+  const syncHash = async value => {
+    const bytes = Uint8Array.from(atob(value), c => c.charCodeAt(0));
+    return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), x => x.toString(16).padStart(2, '0')).join('');
+  };
+  const syncOpen = async () => ({...syncValue});
   let mediaRevision = 0;
 
   const clone = (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -29,31 +33,36 @@ export const devHostJavaScript = `(() => {
     listeners[kind].add(callback);
     return () => listeners[kind].delete(callback);
   };
-  const revision = () => 'dev:' + jsonRevision;
 
+  const reports = new Map();
+  const sendReports = () => { if (parent !== window) parent.postMessage({type:'hitslop:errors',reports:[...reports.values()]},location.origin); };
+  window.addEventListener('message', async event => {
+    if(event.origin !== location.origin || event.source !== parent || event.data?.type !== 'hitslop:error-action') return;
+    await window.__hitslopAction?.(event.data.id,event.data.revision,event.data.instance,event.data.dismiss); sendReports();
+  });
   const resize = async (size) => size;
   const drag = async () => undefined;
 
   window.slop = Object.freeze({
-    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['host.info', 'json.open', 'json.read', 'json.write', 'window.resize', 'window.drag'] }),
+    preview: window.__hitslopReviewConfig,
+    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['sync.open', 'sync.commit', 'sync.readExternal', 'sync.review', 'errors.report', 'errors.clear', 'host.info', 'window.resize', 'window.drag'] }),
     flush: async () => undefined,
-    json: Object.freeze({
-      open: async (value) => {
-        if (!jsonOpened) { jsonValue = clone(window.__hitslopReviewConfig && Object.hasOwn(window.__hitslopReviewConfig, 'data') ? window.__hitslopReviewConfig.data : value); jsonOpened = true; }
-        return { value: clone(jsonValue), revision: revision() };
+    sync: Object.freeze({
+      open: syncOpen,
+      readExternal: syncOpen,
+      commit: async value => {
+        if (value.expectedGeneration !== syncValue.generation || value.expectedExternal !== syncValue.externalHash) throw Object.assign(new Error('Document changed'), {code: 'revision_conflict'});
+        const external = value.projection === undefined ? syncValue.external : value.projection;
+        const externalHash = external === null ? null : await syncHash(external);
+        syncValue = {identity:value.identity, checkpoint:value.checkpoint, metadata:value.metadata, external, externalHash, generation:'dev-sync:' + (++syncGeneration)};
+        return {...syncValue};
       },
-      read: async () => {
-        if (!jsonOpened) throw new Error('JSON preview store has not been opened');
-        return { value: clone(jsonValue), revision: revision() };
-      },
-      write: async (value, expectedRevision) => {
-        if (expectedRevision !== undefined && expectedRevision !== revision()) throw Object.assign(new Error('Document changed'), { code: 'revision_conflict' });
-        jsonValue = clone(value); jsonOpened = true; jsonRevision += 1;
-        const result = { revision: revision() };
-        emit('json', { source: 'app', revision: result.revision });
-        return result;
-      },
-      onChange: (callback) => watch('json', callback)
+      review: async () => { console.info('File review uses a built document in the macOS host. This preview is disposable.'); return 'cancel'; },
+      onChange: callback => watch('sync', callback)
+    }),
+    errors: Object.freeze({
+      report: async value => { if(value.revision >= (reports.get(value.id)?.revision ?? 0)) reports.set(value.id, {...value}); sendReports(); },
+      clear: async value => { if(value.revision >= (reports.get(value.id)?.revision ?? 0)) reports.delete(value.id); sendReports(); }
     }),
     media: Object.freeze({
       open: async () => ({ exists: false, revision: null }),

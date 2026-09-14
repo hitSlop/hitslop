@@ -84,7 +84,8 @@ or neither. See [Package format](docs/package-format.md) and
 ## The system at a glance
 
 - `apps/apple` — the macOS/iOS document host, catalog UI, Quick Look, export,
-  local/iCloud coordination, and the native capture CLI.
+  local document persistence, host recovery UI, and the native capture CLI.
+  See [document architecture](docs/sync-v1.md).
 - `apps/landing` — the static Astro site served at `hitslop.com`.
 - `apps/firebase` — Firebase Functions, Firestore, Storage, Hosting, and catalog
   rules for publishing and discovery.

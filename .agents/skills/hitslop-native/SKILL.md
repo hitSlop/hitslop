@@ -1,6 +1,6 @@
 ---
 name: hitslop-native
-description: Work on hitSlop Apple hosting, local storage, iCloud coordination, template caching, previews, export, or the native CLI.
+description: Work on hitSlop Apple hosting, local document storage, template caching, previews, export, or the native CLI.
 ---
 
 # hitSlop native host
@@ -35,8 +35,8 @@ description: Work on hitSlop Apple hosting, local storage, iCloud coordination, 
   extensions.
 - Skinned windows use an exact-size RGBA PNG as visible backing and mask, with
   10% alpha click-through and a transparent WebView.
-- On iOS, surface iCloud coordination and flush failures; do not silently lose
-  a store update.
+- Document editing is macOS-local only. iOS shows an unavailable state, and
+  known iCloud locations are rejected. The native host owns error and review UI.
 
 - Background captures use disposable snapshots. Never
   point a rendering runtime at original writable stores. Interactive exports

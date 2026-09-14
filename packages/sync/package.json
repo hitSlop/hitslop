@@ -1,0 +1,46 @@
+{
+  "name": "@hitslop/sync",
+  "version": "0.3.0",
+  "description": "Loro document replicas and on-disk journals for hitSlop.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hitslop/hitslop.git",
+    "directory": "packages/sync"
+  },
+  "homepage": "https://hitslop.com",
+  "bugs": {
+    "url": "https://github.com/hitslop/hitslop/issues"
+  },
+  "keywords": [
+    "hitslop",
+    "loro",
+    "crdt",
+    "local-first"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./browser": "./dist/browser.js"
+  },
+  "scripts": {
+    "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json",
+    "test": "bun run --cwd ../schema build && bun test"
+  },
+  "dependencies": {
+    "@hitslop/schema": "^0.3.0",
+    "loro-crdt": "^1.15.0",
+    "typebox": "^1.3.26"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^7.0.2"
+  }
+}

@@ -25,13 +25,22 @@ app-specific data and styling guidance.
 - Read \`data.schema.json\` when present before changing \`stores/data.json\`.
 - Treat \`manifest.json\`, \`app.html\`, \`data.schema.json\`, \`assets/\`, this
   skill, and \`QuickLook/Icon.png\` as immutable application files.
-- User data belongs only in \`stores/\`. \`QuickLook/Preview.png\` may be
+- User data belongs in \`stores/\`. Host-owned merge history belongs in
+  \`state/\`; do not edit \`state/\` by hand. \`QuickLook/Preview.png\` may be
   refreshed by the host. \`Icon\\r\` is Finder metadata, not document content.
 
 ## Edit data safely
 
-- For JSON, validate the complete value against the schema, write a temporary
-  sibling file, then atomically replace \`stores/data.json\`.
+- \`stores/data.json\` is an envelope with \`$slop\`
+  and \`data\`. Preserve \`$slop\` exactly and edit only \`data\`; read the
+  entire latest file before each editing pass. The host merges a saved edit
+  against the revision carried by that file. Do not parse or manufacture tokens.
+- Identical retries are safe. Different edits reusing an already consumed
+  revision require native review. Missing/unknown metadata or invalid data is
+  preserved for review; do not remove \`state/\` to force an overwrite.
+- Invalid external data is retained for repair. Do not replace it with stale UI
+  data. If no data exists, open the document to initialize authored defaults.
+  Do not construct revision metadata or edit the host-owned state files.
 - Named attachments belong in \`stores/media/\`. Names start with a lowercase
   ASCII letter and contain only lowercase letters, digits, and hyphens. Replace
   a media file atomically; use only supported image or bounded ZIP content.
@@ -44,8 +53,9 @@ write \`stores/theme.css\` with one \`:root\` rule that overrides only existing
 
 ## Check and export
 
-Run \`slop validate .\` after edits. Use
-\`slop export . --format png|pdf --output <path>\` for the full document and
+Use \`slop inspect . --json\` to inspect data and guidance and \`slop open .\`
+to show the document. Run \`slop validate .\` after edits. Use
+\`slop export . --format png|pdf --output <path>\` for saved disk data (pending UI edits are not flushed) and
 \`slop screenshot . --target preview|icon --output <path>\` for render targets.
 `;
 

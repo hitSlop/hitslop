@@ -20,7 +20,7 @@ try {
   await mkdir(document);
   await cp(join(root, "examples/slops/quick-checklist/manifest.json"), join(document, "manifest.json"));
   await writeFile(join(document, "app.html"), `<!doctype html><html><body><h1>Embedded helper</h1><script>
-    window.slop.json.open({ count: 1 }).then(() => window.slop.ready());
+    window.slop.sync.open().then(() => window.slop.ready());
   </script></body></html>`);
   const output = join(temporary, "preview.png");
   await run([join(app, "Contents/Helpers/hitslop-native"), "screenshot", document, "--output", output]);

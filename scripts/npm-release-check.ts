@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
-const packageNames = ["schema", "runtime", "svelte", "cli"] as const;
+const packageNames = ["schema", "sync", "runtime", "svelte", "cli"] as const;
 
 async function command(argv: string[], cwd = root, quiet = false, extraEnv: Record<string, string> = {}): Promise<string> {
   const label = argv.join(" ");

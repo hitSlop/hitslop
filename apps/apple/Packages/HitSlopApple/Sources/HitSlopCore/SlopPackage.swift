@@ -11,7 +11,7 @@ public enum SlopPackageError: LocalizedError {
     }
 }
 
-public enum SlopStoreKind: String, Sendable { case json, media }
+public enum SlopStoreKind: String, Sendable { case media, sync }
 
 public struct SlopPackage: Sendable {
     public let rootURL: URL
@@ -34,7 +34,7 @@ public struct SlopPackage: Sendable {
         guard fileManager.fileExists(atPath: entryURL.path) else { throw SlopPackageError.missing("app.html") }
         guard String(data: try Data(contentsOf: entryURL), encoding: .utf8) != nil else { throw SlopPackageError.invalid("app.html must be UTF-8") }
         let topLevel = try fileManager.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
-        let allowedTopLevel = Set(["manifest.json", "app.html", "assets", "stores", "QuickLook", ".agents", "Icon\r", "data.schema.json"])
+        let allowedTopLevel = Set(["manifest.json", "app.html", "assets", "stores", "state", "QuickLook", ".agents", "Icon\r", "data.schema.json"])
         if let unknown = topLevel.first(where: { !allowedTopLevel.contains($0.lastPathComponent) }) { throw SlopPackageError.invalid("unexpected runtime entry \(unknown.lastPathComponent)") }
         let forbidden = Set(["package.json", "bun.lock", "bun.lockb", "node_modules", "source", "src", "build", "document.json", ".build", ".hitslop", "style.css"])
         if let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: [.isSymbolicLinkKey]) {
@@ -44,6 +44,7 @@ public struct SlopPackage: Sendable {
             }
         }
         try validateStores()
+        try validateState()
         try validateSchemaMetadata()
         try validateDocumentSkill()
         try validateQuickLook()
@@ -54,7 +55,9 @@ public struct SlopPackage: Sendable {
     public var previewURL: URL { rootURL.appendingPathComponent("QuickLook/Preview.png") }
     public var iconURL: URL { rootURL.appendingPathComponent("QuickLook/Icon.png") }
     public var storesURL: URL { rootURL.appendingPathComponent("stores", isDirectory: true) }
-    public var jsonStoreURL: URL { storesURL.appendingPathComponent("data.json") }
+
+    public var stateURL: URL { rootURL.appendingPathComponent("state", isDirectory: true) }
+    public var projectionURL: URL { storesURL.appendingPathComponent("data.json") }
     public var mediaStoresURL: URL { storesURL.appendingPathComponent("media", isDirectory: true) }
     public var themeOverrideURL: URL { storesURL.appendingPathComponent("theme.css") }
     public var isSkinned: Bool { manifest.presentation.skin != nil }
@@ -79,6 +82,7 @@ public struct SlopPackage: Sendable {
     public func validateAsTemplate(requirePreview: Bool = true) throws {
         try validateDocumentSkill(strict: true)
         if FileManager.default.fileExists(atPath: storesURL.path) { throw SlopPackageError.invalid("templates cannot contain stores") }
+        if FileManager.default.fileExists(atPath: stateURL.path) { throw SlopPackageError.invalid("templates cannot contain state") }
         if FileManager.default.fileExists(atPath: rootURL.appendingPathComponent("Icon\r").path) { throw SlopPackageError.invalid("templates cannot contain a Finder custom icon") }
         if requirePreview {
             for url in [previewURL, iconURL] {
@@ -171,6 +175,27 @@ public struct SlopPackage: Sendable {
         }
         // Mutable contents are validated when accessed. A damaged store must not
         // prevent the guest from opening and presenting a recoverable error.
+    }
+
+    private func validateState() throws {
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: stateURL.path) else { return }
+        let allowed = Set(["identity.json", "checkpoint.loro", "materialization.json", "journal"])
+        for url in try fileManager.contentsOfDirectory(at: stateURL, includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey]) {
+            guard allowed.contains(url.lastPathComponent) else { throw SlopPackageError.invalid("unexpected state file \(url.lastPathComponent)") }
+            let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
+            if url.lastPathComponent == "journal" {
+                guard values.isDirectory == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("state/journal must be a directory") }
+                for entry in try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]) {
+                    let entryValues = try entry.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                    guard entryValues.isRegularFile == true, entryValues.isSymbolicLink != true else {
+                        throw SlopPackageError.invalid("invalid state/journal entry")
+                    }
+                }
+            } else {
+                guard values.isRegularFile == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("state must be a regular file: \(url.lastPathComponent)") }
+            }
+        }
     }
 
     private func validateSchemaMetadata() throws {

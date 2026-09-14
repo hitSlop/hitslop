@@ -42,6 +42,22 @@ import Testing
     #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
 }
 
+@Test func allowsHostOwnedStateOnlyInDocuments() throws {
+    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let state = root.appendingPathComponent("state", isDirectory: true)
+    try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
+    try Data(#"{"format":1,"documentId":"doc-a","peerId":"1"}"#.utf8).write(to: state.appendingPathComponent("identity.json"))
+    try Data([1, 2, 3]).write(to: state.appendingPathComponent("checkpoint.loro"))
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: false) }
+    let journal = state.appendingPathComponent("journal", isDirectory: true)
+    try FileManager.default.createDirectory(at: journal, withIntermediateDirectories: true)
+    for name in ["pending.json", "recovery.tmp"] {
+        try Data().write(to: journal.appendingPathComponent(name))
+    }
+
+}
+
 @Test func allowsHostFinderIconOnlyInDocuments() throws {
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     try Data().write(to: root.appendingPathComponent("Icon\r"))

@@ -167,16 +167,89 @@
     {
       "type": "object",
       "required": [
-        "method",
-        "value"
+        "method"
       ],
       "properties": {
         "method": {
           "type": "string",
-          "const": "json.open"
+          "const": "sync.open"
+        }
+      },
+      "additionalProperties": false,
+      "$defs": {
+        "json": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/json"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/json"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "method",
+        "expectedGeneration",
+        "expectedExternal",
+        "identity",
+        "checkpoint",
+        "metadata",
+        "preserveExternal"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "sync.commit"
         },
-        "value": {
-          "$ref": "#/$defs/json"
+        "expectedGeneration": {
+          "type": "string"
+        },
+        "expectedExternal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "identity": {
+          "type": "string"
+        },
+        "checkpoint": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "string"
+        },
+        "projection": {
+          "type": "string"
+        },
+        "preserveExternal": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
@@ -219,7 +292,7 @@
       "properties": {
         "method": {
           "type": "string",
-          "const": "json.read"
+          "const": "sync.readExternal"
         }
       },
       "additionalProperties": false,
@@ -258,18 +331,159 @@
       "type": "object",
       "required": [
         "method",
-        "value"
+        "proposal",
+        "canApply"
       ],
       "properties": {
         "method": {
           "type": "string",
-          "const": "json.write"
+          "const": "sync.review"
         },
-        "value": {
-          "$ref": "#/$defs/json"
-        },
-        "expectedRevision": {
+        "proposal": {
           "type": "string"
+        },
+        "canApply": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "$defs": {
+        "json": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/json"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/json"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "method",
+        "instance",
+        "id",
+        "revision",
+        "message",
+        "details",
+        "action",
+        "busy",
+        "dismissible"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "errors.report"
+        },
+        "instance": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        },
+        "action": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "busy": {
+          "type": "boolean"
+        },
+        "dismissible": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "$defs": {
+        "json": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/json"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/json"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "method",
+        "instance",
+        "id",
+        "revision"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "errors.clear"
+        },
+        "instance": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "additionalProperties": false,

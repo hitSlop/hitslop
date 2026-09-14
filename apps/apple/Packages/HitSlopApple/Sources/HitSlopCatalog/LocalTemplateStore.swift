@@ -15,49 +15,86 @@ public struct LocalTemplate: Identifiable, Sendable {
     public var id: String { "local:\(manifest.slug)" }
 }
 
+public struct LocalTemplateSnapshot: Sendable {
+    public var templates: [LocalTemplate] = []
+    public var issues: [String] = []
+}
+
 @MainActor public final class LocalTemplateStore: ObservableObject {
-    @Published public private(set) var templates: [LocalTemplate] = []
-    @Published public private(set) var issues: [String] = []
+    @Published public private(set) var snapshot = LocalTemplateSnapshot()
+    public var templates: [LocalTemplate] { snapshot.templates }
+    public var issues: [String] { snapshot.issues }
     public let templatesURL: URL
-    private var watcher: DispatchSourceFileSystemObject?; private var descriptor: Int32 = -1
+    private let scan: @Sendable (URL) async throws -> LocalTemplateSnapshot
+    private var watcher: DispatchSourceFileSystemObject?
+    private var scanTask: Task<Void, Never>?
+    private var generation = 0
+    private var stopped = false
 
-    public init(templatesURL: URL = DocumentFactory.defaultTemplatesRoot) {
-        self.templatesURL = templatesURL; refresh(); startWatching()
+    public convenience init(templatesURL: URL = DocumentFactory.defaultTemplatesRoot) {
+        let scanner = CatalogScanner()
+        self.init(templatesURL: templatesURL, scan: { try await scanner.local(at: $0) })
     }
-    deinit { watcher?.cancel() }
 
-    public func refresh() {
-        do {
-            try FileManager.default.createDirectory(at: templatesURL, withIntermediateDirectories: true)
-            var nextIssues: [String] = []
-            let children = try FileManager.default.contentsOfDirectory(at: templatesURL, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])
-            var next: [LocalTemplate] = []
-            for child in children.sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }) where child.pathExtension.lowercased() == "slop" {
-                do {
-                    let package = try SlopPackage(rootURL: child); try package.validateAsTemplate()
-                    guard child.deletingPathExtension().lastPathComponent == package.manifest.slug else { throw SlopPackageError.invalid("installed filename must match manifest slug") }
-                    let values = try? child.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
-                    next.append(LocalTemplate(
-                        packageURL: child,
-                        iconURL: package.iconURL,
-                        previewURL: package.previewURL,
-                        manifest: package.manifest,
-                        packageBytes: slopPackageByteCount(child),
-                        createdAt: values?.creationDate,
-                        updatedAt: values?.contentModificationDate
-                    ))
-                    try? SlopDuplicator.makeImmutable(child)
-                } catch { nextIssues.append("\(child.lastPathComponent): \(error.localizedDescription)") }
-            }
-            templates = next; issues = nextIssues
-        } catch { templates = []; issues = [error.localizedDescription] }
+    init(templatesURL: URL, scan: @escaping @Sendable (URL) async throws -> LocalTemplateSnapshot) {
+        self.templatesURL = templatesURL
+        self.scan = scan
+        startWatching()
+        scheduleScan()
+    }
+
+    deinit { watcher?.cancel(); scanTask?.cancel() }
+
+    /// Joins an existing scan instead of restarting the watcher or duplicating disk work.
+    public func refresh() async {
+        guard !stopped else { return }
+        if scanTask == nil { scheduleScan() }
+        while let task = scanTask, !stopped {
+            let requestedGeneration = generation
+            await task.value
+            if generation == requestedGeneration { return }
+            // A filesystem event superseded the scan we joined; await its replacement.
+        }
+    }
+
+    func stop() {
+        stopped = true
+        generation += 1
+        scanTask?.cancel()
+        scanTask = nil
+        watcher?.cancel()
+        watcher = nil
+    }
+
+    private func scheduleScan() {
+        guard !stopped else { return }
+        generation += 1
+        let requestedGeneration = generation
+        scanTask?.cancel()
+        scanTask = Task { [weak self, scan, templatesURL] in
+            let result: LocalTemplateSnapshot
+            do { result = try await scan(templatesURL) }
+            catch is CancellationError { return }
+            catch { result = LocalTemplateSnapshot(issues: [error.localizedDescription]) }
+            guard !Task.isCancelled, let self, self.generation == requestedGeneration else { return }
+            self.snapshot = result
+            self.scanTask = nil
+            // The first scan may have created a previously missing templates directory.
+            self.startWatching()
+        }
     }
 
     private func startWatching() {
-        descriptor = open(templatesURL.path, O_EVTONLY); guard descriptor >= 0 else { return }
-        let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor, eventMask: [.write, .rename, .delete, .extend], queue: .main)
-        source.setEventHandler { [weak self] in self?.refresh() }; source.setCancelHandler { [descriptor] in if descriptor >= 0 { close(descriptor) } }
-        watcher = source; source.resume()
+        guard watcher == nil, !stopped else { return }
+        let descriptor = open(templatesURL.path, O_EVTONLY)
+        guard descriptor >= 0 else { return }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor, eventMask: [.write, .rename, .delete, .extend], queue: .main
+        )
+        source.setEventHandler { [weak self] in self?.scheduleScan() }
+        source.setCancelHandler { if descriptor >= 0 { close(descriptor) } }
+        watcher = source
+        source.resume()
     }
 }
 

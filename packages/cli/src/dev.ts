@@ -1,3 +1,4 @@
+import { previewShell } from "./preview-shell.ts";
 import { join, resolve } from "node:path";
 import type { Plugin } from "vite";
 import { createServer } from "vite";
@@ -6,20 +7,23 @@ import { loadManifest } from "./project.ts";
 import { readThemeCSS } from "./theme.ts";
 
 /** Browser-only preview host. Durable storage behavior is tested in a built .slop. */
-export function mockHostPlugin(options: { themeHref?: string } = {}): Plugin {
+export function mockHostPlugin(options: { themeHref?: string; width?: number; height?: number } = {}): Plugin {
   return {
     name: "hitslop-browser-preview",
     transformIndexHtml: {
       order: "pre",
-      handler: (html) => injectHost(html, options),
+      handler: (html, context) => {
+        const url = new URL(context.originalUrl ?? context.path, "http://preview");
+        return url.searchParams.has("_slopFrame") || url.searchParams.has("capture") ? injectHost(html, options) : previewShell(context.originalUrl ?? context.path, options.width, options.height);
+      },
     },
   };
 }
 
 export async function runDev(root: string): Promise<void> {
-  await loadManifest(root);
+  const manifest = await loadManifest(root);
   const themeHref = await readThemeCSS(root) !== undefined ? "/assets/theme.css" : undefined;
-  const server = await createServer({ root, plugins: [themePreviewPlugin(root), mockHostPlugin(themeHref ? { themeHref } : {})] });
+  const server = await createServer({ root, plugins: [themePreviewPlugin(root), mockHostPlugin({ ...(themeHref ? {themeHref} : {}), ...manifest.presentation })] });
   await server.listen();
   const url = server.resolvedUrls?.local[0];
   if (!url) throw new Error("Vite did not expose a development URL");

@@ -80,5 +80,12 @@ archive/templates/*
 !archive/templates/weekly-planner/
 !archive/templates/weekly-planner/**
 Prototypes/*
+!Prototypes/sync-wasm/
+!Prototypes/sync-wasm/*.ts
+!Prototypes/sync-wasm/*.html
+!Prototypes/sync-wasm/*.json
+!Prototypes/sync-wasm/*.md
+Prototypes/sync-wasm/dist/
+Prototypes/sync-wasm/node_modules/
 !Prototypes/ambient-mixer/
 !Prototypes/ambient-mixer/**

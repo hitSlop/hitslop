@@ -10,6 +10,7 @@
 | `apps/landing` | Static Astro site for `hitslop.com` |
 | `packages/cli` | Authoring, browser preview fake, build, capture, identity, register, publish |
 | `packages/runtime` | Framework-neutral host API and adapter building blocks |
+| `packages/sync` | Loro replicas and on-disk document journals |
 | `packages/svelte` | Svelte 5 state adapters |
 | `archive/packages/react` | Paused React adapter, excluded from workspaces/releases |
 | `packages/schema` | TypeBox source, JSON Schema, publish protocol, generated Swift |

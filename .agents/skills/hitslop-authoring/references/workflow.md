@@ -2,7 +2,7 @@
 
 ## Commands
 
-Quick Checklist imports root `schema.ts` directly into `jsonStore`.
+Quick Checklist imports root `schema.ts` directly into `documentStore`.
 Editor types and checks work without preparation or a dev server. Builds emit
 `data.schema.json` for the host; keep schema definitions deterministic.
 The CLI counter starter follows the same workflow; run `bun run check` for editor/type diagnostics.

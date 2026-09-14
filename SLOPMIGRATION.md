@@ -1,8 +1,9 @@
-# Slop Migration Plan
+# Deferred template authoring
 
-Current platform pilot: Quick Checklist plus two promoted waves. Remaining examples
-stay in `examples/slops/_backlog/`.
-Promote and migrate one project at a time before marking it supported again.
+Quick Checklist is the sole active example. Every other example is in
+`examples/slops/_backlog/`; archived sources stay in `archive/`. Neither is a
+supported platform client. Bring templates into the current system one at a time.
+There is no runtime format migration or compatibility layer.
 
 This document tracks the structural and design migration of every existing authored
 slop in `examples/slops/`. Follow `SLOPMIGRATIONRUNNER.md` for the routine

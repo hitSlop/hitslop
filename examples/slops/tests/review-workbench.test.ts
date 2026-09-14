@@ -9,7 +9,7 @@ async function fixture(run: (path: string) => Promise<void>) {
   try {
     await writeFile(
       join(path, "schema.ts"),
-      'export default { type: "object", properties: { text: { type: "string" } }, required: ["text"], additionalProperties: true };',
+      'export default { "x-hitslop": {version: 1, container: "map"}, type: "object", properties: { text: { type: "string" } }, required: ["text"], additionalProperties: true };',
     );
     await run(path);
   } finally {

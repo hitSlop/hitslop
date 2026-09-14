@@ -2,6 +2,7 @@ import AppKit
 import HitSlopCore
 import HitSlopRuntime
 import SwiftUI
+import Observation
 import UniformTypeIdentifiers
 
 private final class FramelessDocumentWindow: NSWindow {
@@ -140,13 +141,31 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
 }
 
+@MainActor @Observable private final class SlopToolbarPresentation {
+    var pinned = false
+    var commandsEnabled = true
+}
+
+public enum SlopDocumentCommand: Equatable, Sendable {
+    case pin(Bool), exportPNG, exportPDF, duplicate, share, reveal, copyPath, openEditor(URL), retry, close
+}
+
 @MainActor public final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, SlopRuntimeSessionDelegate {
     public let packageURL: URL
     public let session: SlopRuntimeSession
     public var onClose: (() -> Void)?
     public var onOpenDocument: ((URL) -> Void)?
+    public var onCommand: ((SlopDocumentCommand) -> Void)?
+    public var onRuntimeReady: (() -> Void)?
+    public var onRuntimeFailure: ((String) -> Void)?
+    private let toolbarPresentation = SlopToolbarPresentation()
     private let opened: SlopOpenedDocument
     private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?, hideWork: DispatchWorkItem?
+    private let reportStack = NSStackView()
+    private var reportRows: [String: ReportRow] = [:]
+    private var syncPanel: NSPanel?
+    private var presentedRuntimeError: String?
+    public var isShowingRuntimeFailure: Bool { failedOverlay != nil }
     private var failedOverlay: NSHostingView<FailureOverlay>?
 
     public init(packageURL: URL) throws {
@@ -168,7 +187,6 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         window.contentView = container; window.center()
         super.init(window: window)
         window.delegate = self; session.delegate = self; container.changed = { [weak self] in $0 ? self?.showToolbar() : self?.scheduleHide() }
-        opened.onFlushError = { [weak self] error in self?.present("Could not save to iCloud", error) }
         setupToolbar()
         SlopDocumentAssetRefreshQueue.invalidate(self.packageURL)
         SlopPreviewWriter.installExistingPreview(for: self.packageURL)
@@ -176,7 +194,73 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     required init?(coder: NSCoder) { nil }
 
-    public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) { failedOverlay?.removeFromSuperview(); failedOverlay = nil }
+    public func runtimeSession(_ session: SlopRuntimeSession, errorsChanged errors: [SlopHostError]) {
+        guard let window else { return }
+        if errors.isEmpty {
+            if let panel = syncPanel { window.removeChildWindow(panel); panel.close(); syncPanel = nil }
+            for row in reportRows.values { reportStack.removeArrangedSubview(row); row.removeFromSuperview() }
+            reportRows.removeAll()
+            return
+        }
+        let panel: NSPanel
+        if let existing = syncPanel { panel = existing }
+        else {
+            panel = NSPanel(contentRect: .zero, styleMask: [.nonactivatingPanel, .titled], backing: .buffered, defer: false)
+            panel.isReleasedWhenClosed = false; syncPanel = panel; window.addChildWindow(panel, ordered: .above)
+            reportStack.orientation = .vertical; reportStack.alignment = .leading; reportStack.spacing = 8
+            panel.contentView?.addSubview(reportStack)
+        }
+        panel.title = errors.count == 1 ? errors[0].message : "Document needs attention"
+        let ids = Set(errors.map(\.id))
+        for id in reportRows.keys.filter({ !ids.contains($0) }) {
+            let row = reportRows.removeValue(forKey: id)!; reportStack.removeArrangedSubview(row); row.removeFromSuperview()
+        }
+        for report in errors {
+            let row: ReportRow
+            if let existing = reportRows[report.id] { row = existing }
+            else {
+                row = ReportRow(target: self, run: #selector(runErrorAction(_:)), details: #selector(showErrorDetails(_:)), dismiss: #selector(dismissError(_:)))
+                reportRows[report.id] = row; reportStack.addArrangedSubview(row)
+            }
+            row.update(report)
+        }
+        let height = CGFloat(24 + errors.count * 44)
+        panel.setFrame(NSRect(x: window.frame.minX, y: window.frame.minY - height - 24, width: max(480, window.frame.width), height: height), display: true)
+        reportStack.frame = NSRect(x: 12, y: 12, width: panel.frame.width - 24, height: height - 24)
+        reportStack.autoresizingMask = [.width, .height]; panel.orderFront(nil)
+    }
+    @objc private func runErrorAction(_ sender: ReportButton) { performError(sender, dismiss: false) }
+    @objc private func dismissError(_ sender: ReportButton) { performError(sender, dismiss: true) }
+    private func performError(_ sender: ReportButton, dismiss: Bool) {
+        guard let report = sender.report else { return }; sender.isEnabled = false
+        Task { do { _ = try await session.performErrorAction(id: report.id, revision: report.revision, instance: report.instance, dismiss: dismiss) } catch { sender.isEnabled = true; present("Action failed", error) } }
+    }
+    @objc private func showErrorDetails(_ sender: ReportButton) {
+        guard let report = sender.report, let window else { return }
+        let alert = NSAlert(); alert.messageText = report.message; alert.informativeText = report.details; alert.beginSheetModal(for: window)
+    }
+    public func runtimeSession(_ session: SlopRuntimeSession, review proposal: String, canApply: Bool) async -> String {
+        guard let window else { return "cancel" }
+        let alert = NSAlert(); alert.messageText = "Review external file changes"
+        alert.informativeText = "The original file will be retained in the recovery journal."
+        if canApply { alert.addButton(withTitle: "Apply file changes") }
+        alert.addButton(withTitle: "Keep current document"); alert.addButton(withTitle: "Cancel")
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 560, height: 300)); scroll.hasVerticalScroller = true
+        let text = NSTextView(frame: scroll.bounds); text.isEditable = false; text.string = proposal
+        text.font = .monospacedSystemFont(ofSize: 12, weight: .regular); text.isVerticallyResizable = true; text.autoresizingMask = [.width]; text.textContainer?.widthTracksTextView = true
+        scroll.documentView = text; alert.accessoryView = scroll
+        return await withCheckedContinuation { continuation in
+            alert.beginSheetModal(for: window) { response in
+                let index = response.rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
+                let choices = canApply ? ["apply", "keep", "cancel"] : ["keep", "cancel"]
+                continuation.resume(returning: choices.indices.contains(index) ? choices[index] : "cancel")
+            }
+        }
+    }
+    public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {
+        if let onRuntimeReady { onRuntimeReady() }
+        else { updateRuntimeFailure(nil) }
+    }
     public func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo requested: CGSize) throws -> CGSize {
         guard let window else { throw SlopPackageError.invalid("document window is unavailable") }
         let frame = dynamicSlopWindowFrame(current: window.frame, requested: requested, visible: window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame)
@@ -188,7 +272,10 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         guard let window else { throw SlopPackageError.invalid("document window is unavailable") }
         try session.performWindowDrag(on: window)
     }
-    public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) { showFailure(error) }
+    public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {
+        if let onRuntimeFailure { onRuntimeFailure(error.localizedDescription) }
+        else { updateRuntimeFailure(error.localizedDescription) }
+    }
 
     private func setupToolbar() {
         let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 388, height: 44), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -200,7 +287,24 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         window?.addChildWindow(panel, ordered: .above); panel.orderOut(nil); toolbar = panel; toolbarHost = host
     }
     private func toolbarView() -> SlopToolbar {
-        SlopToolbar(drag: { [weak self] event in self?.dragWindow(with: event) }, pinned: isPinned, close: { [weak self] in self?.close() }, minimize: { [weak self] in self?.miniaturizeFromToolbar() }, pin: { [weak self] in self?.togglePin() }, duplicate: { [weak self] in self?.duplicate() }, png: { [weak self] in self?.export(.png) }, pdf: { [weak self] in self?.export(.pdf) }, share: { [weak self] in self?.share() }, reveal: { [weak self] in self?.reveal() }, copyPath: { [weak self] in self?.copyPath() }, editors: installedEditors(), openEditor: { [weak self] url in self?.openInEditor(url) })
+        SlopToolbar(drag: { [weak self] event in self?.dragWindow(with: event) }, presentation: toolbarPresentation,
+            close: { [weak self] in self?.request(.close) }, minimize: { [weak self] in self?.miniaturizeFromToolbar() },
+            pin: { [weak self] in guard let self else { return }; self.request(.pin(!self.isPinned)) },
+            duplicate: { [weak self] in self?.request(.duplicate) }, png: { [weak self] in self?.request(.exportPNG) },
+            pdf: { [weak self] in self?.request(.exportPDF) }, share: { [weak self] in self?.request(.share) },
+            reveal: { [weak self] in self?.request(.reveal) }, copyPath: { [weak self] in self?.request(.copyPath) },
+            applications: installedApplications(), openApplication: { [weak self] in self?.request(.openEditor($0)) })
+    }
+    public func updatePresentation(pinned: Bool, commandsEnabled: Bool, runtimeError: String? = nil) {
+        updateRuntimeFailure(runtimeError)
+        guard isPinned != pinned || toolbarPresentation.commandsEnabled != commandsEnabled else { return }
+        window?.level = pinned ? .floating : .normal
+        toolbarPresentation.pinned = pinned
+        toolbarPresentation.commandsEnabled = commandsEnabled
+    }
+    private func request(_ command: SlopDocumentCommand) {
+        if let onCommand { onCommand(command); return }
+        Task { do { if let url = try await perform(command) { onOpenDocument?(url) } } catch { present("Could not complete command", error) } }
     }
     private func dragWindow(with event: NSEvent) { hideWork?.cancel(); window?.performDrag(with: event); showToolbar() }
     private func miniaturizeFromToolbar() { hideWork?.cancel(); toolbar?.orderOut(nil); window?.miniaturize(nil) }
@@ -216,66 +320,92 @@ private struct ToolbarDragHandle: NSViewRepresentable {
             if self.window?.frame.contains(point) != true, self.toolbar?.frame.contains(point) != true { self.toolbar?.orderOut(nil) }
         }; hideWork = work; DispatchQueue.main.asyncAfter(deadline: .now() + 0.65, execute: work)
     }
-    private func togglePin() { window?.level = isPinned ? .normal : .floating; toolbarHost?.rootView = toolbarView() }
     public var isPinned: Bool { window?.level == .floating }
     public var documentTitle: String { window?.title ?? session.package.manifest.title }
     public var dockMenuImage: NSImage {
         slopDockMenuImage(iconURL: session.package.iconURL, fallbackURL: packageURL)
     }
     public func owns(_ candidate: NSWindow?) -> Bool { candidate === window || candidate === toolbar }
-    public func togglePinFromMenu() { togglePin() }
-    public func duplicateFromMenu() { duplicate() }
-    public func exportPNGFromMenu() { export(.png) }
-    public func exportPDFFromMenu() { export(.pdf) }
-    public func shareFromMenu() { share() }
+    public func togglePinFromMenu() { request(.pin(!isPinned)) }
+    public func duplicateFromMenu() { request(.duplicate) }
+    public func exportPNGFromMenu() { request(.exportPNG) }
+    public func exportPDFFromMenu() { request(.exportPDF) }
+    public func shareFromMenu() { request(.share) }
     public func revealFromDock() {
         showWindow(nil)
         window?.deminiaturize(nil)
         window?.makeKeyAndOrderFront(nil)
     }
 
-    private func duplicate() {
-        guard let window else { return }; let panel = NSSavePanel(); panel.allowedContentTypes = [.slop]; panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + " copy.slop"
-        panel.directoryURL = SlopCloud.defaultCreationDirectory()
-        panel.beginSheetModal(for: window) { [weak self] response in
-            guard response == .OK, let self, let target = panel.url else { return }
-                Task {
-                    do {
-                        try await self.session.flush()
-                        try self.opened.flush()
-                        self.onOpenDocument?(try SlopDuplicator.duplicate(from: self.session.package.rootURL, to: target))
-                    } catch { self.present("Could not duplicate", error) }
-                }
+    /// Executes a command authorized by the application feature. Resource ownership stays native.
+    public func perform(_ command: SlopDocumentCommand) async throws -> URL? {
+        switch command {
+        case .pin(let pinned): window?.level = pinned ? .floating : .normal; toolbarPresentation.pinned = pinned
+        case .duplicate:
+            guard let target = await destination(types: [.slop], name: packageURL.deletingPathExtension().lastPathComponent + " copy.slop") else { return nil }
+            try await session.flush()
+            return try SlopDuplicator.duplicate(from: session.package.rootURL, to: target).standardizedFileURL.resolvingSymlinksInPath()
+        case .exportPNG, .exportPDF:
+            let png = command == .exportPNG
+            guard let target = await destination(types: [png ? .png : .pdf], name: packageURL.deletingPathExtension().lastPathComponent + (png ? ".png" : ".pdf")) else { return nil }
+            try await session.flush()
+            let data = try await (png ? SlopRenderer.exportPNGData(session: session) : SlopRenderer.exportPDFData(session: session))
+            try data.write(to: target, options: .atomic)
+        case .share: share()
+        case .reveal: reveal()
+        case .copyPath: copyPath()
+        case .openEditor(let app): try await openInApplication(app)
+        case .retry:
+            if onCommand == nil { updateRuntimeFailure(nil) }
+            session.reload()
+        case .close:
+            try await prepareToClose()
+            closePrepared = true
+            window?.close()
         }
+        return nil
     }
-    private enum ExportKind { case png, pdf }
-    private func export(_ kind: ExportKind) {
-        let panel = NSSavePanel(); panel.allowedContentTypes = [kind == .png ? .png : .pdf]; panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + (kind == .png ? ".png" : ".pdf")
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        Task { do { try await session.flush(); try await (kind == .png ? SlopRenderer.exportPNGData(session: session) : SlopRenderer.exportPDFData(session: session)).write(to: url, options: .atomic) } catch { present("Export failed", error) } }
+    private func destination(types: [UTType], name: String) async -> URL? {
+        let panel = NSSavePanel(); panel.allowedContentTypes = types; panel.nameFieldStringValue = name
+        panel.directoryURL = packageURL.deletingLastPathComponent()
+        let response = await withCheckedContinuation { continuation in
+            if let window { panel.beginSheetModal(for: window) { continuation.resume(returning: $0) } }
+            else { panel.begin { continuation.resume(returning: $0) } }
+        }
+        return response == .OK ? panel.url : nil
     }
     private func share() { guard let view = toolbar?.contentView else { return }; NSSharingServicePicker(items: [packageURL]).show(relativeTo: view.bounds, of: view, preferredEdge: .minY) }
     private func reveal() { NSWorkspace.shared.activateFileViewerSelecting([packageURL]) }
     private func copyPath() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(packageURL.path, forType: .string) }
-    private func installedEditors() -> [(String, URL)] {
+    private func installedApplications() -> [(String, URL)] {
         // Resolve via Launch Services first so non-/Applications installs work.
         [
             ("Open in Cursor", "com.todesktop.230313mzl4w4u92", "/Applications/Cursor.app"),
             ("Open in Visual Studio Code", "com.microsoft.VSCode", "/Applications/Visual Studio Code.app"),
             ("Open in VS Code Insiders", "com.microsoft.VSCodeInsiders", "/Applications/Visual Studio Code - Insiders.app"),
+            ("Open in Terminal", "com.apple.Terminal", "/System/Applications/Utilities/Terminal.app"),
+            ("Open in iTerm", "com.googlecode.iterm2", "/Applications/iTerm.app"),
+            ("Open in Warp", "dev.warp.Warp-Stable", "/Applications/Warp.app"),
         ].compactMap { title, bundleID, fallbackPath in
             if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) { return (title, url) }
             return FileManager.default.fileExists(atPath: fallbackPath) ? (title, URL(fileURLWithPath: fallbackPath)) : nil
         }
     }
-    private func openInEditor(_ app: URL) { NSWorkspace.shared.open([packageURL], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration()) }
+    private func openInApplication(_ app: URL) async throws {
+        let directoryURL = URL(fileURLWithPath: packageURL.path, isDirectory: true)
+        _ = try await NSWorkspace.shared.open([directoryURL], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+    }
 
-    private func showFailure(_ error: Error) {
-        guard let content = window?.contentView else { return }; failedOverlay?.removeFromSuperview()
-        let overlay = NSHostingView(rootView: FailureOverlay(message: error.localizedDescription, retry: { [weak self] in self?.failedOverlay?.removeFromSuperview(); self?.failedOverlay = nil; self?.session.reload() }))
+    private func updateRuntimeFailure(_ message: String?) {
+        guard presentedRuntimeError != message else { return }
+        presentedRuntimeError = message
+        failedOverlay?.removeFromSuperview()
+        failedOverlay = nil
+        guard let message, let content = window?.contentView else { return }
+        let overlay = NSHostingView(rootView: FailureOverlay(message: message, retry: { [weak self] in self?.request(.retry) }))
         overlay.frame = content.bounds; overlay.autoresizingMask = [.width, .height]; content.addSubview(overlay); failedOverlay = overlay
     }
-    public func windowDidMove(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
+    public func windowDidMove(_ notification: Notification) { if let window, let syncPanel { syncPanel.setFrameOrigin(NSPoint(x: window.frame.minX, y: window.frame.minY - syncPanel.frame.height - 24)) }; if toolbar?.isVisible == true { showToolbar() } }
     private var closePrepared = false
     private var preparingClose = false
     public override func close() {
@@ -284,7 +414,6 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     public func prepareToClose() async throws {
         try await session.flush()
-        try opened.flush()
         do {
             let snapshot = try SlopRenderSnapshot(packageURL: session.package.rootURL)
             SlopDocumentAssetRefreshQueue.schedule(snapshot: snapshot, presentedURL: packageURL)
@@ -295,6 +424,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     public func windowShouldClose(_ sender: NSWindow) -> Bool {
         if closePrepared { return true }
+        if let onCommand { onCommand(.close); return false }
         guard !preparingClose else { return false }
         preparingClose = true
         Task {
@@ -307,6 +437,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     public func windowDidResize(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
     public func windowWillMiniaturize(_ notification: Notification) { hideWork?.cancel(); toolbar?.orderOut(nil) }
     public func windowWillClose(_ notification: Notification) {
+        if let syncPanel { window?.removeChildWindow(syncPanel); syncPanel.close(); self.syncPanel = nil }
         toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil
         opened.close()
         onClose?()
@@ -321,20 +452,44 @@ private struct FailureOverlay: View {
 
 private struct SlopToolbar: View {
     let drag: (NSEvent) -> Void
-    let pinned: Bool, close: () -> Void, minimize: () -> Void, pin: () -> Void, duplicate: () -> Void, png: () -> Void, pdf: () -> Void, share: () -> Void, reveal: () -> Void, copyPath: () -> Void
-    let editors: [(String, URL)], openEditor: (URL) -> Void
+    let presentation: SlopToolbarPresentation
+    let close: () -> Void, minimize: () -> Void, pin: () -> Void, duplicate: () -> Void, png: () -> Void, pdf: () -> Void, share: () -> Void, reveal: () -> Void, copyPath: () -> Void
+    let applications: [(String, URL)], openApplication: (URL) -> Void
     var body: some View {
         HStack(spacing: 3) {
             ToolbarDragHandle(onDrag: drag).frame(width: 20, height: 25).help("Drag window")
             Divider().frame(height: 16)
-            icon("xmark", "Close", close); icon("minus", "Minimize", minimize); icon(pinned ? "pin.fill" : "pin", pinned ? "Unpin" : "Always on Top", pin); Divider().frame(height: 16)
+            icon("xmark", "Close", close); icon("minus", "Minimize", minimize); icon(presentation.pinned ? "pin.fill" : "pin", presentation.pinned ? "Unpin" : "Always on Top", pin).disabled(!presentation.commandsEnabled); Divider().frame(height: 16)
+            Group {
             icon("doc.on.doc", "Duplicate", duplicate)
             Menu { Button("Export PNG…", action: png); Button("Export PDF…", action: pdf) } label: { Image(systemName: "arrow.down.doc").frame(width: 25, height: 25) }.menuStyle(.borderlessButton).fixedSize().help("Export")
             icon("square.and.arrow.up", "Share", share)
-            Menu { ForEach(editors, id: \.1) { editor in Button(editor.0) { openEditor(editor.1) } }; if !editors.isEmpty { Divider() }; Button("Reveal in Finder", action: reveal); Button("Copy Path", action: copyPath) } label: { Image(systemName: "arrow.up.forward.square").frame(width: 25, height: 25) }.menuStyle(.borderlessButton).fixedSize().help("Open in")
+            Menu { ForEach(applications, id: \.1) { application in Button(application.0) { openApplication(application.1) } }; if !applications.isEmpty { Divider() }; Button("Reveal in Finder", action: reveal); Button("Copy Path", action: copyPath) } label: { Image(systemName: "arrow.up.forward.square").frame(width: 25, height: 25) }.menuStyle(.borderlessButton).fixedSize().help("Open in")
+            }.disabled(!presentation.commandsEnabled)
         }.padding(.horizontal, 9).padding(.vertical, 6).background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.25))).padding(2)
     }
     private func icon(_ name: String, _ help: String, _ action: @escaping () -> Void) -> some View { Button(action: action) { Image(systemName: name).frame(width: 25, height: 25).contentShape(Rectangle()) }.buttonStyle(.plain).help(help) }
 }
 
 public extension UTType { static let slop = UTType(exportedAs: "com.hitslop.slop", conformingTo: .package) }
+
+private final class ReportButton: NSButton { var report: SlopHostError? }
+
+private final class ReportRow: NSStackView {
+    private let label = NSTextField(wrappingLabelWithString: "")
+    private let run = ReportButton(), details = ReportButton(), dismiss = ReportButton()
+    init(target: AnyObject, run: Selector, details: Selector, dismiss: Selector) {
+        super.init(frame: .zero); orientation = .horizontal; spacing = 12
+        self.run.target = target; self.run.action = run
+        self.details.target = target; self.details.action = details; self.details.title = "Details"
+        self.dismiss.target = target; self.dismiss.action = dismiss; self.dismiss.title = "Dismiss"
+        for view in [label, self.run, self.details, self.dismiss] { addArrangedSubview(view) }
+    }
+    required init?(coder: NSCoder) { nil }
+    func update(_ report: SlopHostError) {
+        label.stringValue = report.message
+        run.report = report; run.title = report.action ?? ""; run.isHidden = report.action == nil; run.isEnabled = !report.busy
+        details.report = report; details.isHidden = report.details.isEmpty
+        dismiss.report = report; dismiss.isHidden = !report.dismissible
+    }
+}

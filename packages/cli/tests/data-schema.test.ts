@@ -1,3 +1,4 @@
+import { envelopeSchema } from "@hitslop/schema/document";
 import { afterEach, expect, test } from "bun:test";
 import { loadDataSchema } from "../src/data-schema.ts";
 import { dataSchemaFromJSON } from "@hitslop/schema";
@@ -5,9 +6,9 @@ import checklistSchema from "../../../examples/slops/quick-checklist/schema.ts";
 
 test("root TypeBox schema is exported directly as portable JSON Schema", async () => {
   const schema = await loadDataSchema(new URL("../../../examples/slops/quick-checklist/schema.ts", import.meta.url).pathname);
-  expect(schema).toEqual(dataSchemaFromJSON(checklistSchema));
+  expect(schema).toEqual(dataSchemaFromJSON(envelopeSchema(dataSchemaFromJSON(checklistSchema) as any)));
   expect(schema.type).toBe("object");
-  expect(schema.required).toEqual(["title", "tasks"]);
+  expect(schema.required).toEqual(["$slop", "data"]);
   expect(JSON.stringify(schema)).not.toContain("~standard");
 });
 
@@ -24,17 +25,17 @@ test("packaging reevaluates transitive imports and recovers after invalid edits"
   const root = await mkdtemp(join(tmpdir(), "hitslop-direct-schema-"));
   temporary.push(root);
   const schema = join(root, "schema.ts"), field = join(root, "field.ts");
-  await writeFile(schema, 'import field from "./field"; export default { type: "object", properties: { field }, required: ["field"] };');
+  await writeFile(schema, 'import field from "./field"; export default { "x-hitslop": {version: 1, container: "map"}, type: "object", properties: { field }, required: ["field"] };');
   await writeFile(field, 'export default { type: "string" };');
-  expect((await loadDataSchema(schema)).properties).toEqual({ field: { type: "string" } });
+  expect(((await loadDataSchema(schema)).properties as any).data.properties).toEqual({ field: { type: "string" } });
   await writeFile(field, 'export default { type: "number" };');
-  expect((await loadDataSchema(schema)).properties).toEqual({ field: { type: "number" } });
+  expect(((await loadDataSchema(schema)).properties as any).data.properties).toEqual({ field: { type: "number" } });
   await writeFile(field, 'export default { type: "invalid" };');
   await expect(loadDataSchema(schema)).rejects.toThrow();
   await rm(field);
   await expect(loadDataSchema(schema)).rejects.toThrow("Could not evaluate");
   await writeFile(field, 'export default { type: "boolean" };');
-  expect((await loadDataSchema(schema)).properties).toEqual({ field: { type: "boolean" } });
+  expect(((await loadDataSchema(schema)).properties as any).data.properties).toEqual({ field: { type: "boolean" } });
   expect(await readdir(root)).not.toContain(".hitslop");
 });
 
@@ -50,8 +51,8 @@ async function fixture(source: string) {
 }
 
 test("schema logs and old markers cannot corrupt IPC results", async () => {
-  const { path } = await fixture('console.log("\\nHITSLOP_SCHEMA_RESULT:not-json"); console.error("schema diagnostic"); export default { type: "string" };');
-  expect((await loadDataSchema(path)).type).toBe("string");
+  const { path } = await fixture('console.log("\\nHITSLOP_SCHEMA_RESULT:not-json"); console.error("schema diagnostic"); export default { type: "object", "x-hitslop": {version: 1, container: "map"}, properties: {} };');
+  expect((await loadDataSchema(path)).type).toBe("object");
 });
 
 test("loader reports errors, missing results, and malformed IPC", async () => {
@@ -78,10 +79,10 @@ test("deadline and successful results both reap schema processes", async () => {
       writeFileSync(join(dirname(process.argv[2]), "pid"), String(process.pid));
       process.on("SIGTERM", () => {});
       setInterval(() => {}, 1000);
-      ${hangs ? "while (true) {}" : 'export default { type: "string" };'}
+      ${hangs ? "while (true) {}" : 'export default { type: "object", "x-hitslop": {version: 1, container: "map"}, properties: {} };'}
     `);
     if (hangs) await expect(loadDataSchema(path, 1000)).rejects.toThrow("timed out after 1000ms");
-    else expect((await loadDataSchema(path)).type).toBe("string");
+    else expect((await loadDataSchema(path)).type).toBe("object");
     const pid = Number(await readFile(join(root, "pid"), "utf8"));
     expect(() => process.kill(pid, 0)).toThrow();
   }
@@ -101,7 +102,7 @@ test("distributed CLI resolves its sibling loader without source files", async (
   expect(build.success).toBe(true);
   expect((await readdir(output)).sort()).toEqual(["cli.js", "module-loader.js"]);
   const { root } = await fixture("");
-  await writeFile(join(root, "schema.ts"), 'export default { type: "object" };');
+  await writeFile(join(root, "schema.ts"), 'export default { type: "object", "x-hitslop": {version: 1, container: "map"}, properties: {} };');
   await writeFile(join(root, "manifest.json"), JSON.stringify({
     $schema: "https://api.hitslop.com/schemas/v1/manifest.schema.json",
     author: { name: "Test" }, slug: "loader-test", title: "Loader test",

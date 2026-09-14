@@ -12,7 +12,7 @@ test("package paths match the shared native acceptance corpus", () => {
 });
 
 test("template path policy rejects nested source, traversal, and mutable stores", () => {
-  for (const path of ["assets/src/file.js", "assets/package.json", "assets/style.css", "assets/BUILD/x", "stores/data.json", "Icon\r", "../app.html", "assets//x", "assets/./x", "/app.html", "assets/../x", "assets/\\x"]) expect(() => validateTemplatePath(path)).toThrow();
+  for (const path of ["assets/src/file.js", "assets/package.json", "assets/style.css", "assets/BUILD/x", "stores/data.json", "state/identity.json", "Icon\r", "../app.html", "assets//x", "assets/./x", "/app.html", "assets/../x", "assets/\\x"]) expect(() => validateTemplatePath(path)).toThrow();
   for (const path of ["manifest.json", "app.html", "assets/", "assets/font.woff2", ".agents/skills/hitslop-document/SKILL.md", "QuickLook/Icon.png"]) expect(() => validateTemplatePath(path)).not.toThrow();
   expect(safeArchivePath("a".repeat(241))).toBe(false);
 });

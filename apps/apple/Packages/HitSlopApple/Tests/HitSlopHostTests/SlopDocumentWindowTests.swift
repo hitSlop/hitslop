@@ -70,3 +70,43 @@ private func documentWindowFixture(resizable: Bool) throws -> URL {
     try #require(bitmap.representation(using: .png, properties: [:])).write(to: root.appendingPathComponent("QuickLook/Icon.png"))
     return root
 }
+
+@Test @MainActor func managedWindowRoutesMenusAndCloseThroughItsCommandHandler() throws {
+    let root = try documentWindowFixture(resizable: true)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let controller = try SlopDocumentWindowController(packageURL: root)
+    defer { controller.onCommand = nil; controller.session.close() }
+    var commands: [SlopDocumentCommand] = []
+    controller.onCommand = { commands.append($0) }
+    controller.duplicateFromMenu()
+    controller.exportPNGFromMenu()
+    controller.exportPDFFromMenu()
+    controller.shareFromMenu()
+    controller.togglePinFromMenu()
+    #expect(!controller.windowShouldClose(try #require(controller.window)))
+    #expect(commands == [.duplicate, .exportPNG, .exportPDF, .share, .pin(true), .close])
+    #expect(!controller.isPinned)
+    controller.updatePresentation(pinned: true, commandsEnabled: false)
+    #expect(controller.isPinned)
+}
+
+@Test @MainActor func managedCloseFlushFailureDoesNotTearDownTheWindow() async throws {
+    let root = try documentWindowFixture(resizable: true)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let controller = try SlopDocumentWindowController(packageURL: root)
+    defer { controller.session.close() }
+    controller.onCommand = { _ in }
+    try await controller.session.waitUntilReady()
+    _ = try await controller.session.webView.evaluateJavaScript("window.__hitslopFlush = async () => { throw new Error('save rejected') }; true")
+    var closed = false
+    controller.onClose = { closed = true }
+    do {
+        _ = try await controller.perform(.close)
+        Issue.record("Close should fail when the guest flush rejects")
+    } catch {}
+    #expect(!closed)
+    #expect(controller.window?.delegate != nil)
+    _ = try await controller.session.webView.evaluateJavaScript("window.__hitslopFlush = async () => {}; true")
+    _ = try await controller.perform(.close)
+    #expect(closed)
+}

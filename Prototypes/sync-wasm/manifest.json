@@ -1,0 +1,1 @@
+{"author": {"name": "hitSlop"}, "slug": "sync-wasm", "title": "Loro runtime check", "description": "Disposable Loro runtime compatibility check", "categories": ["utilities"], "presentation": {"width": 480, "height": 620}, "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json"}

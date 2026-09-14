@@ -3,7 +3,7 @@
   import type { Checklist } from "../schema";
   import Brand from "./Brand.svelte";
   import * as s from "./styles.css";
-  let { checklist, view }: { checklist: Checklist; view: "tasks" | "filed" } = $props();
+  let { checklist, view }: { checklist: { readonly title: string; readonly tasks: readonly Readonly<Checklist["tasks"][number]>[] }; view: "tasks" | "filed" } = $props();
   const tasks = $derived(checklist.tasks.filter(task => task.archived === (view === "filed")));
   const completed = $derived(tasks.filter(task => task.done).length);
 </script>

@@ -1,0 +1,6 @@
+{
+  "name": "@hitslop/sync-wasm-smoke",
+  "private": true,
+  "type": "module",
+  "dependencies": { "loro-crdt": "^1.15.0" }
+}

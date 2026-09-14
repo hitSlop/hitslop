@@ -1,3 +1,4 @@
+import { previewPanelScript } from "../../packages/cli/src/preview-shell";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -51,7 +52,7 @@ export async function loadReview(directory: string): Promise<ReviewInfo> {
   if (!value || !Array.isArray(value.cases) || !value.cases.length)
     throw new Error("review.json requires a nonempty cases array");
   const validate = compileDataSchema(
-    await loadDataSchema(join(directory, "schema.ts")),
+    ((await loadDataSchema(join(directory, "schema.ts"))).properties as Record<string, Record<string, unknown>>).data!,
   );
   const ids = new Set<string>();
   for (const item of value.cases) {
@@ -106,7 +107,7 @@ const config=${safeJSON(config)};
 ${reviewClient.toString()}
 reviewClient(config);
 if (import.meta.hot) import.meta.hot.on("hitslop:review-stale", data => window.dispatchEvent(new CustomEvent("hitslop:review-stale", {detail:data})));
-</script></body></html>`;
+</script><script>${previewPanelScript}</script></body></html>`;
 }
 
 function reviewClient(config: any) {

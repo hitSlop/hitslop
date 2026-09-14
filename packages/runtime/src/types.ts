@@ -1,14 +1,10 @@
-export type SlopStoreKind = "json" | "media";
+export type SlopStoreKind = "media" | "sync";
 import type { HostInfo, SlopChange } from "@hitslop/schema/bridge";
 export type { HostInfo, SlopChange } from "@hitslop/schema/bridge";
-export type SlopSnapshot<T> = { value: T; revision: string };
 export type SlopMediaSnapshot = { exists: boolean; revision: string | null };
 export type SlopWindowSize = { width: number; height: number };
 
 export interface SlopHost {
-  jsonOpen<T>(initialValue: T): Promise<SlopSnapshot<T>>;
-  jsonRead<T>(): Promise<SlopSnapshot<T>>;
-  jsonWrite<T>(value: T, expectedRevision?: string): Promise<{ revision: string }>;
   mediaOpen(name: string): Promise<SlopMediaSnapshot>;
   mediaWrite(name: string, data: string, mimeType: string): Promise<{ revision: string }>;
   mediaRemove(name: string): Promise<{ revision: null }>;
@@ -18,12 +14,12 @@ export interface SlopHost {
 }
 
 export type WindowSlop = {
+  preview?: {data?: unknown};
+  sync: SlopSyncBridge;
   info?: () => Promise<HostInfo>;
-  json: {
-    open: (initialValue: unknown) => Promise<SlopSnapshot<unknown>>;
-    read: () => Promise<SlopSnapshot<unknown>>;
-    write: (value: unknown, expectedRevision?: string) => Promise<{ revision: string }>;
-    onChange: (callback: (event: SlopChange) => void) => () => void;
+  errors: {
+    report(value: import("@hitslop/schema/bridge").BridgeParams<"errors.report">): Promise<unknown>;
+    clear(value: import("@hitslop/schema/bridge").BridgeParams<"errors.clear">): Promise<unknown>;
   };
   media: {
     open: (name: string) => Promise<SlopMediaSnapshot>;
@@ -40,3 +36,11 @@ export type WindowSlop = {
 };
 
 declare global { interface Window { slop?: WindowSlop } }
+
+export interface SlopSyncBridge {
+  open(): Promise<import("@hitslop/schema/sync").SyncSnapshot>;
+  commit(value: import("@hitslop/schema/sync").SyncCommit): Promise<import("@hitslop/schema/sync").SyncSnapshot>;
+  readExternal(): Promise<import("@hitslop/schema/sync").SyncSnapshot>;
+  review(value: { proposal: string; canApply: boolean }): Promise<"apply" | "keep" | "cancel">;
+  onChange(callback: (event: SlopChange) => void): () => void;
+}

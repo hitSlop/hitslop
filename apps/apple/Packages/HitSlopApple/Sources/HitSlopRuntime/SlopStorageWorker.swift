@@ -19,22 +19,24 @@ struct SlopRevisions: Sendable {
 final class SlopStorageWorker: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.hitslop.document-storage", qos: .userInitiated)
     private let package: SlopPackage
-    private let json: SlopJSONStore
+    private let sync: SlopSyncStorage
+    private let json: SlopProjectionObserver
     private let media: SlopMediaStore
     private let theme: SlopThemeStore
     private var closed = false
 
     init(package: SlopPackage) {
         self.package = package
-        json = SlopJSONStore(url: package.jsonStoreURL, schemaURL: package.rootURL.appendingPathComponent("data.schema.json"))
+        sync = SlopSyncStorage(root: package.rootURL)
+        json = SlopProjectionObserver(url: package.projectionURL)
         media = SlopMediaStore(directoryURL: package.mediaStoresURL)
         theme = SlopThemeStore(url: package.themeOverrideURL)
     }
     func close() { queue.sync { closed = true } }
-    func revisions() async -> SlopRevisions {
+    func revisions(refreshJSON: Bool = false) async -> SlopRevisions {
         await withCheckedContinuation { continuation in
             queue.async {
-                continuation.resume(returning: SlopRevisions(json: try? self.json.revision(), media: try? self.media.directoryRevision(), theme: try? self.theme.revision()))
+                continuation.resume(returning: SlopRevisions(json: try? self.json.revision(refresh: refreshJSON), media: try? self.media.directoryRevision(), theme: try? self.theme.revision()))
             }
         }
     }
@@ -60,16 +62,13 @@ final class SlopStorageWorker: @unchecked Sendable {
             throw SlopBridgeFailure(.invalidRequest, "Missing or unknown method")
         }
         switch method {
-        case .jsonOpen:
-            let missing = !FileManager.default.fileExists(atPath: package.jsonStoreURL.path)
-            let snapshot = try json.open(field("value", in: body, as: Any.self))
-            return .init(value: ["value": snapshot.value, "revision": snapshot.revision], kind: missing ? .json : nil, revision: snapshot.revision)
-        case .jsonRead:
-            let snapshot = try json.read()
-            return .init(value: ["value": snapshot.value, "revision": snapshot.revision])
-        case .jsonWrite:
-            let revision = try json.write(field("value", in: body, as: Any.self), expectedRevision: body["expectedRevision"] as? String)
-            return .init(value: ["revision": revision], kind: .json, revision: revision)
+        case .syncOpen, .syncReadExternal:
+            return .init(value: try sync.open())
+        case .syncCommit:
+            let value = try sync.commit(body)
+            let hash = value["externalHash"] as? String
+            return .init(value: value, kind: .sync, revision: hash.map { "sha256:" + $0 })
+
         case .mediaOpen:
             let snapshot = try media.open(field("name", in: body))
             return .init(value: ["exists": snapshot.exists, "revision": snapshot.revision as Any? ?? NSNull()])

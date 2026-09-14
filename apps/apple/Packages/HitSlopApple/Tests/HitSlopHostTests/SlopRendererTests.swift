@@ -336,7 +336,7 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let app = root.appendingPathComponent("app.html")
     var html = try String(contentsOf: app, encoding: .utf8)
-    html = html.replacingOccurrences(of: "window.slop.ready()", with: "window.slop.json.open({captureCount:1}).then(()=>window.slop.ready())")
+    html = html.replacingOccurrences(of: "window.slop.ready()", with: "(async()=>{const s=await slop.sync.open();await slop.sync.commit({expectedGeneration:s.generation,expectedExternal:s.externalHash,identity:btoa(JSON.stringify({format:1,documentId:'capture'})),checkpoint:btoa('opaque fixture'),metadata:btoa('{}'),projection:btoa(JSON.stringify({$slop:{format:1,baseRevision:'fixture'},data:{count:1}})),preserveExternal:false});window.slop.ready()})()")
     try Data(html.utf8).write(to: app)
     let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
     #expect(assets.previewPNG != nil)
@@ -368,17 +368,17 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     let session = try SlopRuntimeSession(packageURL: root)
     session.load(); try await session.waitUntilReady()
     _ = try await session.webView.callAsyncJavaScript(#"""
-      await slop.json.open({count:1});
+      const s=await slop.sync.open();await slop.sync.commit({expectedGeneration:s.generation,expectedExternal:s.externalHash,identity:btoa(JSON.stringify({format:1,documentId:'capture'})),checkpoint:btoa('opaque fixture'),metadata:btoa('{}'),projection:btoa(JSON.stringify({$slop:{format:1,baseRevision:'fixture'},data:{count:1}})),preserveExternal:false});
       await slop.media.write('photo','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','image/png');
       return true;
     """#, arguments: [:], in: nil, contentWorld: .page)
     try await session.flush(); session.close()
     try Data(":root{--slop-ink:#123456}".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
-    let paths = ["stores/data.json", "stores/media/photo", "stores/theme.css"]
+    let paths = ["stores/data.json", "stores/media/photo", "stores/theme.css", "state/checkpoint.loro", "state/materialization.json"]
     let originals = try paths.map { try Data(contentsOf: root.appendingPathComponent($0)) }
     let app = root.appendingPathComponent("app.html")
     let html = try String(contentsOf: app, encoding: .utf8).replacingOccurrences(of: "window.slop.ready()", with: #"""
-      (async()=>{const s=await slop.json.read();await slop.json.write({count:99},s.revision);await slop.media.remove('photo');slop.ready()})()
+      (async()=>{const s=await slop.sync.open();await slop.sync.commit({expectedGeneration:s.generation,expectedExternal:s.externalHash,identity:s.identity,checkpoint:s.checkpoint,metadata:s.metadata,projection:btoa('{}'),preserveExternal:false});await slop.media.remove('photo');slop.ready()})()
     """#)
     try Data(html.utf8).write(to: app)
     let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
@@ -427,17 +427,24 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     let stores = snapshot.url.appendingPathComponent("stores")
     try FileManager.default.createDirectory(at: stores, withIntermediateDirectories: true)
     let tasks: [[String: Any]] = (0..<120).map { ["id":"task-\($0)","text":"Task \($0) with a second line\nand extra detail", "done":$0 == 0,"archived":false] } + [["id":"filed","text":"Only filed item","done":true,"archived":true]]
-    try JSONSerialization.data(withJSONObject: ["title":"A long checklist", "tasks":tasks]).write(to: stores.appendingPathComponent("data.json"))
     let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true)
     defer { session.close() }
     let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
     window.contentView = session.webView
     session.load(); try await session.waitUntilReady()
+    var envelope = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: stores.appendingPathComponent("data.json"))) as? [String: Any])
+    envelope["data"] = ["title": "A long checklist", "tasks": tasks]
+    try JSONSerialization.data(withJSONObject: envelope).write(to: stores.appendingPathComponent("data.json"), options: .atomic)
+    let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+    while ContinuousClock.now < deadline {
+        if try await session.webView.evaluateJavaScript("document.querySelectorAll('[data-checkbox-root]').length") as? Int == 120 { break }
+        try await Task.sleep(for: .milliseconds(30))
+    }
     let long = try #require(PDFDocument(data: try await SlopRenderer.exportPDFData(session: session)))
     #expect(long.pageCount == 1)
     #expect(long.string?.contains("Task 119") == true)
     #expect(long.string?.contains("Only filed item") == false)
-    _ = try await session.webView.callAsyncJavaScript("document.querySelector('[role=tab][data-value=filed]')?.click(); const tabs=[...document.querySelectorAll('[role=tab]')]; tabs.find(e=>e.textContent.includes('Filed')).click(); await new Promise(r=>setTimeout(r,0)); return true", arguments: [:], in: nil, contentWorld: .page)
+    _ = try await session.webView.callAsyncJavaScript("const tabs=[...document.querySelectorAll('[role=tab]')]; tabs.find(e=>e.textContent.includes('Filed')).click(); await new Promise(r=>setTimeout(r,0)); return true", arguments: [:], in: nil, contentWorld: .page)
     let filed = try #require(PDFDocument(data: try await SlopRenderer.exportPDFData(session: session)))
     #expect(filed.string?.contains("Only filed item") == true)
     #expect(filed.string?.contains("Task 119") == false)
@@ -446,7 +453,7 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     let image = try #require(CGImageSourceCreateWithData(png as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
     #expect(image.width == 960)
     let firstIcon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
-    _ = try await session.webView.callAsyncJavaScript("const s=await slop.json.read(); s.value.tasks.forEach(t=>t.done=true); await slop.json.write(s.value,s.revision); await new Promise(r=>setTimeout(r,100)); return true", arguments: [:], in: nil, contentWorld: .page)
+    _ = try await session.webView.callAsyncJavaScript("[...document.querySelectorAll('[role=tab]')].find(e=>e.textContent.includes('To do')).click();await new Promise(r=>setTimeout(r,0));document.querySelectorAll('[data-checkbox-root][aria-checked=false]').forEach(e=>e.click());await window.__hitslopFlush();await new Promise(r=>setTimeout(r,300));return true", arguments: [:], in: nil, contentWorld: .page)
     let completedIcon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
     #expect(firstIcon != completedIcon)
 }

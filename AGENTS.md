@@ -1,7 +1,7 @@
 # hitSlop
 
-`.slop` packages are framework-neutral runtime web apps with optional host-owned
-JSON, named media, and theme override data. Read `manifest.json` first.
+`.slop` packages are framework-neutral runtime web apps with optional host-persisted
+versioned document data, named media, and theme overrides. Read `manifest.json` first.
 
 - Active authored templates live in `examples/slops/`; paused examples live in
   `examples/slops/_backlog/` and older templates in `archive/templates/`.
@@ -25,24 +25,23 @@ JSON, named media, and theme override data. Read `manifest.json` first.
   `assets/`, optional generated `data.schema.json`, the canonical embedded
   `.agents/skills/hitslop-document` skill, optional canonical
   `stores/data.json`, `stores/theme.css`, and user-selected
-  supported media under `stores/media/`,
+  supported media under `stores/media/`, optional host-owned `state/`
+  (identity, Loro checkpoint, journal; never in templates),
   and optional `QuickLook/Preview.png` and `QuickLook/Icon.png`.
 - Manifest storage is implicit. A slop can use JSON, named media, either, or
-  neither. Replace JSON and media atomically.
+  neither. Commit document state through the journal; replace named media atomically.
+  See `docs/sync-v1.md` for the document contract.
 - Manifest `author.name` is required and `author.url` may be an HTTP(S) URL.
   Attribution belongs to the signed artifact; the publisher identity is only a
   signing key.
 - Browser previews are disposable: no bridge server, disk stores, or polling.
   Routine migrations use the shared gallery for UI smoke tests; persistence and
   native behavior are reserved for explicit release-gate work.
-- Author JSON schemas with `import * as Type from "typebox"` in root `schema.ts`.
-  Import that schema directly into `jsonStore({ schema, initial })`.
-  Types are inferred from the schema; the store uses TypeBox runtime validation.
-  No generated files or dev server are needed for editor types. Schemas must be
-  deterministic because the app and package builder evaluate them separately.
-  Validation never coerces, inserts defaults, or strips fields. Use explicit
-  initial values and `additionalProperties: true` to preserve unknown fields.
-  Quick Checklist and the CLI counter starter use this workflow; backlog examples remain deferred.
+- Author application data with `S.Document` from `@hitslop/schema/document`.
+  Use `documentStore({ schema, initial })`, immutable `current`, and explicit
+  `change()` mutations. Builds always emit the complete envelope schema.
+  Validation never coerces, inserts defaults, or strips unknown fields.
+  The host owns storage errors and review UI. Only Quick Checklist is active.
 - Quick Checklist is the platform pilot. Define its theme once in root
   `theme.ts` with `defineTheme` from `@hitslop/runtime/theme`; builds generate
   immutable `assets/theme.css`. Keep owner overrides in `stores/theme.css`.

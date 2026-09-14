@@ -6,12 +6,13 @@ import HitSlopRuntime
 import Testing
 @testable import HitSlopCatalog
 
-@Test @MainActor func discoversAndDuplicatesInstalledTemplate() throws {
+@Test @MainActor func discoversAndDuplicatesInstalledTemplate() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     let package = try writeTemplate(named: "tiny-counter", in: root)
 
     let store = LocalTemplateStore(templatesURL: root)
+    await store.refresh()
     #expect(store.templates.count == 1)
     #expect(store.templates.first?.manifest.title == "Tiny Counter")
     #expect(store.templates.first?.iconURL.lastPathComponent == "Icon.png")
@@ -35,13 +36,14 @@ import Testing
     #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores").path))
 }
 
-@Test @MainActor func ignoresHostedCacheWhenListingTemplates() throws {
+@Test @MainActor func ignoresHostedCacheWhenListingTemplates() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     _ = try writeTemplate(named: "tiny-counter", in: root)
     _ = try writeTemplate(named: "cached-slop", in: root.appendingPathComponent("cache/publisher/cached-slop", isDirectory: true), fileName: "1.slop")
 
     let store = LocalTemplateStore(templatesURL: root)
+    await store.refresh()
     #expect(store.templates.map(\.manifest.slug) == ["tiny-counter"])
     #expect(store.issues.isEmpty)
 }

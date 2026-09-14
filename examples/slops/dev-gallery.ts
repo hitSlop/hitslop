@@ -1,3 +1,4 @@
+import { previewShell } from "../../packages/cli/src/preview-shell";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
@@ -310,6 +311,11 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
             response.end(String(error));
             return;
           }
+        }
+        if (!review && !requestURL.searchParams.has("_slopFrame") && !requestURL.searchParams.has("capture")) {
+          response.setHeader("content-type", "text/html; charset=utf-8");
+          response.end(previewShell(requestURL.pathname + requestURL.search, slop.width, slop.height));
+          return;
         }
         const hosted = injectHost(prefixed, {
           ...(slop.hasTheme ? { themeHref: `/${slug}/assets/theme.css` } : {}),

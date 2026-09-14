@@ -43,24 +43,35 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
     private let functions: Functions
     private var listener: ListenerRegistration?
     private var catalog: [(template: RegistryTemplate, searchText: String)] = []
+    private var snapshotSink: ((RegistrySnapshot) -> Void)?
+    private var generation = 0
     private var term = ""
     private var category: String?
     private var sort: RegistrySort = .popular
 
-    public init(catalogURL: URL) {
+    public init(catalogURL: URL, subscribeImmediately: Bool = true) {
         self.catalogURL = HitSlopFirebase.catalogURL(default: catalogURL)
-        firestore = Firestore.firestore()
-        functions = Functions.functions(region: "us-central1")
-        if HitSlopFirebase.usesEmulators {
-        firestore.useEmulator(withHost: "127.0.0.1", port: 8080)
-        let settings = firestore.settings
-        settings.cacheSettings = MemoryCacheSettings()
-        settings.isSSLEnabled = false
-        firestore.settings = settings
-        functions.useEmulator(withHost: "127.0.0.1", port: 5001)
-        }
-        subscribe()
+        firestore = Self.sharedFirestore
+        functions = Self.sharedFunctions
+        if subscribeImmediately { subscribe() }
     }
+
+    private static let sharedFirestore: Firestore = {
+        let firestore = Firestore.firestore()
+        if HitSlopFirebase.usesEmulators {
+            firestore.useEmulator(withHost: "127.0.0.1", port: 8080)
+            let settings = firestore.settings
+            settings.cacheSettings = MemoryCacheSettings()
+            settings.isSSLEnabled = false
+            firestore.settings = settings
+        }
+        return firestore
+    }()
+    private static let sharedFunctions: Functions = {
+        let functions = Functions.functions(region: "us-central1")
+        if HitSlopFirebase.usesEmulators { functions.useEmulator(withHost: "127.0.0.1", port: 5001) }
+        return functions
+    }()
 
     public func search(_ term: String, category: String? = nil) {
         let categoryChanged = self.category != category
@@ -74,7 +85,7 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
         let queryChanged = self.category != category || self.sort != sort
         self.category = category
         self.sort = sort
-        if queryChanged { subscribe() } else { applyFilters() }
+        if queryChanged || listener == nil { subscribe() } else { applyFilters() }
     }
 
     public func recordCreation(template: RegistryTemplate) async {
@@ -86,7 +97,22 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    public func snapshots(category: String? = nil, sort: RegistrySort = .popular) -> AsyncStream<RegistrySnapshot> {
+        AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+            snapshotSink = { continuation.yield($0) }
+            continuation.onTermination = { [self] _ in Task { @MainActor in self.stop() } }
+            list(category: category, sort: sort)
+        }
+    }
+
+    public func stop() {
+        generation += 1
+        listener?.remove(); listener = nil; snapshotSink = nil
+    }
+
     private func subscribe() {
+        generation += 1
+        let requestedGeneration = generation
         listener?.remove()
         var query: Query = firestore.collection("templates")
             .whereField("visibility", isEqualTo: "public")
@@ -105,10 +131,11 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
             .limit(to: 200)
             .addSnapshotListener { [weak self] snapshot, error in
                 Task { @MainActor in
-                    guard let self else { return }
+                    guard let self, self.generation == requestedGeneration else { return }
                     if let error {
                         self.errorMessage = error.localizedDescription
                         HitSlopFirebase.record(error)
+                        self.snapshotSink?(RegistrySnapshot(templates: self.templates, errorMessage: self.errorMessage))
                         HitSlopFirebase.log("catalog_load_failed")
                         return
                     }
@@ -136,5 +163,11 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
 
     private func applyFilters() {
         templates = catalog.filter { term.isEmpty || $0.searchText.contains(term) }.map(\.template)
+        snapshotSink?(RegistrySnapshot(templates: templates, errorMessage: errorMessage))
     }
+}
+
+public struct RegistrySnapshot: Sendable {
+    public let templates: [RegistryTemplate]
+    public let errorMessage: String?
 }

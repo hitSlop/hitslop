@@ -16,6 +16,8 @@ const MiB = 1024 * 1024;
 export type RuntimeValidationOptions = {
   template?: boolean;
   requirePreview?: boolean;
+  /** Open/inspect validates immutable structure while preserving editable errors. */
+  allowMutableErrors?: boolean;
 };
 
 export async function validateRuntimePackage(root: string, options: RuntimeValidationOptions = {}): Promise<SlopManifest> {
@@ -26,7 +28,7 @@ export async function validateRuntimePackage(root: string, options: RuntimeValid
   await requireUTF8File(join(root, "app.html"), "app.html");
   await rejectSymlinks(root);
 
-  const allowed = new Set(["manifest.json", "app.html", "data.schema.json", "assets", "stores", "QuickLook", ".agents", "Icon\r"]);
+  const allowed = new Set(["manifest.json", "app.html", "data.schema.json", "assets", "stores", "state", "QuickLook", ".agents", "Icon\r"]);
   for (const entry of await readdir(root)) if (!allowed.has(entry)) throw new Error(`Runtime packages cannot contain ${entry}.`);
   for (const path of await walk(root)) {
     if (forbiddenPackageNames.has(basename(path).toLowerCase())) throw new Error(`Runtime packages cannot contain ${relative(root, path)}.`);
@@ -34,13 +36,15 @@ export async function validateRuntimePackage(root: string, options: RuntimeValid
   }
 
   if (options.template && await exists(join(root, "stores"))) throw new Error("Template packages cannot contain stores.");
+  if (options.template && await exists(join(root, "state"))) throw new Error("Template packages cannot contain state.");
   if (options.template && await exists(join(root, "Icon\r"))) throw new Error("Template packages cannot contain Finder metadata Icon\\r.");
 
   const schema = await readDataSchema(root);
   const contract = await readThemeContract(root);
   const appHTML = await readFile(join(root, "app.html"), "utf8");
   validateThemeReferences(appHTML, contract, "app.html");
-  await validateStores(root, schema, contract);
+  await validateStores(root, schema, contract, options.allowMutableErrors ?? false);
+  await validateState(root);
   await validateQuickLook(root, options.requirePreview ?? false);
   await validateDocumentSkill(root);
   return manifest;
@@ -60,7 +64,7 @@ async function readDataSchema(root: string): Promise<Record<string, unknown> | u
   }
 }
 
-async function validateStores(root: string, schema: Record<string, unknown> | undefined, contract: Set<string> | undefined): Promise<void> {
+async function validateStores(root: string, schema: Record<string, unknown> | undefined, contract: Set<string> | undefined, allowMutableErrors = false): Promise<void> {
   const stores = join(root, "stores");
   if (!await exists(stores)) return;
   const info = await lstat(stores);
@@ -71,7 +75,7 @@ async function validateStores(root: string, schema: Record<string, unknown> | un
     if (entry.name === "media" ? !entry.isDirectory() : !entry.isFile()) throw new Error(`Invalid store entry stores/${entry.name}.`);
   }
   const json = join(stores, "data.json");
-  if (await exists(json)) {
+  if (await exists(json) && !allowMutableErrors) {
     let value: unknown;
     try { value = JSON.parse(decoder.decode(await readFile(json))); }
     catch (error) { throw new Error(`stores/data.json must be valid UTF-8 JSON: ${error instanceof Error ? error.message : String(error)}`); }
@@ -84,7 +88,35 @@ async function validateStores(root: string, schema: Record<string, unknown> | un
   }
   const media = join(stores, "media");
   if (await exists(media)) await validateMedia(media);
-  await validateThemeOverride(root, contract);
+  if (!allowMutableErrors) await validateThemeOverride(root, contract);
+}
+
+async function validateState(root: string): Promise<void> {
+  const directory = join(root, "state");
+  if (!await exists(directory)) return;
+  const info = await lstat(directory);
+  if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("state must be a directory.");
+  const allowed = new Set(["identity.json", "checkpoint.loro", "materialization.json", "journal"]);
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (!allowed.has(entry.name)) throw new Error(`Unexpected state entry state/${entry.name}.`);
+    if (entry.name === "journal" ? !entry.isDirectory() : !entry.isFile()) throw new Error(`Invalid state entry state/${entry.name}.`);
+  }
+  const identity = join(directory, "identity.json");
+  if (await exists(identity)) {
+    try {
+      const value = JSON.parse(decoder.decode(await readFile(identity)));
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("must be an object");
+      if (value.format !== 1) throw new Error("unsupported format");
+      if (typeof value.documentId !== "string" || value.documentId.length === 0) throw new Error("missing documentId");
+    } catch (error) {
+      throw new Error(`state/identity.json is invalid: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  const journal = join(directory, "journal");
+  if (!await exists(journal)) return;
+  for (const entry of await readdir(journal, { withFileTypes: true })) {
+    if (!entry.isFile() || entry.isSymbolicLink()) throw new Error(`state/journal must contain regular files: ${entry.name}.`);
+  }
 }
 
 async function validateMedia(directory: string): Promise<void> {

@@ -54,7 +54,7 @@ describe("syncAgentSkills", () => {
 test("packaged CLI skills stay in sync with canonical guidance", async () => {
   const bundled = bundledSkillsRoot();
   const source = new URL("../../../.agents/skills/", import.meta.url).pathname;
-  for (const skill of ["hitslop-authoring", "hitslop-design"] as const) {
+  for (const skill of ["hitslop", "hitslop-authoring", "hitslop-design"] as const) {
     const walk = async (relative: string): Promise<void> => {
       for (const entry of await readdir(join(source, relative), { withFileTypes: true })) {
         const path = join(relative, entry.name);

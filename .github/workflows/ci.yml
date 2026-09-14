@@ -43,7 +43,7 @@ jobs:
         working-directory: apps/apple
         run: |
           derived="$RUNNER_TEMP/hitslop-macos-derived"
-          xcodebuild \
+          xcodebuild -skipMacroValidation \
             -project hitSlop.xcodeproj \
             -scheme hitSlop-macOS \
             -configuration Debug \
@@ -53,7 +53,7 @@ jobs:
             build
           debug_app="$derived/Build/Products/Debug/hitSlop.app"
           test ! -e "$debug_app/Contents/PlugIns/SlopThumbnail.appex"
-          xcodebuild \
+          xcodebuild -skipMacroValidation \
             -project hitSlop.xcodeproj \
             -scheme hitSlop-macOS \
             -configuration Release \
@@ -68,7 +68,7 @@ jobs:
       - name: Generate and build iOS simulator
         working-directory: apps/apple
         run: |
-          xcodebuild \
+          xcodebuild -skipMacroValidation \
             -project hitSlop.xcodeproj \
             -scheme hitSlop-iOS \
             -configuration Debug \

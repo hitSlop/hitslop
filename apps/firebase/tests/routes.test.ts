@@ -18,6 +18,12 @@ class FakeBackend implements RegistryBackend {
     if (this.failCatalog) throw new Error("offline");
     return this.templates;
   }
+  async listTemplatePage(cursor?: string) {
+    const entries = await this.listTemplates();
+    const start = cursor ? entries.findIndex(entry => entry.id === cursor) + 1 : 0;
+    const templates = entries.slice(start, start + 200);
+    return { templates, nextCursor: start + 200 < entries.length ? templates.at(-1)!.id : null };
+  }
   async recordCreation(): Promise<boolean> { return true; }
 }
 
@@ -103,4 +109,22 @@ test("catalog failures are sanitized and never cached", async () => {
   expect(response.status).toBe(503);
   expect(response.headers.get("cache-control")).toBe("no-store");
   expect(await response.json()).toEqual({ error: "Catalog temporarily unavailable" });
+});
+
+
+test("paginated catalog continues past 200 entries and rejects invalid cursors", async () => {
+  const backend = new FakeBackend();
+  const asset = { key: `artifacts/sha256/${hash}.slop.zip`, sha256: hash, bytes: 1 };
+  backend.templates = Array.from({ length: 201 }, (_, i) => ({
+    id: `template-${String(i).padStart(3, "0")}`, slug: "fixture", title: "Fixture", description: "Test", categories: ["utilities"],
+    author: { name: "Test" }, creationCount: 0, release: { number: 1, publishedAt: "2026-01-01T00:00:00Z" },
+    download: asset, preview: asset, icon: asset,
+  }));
+  const first = await (await route(new Request("https://api.hitslop.com/api/catalog?page=true"), backend)).json();
+  expect(first.templates).toHaveLength(200);
+  expect(first.nextCursor).toBe("template-199");
+  const last = await (await route(new Request(`https://api.hitslop.com/api/catalog?cursor=${first.nextCursor}`), backend)).json();
+  expect(last.templates.map((entry: { id: string }) => entry.id)).toEqual(["template-200"]);
+  expect(last.nextCursor).toBeNull();
+  expect((await route(new Request("https://api.hitslop.com/api/catalog?cursor=.."), backend)).status).toBe(400);
 });

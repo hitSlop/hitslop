@@ -86,7 +86,7 @@ export_dir="$stage_dir/export"
 
 echo "Archiving Apple-silicon Release…"
 # shellcheck disable=SC2086
-/usr/bin/xcodebuild \
+/usr/bin/xcodebuild -skipMacroValidation \
   -quiet \
   -project "$project" \
   -scheme hitSlop-macOS \
@@ -101,7 +101,7 @@ echo "Archiving Apple-silicon Release…"
 
 echo "Exporting Developer ID app…"
 # shellcheck disable=SC2086
-/usr/bin/xcodebuild \
+/usr/bin/xcodebuild -skipMacroValidation \
   -quiet \
   -exportArchive \
   -archivePath "$archive_path" \

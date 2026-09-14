@@ -51,19 +51,19 @@ to retain the printed temporary directory for visual inspection and debugging.
 Publish in dependency order:
 
 1. `@hitslop/schema`
-2. `@hitslop/runtime`
-3. `@hitslop/svelte`
-4. `@hitslop/cli`
+2. `@hitslop/sync`
+3. `@hitslop/runtime`
+4. `@hitslop/svelte`
+5. `@hitslop/cli`
 
 Use `bun pm pack --dry-run` in every package before publishing. Verify the
 tarball includes only `dist`, permitted templates/generated schema,
 `package.json`, `README.md`, and `LICENSE`; confirm repository metadata,
 MIT license, and intended `0.3.x` version.
 
-In `0.3.0`, `JsonPersister.onError` receives `Error | null` instead of a
-message string. Adapter consumers should read `error.message` for display and
-retain the original error for its code. Existing immutable documents retain
-their bundled runtime; rebuild and publish templates to distribute these fixes.
+Templates must be rebuilt against the current document contract before release.
+Only Quick Checklist is active; deferred templates require reauthoring before
+returning to the gallery.
 
 Tag npm releases as `npm-v<version>` and macOS releases as
 `macos-v<version>`. The separate namespaces keep an npm-only release from

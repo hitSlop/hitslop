@@ -1,4 +1,4 @@
-import { slop } from "@hitslop/runtime";
+import { slop, errors } from "@hitslop/runtime";
 import { chooseLocalFile, fileToBase64, LatestTask, mediaSourceURL, registerFlush, safeMediaName } from "@hitslop/runtime/adapter";
 
 /** Shared lifecycle for named files and images; subclasses only supply policy. */
@@ -13,6 +13,11 @@ export class MediaStore<Fallback extends string | null> {
   private mutations = Promise.resolve();
   private disposed = false;
   private failure: unknown;
+  private retry: (() => Promise<void>) | undefined;
+  private operationVersion = 0;
+  private report(message: string, retry?: () => Promise<void>) {
+    errors.report({ id: `media:${this.name}`, message, details: this.error ?? "", dismissible: false, ...(retry ? { action: { label: "Try again", run: retry } } : {}) });
+  }
   private readonly unregisterFlush: () => void;
 
   constructor(readonly name: string, private readonly fallback: Fallback, private readonly accept: string) {
@@ -26,6 +31,7 @@ export class MediaStore<Fallback extends string | null> {
   async replace(file: File): Promise<void> {
     if (this.accept === "image/*" && !file.type.startsWith("image/")) {
       this.error = "Choose an image file.";
+      this.report("Choose an image file", async () => { this.choose(); });
       throw new Error(this.error);
     }
     await this.mutate(async () => {
@@ -37,17 +43,35 @@ export class MediaStore<Fallback extends string | null> {
   async remove(): Promise<void> {
     await this.mutate(async () => { await slop.media.remove(this.name); return { exists: false, revision: null }; });
   }
-  private async mutate(operation: () => Promise<{ exists: boolean; revision: string | null }>): Promise<void> {
-    if (this.disposed) throw new Error("Media store is closed.");
+  private async mutate(operation: () => Promise<{ exists: boolean; revision: string | null }>, recovery = false): Promise<void> {
+    if (this.disposed && !recovery) throw new Error("Media store is closed.");
+    const version = ++this.operationVersion;
+    this.retry = () => this.mutate(operation, true);
     this.task.invalidate();
     this.isLoading = true;
     this.error = null;
-    const mutation = this.mutations.then(async () => { await operation(); this.failure = undefined; });
-    this.mutations = mutation.catch(() => undefined);
-    try { await mutation; await this.reload(); }
-    catch (error) { this.failure = error; if (!this.disposed) { this.error = error instanceof Error ? error.message : String(error); this.isLoading = false; } throw error; }
+    const mutation = this.mutations.then(operation);
+    this.mutations = mutation.then(() => undefined, () => undefined);
+    try {
+      await mutation;
+      if (version === this.operationVersion) {
+        this.failure = undefined; this.retry = undefined; errors.clear(`media:${this.name}`);
+        if (!this.disposed) await this.reload(); else this.unregisterFlush();
+      }
+    } catch (error) {
+      if (version === this.operationVersion) {
+        this.failure = error; this.error = error instanceof Error ? error.message : String(error);
+        this.isLoading = false; this.report(`Could not save ${this.name}`, this.retry);
+      }
+      throw error;
+    }
   }
-  async flush(): Promise<void> { await this.mutations; if (this.failure) throw this.failure; }
+  async flush(): Promise<void> {
+    await this.mutations;
+    if (this.failure && this.retry) await this.retry();
+    if (this.failure) throw this.failure;
+    if (this.disposed) this.unregisterFlush();
+  }
   async reload(): Promise<void> {
     if (this.disposed) return;
     this.isLoading = true;
@@ -56,7 +80,8 @@ export class MediaStore<Fallback extends string | null> {
       this.revision = result.revision;
       this.src = result.exists ? mediaSourceURL(this.name, result.revision) : this.fallback;
       this.error = null;
-    }, (error) => { this.error = error instanceof Error ? error.message : String(error); }, () => { this.isLoading = false; });
+      if (!this.failure) errors.clear(`media:${this.name}`);
+    }, (error) => { this.error = error instanceof Error ? error.message : String(error); this.report(`Could not load ${this.name}`, () => this.reload()); }, () => { this.isLoading = false; });
   }
-  destroy(): void { this.disposed = true; this.task.dispose(); this.unwatch(); this.unregisterFlush(); }
+  destroy(): void { this.disposed = true; this.task.dispose(); this.unwatch(); void this.flush().catch(() => undefined); }
 }

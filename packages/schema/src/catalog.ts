@@ -29,6 +29,7 @@ export const CatalogTemplateSchema = Type.Object({
 export const CatalogResponseSchema = Type.Object({
   version: Type.Literal(1),
   templates: Type.Array(CatalogTemplateSchema, { maxItems: 200 }),
+  nextCursor: Type.Optional(Type.Union([Type.String({ minLength: 1, maxLength: 160 }), Type.Null()])),
 }, { additionalProperties: false, title: "CatalogResponse" });
 
 export type CatalogTemplate = Type.Static<typeof CatalogTemplateSchema>;

@@ -23,8 +23,8 @@ the user explicitly asks.
 1. Move implementation files from `source/` to `src/`, update
    `index.html` and imports, then delete the old `source/` directory.
 2. Keep reusable state schemas in root `schema.ts`. JSON-backed Svelte slops
-   must default-export a TypeBox schema (`import * as Type from "typebox"`)
-   and pass the same schema to `jsonStore({ schema, initial })`. Preserve
+   must default-export an S.Document schema (`import * as S from "@hitslop/schema/document"`)
+   and pass the same schema to `documentStore({ schema, initial })`. Preserve
    unknown fields with `additionalProperties: true`. Validation never coerces,
    inserts defaults, or strips fields.
 3. Put structural styles in Vanilla Extract `.css.ts` files. Define public
@@ -64,3 +64,7 @@ the user explicitly asks.
 Do not perform writable-copy persistence, native-window, export, Quick Look,
 capture, registration, installation, or publishing work during routine migration.
 Those checks belong to an explicitly requested batch release gate.
+
+Persistent mutations use `change()`. Never mutate `current`. Storage errors and
+file review belong to host chrome. Rebuild fresh packages; do not convert old
+document state or add compatibility code.

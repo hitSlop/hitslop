@@ -30,16 +30,13 @@ adding persistence or changing the runtime boundary.
 - Runtime packages contain `manifest.json`, generated `app.html`, optional
   `data.schema.json`, the canonical document Agent Skill, optional immutable `assets/`, optional host-owned
   `stores/` in writable documents, and optional `QuickLook/` images.
-- Author root `schema.ts` with `import * as Type from "typebox"`.
-  Import that schema directly into `jsonStore({ schema, initial })`.
-  Type inference requires no generated files or running dev server. The store
-  uses TypeBox runtime validation; builds emit `data.schema.json` for the host.
-  Keep schema definitions deterministic: app and builder evaluate separately.
-  Never manually supply a validator or rewrite ordinary schema imports. Preserve
-  unknown fields with `additionalProperties: true`; never coerce or insert defaults.
-  Quick Checklist is the only active example. Paused source is preserved in
-  `examples/slops/_backlog/`, excluded from active checks, tests, and builds.
-  Promote and migrate one example at a time. The CLI counter starter follows the same APIs.
+- Quick Checklist uses `S.Document` from `@hitslop/schema/document`, backed by
+  TypeBox, with `documentStore` and explicit `change()` mutations. Builds emit
+  the versioned JSON envelope schema; the app sees only application data.
+  Recovery UI belongs to the native host. See the storage reference.
+- All data schemas use `S.Document` and `documentStore` with explicit `change()`.
+  The CLI scaffold uses the same model. Quick Checklist is the only active example;
+  backlog sources are excluded from platform checks until reauthored.
 - Authored templates and published artifacts contain no stores, source,
   dependencies, build caches, editable stylesheets, unsupported stores, or
   Finder-managed `Icon\r`.
