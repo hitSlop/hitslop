@@ -205,3 +205,35 @@ test("continuous typing starts a save within the maximum wait", async () => fixt
     expect(commits).toBeGreaterThan(0);
   } finally { await doc.flush(); }
 }));
+
+test("independent copies reset identity and history while retaining visible content", async () => fixture(async (_root, doc) => {
+  doc.change(draft => { draft.title = "Copy me"; });
+  const original = await doc.sharingSnapshot();
+  const copy = await doc.independentCopy();
+  expect((unpack(copy.identity) as { documentId: string }).documentId).not.toBe(original.documentId);
+  expect((unpack(copy.projection) as { data: unknown }).data).toEqual(doc.current);
+  expect(copy.checkpoint).not.toBe(original.checkpoint);
+}));
+
+test("shared seed and bidirectional transfers preserve concurrent edits and reject foreign identities", async () => fixture(async (_root, left) => {
+  const seed = await left.sharingSnapshot();
+  const files = await DocumentEngine.sharedSeed(schema, seed);
+  const directory = await mkdtemp(join(tmpdir(), "slop-shared-"));
+  try {
+    const io = await FileDocumentIO.at(directory);
+    const empty = await io.open();
+    await io.commit({ ...files, expectedGeneration: empty.generation, expectedExternal: empty.externalHash, preserveExternal: false });
+    const right = await DocumentEngine.open({ schema, initial, io });
+    left.change(draft => { draft.title = "Left"; });
+    right.change(draft => { draft.tasks[0]!.done = true; });
+    const l = await left.sharingSnapshot(), r = await right.sharingSnapshot();
+    await left.receiveShared(r); await right.receiveShared(l);
+    expect(left.current).toEqual(right.current);
+    expect(left.current.title).toBe("Left"); expect(left.current.tasks[0]!.done).toBe(true);
+    await right.receiveShared(l);
+    expect(left.current).toEqual(right.current);
+    const before = right.current;
+    await expect(right.receiveShared({ ...l, documentId: "foreign" })).rejects.toThrow("identity");
+    expect(right.current).toEqual(before);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+}));

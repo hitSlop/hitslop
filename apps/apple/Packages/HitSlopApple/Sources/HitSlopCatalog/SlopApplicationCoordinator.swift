@@ -10,6 +10,7 @@ import SwiftUI
 /// The macOS composition root. Stores own decisions; services own native resources.
 @MainActor public final class SlopApplicationCoordinator {
     let store: StoreOf<AppFeature>
+    private let accountServices: AccountServices
     private let presentsWindows: Bool
     private let alerts = NativeAlertPresenter()
     private let native: NativeDocumentServices
@@ -17,6 +18,8 @@ import SwiftUI
     private var catalogWindow: NSWindowController?
     private var observation: ObserveToken?
     private var documentObservations: [UUID: ObserveToken] = [:]
+    private var sharing: [UUID: DocumentSharing] = [:]
+    private var invitationPanel: NSPanel?
     // NotificationCenter removal is thread-safe; registration and all callbacks stay on MainActor.
     nonisolated(unsafe) private var notifications: [NSObjectProtocol] = []
     private var previousDocumentCount = 0
@@ -27,6 +30,8 @@ import SwiftUI
 
     /// Native integration tests use hidden windows and avoid modifying the user's recents.
     init(catalogURL: URL, templatesURL: URL, presentsWindows: Bool) {
+        let accountServices = AccountServices()
+        self.accountServices = accountServices
         self.presentsWindows = presentsWindows
         let native = NativeDocumentServices(templatesURL: templatesURL, presentsWindows: presentsWindows)
         let catalogServices = CatalogServices(catalogURL: catalogURL, templatesURL: templatesURL)
@@ -34,7 +39,9 @@ import SwiftUI
         store = Store(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
             $0.catalogClient = presentsWindows ? catalogServices.client : .empty
             $0.documentClient = native.client
+            $0.accountClient = presentsWindows ? accountServices.client : .empty
         }
+        if presentsWindows { store.send(.account(.start)) }
         native.onOpened = { [weak self] id, controller in self?.connect(id, controller: controller) }
         native.onFocused = { [weak self] in self?.updateFocus() }
         observation = observe { [weak self] in
@@ -57,6 +64,24 @@ import SwiftUI
 
     deinit { for token in notifications { NotificationCenter.default.removeObserver(token) } }
 
+    public var accountSettings: some View { AccountSettingsView(store: store.scope(state: \.account, action: \.account)) }
+    public func handleAuthenticationURL(_ url: URL) -> Bool { accountServices.handle(url) }
+    public func handleSharingURL(_ url: URL) -> Bool {
+        guard url.scheme == "hitslop" else { return false }
+        guard let invitation = SharingInvitation(url: url) else {
+            store.send(.externalFailure("This hitSlop invitation is invalid.")); return true
+        }
+        let model = JoinSharingModel(account: store.scope(state: \.account, action: \.account), invitation: invitation,
+            templates: catalogServices.templatesURL, opened: { [weak self] in self?.openDocument($0) })
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 300), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        panel.isReleasedWhenClosed = false; panel.title = "Join document"
+        panel.contentViewController = NSHostingController(rootView: JoinSharingView(model: model))
+        model.finished = { [weak panel] in panel?.close() }
+        invitationPanel?.close(); invitationPanel = panel
+        panel.center(); panel.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        return true
+    }
+
     public var hasOpenDocuments: Bool { !store.documents.isEmpty }
     public var documentControllers: [SlopDocumentWindowController] { Array(native.controllers.values) }
     public var canPerformDocumentCommands: Bool {
@@ -74,7 +99,7 @@ import SwiftUI
     public func showCatalog() {
         guard presentsWindows, store.quitPhase == .running else { return }
         if catalogWindow == nil {
-            let host = NSHostingController(rootView: CatalogView(store: store.scope(state: \.catalog, action: \.catalog)))
+            let host = NSHostingController(rootView: CatalogView(store: store.scope(state: \.catalog, action: \.catalog), account: store.scope(state: \.account, action: \.account)))
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 720), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
             window.title = ""; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 900, height: 600); window.contentViewController = host; window.center()
@@ -116,10 +141,18 @@ import SwiftUI
         store.send(.documents(.element(id: id, action: action)))
     }
     private func connect(_ id: UUID, controller: SlopDocumentWindowController) {
+        if presentsWindows {
+            let model = DocumentSharing(controller: controller, account: store.scope(state: \.account, action: \.account))
+            sharing[id] = model
+            controller.onShare = { [weak model] in model?.show() }
+        }
         controller.onCommand = { [weak self] command in self?.send(.command(command.featureCommand), to: id) }
         controller.onRuntimeReady = { [weak self] in self?.send(.runtimeReady, to: id) }
         controller.onRuntimeFailure = { [weak self] message in self?.send(.runtimeFailed(message), to: id) }
-        controller.onClose = { [weak self] in self?.documentObservations.removeValue(forKey: id) }
+        controller.onClose = { [weak self] in
+            self?.documentObservations.removeValue(forKey: id)
+            self?.sharing.removeValue(forKey: id)?.stop()
+        }
         if let document = store.scope(state: \.documents[id: id], action: \.documents[id: id]) {
             documentObservations[id] = observe { [weak self, weak controller] in
                 controller?.updatePresentation(pinned: document.isPinned, commandsEnabled: document.acceptsCommands, runtimeError: document.runtimeError)

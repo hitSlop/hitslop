@@ -71,6 +71,42 @@ authoring work. They are excluded from builds, checks, and dependency support.
 
 The supported document host is macOS with local files. iOS editing and iCloud
 working-copy synchronization are unavailable. Media and theme storage remain
-separate features. Networking, presence, encryption, and history compaction are
+separate features. Presence, end-to-end encryption, and history compaction are
 future work. Loro uses its bundled base64 WASM distribution, with a bundle-size
 cost accepted for the current small-document implementation.
+
+## Sharing (macOS)
+
+Share opens native hitSlop controls. Google sign-in is required only for live
+collaboration. `shareDocument` is a Firebase callable with Auth and App Check;
+it creates rooms, redeems invitations, manages membership, and appends Loro
+snapshots. Firestore listeners receive authorized updates, which the existing
+JS engine validates, merges, and persists through the local journal. Native
+code never interprets CRDT operations. The internal host-to-guest document
+commands are snapshot, receive, copy, and seed; they do not expose credentials
+or add another author-facing mutation API.
+
+Rooms use the existing document identity; no extra identity or invite secret is
+written into the package. Each member has whole-document editing access. The
+owner can disable/rotate the invite link and remove people. Removed members
+cannot rejoin with the old link. They retain already downloaded content.
+Invitation URLs use `hitslop://join/<documentId>#<token>` and open the Mac app.
+Joining explicitly saves a local replica from the shared history, using an
+already installed template with an exact immutable-content fingerprint. Missing
+templates require installation first; links never install executable code.
+
+The initial transport stores full Loro snapshots as idempotent append-only
+updates: 512 KiB per checkpoint, 10,000 updates and 20 members per room. These
+are enforced limits, not compaction. Synchronization checks local changes every
+second and receives remote edits through a Firestore listener. Offline edits
+remain in the local checkpoint and resume on reopening/reconnection. “Synced”
+requires server-confirmed delivery; local flush/close never waits for networking.
+The service stores document data and history with Firebase-managed protection,
+not end-to-end encryption. Media and theme changes are not synchronized.
+
+Send a copy first creates a new document identity and history from valid visible
+content, then opens Apple's share sheet. Duplicate uses the same independent
+copy operation. Raw Finder copies retain history and document identity, but
+possession of a file does not grant room access. Unresolved JSON reviews must be
+resolved before making an independent copy. Existing files and templates are
+never rewritten in place to update executable app code.

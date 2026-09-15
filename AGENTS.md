@@ -67,7 +67,9 @@ versioned document data, named media, and theme overrides. Read `manifest.json` 
   SHA-256, and copies one to the user-selected path. Local `slop register`
   writes `~/.hitslop/templates/<slug>.slop`. Anything under
   `~/.hitslop/templates` is a catalog master, never a writable document.
-  Firebase stores only public catalog metadata and immutable published artifacts;
-  it never stores a local document.
+  Firebase stores public catalog artifacts and, after explicit sharing,
+  private room membership and Loro updates. Local-only documents stay local.
+  Share opens native collaboration controls; Apple's share sheet is only for
+  sending an independent copy. See `docs/sync-v1.md` for access and copy semantics.
 - TypeBox is authoritative. Run `bun run schema:generate` after schema changes;
   JSON Schema then generates the Swift types and validates Swift manifests.

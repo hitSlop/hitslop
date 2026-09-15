@@ -68,6 +68,39 @@ export class DocumentEngine<S extends TSchema> {
     return engine;
   }
   get dataVersion(): string { return this.version(); }
+  /** Host-only replication payload; account credentials never enter the engine. */
+  async sharingSnapshot() {
+    await this.flush();
+    return { documentId: this.identity.documentId, schema: this.fingerprint,
+      checkpoint: encode(this.replica.exportSnapshot()), version: this.dataVersion };
+  }
+  async receiveShared(value: { documentId: string; schema: string; checkpoint: string }): Promise<void> {
+    if (value.documentId !== this.identity.documentId || value.schema !== this.fingerprint) throw new Error("Shared document identity or schema does not match");
+    this.importUpdates(decode(value.checkpoint));
+    await this.flush();
+  }
+  /** A copy starts from visible content, never the original document's history. */
+  async independentCopy(): Promise<{ identity: string; checkpoint: string; metadata: string; projection: string }> {
+    await this.flush();
+    if (this.state.projectionError) throw new Error("Review the JSON file before making a copy");
+    const replica = new Replica({ schema: this.schema, peerId: writer(), initial: this.current });
+    return this.materializeReplica(replica, crypto.randomUUID());
+  }
+  private async materializeReplica(replica: Replica<S>, documentId: string) {
+    const revision = pack({ format: 1, documentId, schema: this.fingerprint, frontiers: replica.doc.oplogFrontiers(), nonce: crypto.randomUUID() } satisfies Revision);
+    const projection = pack({ $slop: { format: 1, baseRevision: revision }, data: replica.current() });
+    return { identity: pack({ format: 1, documentId }), checkpoint: encode(replica.exportSnapshot()), projection,
+      metadata: pack({ format: 2, schema: this.fingerprint, receipts: {}, materialized: { revision, hash: await hashEncoded(projection) } } satisfies Metadata) };
+  }
+  /** Bootstrap a new local package from an existing replica, before opening its UI. */
+  static async sharedSeed(schema: TSchema, value: { documentId: string; schema: string; checkpoint: string }) {
+    const fingerprint = await digest(utf8(canonical(schema)));
+    if (value.schema !== fingerprint || !value.documentId) throw new Error("Shared document schema does not match this template");
+    const replica = new Replica({ schema, peerId: writer(), snapshot: decode(value.checkpoint) });
+    const engine = new DocumentEngine(schema, { open: async () => { throw new Error("Seed has no storage"); }, commit: async () => { throw new Error("Seed has no storage"); } });
+    engine.fingerprint = fingerprint;
+    return engine.materializeReplica(replica, value.documentId);
+  }
   get current(): DocumentValue<S> { return this.replica.current(); }
   subscribe(callback: () => void): () => void { this.listeners.add(callback); return () => this.listeners.delete(callback); }
   private notify() { this.state.isDirty = this.saved !== this.changed; for (const callback of this.listeners) callback(); }

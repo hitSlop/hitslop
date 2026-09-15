@@ -58,6 +58,14 @@ class EngineOwner<S extends TSchema> {
       io: this.io,
     })).then(engine => {
       this.engine = engine;
+      if (this.bridge && typeof window !== "undefined") {
+        Object.assign(window, { __hitslopDocument: {
+          snapshot: () => engine.sharingSnapshot(),
+          receive: (value: Parameters<typeof engine.receiveShared>[0]) => engine.receiveShared(value),
+          copy: () => engine.independentCopy(),
+          seed: (value: Parameters<typeof DocumentEngine.sharedSeed>[1]) => DocumentEngine.sharedSeed(this.options.schema, value),
+        } });
+      }
       this.unsubscribe = engine.subscribe(() => this.notify());
       if (this.bridge) errors.clear("document-open");
       return engine;

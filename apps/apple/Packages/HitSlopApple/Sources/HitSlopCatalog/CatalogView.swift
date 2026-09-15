@@ -8,14 +8,17 @@ import SwiftUI
 
 public struct CatalogView: View {
     @Bindable var store: StoreOf<CatalogFeature>
+    let account: StoreOf<AccountFeature>
     @FocusState private var searchFocused: Bool
     @Environment(\.scenePhase) private var scenePhase
 
-    public init(store: StoreOf<CatalogFeature>) { self.store = store }
+    public init(store: StoreOf<CatalogFeature>, account: StoreOf<AccountFeature>) {
+        self.store = store; self.account = account
+    }
 
     public var body: some View {
         NavigationSplitView {
-            CatalogSidebarFeatureView(store: store)
+            CatalogSidebarFeatureView(store: store, account: account)
             .navigationSplitViewColumnWidth(min: 168, ideal: 184, max: 204)
         } content: {
             CatalogResultsFeatureView(store: store, searchFocused: $searchFocused)
@@ -42,9 +45,10 @@ public struct CatalogView: View {
 
 private struct CatalogSidebarFeatureView: View {
     let store: StoreOf<CatalogFeature>
+    let account: StoreOf<AccountFeature>
     private let categories = ["productivity", "utilities", "finance", "media", "games", "developer-tools", "education", "business", "personal", "other"]
     var body: some View {
-        CatalogSidebar(filter: store.filter, categories: categories, localCount: store.local.count, recentCount: store.recents.count) {
+        CatalogSidebar(filter: store.filter, categories: categories, localCount: store.local.count, recentCount: store.recents.count, account: account) {
             store.send(.filterChanged($0))
         }
     }
@@ -80,6 +84,8 @@ private struct CatalogSidebar: View {
     let categories: [String]
     let localCount: Int
     let recentCount: Int
+    let account: StoreOf<AccountFeature>
+    @State private var showsAccount = false
     let select: (CatalogFilter) -> Void
 
     var body: some View {
@@ -121,12 +127,19 @@ private struct CatalogSidebar: View {
                     }.buttonStyle(.plain)
                 }
                 HStack(spacing: 9) {
-                    BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
-                    if let discord = CatalogLinks.discord {
-                        BrandLink(name: "discord", label: "Discord", destination: discord)
+                    Button { showsAccount = true } label: {
+                        AccountAvatar(user: account.user)
+                            .contentShape(Circle())
                     }
+                    .buttonStyle(.plain)
+                    .help(account.user?.email.map { "Account: \($0)" } ?? "Account")
+                    .accessibilityLabel("Account")
+                    .popover(isPresented: $showsAccount) {
+                        AccountSettingsView(store: account)
+                    }
+                    BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
+                    BrandLink(name: "discord", label: "Discord", destination: CatalogLinks.discord)
                 }
-                Text("Mini apps · local data · fun").font(.caption2).foregroundStyle(.tertiary)
             }
             .padding(14)
             .overlay(alignment: .top) { Divider() }
@@ -138,26 +151,35 @@ private struct CatalogSidebar: View {
 private struct BrandLink: View {
     let name: String
     let label: String
-    let destination: URL
+    let destination: URL?
 
     var body: some View {
-        Link(destination: destination) {
-            Group {
-                if let image = brandImage(named: name) {
-                    Image(nsImage: image).resizable().scaledToFit()
-                } else {
-                    Image(systemName: "link")
-                }
+        Group {
+            if let destination {
+                Link(destination: destination) { icon }
+            } else {
+                Button {} label: { icon }
+                    .disabled(true)
             }
-            .frame(width: 15, height: 15)
-            .frame(width: 30, height: 30)
-            .foregroundStyle(.secondary)
-            .background(Color.primary.opacity(0.055), in: Circle())
-            .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel(label)
+        .help(destination == nil ? "\(label) — coming soon" : label)
+        .accessibilityLabel(destination == nil ? "\(label) — coming soon" : label)
+    }
+
+    private var icon: some View {
+        Group {
+            if let image = brandImage(named: name) {
+                Image(nsImage: image).resizable().scaledToFit()
+            } else {
+                Image(systemName: "link")
+            }
+        }
+        .frame(width: 15, height: 15)
+        .frame(width: 30, height: 30)
+        .foregroundStyle(.secondary)
+        .background(Color.primary.opacity(0.055), in: Circle())
+        .contentShape(Circle())
     }
 }
 

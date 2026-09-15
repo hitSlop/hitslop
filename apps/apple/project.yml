@@ -61,6 +61,7 @@ targets:
       - path: App/macOS
         excludes:
           - ExportOptions.plist
+          - hitSlop.entitlements
           - Info.plist
           - GoogleService-Info.plist
       - path: App/macOS/GoogleService-Info.plist
@@ -113,7 +114,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.app
         PRODUCT_NAME: hitSlop
         INFOPLIST_FILE: App/macOS/Info.plist
-        CODE_SIGN_ENTITLEMENTS: App/Shared/hitSlop.entitlements
+        CODE_SIGN_ENTITLEMENTS: App/macOS/hitSlop.entitlements
+        PROVISIONING_PROFILE_SPECIFIER: $(HITSLOP_PROVISIONING_PROFILE)
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0.5"
         CURRENT_PROJECT_VERSION: "23"

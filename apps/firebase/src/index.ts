@@ -5,11 +5,20 @@ import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2/options";
 import { FirebaseRegistryBackend } from "./backend.js";
 import { route } from "./router.js";
+import { SharingBackend } from "./sharing.js";
 
 initializeApp();
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 
 const backend = new FirebaseRegistryBackend(getFirestore(), getStorage().bucket());
+const sharing = new SharingBackend(getFirestore());
+
+export const shareDocumentOptions = { invoker: "public" as const, enforceAppCheck: true, memory: "512MiB" as const };
+export const shareDocument = onCall(shareDocumentOptions, request =>
+  sharing.perform(request.auth?.uid, {
+    name: typeof request.auth?.token.name === "string" ? request.auth.token.name : "Google account",
+    email: typeof request.auth?.token.email === "string" ? request.auth.token.email : "",
+  }, request.data));
 
 export const api = onRequest({
   invoker: "public",

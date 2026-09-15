@@ -2,6 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /syncRooms/{roomId}/updates/{updateId} {
+      allow read: if request.auth != null
+        && request.auth.uid in get(/databases/$(database)/documents/syncRooms/$(roomId)).data.members;
+      allow write: if false;
+    }
     match /templates/{templateId} {
       allow read: if resource.data.visibility == "public";
       allow write: if false;

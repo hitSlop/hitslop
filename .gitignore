@@ -23,6 +23,7 @@ sparkle_eddsa*
 **/sparkle_eddsa*
 
 # Generated service, Apple, and editor state.
+/GoogleService-Info.plist
 .wrangler/
 .firebase/
 apps/firebase/lib/

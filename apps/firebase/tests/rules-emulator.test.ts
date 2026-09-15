@@ -38,6 +38,25 @@ if (!emulator) {
 
   afterAll(async () => environment.cleanup());
 
+  test("shared updates require current membership and cannot be written directly", async () => {
+    await environment.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), "syncRooms/room"), { members: { member: { name: "Member" } } });
+      await setDoc(doc(context.firestore(), "syncRooms/room/updates/update"), { checkpoint: "private" });
+    });
+    const member = environment.authenticatedContext("member").firestore();
+    const stranger = environment.authenticatedContext("stranger").firestore();
+    const anonymous = environment.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(member, "syncRooms/room/updates/update")));
+    await assertFails(getDoc(doc(stranger, "syncRooms/room/updates/update")));
+    await assertFails(getDoc(doc(anonymous, "syncRooms/room/updates/update")));
+    await assertFails(getDoc(doc(member, "syncRooms/room")));
+    await assertFails(setDoc(doc(member, "syncRooms/room/updates/injected"), { checkpoint: "bad" }));
+    await environment.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), "syncRooms/room"), { members: {} });
+    });
+    await assertFails(getDoc(doc(member, "syncRooms/room/updates/update")));
+  });
+
   test("exposes only public catalog metadata and denies all client writes", async () => {
     const firestore = environment.unauthenticatedContext().firestore();
     await assertSucceeds(getDoc(doc(firestore, "templates/public-template")));

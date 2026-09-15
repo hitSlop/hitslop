@@ -6,9 +6,11 @@ describe("deployed function metadata", () => {
       projectId: "hitslopapp",
       storageBucket: "hitslopapp.firebasestorage.app",
     });
-    const { recordCreation, recordCreationOptions } = await import("../src/index.js");
+    const { recordCreation, recordCreationOptions, shareDocument, shareDocumentOptions } = await import("../src/index.js");
     expect(recordCreation.__endpoint.callableTrigger).toBeDefined();
     expect(recordCreation.__endpoint.platform).toBe("gcfv2");
     expect(recordCreationOptions).toEqual({ invoker: "public", enforceAppCheck: true });
+    expect(shareDocument.__endpoint.callableTrigger).toBeDefined();
+    expect(shareDocumentOptions.enforceAppCheck).toBe(true);
   });
 });

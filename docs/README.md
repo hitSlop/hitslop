@@ -23,9 +23,8 @@
 
 ## Design proposals
 
-- [Sync v1: JSON, Loro, files, and Firebase](sync-v1.md) — `S.*` schemas, Loro
-  merge, agent baselines, and encrypted Firebase rooms. JS proof of concept in
-  `Prototypes/sync-loro`; not the production storage contract yet.
+- [Document architecture and sharing](sync-v1.md) — `S.*` schemas, Loro,
+  versioned file edits, native persistence, and authenticated Firebase rooms.
 
 ## Historical decisions
 

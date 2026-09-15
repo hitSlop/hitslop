@@ -12,7 +12,11 @@ import UniformTypeIdentifiers
     @NSApplicationDelegateAdaptor(HitSlopAppDelegate.self) private var delegate
     var body: some Scene {
         Settings {
-            UpdateSettingsView(updater: delegate.updater)
+            TabView {
+                delegate.accountSettings.tabItem { Label("Account", systemImage: "person.crop.circle") }
+                UpdateSettingsView(updater: delegate.updater).tabItem { Label("Updates", systemImage: "arrow.triangle.2.circlepath") }
+            }
+            .frame(width: 480, height: 340)
         }
     }
 }
@@ -37,6 +41,7 @@ private struct UpdateSettingsView: View {
     private var recentMenu: NSMenu?
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     var updater: SPUUpdater { updaterController.updater }
+    var accountSettings: some View { coordinator.accountSettings }
     private var catalogURL: URL { HitSlopFirebase.catalogURL(default: URL(string: Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")!) }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -56,7 +61,7 @@ private struct UpdateSettingsView: View {
         let urls = CommandLine.arguments.dropFirst().filter { $0.hasSuffix(".slop") }.map(URL.init(fileURLWithPath:))
         if urls.isEmpty { showCatalog() } else { urls.forEach(openDocument) }
     }
-    func application(_ application: NSApplication, open urls: [URL]) { urls.filter { $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
+    func application(_ application: NSApplication, open urls: [URL]) { urls.filter { !coordinator.handleSharingURL($0) && !coordinator.handleAuthenticationURL($0) && $0.isFileURL && $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         coordinator.requestQuit()

@@ -158,6 +158,7 @@ public enum SlopDocumentCommand: Equatable, Sendable {
     public var onCommand: ((SlopDocumentCommand) -> Void)?
     public var onRuntimeReady: (() -> Void)?
     public var onRuntimeFailure: ((String) -> Void)?
+    public var onShare: (() -> Void)?
     private let toolbarPresentation = SlopToolbarPresentation()
     private let opened: SlopOpenedDocument
     private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?, hideWork: DispatchWorkItem?
@@ -344,14 +345,16 @@ public enum SlopDocumentCommand: Equatable, Sendable {
         case .duplicate:
             guard let target = await destination(types: [.slop], name: packageURL.deletingPathExtension().lastPathComponent + " copy.slop") else { return nil }
             try await session.flush()
-            return try SlopDuplicator.duplicate(from: session.package.rootURL, to: target).standardizedFileURL.resolvingSymlinksInPath()
+            return try await session.independentCopy(to: target).standardizedFileURL.resolvingSymlinksInPath()
         case .exportPNG, .exportPDF:
             let png = command == .exportPNG
             guard let target = await destination(types: [png ? .png : .pdf], name: packageURL.deletingPathExtension().lastPathComponent + (png ? ".png" : ".pdf")) else { return nil }
             try await session.flush()
             let data = try await (png ? SlopRenderer.exportPNGData(session: session) : SlopRenderer.exportPDFData(session: session))
             try data.write(to: target, options: .atomic)
-        case .share: share()
+        case .share:
+            guard let onShare else { throw SlopPackageError.invalid("Sharing requires the hitSlop app") }
+            onShare()
         case .reveal: reveal()
         case .copyPath: copyPath()
         case .openEditor(let app): try await openInApplication(app)
@@ -374,7 +377,6 @@ public enum SlopDocumentCommand: Equatable, Sendable {
         }
         return response == .OK ? panel.url : nil
     }
-    private func share() { guard let view = toolbar?.contentView else { return }; NSSharingServicePicker(items: [packageURL]).show(relativeTo: view.bounds, of: view, preferredEdge: .minY) }
     private func reveal() { NSWorkspace.shared.activateFileViewerSelecting([packageURL]) }
     private func copyPath() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(packageURL.path, forType: .string) }
     private func installedApplications() -> [(String, URL)] {

@@ -17,6 +17,7 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture", exact: "1.26.2"),
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20"),
         .package(url: "https://github.com/firebase/firebase-ios-sdk.git", exact: "12.18.0"),
+        .package(url: "https://github.com/google/GoogleSignIn-iOS", exact: "9.0.0"),
         .package(url: "https://github.com/objecthub/swift-dynamicjson.git", from: "1.0.2"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2"),
     ],
@@ -65,7 +66,14 @@ let package = Package(
         ),
         .target(
             name: "HitSlopCatalog",
-            dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRuntime", "HitSlopRegistry", "HitSlopFirebase", "HitSlopFeatures"],
+            dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRuntime", "HitSlopRegistry", "HitSlopFirebase", "HitSlopFeatures",
+                .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseFirestore", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseFunctions", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseAppCheck", package: "firebase-ios-sdk"),
+                .product(name: "GoogleSignIn", package: "GoogleSignIn-iOS"),
+                .product(name: "GoogleSignInSwift", package: "GoogleSignIn-iOS"),
+            ],
             resources: [.process("Resources")],
             linkerSettings: [.linkedFramework("AppKit")]
         ),
