@@ -1,0 +1,60 @@
+{
+  "runtime": "1.0.0",
+  "loro": "1.16.1",
+  "schema": {
+    "type": "object",
+    "required": [
+      "title",
+      "tasks"
+    ],
+    "properties": {
+      "title": {
+        "type": "string",
+        "x-hitslop": {
+          "container": "text"
+        }
+      },
+      "tasks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "done"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "done": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true,
+          "x-hitslop": {
+            "container": "map"
+          }
+        },
+        "x-hitslop": {
+          "container": "movable-list",
+          "key": "id"
+        }
+      }
+    },
+    "additionalProperties": true,
+    "x-hitslop": {
+      "version": 1,
+      "container": "map"
+    }
+  },
+  "checkpoint": "bG9ybwAAAAAAAAAAAAAAABpSV7EAA/MAAABMT1JPAAAiACIBEAEBAAAAAAAAAAEBAAAAAAAFAQAAAQAVBAQBAAAIBAACAAAEAAQAIAQAAAAiGQV0aXRsZQV0YXNrcwJpZARkb25lBGRhdGEALAEECg0AAgEEAgADBAAKBAANAgEEAgUAEAkDCwUICwEJBAUJAwEPCAEFBgcBCwEDAgEAAgECAgEMKAkCD1J1bnRpbWUgZml4dHVyZQkEBwEJAAUDb25lAgdWZXJzaW9uAWQAAgBmcgEBQgACAHZ2AQFEAACvALcAAwCMANUYAQAAAAUAAAAMAAAAAAAAAAABAAAAAAACAHZ2lijVh9AAAAAEAQAATE9STwAEIk0YYECCxAAAAPMMAAMBAQEgAwIEZG9uZQEAAmlkBANvbmUAAQEAAQB1EwASAA0AAhAA9RAAAAACAgEABGRhdGEBEVZlcnNpb25lZCBmaXh0dXJlOQCxAwQCCAAFBzQlNDEJAKQOCwAOAAAADQAESwBVEAAAAARLAGUBBwEBIgE/APADBAMCBAACAAICAAIDAgEAAgEiBgAQAAMAQQAGAIB/ALAAAQACBXRhc2tzB8UAcQV0aXRsZQdDAAEFAAECAABmAJAAJQBwALQABAAAAAAAx+D3ggEAAAAFAAAADQAAAQAAAAAAAAARAAAAAQYAgARkYXRh9yIoudwAAAAAAAAA",
+  "data": {
+    "tasks": [
+      {
+        "done": false,
+        "id": "one"
+      }
+    ],
+    "title": "Versioned fixture"
+  }
+}

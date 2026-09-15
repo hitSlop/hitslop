@@ -11,7 +11,7 @@ import Testing
     var callbacks: [UUID: @MainActor () -> Void] = [:]
     let presenter = NativeAlertPresenter { alert, _, completion in
         presented.append(alert.id)
-        callbacks[alert.id] = completion
+        callbacks[alert.id] = { completion(nil) }
     }
     let observation = observe {
         if let alert = store.alert {
@@ -47,7 +47,7 @@ import Testing
     var presented: [UUID] = []
     var callbacks: [UUID: @MainActor () -> Void] = [:]
     let presenter = NativeAlertPresenter { alert, _, completion in
-        presented.append(alert.id); callbacks[alert.id] = completion
+        presented.append(alert.id); callbacks[alert.id] = { completion(nil) }
     }
     presenter.enqueue(first, window: firstWindow, isCurrent: { true }, dismiss: {})
     presenter.enqueue(obsolete, window: firstWindow, isCurrent: { obsoleteIsCurrent.value }, dismiss: { Issue.record("Obsolete alert was dismissed") })

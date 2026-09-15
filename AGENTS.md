@@ -73,3 +73,8 @@ versioned document data, named media, and theme overrides. Read `manifest.json` 
   sending an independent copy. See `docs/sync-v1.md` for access and copy semantics.
 - TypeBox is authoritative. Run `bun run schema:generate` after schema changes;
   JSON Schema then generates the Swift types and validates Swift manifests.
+
+- Authored manifests use `schemas/v1/authoring-manifest.schema.json`. Built manifests
+  require a build-generated minimum-compatible `runtime` version. Hosts supply the
+  JS/WASM document engine; never bundle platform sync code into a slop. Generate
+  shared runtime resources with `bun run schema:generate`. See `docs/sync-v1.md`.

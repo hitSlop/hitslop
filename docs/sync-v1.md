@@ -5,8 +5,9 @@ hitSlop has one document data model. Authors define `S.Document` schemas from
 default insertion, or field stripping. `documentStore({ schema, initial })`
 exposes an immutable `current` view and an explicit `change(draft => …)` API.
 
-JavaScript owns the Loro Replica, validation, historical edit reconciliation,
-and operation ordering. Swift owns local package bytes and journal recovery.
+The host supplies a versioned JavaScript/WASM runtime that owns the Loro Replica,
+validation, historical edit reconciliation, and operation ordering. It executes
+in each document’s webview; documents do not bundle the platform sync engine. Swift owns local package bytes and journal recovery.
 The engine lives for the document runtime and `flush()` acknowledges durability.
 
 Fresh templates contain no `stores/` or `state/`. Opening initializes authored
@@ -72,8 +73,9 @@ authoring work. They are excluded from builds, checks, and dependency support.
 The supported document host is macOS with local files. iOS editing and iCloud
 working-copy synchronization are unavailable. Media and theme storage remain
 separate features. Presence, end-to-end encryption, and history compaction are
-future work. Loro uses its bundled base64 WASM distribution, with a bundle-size
-cost accepted for the current small-document implementation.
+future work. Loro’s JS and base64 WASM ship together in the installed runtime,
+loaded lazily from app resources. Browser previews serve the identical generated
+runtime with disposable in-memory storage.
 
 ## Sharing (macOS)
 
@@ -110,3 +112,57 @@ copy operation. Raw Finder copies retain history and document identity, but
 possession of a file does not grant room access. Unresolved JSON reviews must be
 resolved before making an independent copy. Existing files and templates are
 never rewritten in place to update executable app code.
+
+## Runtime requirements
+
+Authored manifests use `schemas/v1/authoring-manifest.schema.json` and contain no
+runtime declaration. The build stamps `"runtime": "1.0.0"` into the immutable
+built manifest using the highest minimum required by the SDK packages in its
+bundle graph. SDK package metadata uses `hitslop.runtime`; conflicting majors
+fail the build. SDK-free apps use the builder baseline. Built manifests require
+the runtime field; there is no legacy fallback or migration.
+
+Runtime versions are independent of hitSlop app, bridge protocol, npm package,
+and Loro versions. A requirement is the minimum stable `major.minor.patch`
+release within that major: `1.2.0` accepts `1.3.1`, but neither `1.1.0` nor
+`2.0.0`. The host chooses the highest installed compatible release before
+starting JavaScript or storage workers. Unsupported documents offer the normal
+hitSlop updater; opening a document never downloads executable code. Missing or
+malformed declarations fail package validation.
+
+The complete engine is versioned together, including validation, schema mapping,
+reconciliation, and persistence. Compatible fixes raise the implementation
+release; only newly required capabilities raise SDK minimums. A breaking API or
+checkpoint/operation format needs a new major. Same-major releases must read and
+exchange each other’s writes, including reopening data on an older compatible
+host. Keep runtime-versioned checkpoint fixtures and exercise both directions
+before releasing an engine update. Future major releases must retain a compatible
+implementation for previously supported majors; never silently substitute one.
+
+`window.slop.runtime.version` identifies the selected release. Its document
+provider returns a narrow session interface without exposing Loro containers.
+The Svelte store retains its normal API and synchronous mutations. Custom-I/O
+consumers explicitly pass `runtime` from `@hitslop/sync/provider`.
+
+Run `bun run schema:generate` after changing the engine to generate identical
+native and CLI runtime resources. The app bundles these generated files; the CLI
+serves its installed copy for previews. Document bundles reject platform engine
+imports. Quick Checklist’s pre-capture package has a 500,000-byte regression
+budget; report preview and icon bytes separately.
+
+Ship the supporting host and publishing validator before publishing rebuilt
+templates. Document application code stays fixed; compatible host-runtime fixes
+can change when the user updates hitSlop.
+
+### Releasing an engine update
+
+1. Change the implementation version in `packages/sync/src/runtime-release.ts`.
+   Raise SDK `hitslop.runtime` metadata and the shared SDK minimum only when
+   document code needs a new capability.
+2. For a new major, first preserve the exact last shipped runtime of each older
+   supported major in `packages/sync/runtime-archive/` and list its version in
+   `retainedRuntimeVersions`. The generator ships one release per supported major.
+3. Run `bun run schema:generate`. It replaces superseded generated resources, so
+   compatible releases do not accumulate old WASM files in the host.
+4. Run schema, compatibility, native, preview, size, and npm release checks, then
+   deliver the runtime through the normal app update.

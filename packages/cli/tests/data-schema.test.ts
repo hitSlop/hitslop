@@ -104,7 +104,7 @@ test("distributed CLI resolves its sibling loader without source files", async (
   const { root } = await fixture("");
   await writeFile(join(root, "schema.ts"), 'export default { type: "object", "x-hitslop": {version: 1, container: "map"}, properties: {} };');
   await writeFile(join(root, "manifest.json"), JSON.stringify({
-    $schema: "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+    $schema: "https://api.hitslop.com/schemas/v1/authoring-manifest.schema.json",
     author: { name: "Test" }, slug: "loader-test", title: "Loader test",
     description: "A schema loading fixture", categories: ["utilities"],
     presentation: { width: 480, height: 620, shape: "rounded" },

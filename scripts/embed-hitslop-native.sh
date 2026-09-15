@@ -29,48 +29,58 @@ if [ -z "$archs" ]; then
   esac
 fi
 
-arch_flags=
+supported_archs=
 for arch in $archs; do
   case "$arch" in
-    arm64|x86_64) arch_flags="$arch_flags --arch $arch" ;;
+    arm64|x86_64) supported_archs="$supported_archs $arch" ;;
   esac
 done
 
-if [ -z "$arch_flags" ]; then
+if [ -z "$supported_archs" ]; then
   echo "No supported architectures were requested: $archs" >&2
   exit 69
 fi
 
 echo "Building hitslop-native ($archs)…"
-# shellcheck disable=SC2086
-/usr/bin/swift build \
-  --package-path "$native_package" \
-  --scratch-path "$scratch" \
-  --configuration release \
-  --product hitslop-native \
-  $arch_flags
-
-native_bin=$(
-  # shellcheck disable=SC2086
+# Multiple --arch flags select SwiftPM's Xcode backend, which tries to copy
+# unrelated Firebase/TCA resource bundles for this executable-only build.
+# Build the product with the native backend once per architecture instead.
+set --
+for arch in $supported_archs; do
   /usr/bin/swift build \
     --package-path "$native_package" \
     --scratch-path "$scratch" \
+    --build-system native \
     --configuration release \
     --product hitslop-native \
-    --show-bin-path \
-    $arch_flags
-)
-helper="$native_bin/hitslop-native"
-if [ ! -f "$helper" ]; then
-  echo "hitslop-native is missing at $helper" >&2
-  exit 70
-fi
+    --arch "$arch"
+  native_bin=$(
+    /usr/bin/swift build \
+      --package-path "$native_package" \
+      --scratch-path "$scratch" \
+      --build-system native \
+      --configuration release \
+      --product hitslop-native \
+      --show-bin-path \
+      --arch "$arch"
+  )
+  helper="$native_bin/hitslop-native"
+  if [ ! -f "$helper" ]; then
+    echo "hitslop-native is missing at $helper" >&2
+    exit 70
+  fi
+  set -- "$@" "$helper"
+done
 
 # SwiftPM executables locate Bundle.module resources beside the executable.
 # The host app also links HitSlopCore and therefore has a copy in Resources,
 # but that location is not visible to this independently-built helper.
 /bin/mkdir -p "$app/Contents/Helpers"
-/bin/cp "$helper" "$app/Contents/Helpers/hitslop-native"
+if [ "$#" -eq 1 ]; then
+  /bin/cp "$1" "$app/Contents/Helpers/hitslop-native"
+else
+  /usr/bin/lipo -create "$@" -output "$app/Contents/Helpers/hitslop-native"
+fi
 /bin/chmod 755 "$app/Contents/Helpers/hitslop-native"
 
 # Xcode does not automatically sign nested content added by a run script. Use

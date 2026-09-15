@@ -1,8 +1,9 @@
 # @hitslop/runtime
 
 Framework-neutral host APIs: media, window controls, readiness, capture, flush,
-and host errors. Document state is owned by `@hitslop/sync`; Svelte applications
-use `documentStore` from `@hitslop/svelte`.
+and host errors. The host supplies the document engine through
+`window.slop.runtime`, including its selected version. Svelte applications use
+`documentStore` from `@hitslop/svelte`; their bundles contain no sync engine.
 
 ```ts
 import { errors } from "@hitslop/runtime";

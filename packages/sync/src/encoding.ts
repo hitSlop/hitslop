@@ -1,9 +1,6 @@
 /** Browser and native use exactly the same canonical JSON and byte encoding. */
-export const canonical = (value: unknown): string => {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`).join(",")}}`;
-};
+export { canonical } from "@hitslop/schema/json";
+import { canonical } from "@hitslop/schema/json";
 export const encode = (bytes: Uint8Array): string => {
   let text = "";
   for (let i = 0; i < bytes.length; i += 8192) text += String.fromCharCode(...bytes.subarray(i, i + 8192));

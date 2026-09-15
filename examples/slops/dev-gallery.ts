@@ -1,3 +1,4 @@
+import { previewRuntimePlugin } from "../../packages/cli/src/preview-runtime.ts";
 import { previewShell } from "../../packages/cli/src/preview-shell";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { spawn } from "node:child_process";
@@ -374,7 +375,7 @@ if (isMain) {
       root,
       configFile: false,
       appType: "mpa",
-      plugins: [galleryPlugin(slops), vanillaExtractPlugin(), svelte()],
+      plugins: [previewRuntimePlugin(), galleryPlugin(slops), vanillaExtractPlugin(), svelte()],
       server: {
         host: "localhost",
         port,

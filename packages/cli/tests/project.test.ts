@@ -3,10 +3,10 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { encode } from "fast-png";
-import { documentSkillContent, manifestSchemaURL } from "@hitslop/schema";
+import { documentSkillContent, authoringManifestSchemaURL } from "@hitslop/schema";
 import { compileDataSchema } from "@hitslop/schema";
 import { loadDataSchema } from "../src/data-schema.ts";
-import { buildSlop, loadManifest, scaffold } from "../src/project.ts";
+import { buildSlop, loadAuthoringManifest, scaffold } from "../src/project.ts";
 import { validateRuntimePackage } from "../src/runtime-package.ts";
 
 const roots: string[] = [];
@@ -14,16 +14,16 @@ afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root,
 
 async function fixture(width = 240, height = 180, channels = 4): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "hitslop-skin-")); roots.push(root); await mkdir(join(root, "assets"), { recursive: true });
-  await writeFile(join(root, "manifest.json"), JSON.stringify({ $schema: manifestSchemaURL, author: { name: "Fixture Author", url: "https://example.com" }, slug: "skin-test", title: "Skin Test", description: "A PNG skin validation fixture.", categories: ["utilities"], presentation: { width: 240, height: 180, skin: "assets/skin.png" } }));
+  await writeFile(join(root, "manifest.json"), JSON.stringify({ $schema: authoringManifestSchemaURL, author: { name: "Fixture Author", url: "https://example.com" }, slug: "skin-test", title: "Skin Test", description: "A PNG skin validation fixture.", categories: ["utilities"], presentation: { width: 240, height: 180, skin: "assets/skin.png" } }));
   await writeFile(join(root, "index.html"), "<main>Skin</main>");
   await writeFile(join(root, "assets/skin.png"), encode({ width, height, channels, data: new Uint8Array(width * height * channels).fill(255) }));
   return root;
 }
 
 describe("skin validation", () => {
-  test("accepts exact RGBA dimensions", async () => await expect(loadManifest(await fixture())).resolves.toMatchObject({ presentation: { skin: "assets/skin.png" } }));
-  test("rejects different dimensions", async () => await expect(loadManifest(await fixture(241, 180))).rejects.toThrow("exactly 240x180"));
-  test("rejects PNGs without alpha", async () => await expect(loadManifest(await fixture(240, 180, 3))).rejects.toThrow("RGBA PNG"));
+  test("accepts exact RGBA dimensions", async () => await expect(loadAuthoringManifest(await fixture())).resolves.toMatchObject({ presentation: { skin: "assets/skin.png" } }));
+  test("rejects different dimensions", async () => await expect(loadAuthoringManifest(await fixture(241, 180))).rejects.toThrow("exactly 240x180"));
+  test("rejects PNGs without alpha", async () => await expect(loadAuthoringManifest(await fixture(240, 180, 3))).rejects.toThrow("RGBA PNG"));
 });
 
 describe("immutable artifacts", () => {

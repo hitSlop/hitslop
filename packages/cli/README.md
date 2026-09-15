@@ -56,7 +56,11 @@ message } }` with nonzero exit status on failure. Progress goes to stderr.
 `inspect` reports absent data explicitly (`dataExists: false`); open the document
 to initialize authored defaults or supply a complete schema-valid value.
 
-New runtimes prefer valid external file changes over unsaved UI edits. Concurrent
-file writes are last-write-wins. Export uses saved disk data. Documents with
-`state/checkpoint.loro` require sync-aware editing; do not edit their projections.
+Builds generate the document's minimum compatible `runtime` from SDK metadata.
+The native host and disposable browser preview supply its JS/WASM engine;
+document bundles must not import `@hitslop/sync` or Loro.
+
+External JSON edits retain `$slop` revision metadata so the engine can reconcile
+them with document history. Unresolved revisions require native review. See
+[the document contract](../../docs/sync-v1.md) for the editing rules.
 Read the installed `hitslop` skill for template selection and authoring fallback.

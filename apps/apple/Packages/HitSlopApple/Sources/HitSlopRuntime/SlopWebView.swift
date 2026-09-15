@@ -154,8 +154,9 @@ public extension SlopRuntimeSessionDelegate {
 }
 private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     private let package: SlopPackage
+    private let runtime: SlopDocumentRuntime
     private let theme: SlopThemeStore
-    init(package: SlopPackage) { self.package = package; theme = SlopThemeStore(url: package.themeOverrideURL, defaultURL: package.rootURL.appendingPathComponent("assets/theme.css")) }
+    init(package: SlopPackage, runtime: SlopDocumentRuntime) { self.package = package; self.runtime = runtime; theme = SlopThemeStore(url: package.themeOverrideURL, defaultURL: package.rootURL.appendingPathComponent("assets/theme.css")) }
     func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
         guard let url = task.request.url else { task.didFailWithError(SlopPackageError.invalid("missing resource URL")); return }
         do {
@@ -171,6 +172,10 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     }
     func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
     private func resource(for url: URL) throws -> (data: Data, mime: String) {
+        if url.path.hasPrefix("/__hitslop_runtime__/") {
+            guard url.path == runtime.resourcePath else { throw SlopPackageError.missing("installed runtime resource") }
+            return (try Data(contentsOf: runtime.scriptURL), "text/javascript")
+        }
         if ["", "/", "/index.html"].contains(url.path) { return (try Data(contentsOf: package.entryURL), "text/html; charset=utf-8") }
         if url.path == "/theme.css" {
             return (theme.stylesheet(), "text/css; charset=utf-8")
@@ -207,9 +212,12 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
 
     public init(packageURL: URL, renderTargetsEnabled: Bool = false) throws {
         let package = try SlopPackage(rootURL: packageURL); self.package = package
+        // Fail before constructing storage workers/watchers or executing guest code.
+        let runtime = try SlopDocumentRuntime(required: package.manifest.runtime)
         usesTransparentBackground = package.usesTransparentBackground
         let configuration = WKWebViewConfiguration(); configuration.websiteDataStore = .nonPersistent()
-        let handler = SlopSchemeHandler(package: package); schemeHandler = handler; configuration.setURLSchemeHandler(handler, forURLScheme: "slop")
+        let handler = SlopSchemeHandler(package: package, runtime: runtime); schemeHandler = handler; configuration.setURLSchemeHandler(handler, forURLScheme: "slop")
+        configuration.userContentController.addUserScript(WKUserScript(source: runtime.bootstrap, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
         if renderTargetsEnabled {
             configuration.userContentController.addUserScript(WKUserScript(
                 source: "document.documentElement.setAttribute('data-slop-renderer', 'true')",

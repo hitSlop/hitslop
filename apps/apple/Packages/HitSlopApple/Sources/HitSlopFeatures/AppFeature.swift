@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import HitSlopCore
 
 @Reducer public struct AppFeature: Sendable {
     public enum QuitPhase: Equatable, Sendable { case running, waiting, preparing, finished }
@@ -19,11 +20,13 @@ import Foundation
         /// Caller resolves symlinks before dispatching; the reducer performs no filesystem access.
         case openDocument(URL)
         case openFinished(UUID, String), openFailed(UUID, String)
+        case openIncompatible(UUID, SlopRuntimeCompatibilityError)
         case focused(UUID?)
         case quitRequested, quitFinished, quitFailed(String), externalFailure(String)
         case alert(PresentationAction<ErrorAlertAction>)
     }
     @Dependency(\.documentClient) var client
+    @Dependency(\.updateClient) var updater
     @Dependency(\.uuid) var uuid
     public init() {}
     public var body: some ReducerOf<Self> {
@@ -46,6 +49,9 @@ import Foundation
             case .openFailed(let id, let message):
                 guard state.documents.remove(id: id) != nil else { return .none }
                 state.alert = .operationFailure(message)
+            case .openIncompatible(let id, let error):
+                guard state.documents.remove(id: id) != nil else { return .none }
+                state.alert = .unsupportedRuntime(error)
             case .focused(let id): state.activeDocumentID = id.flatMap { state.documents[id: $0] == nil ? nil : $0 }
             case .documents(.element(let id, .operationFinished(.close, _))):
                 state.documents.remove(id: id)
@@ -67,6 +73,8 @@ import Foundation
                 return .run { _ in await client.replyToQuit(true) }
             case .quitFailed(let message): return cancelQuit(&state, message: message)
             case .externalFailure(let message): state.alert = .operationFailure(message)
+            case .alert(.presented(.checkForUpdates)):
+                return .run { _ in await updater.checkForUpdates() }
             case .alert: break
             case .account, .catalog, .documents: break
             }
@@ -87,6 +95,7 @@ import Foundation
         state.documents.append(document)
         return .run { send in
             do { await send(.openFinished(id, try await client.open(id, url))) }
+            catch let error as SlopRuntimeCompatibilityError { await send(.openIncompatible(id, error)) }
             catch { await send(.openFailed(id, error.localizedDescription)) }
         }
     }

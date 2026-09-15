@@ -15,6 +15,10 @@ the store does not expose error, dirty, or saving fields.
 Hosted views share one engine-lifetime flush barrier. `destroy()` detaches the
 view while pending persistence remains owned by that engine.
 
+The host supplies the versioned JS/WASM engine through `window.slop.runtime`.
+This package contains only its reactive adapter. Tests using custom `io` must
+also pass a `runtime` provider from `@hitslop/sync/provider`.
+
 Named attachments use `imageStore` or `fileStore`. Dedicated `ExportTarget` and
 `IconTarget` views share the document state and exclude host error chrome.
 See [document architecture](../../docs/sync-v1.md).

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { lstat, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { manifestSchemaURL } from "@hitslop/schema";
+import { authoringManifestSchemaURL } from "@hitslop/schema";
 import { decode, encode } from "fast-png";
 import { installTemplate, makePackageWritable, validateTemplatePackage } from "../src/install.ts";
 import { iconFromPng } from "../src/static-preview.ts";
@@ -19,7 +19,7 @@ async function fixture(): Promise<{ project: string; templates: string; preview:
   const root = await mkdtemp(join(tmpdir(), "hitslop-install-")); roots.push(root);
   const project = join(root, "source"); const templates = join(root, "templates"); const preview = join(root, "preview.png");
   await mkdir(project, { recursive: true });
-  await writeFile(join(project, "manifest.json"), JSON.stringify({ $schema: manifestSchemaURL, author: { name: "Fixture Author", url: "https://example.com" }, slug: "tiny-counter", title: "Tiny Counter", description: "Counts a very small thing.", categories: ["utilities"], presentation: { width: 320, height: 240 } }));
+  await writeFile(join(project, "manifest.json"), JSON.stringify({ $schema: authoringManifestSchemaURL, author: { name: "Fixture Author", url: "https://example.com" }, slug: "tiny-counter", title: "Tiny Counter", description: "Counts a very small thing.", categories: ["utilities"], presentation: { width: 320, height: 240 } }));
   await writeFile(join(project, "index.html"), "<main>Hello</main>");
   await writeFile(preview, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"));
   return { project, templates, preview };

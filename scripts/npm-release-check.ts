@@ -74,7 +74,7 @@ async function main(): Promise<void> {
       const tarball = join(tarballs, `${name}.tgz`);
       await command(["bun", "pm", "pack", "--filename", tarball, "--quiet"], join(root, "packages", name), true);
       const entries = (await command(["tar", "-tzf", tarball], root, true)).trim().split("\n");
-      const allowed = new Set(["package.json", "README.md", "LICENSE", "dist", ...(name === "cli" ? ["templates", "skills"] : []), ...(name === "schema" ? ["generated"] : [])]);
+      const allowed = new Set(["package.json", "README.md", "LICENSE", "dist", ...(name === "cli" ? ["templates", "skills"] : []), ...(["schema", "sync"].includes(name) ? ["generated"] : [])]);
       for (const entry of entries) {
         const path = entry.replace(/^package\//, "").replace(/\/$/, "");
         if (!path) continue;
@@ -92,16 +92,14 @@ async function main(): Promise<void> {
       private: true,
       dependencies: {
         "@hitslop/schema": packageReferences.schema,
+        "@hitslop/sync": packageReferences.sync,
         "@hitslop/runtime": packageReferences.runtime,
         "@hitslop/svelte": packageReferences.svelte,
         "@hitslop/cli": packageReferences.cli,
         svelte: "^5.0.0",
         typebox: "^1.3.26",
       },
-      overrides: {
-        "@hitslop/schema": packageReferences.schema,
-        "@hitslop/runtime": packageReferences.runtime,
-      },
+      overrides: Object.fromEntries(packageNames.map(name => [`@hitslop/${name}`, packageReferences[name]])),
     }, null, 2)}\n`);
     await command(["bun", "install"], harness, false, installEnv);
 

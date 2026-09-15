@@ -36,10 +36,12 @@ not send TCA actions. Native adapters observe only their scoped document state.
 
 ## Validation
 
-Run `swift test --package-path apps/apple/Packages/HitSlopApple` for reducer and
+Run `swift test --package-path apps/apple/Packages/HitSlopApple --no-parallel` for reducer and
 native integration tests. Reducer tests use controlled clocks and clients; native
 close tests exercise the real WebKit flush barrier, including rejection and retry.
-Run the timing-sensitive WebKit suite without concurrent full app builds.
+Run the timing-sensitive WebKit suite serially and without concurrent full app
+builds. Explicit `--no-parallel` also serializes Swift Testing; its implicit
+default can still run WebKit tests concurrently.
 
 Build both macOS configurations and the iOS simulator with the existing Xcode
 schemes. Command-line Xcode builds use `-skipMacroValidation` for the reviewed,
@@ -163,3 +165,12 @@ existing Quick Checklist persistence/review tests. The Firebase emulator suite
 covers membership, disabled invites, removal, duplicate append, and rules.
 A two-account live test remains required after deployment. See
 [`docs/sync-v1.md`](../../docs/sync-v1.md) for initial limits and offline behavior.
+
+## Host runtime
+
+Source manifests use `https://api.hitslop.com/schemas/v1/authoring-manifest.schema.json`.
+The build generates a required minimum-compatible `runtime` version in the built
+manifest. Do not author this field or bundle `@hitslop/sync`/Loro into a document.
+The installed host supplies the JS/WASM engine; `slop dev` and the gallery serve
+the same runtime with disposable storage. Unsupported requirements require an
+app update. See `docs/sync-v1.md` in the repository for versioning and release rules.

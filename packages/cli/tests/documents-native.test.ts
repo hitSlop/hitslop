@@ -24,7 +24,7 @@ const enabled = process.platform === "darwin" && Boolean(process.env.HITSLOP_NAT
     if (!out.trim()) throw new Error(JSON.stringify({ args, code, err }));
     return { code, body: JSON.parse(out), err };
   };
-  const manifest = { $schema: manifestSchemaURL, slug: "fixture", title: "Fixture", description: "Native fixture", categories: ["utilities"], author: { name: "Test" }, presentation: { width: 320, height: 240 } };
+  const manifest = { $schema: manifestSchemaURL, runtime: "1.0.0", slug: "fixture", title: "Fixture", description: "Native fixture", categories: ["utilities"], author: { name: "Test" }, presentation: { width: 320, height: 240 } };
   const png = (size: number) => encode({ width: size, height: size, channels: 4, data: new Uint8Array(size * size * 4).fill(255) });
   const archive = zipSync({ "manifest.json": new TextEncoder().encode(JSON.stringify(manifest)), "app.html": new TextEncoder().encode("<main>Fixture</main>"), "QuickLook/Preview.png": png(320), "QuickLook/Icon.png": png(512) });
   const hash = sha256(archive);

@@ -22,7 +22,7 @@ test("ZIP inspection accepts runtime paths and rejects unsafe or source paths", 
 
 test("skin validation requires the exact RGBA artifact", () => {
   const manifest = parseManifest({
-    $schema: manifestSchemaURL,
+    $schema: manifestSchemaURL, runtime: "1.0.0",
     author: { name: "Fixture Author", url: "https://example.com" },
     slug: "skin-test",
     title: "Skin Test",

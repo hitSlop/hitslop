@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { manifestSchemaURL, parseManifest } from "../src/index.ts";
 
 const valid = {
-  $schema: manifestSchemaURL,
+  $schema: manifestSchemaURL, runtime: "1.0.0",
   author: { name: "hitSlop", url: "https://hitslop.com" },
   slug: "counter",
   title: "Counter",

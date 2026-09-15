@@ -1,7 +1,8 @@
 # Package format
 
 Read `manifest.json` first. It is the complete declarative contract for
-identity, discovery, and initial native presentation; storage is implicit.
+identity, discovery, runtime compatibility, and initial native presentation;
+storage is implicit.
 
 ## Authored source
 
@@ -23,6 +24,8 @@ my-app/
 
 It may also contain an `Icon.svelte` component and local
 screenshots. It must not contain real document stores.
+Its manifest uses `schemas/v1/authoring-manifest.schema.json`. The builder
+generates the runtime requirement from the included SDK packages.
 
 ## Runtime template
 
@@ -46,6 +49,8 @@ Generated JavaScript, workers, fonts, and WASM also live under immutable
 `assets/`. Structural styles remain in `app.html`. Every new CLI build embeds
 document guidance, but its text or absence is never a prerequisite for opening
 a document. Publishing validation accepts optional UTF-8 guidance as well.
+The platform document engine's JS/WASM is supplied by the installed host and
+must not be bundled under `assets/`.
 
 Asset preservation is not a guarantee of browser API support: the current
 Apple host permits blob workers, not direct custom-scheme worker URLs. Use
@@ -70,11 +75,12 @@ source, `node_modules`, build directories,
 
 ## Manifest
 
-A minimal v1 manifest:
+A minimal built manifest:
 
 ```json
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "1.0.0",
   "author": {
     "name": "Jordan Singer",
     "url": "https://example.com"
@@ -96,8 +102,14 @@ optional public HTTP(S) URL. Author attribution is intentionally separate from
 the publisher signing key: the manifest says who made the work, while the key
 proves who controls its catalog releases.
 
+`runtime` is the minimum compatible host runtime, independent of the app or npm
+package version. `1.2.0` accepts newer `1.x` releases, but not `2.x`. Unsupported
+requirements stop opening before guest execution or storage initialization and
+offer a hitSlop update. Source manifests omit this generated field. See
+[runtime requirements](sync-v1.md#runtime-requirements).
+
 There is intentionally no document ID, release lineage, entry path, storage
-declaration, tags, seed data, or runtime version. Publisher ownership and
+declaration, tags, or seed data. Publisher ownership and
 releases live outside the artifact. Copying a template preserves the manifest
 byte-for-byte.
 
@@ -115,5 +127,5 @@ application `data`; `data.schema.json` validates that complete envelope.
 Host-owned `state/materialization.json` stores projection metadata and durable
 import receipts alongside the checkpoint and identity. `state/journal/` may
 contain pending transactions and preserved originals from explicit review.
-None of `state/` belongs in templates or published artifacts. document compiled
-apps retain their original format. See [Sync v1](sync-v1.md).
+None of `state/` belongs in templates or published artifacts. This format has no
+legacy fallback or migration. See [Sync v1](sync-v1.md).

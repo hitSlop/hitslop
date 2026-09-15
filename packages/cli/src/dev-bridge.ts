@@ -1,4 +1,5 @@
 import { protocolVersion } from "@hitslop/schema/bridge";
+import { previewRuntimeScript } from "./preview-runtime.ts";
 // Browser-only half of `slop dev`. This disposable window.slop fake exists to
 // keep authored UI renderable; it deliberately does not model durable storage.
 
@@ -44,6 +45,7 @@ export const devHostJavaScript = `(() => {
   const drag = async () => undefined;
 
   window.slop = Object.freeze({
+    runtime: window.__hitslopPreviewRuntime,
     preview: window.__hitslopReviewConfig,
     info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['sync.open', 'sync.commit', 'sync.readExternal', 'sync.review', 'errors.report', 'errors.clear', 'host.info', 'window.resize', 'window.drag'] }),
     flush: async () => undefined,
@@ -105,6 +107,7 @@ export const injectHost = (
     hostStyle +
     theme +
     reviewConfig +
+    previewRuntimeScript +
     bridgeScript +
     (options.review ? `<script>${reviewHostJavaScript}</script>` : "");
   return /<head(?:\s[^>]*)?>/i.test(html)

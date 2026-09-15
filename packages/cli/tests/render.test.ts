@@ -13,7 +13,7 @@ async function fixture(): Promise<string> {
   const root = join(temporary, "render-test.slop");
   await mkdir(join(root, documentSkillPath, ".."), { recursive: true });
   await writeFile(join(root, "manifest.json"), JSON.stringify({
-    $schema: manifestSchemaURL,
+    $schema: manifestSchemaURL, runtime: "1.0.0",
     author: { name: "Fixture Author", url: "https://example.com" },
     slug: "render-test",
     title: "Render Test",

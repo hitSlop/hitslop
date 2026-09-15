@@ -47,7 +47,7 @@ let package = Package(
         .target(
             name: "HitSlopRuntime",
             dependencies: ["HitSlopCore", .product(name: "DynamicJSON", package: "swift-dynamicjson")],
-            resources: [.copy("Resources/host-bridge.js"), .copy("Resources/bridge-request.schema.json")],
+            resources: [.copy("Resources/host-bridge.js"), .copy("Resources/document-runtimes"), .copy("Resources/bridge-request.schema.json")],
             linkerSettings: [.linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS]))]
         ),
         .target(

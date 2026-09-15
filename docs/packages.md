@@ -11,7 +11,7 @@ The `slop` executable owns project lifecycle:
 - `skills sync` writes `hitslop-authoring`, `hitslop-design`, and `hitslop-document` into `~/.hitslop/skills` and links them for coding agents.
 - `validate` parses the authoritative manifest.
 - `dev` runs Vite with a disposable in-memory host fake for UI work.
-- `build` emits a source/store-free runtime directory and optional schema metadata.
+- `build` emits a source/store-free runtime directory, generated runtime requirement, and optional schema metadata.
 - `register` captures and adds an immutable local catalog master.
 - `publish` signs and uploads an immutable ZIP.
 - `identity` manages the local Ed25519 publisher identity.
@@ -22,14 +22,17 @@ files.
 
 ## @hitslop/sync
 
-Loro replicas, versioned JSON imports, and durable document state.
-`documentStore.change()` sends application edits through this engine. See [Sync v1](sync-v1.md).
+Loro replicas, versioned JSON imports, and durable document state. Its complete
+JS/WASM implementation ships in the host and CLI preview resources, outside each
+document. `documentStore.change()` uses the host's versioned provider in the same
+webview. See [Sync v1](sync-v1.md).
 
 ## @hitslop/runtime
 
 Application-facing exports include `slop`, `errors`, `ready`, and `capture`.
 They cover named media, host errors, window resize/drag, host readiness,
-and document capture.
+and document capture. `window.slop.runtime` exposes the selected runtime version
+and lazy document provider without exposing Loro containers.
 
 `@hitslop/runtime/adapter` exposes lower-level persistence/media primitives
 for framework adapter authors. Ordinary slops should use the root package or a

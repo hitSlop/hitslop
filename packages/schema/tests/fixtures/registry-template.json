@@ -16,7 +16,7 @@
     "id": "release-one",
     "number": 1,
     "publishedAt": "2026-09-01T12:00:00.000Z",
-    "manifestJSON": "{\"$schema\":\"https://api.hitslop.com/schemas/v1/manifest.schema.json\",\"author\":{\"name\":\"Counter Author\",\"url\":\"https://example.com/counter\"},\"slug\":\"counter\",\"title\":\"Counter\",\"description\":\"Count one useful thing.\",\"categories\":[\"utilities\"],\"presentation\":{\"width\":360,\"height\":480}}",
+    "manifestJSON": "{\"$schema\":\"https://api.hitslop.com/schemas/v1/manifest.schema.json\",\"author\":{\"name\":\"Counter Author\",\"url\":\"https://example.com/counter\"},\"slug\":\"counter\",\"title\":\"Counter\",\"description\":\"Count one useful thing.\",\"categories\":[\"utilities\"],\"presentation\":{\"width\":360,\"height\":480},\"runtime\":\"1.0.0\"}",
     "artifact": {
       "key": "artifacts/sha256/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.slop.zip",
       "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

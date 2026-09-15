@@ -8,11 +8,18 @@ author, catalog metadata, and initial native window. The manifest is immutable i
 a built template or document, so make changes in the source project and rebuild.
 Data and media stores are created by the app and are not declared here.
 
+The build switches to the runtime manifest schema and adds a `runtime` requirement
+automatically, such as `"runtime": "1.0.0"`. This is the minimum compatible host
+runtime within that major version. Do not add it to your source manifest. The
+installed hitSlop app supplies the document engine; an unsupported requirement
+asks the user to update hitSlop. Documents keep their application code while
+compatible host-runtime fixes can arrive through app updates.
+
 ## Start with a complete manifest
 
 ```json title="manifest.json"
 {
-  "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "$schema": "https://api.hitslop.com/schemas/v1/authoring-manifest.schema.json",
   "author": {
     "name": "Your Name",
     "url": "https://example.com"
@@ -34,7 +41,7 @@ Data and media stores are created by the app and are not declared here.
 
 | Field | Rule |
 | --- | --- |
-| `$schema` | Must be `https://api.hitslop.com/schemas/v1/manifest.schema.json`. |
+| `$schema` | Must be `https://api.hitslop.com/schemas/v1/authoring-manifest.schema.json`. |
 | `author.name` | Required, 1–80 characters with at least one non-space character. This attribution travels with the signed artifact. |
 | `author.url` | Optional HTTP or HTTPS URL, up to 2,048 characters. |
 | `slug` | 2–64 lowercase letters or numbers in kebab case, such as `tiny-counter`. |

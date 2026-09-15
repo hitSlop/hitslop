@@ -9,7 +9,7 @@
     "build": "bun active.ts build",
     "register": "bun active.ts register",
     "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
-    "test": "bun test tests"
+    "test": "bun test ./tests"
   },
   "dependencies": {
     "@hitslop/runtime": "workspace:*",

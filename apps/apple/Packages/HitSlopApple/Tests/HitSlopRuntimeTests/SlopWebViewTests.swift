@@ -228,6 +228,44 @@ import Testing
     #expect(try await session.webView.evaluateJavaScript("window.pageMarker") as? Int == 7)
 }
 
+@Test @MainActor func unsupportedRuntimeLeavesPackageUntouched() throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let manifestURL = root.appendingPathComponent("manifest.json")
+    let future = try String(contentsOf: manifestURL, encoding: .utf8).replacingOccurrences(of: #""runtime":"1.0.0""#, with: #""runtime":"99.0.0""#)
+    try Data(future.utf8).write(to: manifestURL)
+    let before = try FileManager.default.subpathsOfDirectory(atPath: root.path).sorted()
+    #expect(throws: SlopRuntimeCompatibilityError(required: "99.0.0", available: ["1.0.0"])) { try SlopRuntimeSession(packageURL: root) }
+    #expect(try FileManager.default.subpathsOfDirectory(atPath: root.path).sorted() == before)
+    #expect(try String(contentsOf: manifestURL, encoding: .utf8) == future)
+}
+
+@Test @MainActor func documentRuntimeLoadsLazilyFromHostAndExposesNoReplica() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try Data("<script>window.slop.ready()</script>".utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    session.load(); try await session.waitUntilReady()
+    #expect(try await session.webView.evaluateJavaScript("window.slop.runtime.version") as? String == "1.0.0")
+    #expect(try await session.webView.evaluateJavaScript("typeof window.__hitslopDocumentRuntime") as? String == "undefined")
+    let result = try await session.webView.callAsyncJavaScript("""
+        const schema = {type:'object','x-hitslop':{version:1,container:'map'},properties:{count:{type:'integer'}},required:['count'],additionalProperties:true};
+        const io = {open:()=>window.slop.sync.open(),commit:value=>window.slop.sync.commit(value)};
+        const document = await window.slop.runtime.open({schema,initial:{count:1},io});
+        document.change(draft=>{draft.count=2});
+        const immediate = document.current.count;
+        await document.flush();
+        return {immediate, replica: 'replica' in document, version: window.__hitslopDocumentRuntime.version};
+        """, arguments: [:], in: nil, contentWorld: .page) as? [String: Any]
+    #expect(result?["immediate"] as? Int == 2)
+    #expect(result?["replica"] as? Bool == false)
+    #expect(result?["version"] as? String == "1.0.0")
+    let data = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("stores/data.json"))) as? [String: Any]
+    #expect((data?["data"] as? [String: Any])?["count"] as? Int == 2)
+    #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("assets/document-runtime-1.0.0.js").path))
+}
+
 private func webViewPackage(skinned: Bool, transparent: Bool = false) throws -> URL {
     let parent = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-webview-\(UUID().uuidString)", isDirectory: true)
     let root = parent.appendingPathComponent("fixture.slop", isDirectory: true)
@@ -236,7 +274,7 @@ private func webViewPackage(skinned: Bool, transparent: Bool = false) throws -> 
     let presentation = skinned
         ? #"{"width":320,"height":240,"skin":"assets/skin.png"}"#
         : transparent ? #"{"width":320,"height":240,"resizable":false,"background":"transparent"}"# : #"{"width":320,"height":240}"#
-    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"webview-fixture","title":"WebView Fixture","description":"Runtime opacity fixture.","categories":["utilities"],"presentation":\#(presentation)}"#
+    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","runtime":"1.0.0","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"webview-fixture","title":"WebView Fixture","description":"Runtime opacity fixture.","categories":["utilities"],"presentation":\#(presentation)}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try writeCanonicalDocumentSkill(to: root)
     if skinned {

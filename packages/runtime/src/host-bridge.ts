@@ -1,4 +1,5 @@
 import "./capture.js";
+import { createDocumentRuntimeLoader } from "./document-runtime.js";
 import type { BridgeMethod, BridgeParams, BridgeResult } from "@hitslop/schema/bridge";
 import { createThemeReload } from "./theme-reload.js";
 import { dispatchChange } from "./change-events.js";
@@ -49,6 +50,7 @@ const watch = (kind: keyof typeof listeners, callback: (event: SlopChange) => vo
 window.__hitslopReloadTheme = createThemeReload(document);
 window.__hitslopEmit = value => dispatchChange(value, listeners, error => console.error("hitSlop change event failed", error));
 const bridge: WindowSlop = {
+  runtime: createDocumentRuntimeLoader(window.__hitslopRuntimeConfig!),
   info: () => call("host.info", {}),
   flush: drain,
   sync: {

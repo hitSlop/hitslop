@@ -21,5 +21,6 @@
     "test": "bun test"
   },
   "dependencies": { "@hitslop/schema": "^0.3.0" },
-  "devDependencies": { "typescript": "^7.0.2" }
+  "devDependencies": { "typescript": "^7.0.2" },
+  "hitslop": { "runtime": "1.0.0" }
 }

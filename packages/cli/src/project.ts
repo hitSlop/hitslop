@@ -5,11 +5,13 @@ import { createHash } from "node:crypto";
 import { zipSync, type Zippable } from "fflate";
 import { decode as decodePng } from "fast-png";
 import { build as viteBuild } from "vite";
-import { checkPngDimensions, manifestSchemaURL, parseManifest, type SlopAuthor, type SlopCategory, type SlopManifest } from "@hitslop/schema";
+import { checkPngDimensions, manifestSchemaURL, authoringManifestSchemaURL, parseAuthoringManifest, parseManifest, type SlopAuthoringManifest, type SlopAuthor, type SlopCategory, type SlopManifest } from "@hitslop/schema";
 import cliPackage from "../package.json" with { type: "json" };
 import { emitDocumentSkill, readDocumentGuideSource } from "./document-skill.ts";
 import { readThemeContract, readThemeCSS, themeContract, validateThemeReferences } from "./theme.ts";
 import { hitSlopBuildPlugin } from "./vite-build-plugin.ts";
+import { runtimeRequirementsPlugin } from "./runtime-requirements.ts";
+import { minimumRuntimeVersion } from "@hitslop/schema/document-runtime";
 import { loadDataSchema } from "./data-schema.ts";
 
 export const manifestPath = (root: string): string => join(root, "manifest.json");
@@ -19,10 +21,16 @@ export async function loadManifest(root: string): Promise<SlopManifest> {
   return manifest;
 }
 
+export async function loadAuthoringManifest(root: string): Promise<SlopAuthoringManifest> {
+  const manifest = parseAuthoringManifest(JSON.parse(await readFile(manifestPath(root), "utf8")));
+  await validateSkin(root, manifest);
+  return manifest;
+}
+
 const exists = async (path: string): Promise<boolean> => { try { await stat(path); return true; } catch { return false; } };
 export const sha256 = (bytes: Uint8Array | string): string => createHash("sha256").update(bytes).digest("hex");
 
-async function validateSkin(root: string, manifest: SlopManifest): Promise<void> {
+async function validateSkin(root: string, manifest: SlopAuthoringManifest | SlopManifest): Promise<void> {
   if (!("skin" in manifest.presentation)) return;
   const path = join(root, manifest.presentation.skin);
   if (!await exists(path)) throw new Error(`Missing window skin: ${manifest.presentation.skin}`);
@@ -68,8 +76,8 @@ export async function scaffold(destination: string, options: ScaffoldOptions): P
     dependencies: { "@hitslop/schema": "^0.3.0", "@hitslop/runtime": "^0.3.0", "@hitslop/svelte": "^0.3.0", "bits-ui": "^2.19.0", "svelte": "^5.57.0", "typebox": "^1.3.26" },
     devDependencies: { "@hitslop/cli": `^${cliPackage.version}`, "@sveltejs/vite-plugin-svelte": "^7.3.0", "@vanilla-extract/css": "^1.21.2", "@vanilla-extract/vite-plugin": "^5.2.6", "vite": "^8.2.2", "svelte-check": "^4.7.6", "@typescript/native": "npm:typescript@^7.0.2", "typescript": "^6.0.3" },
   }, null, 2) + "\n");
-  const manifest = parseManifest({
-    $schema: manifestSchemaURL, slug,
+  const manifest = parseAuthoringManifest({
+    $schema: authoringManifestSchemaURL, slug,
     author: options.author,
     title,
     description: options.description || "A small, lovable hitSlop app.", categories: options.categories?.length ? options.categories : ["utilities"],
@@ -81,7 +89,8 @@ export async function scaffold(destination: string, options: ScaffoldOptions): P
 }
 
 export async function buildSlop(root: string): Promise<{ directory: string; manifest: SlopManifest }> {
-  const manifest = await loadManifest(root);
+  const authored = await loadAuthoringManifest(root);
+  let manifest = parseManifest({ ...authored, $schema: manifestSchemaURL, runtime: minimumRuntimeVersion });
   const schemaPath = join(root, "schema.ts");
   const dataSchema = await exists(schemaPath) ? await loadDataSchema(schemaPath) : undefined;
   await readDocumentGuideSource(root);
@@ -96,7 +105,7 @@ export async function buildSlop(root: string): Promise<{ directory: string; mani
     const contract = themeContract(themeCSS);
     const hasTheme = contract !== undefined;
     await mkdir(output, { recursive: true });
-    await viteBuild({ root, plugins: [hitSlopBuildPlugin({ hasTheme })], build: { outDir: viteOut, emptyOutDir: true } });
+    await viteBuild({ root, plugins: [hitSlopBuildPlugin({ hasTheme }), runtimeRequirementsPlugin(runtime => { manifest = parseManifest({ ...manifest, runtime }); })], build: { outDir: viteOut, emptyOutDir: true } });
     const html = join(viteOut, "index.html"); if (!await exists(html)) throw new Error("Vite did not produce index.html");
     validateThemeReferences(await readFile(html, "utf8"), contract, "generated app.html");
     await cp(html, join(output, "app.html"));
@@ -126,8 +135,8 @@ export async function buildSlop(root: string): Promise<{ directory: string; mani
   } finally { await rm(staging, { recursive: true, force: true }); }
 }
 
-export async function validateAuthoringProject(root: string): Promise<SlopManifest> {
-  const manifest = await loadManifest(root);
+export async function validateAuthoringProject(root: string): Promise<SlopAuthoringManifest> {
+  const manifest = await loadAuthoringManifest(root);
   await readThemeContract(root);
   if (await exists(join(root, "schema.ts"))) await loadDataSchema(join(root, "schema.ts"));
   await readDocumentGuideSource(root);

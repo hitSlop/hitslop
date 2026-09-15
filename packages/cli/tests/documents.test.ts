@@ -38,7 +38,7 @@ async function document() {
   const directory = await root();
   const path = join(directory, "test.slop");
   await mkdir(path);
-  await writeFile(join(path, "manifest.json"), JSON.stringify({ $schema: manifestSchemaURL, slug: "test-document", title: "Test", description: "Document fixture", author: { name: "Tests" }, categories: ["utilities"], presentation: { width: 320, height: 240 } }));
+  await writeFile(join(path, "manifest.json"), JSON.stringify({ $schema: manifestSchemaURL, runtime: "1.0.0", slug: "test-document", title: "Test", description: "Document fixture", author: { name: "Tests" }, categories: ["utilities"], presentation: { width: 320, height: 240 } }));
   await writeFile(join(path, "app.html"), "<main>Test</main>");
   await writeFile(join(path, "data.schema.json"), JSON.stringify({ type: "object", properties: { count: { type: "number" } }, required: ["count"], additionalProperties: true }));
   return { path, directory };

@@ -1,3 +1,4 @@
+import { documentRuntime } from "@hitslop/sync/provider";
 import { test, expect } from "bun:test";
 import { compileModule } from "svelte/compiler";
 import { dirname, resolve, join } from "node:path";
@@ -23,7 +24,7 @@ test("document store has immutable views, explicit validated changes and acknowl
   } };
   const { documentStore } = await import("../src/document-store.svelte.ts");
   const schema = S.Document({ count: S.Integer() });
-  const store = documentStore({ schema, initial: { count: 1 }, io: delayed });
+  const store = documentStore({ runtime: documentRuntime, schema, initial: { count: 1 }, io: delayed });
   try {
     await store.flush();
     expect(store.isReady).toBe(true);
@@ -73,7 +74,7 @@ test("custom-I/O destruction retains failed saves until the runtime barrier retr
     open: () => { reads++; return disk.open(); },
     commit: (value: SyncCommit) => { if (fail) throw new Error("Save failed"); return disk.commit(value); },
   };
-  const store = documentStore({ schema: S.Document({ count: S.Integer() }), initial: { count: 0 }, io });
+  const store = documentStore({ runtime: documentRuntime, schema: S.Document({ count: S.Integer() }), initial: { count: 0 }, io });
   try {
     await store.flush();
     fail = true;
@@ -116,7 +117,7 @@ test("hosted views share one barrier through opening, recovery and destruction",
     },
     onChange: () => { watches++; return () => {}; },
   };
-  Object.defineProperty(globalThis, "window", { configurable: true, writable: true, value: { slop: { sync: bridge, errors: {
+  Object.defineProperty(globalThis, "window", { configurable: true, writable: true, value: { slop: { runtime: documentRuntime, sync: bridge, errors: {
     report: async (value: Report) => { reports.set(value.id, value); },
     clear: async ({ id }: { id: string }) => { reports.delete(id); },
   } } } });

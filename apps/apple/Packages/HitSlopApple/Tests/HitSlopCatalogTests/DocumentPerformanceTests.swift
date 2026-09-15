@@ -92,7 +92,7 @@ private func residentMiB() -> Double {
 private func performanceFixture(in directory: URL, index: Int) throws -> URL {
     let root = directory.appendingPathComponent("fixture-\(index).slop")
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Native benchmark"},"slug":"fixture-\#(index)","title":"Fixture \#(index)","description":"Disposable fixture","categories":["utilities"],"presentation":{"width":380,"height":280,"resizable":true}}"#
+    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","runtime":"1.0.0","author":{"name":"Native benchmark"},"slug":"fixture-\#(index)","title":"Fixture \#(index)","description":"Disposable fixture","categories":["utilities"],"presentation":{"width":380,"height":280,"resizable":true}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try Data("<!doctype html><body style='font:20px system-ui;background:#f0ecff'><h1>Fixture</h1><p>Native state measurement</p><script>window.slop.ready()</script></body>".utf8).write(to: root.appendingPathComponent("app.html"))
     return root

@@ -8,8 +8,13 @@ import { parseManifest } from "@hitslop/schema";
 const manifest = parseManifest(JSON.parse(source));
 ```
 
-The package also exports `./manifest.schema.json`. In the monorepo, TypeBox is the
-source of truth; `bun run schema:generate` updates committed JSON Schema,
+`parseManifest` validates built documents, including their required minimum
+`runtime` version. Source projects use `parseAuthoringManifest` and omit that
+generated requirement. Both JSON schemas are exported as `./manifest.schema.json`
+and `./authoring-manifest.schema.json`.
+
+In the monorepo, TypeBox is the source of truth;
+`bun run schema:generate` updates committed JSON Schema,
 Swift Codable models, and the bundled Apple validation resource.
 
 Document authoring uses namespace imports (`import * as Type from "typebox"`).

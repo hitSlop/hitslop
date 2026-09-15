@@ -1,5 +1,12 @@
 import type { JSONValue } from "./bridge.js";
 
+/** Deterministic JSON for schema identity and document hashes. */
+export const canonical = (value: unknown): string => {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`).join(",")}}`;
+};
+
 /** Reject values JSON.stringify would silently change or discard. */
 export function assertJSON(value: unknown, ancestors = new Set<object>()): asserts value is JSONValue {
   if (value === null || typeof value === "string" || typeof value === "boolean") return;

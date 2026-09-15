@@ -34,7 +34,7 @@ if (!emulator) {
     iconSha256: hash("c"),
     iconBytes: 256,
     manifest: parseManifest({
-      $schema: manifestSchemaURL,
+      $schema: manifestSchemaURL, runtime: "1.0.0",
       author: { name: "Counter Author", url: "https://example.com/counter" },
       slug: "counter",
       title: "Counter",

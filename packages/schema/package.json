@@ -33,7 +33,9 @@
     "./validation": "./dist/validation.js",
     "./json": "./dist/json.js",
     "./manifest.schema.json": "./generated/manifest.schema.json",
-    "./sync": "./dist/sync.js"
+    "./authoring-manifest.schema.json": "./generated/authoring-manifest.schema.json",
+    "./sync": "./dist/sync.js",
+    "./document-runtime": "./dist/document-runtime.js"
   },
   "scripts": {
     "generate": "bun run build && bun src/generate.ts",
@@ -50,5 +52,8 @@
   "devDependencies": {
     "quicktype-core": "26.0.0",
     "typescript": "^7.0.2"
+  },
+  "hitslop": {
+    "runtime": "1.0.0"
   }
 }

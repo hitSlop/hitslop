@@ -5,12 +5,8 @@ import { Replica, type DocumentValue } from "./replica.js";
 import { describeChanges } from "./review.js";
 import { canonical, decode, digest, encode, hashEncoded, pack, unpack, utf8 } from "./encoding.js";
 
-export interface DocumentIO {
-  open(): Promise<SyncSnapshot>;
-  commit(value: SyncCommit): Promise<SyncSnapshot>;
-  status?(value: SyncStatus): Promise<void>;
-}
-export type DocumentState = { isReady: boolean; isDirty: boolean; isSaving: boolean; error: string | null; projectionError: string | null };
+export type { DocumentIO, DocumentState } from "@hitslop/schema/document-runtime";
+import type { DocumentIO, DocumentState } from "@hitslop/schema/document-runtime";
 type Metadata = { format: 2; schema: string; materialized: { revision: string; hash: string } | null; receipts: Record<string, string> };
 type Identity = { format: 1; documentId: string };
 type Revision = { format: 1; documentId: string; schema: string; frontiers: ReturnType<Replica<TSchema>["doc"]["oplogFrontiers"]>; nonce: string };

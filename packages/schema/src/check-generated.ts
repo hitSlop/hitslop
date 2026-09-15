@@ -5,6 +5,8 @@ import { $ } from "bun";
 
 const root = resolve(import.meta.dir, "../../..");
 const generatedFiles = [
+  "packages/schema/generated/authoring-manifest.schema.json",
+  "apps/firebase/public/schemas/v1/authoring-manifest.schema.json",
   "apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/sync-transaction.json",
   "packages/schema/generated/registry-template.schema.json",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopRegistry/Generated/RegistryTemplate.generated.swift",
@@ -19,6 +21,8 @@ const generatedFiles = [
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopRuntime/BridgeContract.generated.swift",
 ];
 const generatedTrees = [
+  "packages/sync/generated/document-runtimes",
+  "apps/apple/Packages/HitSlopApple/Sources/HitSlopRuntime/Resources/document-runtimes",
   "packages/cli/skills",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/skills",
 ];

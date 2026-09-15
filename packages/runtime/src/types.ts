@@ -14,6 +14,7 @@ export interface SlopHost {
 }
 
 export type WindowSlop = {
+  runtime: import("@hitslop/schema/document-runtime").DocumentRuntime;
   preview?: {data?: unknown};
   sync: SlopSyncBridge;
   info?: () => Promise<HostInfo>;

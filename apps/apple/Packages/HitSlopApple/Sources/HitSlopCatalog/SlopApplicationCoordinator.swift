@@ -24,12 +24,12 @@ import SwiftUI
     nonisolated(unsafe) private var notifications: [NSObjectProtocol] = []
     private var previousDocumentCount = 0
 
-    public convenience init(catalogURL: URL, templatesURL: URL = DocumentFactory.defaultTemplatesRoot) {
-        self.init(catalogURL: catalogURL, templatesURL: templatesURL, presentsWindows: true)
+    public convenience init(catalogURL: URL, templatesURL: URL = DocumentFactory.defaultTemplatesRoot, checkForUpdates: @escaping @MainActor @Sendable () -> Void = {}) {
+        self.init(catalogURL: catalogURL, templatesURL: templatesURL, presentsWindows: true, checkForUpdates: checkForUpdates)
     }
 
     /// Native integration tests use hidden windows and avoid modifying the user's recents.
-    init(catalogURL: URL, templatesURL: URL, presentsWindows: Bool) {
+    init(catalogURL: URL, templatesURL: URL, presentsWindows: Bool, checkForUpdates: @escaping @MainActor @Sendable () -> Void = {}) {
         let accountServices = AccountServices()
         self.accountServices = accountServices
         self.presentsWindows = presentsWindows
@@ -39,6 +39,7 @@ import SwiftUI
         store = Store(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
             $0.catalogClient = presentsWindows ? catalogServices.client : .empty
             $0.documentClient = native.client
+            $0.updateClient = UpdateClient(checkForUpdates: { await checkForUpdates() })
             $0.accountClient = presentsWindows ? accountServices.client : .empty
         }
         if presentsWindows { store.send(.account(.start)) }
@@ -52,7 +53,7 @@ import SwiftUI
             if self.presentsWindows, let alert = self.store.alert {
                 self.alerts.enqueue(alert, window: NSApp.keyWindow ?? self.catalogWindow?.window, isCurrent: { [weak self] in
                     self?.store.alert?.id == alert.id
-                }, dismiss: { [weak self] in self?.store.send(.alert(.dismiss)) })
+                }, dismiss: { [weak self] in self?.store.send(.alert(.dismiss)) }, send: { [weak self] action in self?.store.send(.alert(.presented(action))) })
             }
         }
         for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification, NSWindow.didBecomeMainNotification, NSWindow.didResignMainNotification] {

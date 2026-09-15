@@ -3,7 +3,8 @@ import { join, resolve } from "node:path";
 import type { Plugin } from "vite";
 import { createServer } from "vite";
 import { injectHost } from "./dev-bridge.ts";
-import { loadManifest } from "./project.ts";
+import { loadAuthoringManifest } from "./project.ts";
+import { previewRuntimePlugin } from "./preview-runtime.ts";
 import { readThemeCSS } from "./theme.ts";
 
 /** Browser-only preview host. Durable storage behavior is tested in a built .slop. */
@@ -21,9 +22,9 @@ export function mockHostPlugin(options: { themeHref?: string; width?: number; he
 }
 
 export async function runDev(root: string): Promise<void> {
-  const manifest = await loadManifest(root);
+  const manifest = await loadAuthoringManifest(root);
   const themeHref = await readThemeCSS(root) !== undefined ? "/assets/theme.css" : undefined;
-  const server = await createServer({ root, plugins: [themePreviewPlugin(root), mockHostPlugin({ ...(themeHref ? {themeHref} : {}), ...manifest.presentation })] });
+  const server = await createServer({ root, plugins: [previewRuntimePlugin(), themePreviewPlugin(root), mockHostPlugin({ ...(themeHref ? {themeHref} : {}), ...manifest.presentation })] });
   await server.listen();
   const url = server.resolvedUrls?.local[0];
   if (!url) throw new Error("Vite did not expose a development URL");

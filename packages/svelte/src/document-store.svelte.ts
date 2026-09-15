@@ -1,5 +1,6 @@
 import { errors, type WindowSlop } from "@hitslop/runtime";
-import { DocumentEngine, canonical, type DocumentIO, type DocumentValue } from "@hitslop/sync/browser";
+import { minimumRuntimeVersion, selectRuntime, type DocumentRuntime, type DocumentSession, type DocumentIO, type DocumentValue } from "@hitslop/schema/document-runtime";
+import { canonical } from "@hitslop/schema/json";
 import { registerFlush } from "@hitslop/runtime/adapter";
 import type { TSchema, Static } from "typebox";
 import { validateDocument } from "@hitslop/schema/document";
@@ -9,23 +10,26 @@ const freeze = <T>(value: T): ReadonlyJSON<T> => {
   if (value && typeof value === "object") { for (const child of Object.values(value)) freeze(child); Object.freeze(value); }
   return value as ReadonlyJSON<T>;
 };
-export type DocumentStoreOptions<S extends TSchema> = { schema: S; initial: NoInfer<Static<S>>; io?: DocumentIO };
+export type DocumentStoreOptions<S extends TSchema> = { schema: S; initial: NoInfer<Static<S>>; io?: DocumentIO; runtime?: DocumentRuntime };
 
 // The owner outlives hosted views and registers one barrier before opening starts.
 class EngineOwner<S extends TSchema> {
   readonly schemaKey: string;
-  engine?: DocumentEngine<S>;
+  engine?: DocumentSession<S>;
   loading = true;
   view?: ReadonlyJSON<Static<S>>;
   private viewVersion?: string;
-  private opening!: Promise<DocumentEngine<S>>;
+  private opening!: Promise<DocumentSession<S>>;
   private listeners = new Set<() => void>();
   private unregister: () => void;
   private unsubscribe?: () => void;
   private disposed = false;
   private readonly io: DocumentIO;
+  private readonly runtime: DocumentRuntime;
 
   constructor(private readonly options: DocumentStoreOptions<S>, private readonly bridge?: WindowSlop["sync"]) {
+    this.runtime = options.runtime ?? window.slop!.runtime;
+    if (!selectRuntime(minimumRuntimeVersion, [this.runtime.version])) throw new Error(`This SDK requires hitSlop runtime ${minimumRuntimeVersion}`);
     this.schemaKey = canonical(options.schema);
     this.io = options.io ?? {
       open: () => bridge!.open(), commit: value => bridge!.commit(value),
@@ -49,10 +53,10 @@ class EngineOwner<S extends TSchema> {
       if (event.source !== "app") void this.opening.then(engine => engine.externalChanged()).catch(() => undefined);
     });
   }
-  private start(): Promise<DocumentEngine<S>> {
+  private start(): Promise<DocumentSession<S>> {
     this.loading = true;
     this.notify();
-    this.opening = Promise.resolve().then(() => DocumentEngine.open({
+    this.opening = Promise.resolve().then(() => this.runtime.open({
       schema: this.options.schema,
       initial: (this.bridge && window.slop?.preview && Object.hasOwn(window.slop.preview, "data") ? window.slop.preview.data : this.options.initial) as DocumentValue<S>,
       io: this.io,
@@ -63,7 +67,7 @@ class EngineOwner<S extends TSchema> {
           snapshot: () => engine.sharingSnapshot(),
           receive: (value: Parameters<typeof engine.receiveShared>[0]) => engine.receiveShared(value),
           copy: () => engine.independentCopy(),
-          seed: (value: Parameters<typeof DocumentEngine.sharedSeed>[1]) => DocumentEngine.sharedSeed(this.options.schema, value),
+          seed: (value: Parameters<DocumentRuntime["sharedSeed"]>[1]) => this.runtime.sharedSeed(this.options.schema, value),
         } });
       }
       this.unsubscribe = engine.subscribe(() => this.notify());
@@ -111,6 +115,7 @@ export class DocumentStore<S extends TSchema> {
   constructor(options: DocumentStoreOptions<S>) {
     this.view = freeze(structuredClone(validateDocument(options.schema, options.initial)));
     const bridge = !options.io && typeof window !== "undefined" ? window.slop?.sync : undefined;
+    if (!options.runtime && (typeof window === "undefined" || !window.slop?.runtime)) throw new Error("This document requires a host document runtime; custom I/O must supply a runtime provider");
     if (!options.io && !bridge) throw new Error("This document requires a host with sync support");
     if (bridge) {
       let owner = hostedEngines.get(bridge);

@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Swift package tests
-        run: swift test --package-path apps/apple/Packages/HitSlopApple
+        run: swift test --package-path apps/apple/Packages/HitSlopApple --no-parallel
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Apple project
