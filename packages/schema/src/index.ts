@@ -7,3 +7,8 @@ export * from "./data.js";
 export * from "./validation.js";
 export * from "./package-path.js";
 export * from "./png.js";
+
+export * from "./room.js";
+export * from "./cloud.js";
+
+export * from "./zip.js";

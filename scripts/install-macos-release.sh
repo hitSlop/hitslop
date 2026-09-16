@@ -26,6 +26,8 @@ esac
 
 echo "Building development-signed hitSlop Release for ${build_arch}…"
 /usr/bin/xcodebuild \
+  -skipPackagePluginValidation \
+  -skipMacroValidation \
   -quiet \
   -allowProvisioningUpdates \
   -project "$project" \

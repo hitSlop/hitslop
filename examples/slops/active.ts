@@ -23,7 +23,9 @@ for (const slop of await discoverSlops()) {
   }
   try {
     const result = await installTemplate(root, { force: true });
-    console.log(`${action}\t${slop.slug}\t${result.replaced ? "updated" : "installed"}\t${result.directory}`);
+    console.log(
+      `${action}\t${slop.slug}\t${result.replaced ? "updated" : "installed"}\t${result.directory}`,
+    );
   } catch (error) {
     failures.push(slop.slug);
     const message = error instanceof Error ? error.message : String(error);

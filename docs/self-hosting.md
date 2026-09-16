@@ -1,55 +1,42 @@
 # Self-hosting
 
-The official Firebase deployment is the default, but the publish protocol and
-backend are open source. A compatible deployment needs Firestore, Cloud
-Storage, second-generation Functions, and Hosting.
+The API runs in `apps/cloudflare`: a Worker serves the oRPC/OpenAPI contract,
+D1 stores the catalog and immutable shared-document metadata, R2 stores artifacts and media,
+and a SQLite Durable Object per shared document relays Loro updates.
 
-## Create the Firebase project
-
-Use the Blaze plan, create the default Firestore database and Storage bucket,
-and choose colocated regions. The official service uses Firestore `nam5`, a US
-multi-region bucket, and Functions in `us-central1`.
-
-Copy `apps/firebase`, change the project alias in `.firebaserc`, and update the
-Function region if your data plane uses another region. Security rules keep
-catalog metadata and immutable artifacts publicly readable while denying all
-client writes.
-
-## Deploy
+Provision a D1 database and R2 bucket, put their bindings in `wrangler.jsonc`,
+and apply the D1 migrations. Configure `FIREBASE_PROJECT_ID` for the Firebase
+Auth project whose users can share documents. Set `TOKEN_KEY` as a Worker secret.
+See [the backend guide](../apps/cloudflare/README.md) for local setup and tests.
 
 ```sh
-cd apps/firebase
-bun install
+bun run schema:generate
+bun run --cwd packages/schema build
+bun run --cwd packages/api build
+cd apps/cloudflare
+bunx wrangler d1 migrations apply hitslop --remote
+bunx wrangler secret put TOKEN_KEY
 bun run deploy
 ```
 
-Attach your API hostname to Firebase Hosting. Hosting serves versioned schemas
-and rewrites `/api/**` to the HTTP Function.
-
-## Publish to it
+Attach your API hostname to the Worker. It serves both `/api/**` and the
+canonical `/schemas/v1/manifest.schema.json`. The static landing site is a
+separate Worker.
 
 ```sh
-slop publish . --registry https://your-domain.example/api/publish
-# or
-HITSLOP_REGISTRY_URL=https://your-domain.example/api/publish slop publish .
+slop publish . --registry https://your-domain.example
+slop search checklist --registry https://your-domain.example
 ```
 
-The publish endpoint remains independent of Firebase clients. It authenticates
-the publisher's Ed25519 envelope and validates the complete artifact before
-writing catalog state.
+Publishing authenticates an Ed25519-signed envelope and validates the complete
+artifact before writing catalog state. Shared documents authenticate Firebase
+ID tokens and receive scoped room credentials. Clients never query D1 directly.
 
-## Apple client
+For an Apple build, point `CatalogURL` at the Worker origin; for local macOS
+runs, `HITSLOP_CATALOG_URL=http://127.0.0.1:8787` overrides it. Use your own
+Firebase Apple app configuration for authentication and telemetry. Firebase
+emulator settings do not reroute catalog or artifact traffic.
 
-A custom Apple build needs its own registered Firebase Apple app and
-`GoogleService-Info.plist`. Point `CatalogURL` at the custom Hosting domain and
-configure Firestore, Functions, Analytics, Crashlytics, and App Check for that
-project.
-
-## Operational responsibilities
-
-Set budget alerts, retain provider audit logs, monitor Function errors and
-Crashlytics release health, test rules in the Emulator Suite, and keep
-dependencies current. Use App Check for native-only callable mutations. Public
-catalog reads and artifact downloads must remain accessible to compatible
-clients, while the public CLI publish endpoint is protected by the signed
-publisher protocol and package validation.
+Existing Firebase catalog data is not copied automatically. Publish templates
+to the new service before switching users to it. Monitor Worker failures and
+storage limits and retain appropriate backups of D1, R2, and room data.

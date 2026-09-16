@@ -1,6 +1,12 @@
 import "./capture.js";
-import type { BridgeMethod, BridgeParams, BridgeResult } from "@hitslop/schema/bridge";
-import { assertJSON } from "@hitslop/schema/validation";
+import {
+  DocumentFrameSchema,
+  type DocumentFrame,
+  type BridgeMethod,
+  type BridgeParams,
+  type BridgeResult,
+} from "@hitslop/schema/bridge";
+import { assertJSON, validate } from "@hitslop/schema/validation";
 import { createThemeReload } from "./theme-reload.js";
 import { dispatchChange } from "./change-events.js";
 import { createBridgeCall } from "./bridge-call.js";
@@ -11,22 +17,40 @@ declare global {
     webkit: { messageHandlers: { hitslop: { postMessage(request: unknown): Promise<unknown> } } };
     __hitslopEmit?: (event: unknown) => void;
     __hitslopReloadTheme?: (revision: string) => void;
+    __hitslopDocumentPublish?: (frame: unknown) => void;
   }
 }
 
 const native = window.webkit.messageHandlers.hitslop;
-const invoke = createBridgeCall(request => native.postMessage(request));
+const invoke = createBridgeCall((request) => native.postMessage(request));
 const pending = new Set<Promise<unknown>>();
-const listeners = { json: new Set<(event: SlopChange) => void>(), media: new Set<(event: SlopChange) => void>() };
+const listeners = {
+  media: new Set<(event: SlopChange) => void>(),
+  document: new Set<(event: SlopChange) => void>(),
+};
 let guestReady = false;
 let readySent = false;
 let readyScheduled = false;
 
-async function drain(): Promise<void> { while (pending.size) await Promise.all([...pending]); }
-function call<M extends BridgeMethod>(method: M, params: NoInfer<BridgeParams<M>>): Promise<BridgeResult<M>> {
+async function drain(): Promise<void> {
+  while (pending.size) await Promise.all([...pending]);
+}
+function call<M extends BridgeMethod>(
+  method: M,
+  params: NoInfer<BridgeParams<M>>,
+): Promise<BridgeResult<M>> {
   const result = invoke(method, params);
   pending.add(result);
-  void result.then(() => { pending.delete(result); scheduleReady(); }, () => { pending.delete(result); scheduleReady(); });
+  void result.then(
+    () => {
+      pending.delete(result);
+      scheduleReady();
+    },
+    () => {
+      pending.delete(result);
+      scheduleReady();
+    },
+  );
   return result;
 }
 function scheduleReady(): void {
@@ -37,7 +61,7 @@ function scheduleReady(): void {
     readyScheduled = false;
     if (pending.size) return;
     readySent = true;
-    void call("ready", {}).catch(error => console.error("hitSlop ready failed", error));
+    void call("ready", {}).catch((error) => console.error("hitSlop ready failed", error));
     window.dispatchEvent(new Event("slop:ready"));
   };
   requestAnimationFrame(() => requestAnimationFrame(finish));
@@ -45,18 +69,54 @@ function scheduleReady(): void {
 }
 const watch = (kind: keyof typeof listeners, callback: (event: SlopChange) => void) => {
   listeners[kind].add(callback);
-  return () => { listeners[kind].delete(callback); };
+  return () => {
+    listeners[kind].delete(callback);
+  };
+};
+const frames = new Set<(frame: DocumentFrame) => void>();
+window.__hitslopDocumentPublish = (value) => {
+  let frame: DocumentFrame;
+  try {
+    frame = validate(DocumentFrameSchema, value);
+  } catch (error) {
+    console.error(error);
+    return;
+  }
+  for (const callback of [...frames]) {
+    try {
+      callback(frame);
+    } catch (error) {
+      console.error(error);
+    }
+  }
 };
 window.__hitslopReloadTheme = createThemeReload(document);
-window.__hitslopEmit = value => dispatchChange(value, listeners, error => console.error("hitSlop change event failed", error));
+window.__hitslopEmit = (value) =>
+  dispatchChange(value, listeners, (error) => console.error("hitSlop change event failed", error));
 const bridge: WindowSlop = {
   info: () => call("host.info", {}),
   flush: drain,
-  json: {
-    open: (value) => { assertJSON(value); return call("json.open", { value }); },
-    read: () => call("json.read", {}),
-    write: (value, expectedRevision) => { assertJSON(value); return call("json.write", { value, ...(expectedRevision === undefined ? {} : { expectedRevision }) }); },
-    onChange: (callback) => watch("json", callback),
+  document: {
+    open: () => call("document.open", {}),
+    apply: (value) => {
+      assertJSON(value.after);
+      return call("document.apply", {
+        session: value.session,
+        sequence: value.sequence,
+        base: value.base,
+        after: value.after,
+        ...(value.draft === undefined ? {} : { draft: value.draft }),
+        ...(value.parent === undefined ? {} : { parent: value.parent }),
+      });
+    },
+    flush: () => call("document.flush", {}),
+    releaseDraft: (value) => call("document.releaseDraft", value),
+    onChange: (callback) => {
+      frames.add(callback);
+      return () => {
+        frames.delete(callback);
+      };
+    },
   },
   media: {
     open: (name) => call("media.open", { name }),
@@ -66,10 +126,20 @@ const bridge: WindowSlop = {
   },
   window: {
     resize: (size) => call("window.resize", size),
-    drag: async () => { await call("window.drag", {}); },
+    drag: async () => {
+      await call("window.drag", {});
+    },
   },
-  ready: () => { guestReady = true; document.documentElement.dataset.hitslopReady = "true"; scheduleReady(); },
+  ready: () => {
+    guestReady = true;
+    document.documentElement.dataset.hitslopReady = "true";
+    scheduleReady();
+  },
 };
 window.slop = Object.freeze(bridge);
-window.addEventListener("error", (event) => { void call("log", { message: event.message }).catch(() => undefined); });
-window.addEventListener("unhandledrejection", (event) => { void call("log", { message: String(event.reason) }).catch(() => undefined); });
+window.addEventListener("error", (event) => {
+  void call("log", { message: event.message }).catch(() => undefined);
+});
+window.addEventListener("unhandledrejection", (event) => {
+  void call("log", { message: String(event.reason) }).catch(() => undefined);
+});

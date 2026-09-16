@@ -8,12 +8,12 @@ import Sparkle
 import SwiftUI
 import UniformTypeIdentifiers
 
-@main struct hitSlopApp: App {
-    @NSApplicationDelegateAdaptor(HitSlopAppDelegate.self) private var delegate
-    var body: some Scene {
-        Settings {
-            UpdateSettingsView(updater: delegate.updater)
-        }
+@main enum hitSlopApp {
+    @MainActor static func main() {
+        let application = NSApplication.shared
+        let delegate = HitSlopAppDelegate()
+        application.delegate = delegate
+        withExtendedLifetime(delegate) { application.run() }
     }
 }
 
@@ -33,19 +33,20 @@ private struct UpdateSettingsView: View {
 }
 
 @MainActor final class HitSlopAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
-    private var catalog: NSWindowController?
-    private var documents: [String: SlopDocumentWindowController] = [:]
+    private lazy var coordinator = SlopApplicationCoordinator(catalogURL: catalogURL, checkForUpdates: { [weak self] in self?.updater.checkForUpdates() })
     private var recentMenu: NSMenu?
+    private var settingsWindow: NSWindow?
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     var updater: SPUUpdater { updaterController.updater }
-    private var catalogURL: URL { HitSlopFirebase.catalogURL(default: URL(string: Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")!) }
+    private var catalogURL: URL { URL(string: ProcessInfo.processInfo.environment["HITSLOP_CATALOG_URL"] ?? Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")! }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         HitSlopFirebase.configure()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular); installMenus()
+        NSApp.setActivationPolicy(.regular)
+        installMenus()
         let skillVersion = "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development")-\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0")"
         Task.detached(priority: .utility) {
             do {
@@ -57,27 +58,16 @@ private struct UpdateSettingsView: View {
         let urls = CommandLine.arguments.dropFirst().filter { $0.hasSuffix(".slop") }.map(URL.init(fileURLWithPath:))
         if urls.isEmpty { showCatalog() } else { urls.forEach(openDocument) }
     }
-    func application(_ application: NSApplication, open urls: [URL]) { urls.filter { $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
+    func application(_ application: NSApplication, open urls: [URL]) { urls.filter { !coordinator.handleSharingURL($0) && !coordinator.handleAuthenticationURL($0) && $0.isFileURL && $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        Task {
-            do {
-                for document in documents.values { try await document.prepareToClose() }
-                await SlopDocumentWindowController.finishAssetRefreshesForTermination()
-                sender.reply(toApplicationShouldTerminate: true)
-            } catch {
-                let alert = NSAlert(error: error)
-                alert.messageText = "Changes could not be saved"
-                alert.runModal()
-                sender.reply(toApplicationShouldTerminate: false)
-            }
-        }
+        coordinator.requestQuit()
         return .terminateLater
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if flag { return true }
-        if !documents.isEmpty {
-            documents.values.forEach { $0.revealFromDock() }
+        if coordinator.hasOpenDocuments {
+            coordinator.revealDocuments()
             NSApp.activate(ignoringOtherApps: true)
             return true
         }
@@ -86,7 +76,7 @@ private struct UpdateSettingsView: View {
     }
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
         let menu = NSMenu()
-        let open = documents.values.sorted { $0.documentTitle.localizedStandardCompare($1.documentTitle) == .orderedAscending }
+        let open = coordinator.documentControllers.sorted { $0.documentTitle.localizedStandardCompare($1.documentTitle) == .orderedAscending }
         for controller in open {
             let item = NSMenuItem(title: controller.documentTitle, action: #selector(focusDocumentFromDock(_:)), keyEquivalent: "")
             item.target = self
@@ -102,93 +92,42 @@ private struct UpdateSettingsView: View {
     }
     @objc private func focusDocumentFromDock(_ sender: NSMenuItem) {
         guard let url = sender.representedObject as? URL else { return }
-        documents[url.standardizedFileURL.path]?.revealFromDock()
+        coordinator.openDocument(url)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc func showCatalog() {
-        if catalog == nil {
-            let root = CatalogView(catalogURL: catalogURL, openDocument: { [weak self] in self?.openDocument($0) })
-            let host = NSHostingController(rootView: root)
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 720), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
-            window.title = ""; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
-            window.minSize = NSSize(width: 900, height: 600); window.contentViewController = host; window.center(); catalog = NSWindowController(window: window)
-        }
-        catalog?.showWindow(nil); catalog?.window?.deminiaturize(nil); catalog?.window?.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
-    }
-
-    private func openDocument(_ url: URL) {
-        if DocumentFactory.isManagedTemplatePackage(url) {
-            createDocument(fromTemplate: url)
-            return
-        }
-        let key = url.standardizedFileURL.path
-        if let existing = documents[key] { existing.showWindow(nil); existing.window?.makeKeyAndOrderFront(nil); return }
-        Task { @MainActor in
-            if let existing = documents[key] { existing.showWindow(nil); existing.window?.makeKeyAndOrderFront(nil); return }
-            do {
-                try await SlopCloud.downloadIfNeeded(url)
-                let controller = try SlopDocumentWindowController(packageURL: url)
-                controller.onClose = { [weak self] in guard let self else { return }; self.documents.removeValue(forKey: key); if self.documents.isEmpty { self.showCatalog() } }
-                controller.onOpenDocument = { [weak self] in self?.openDocument($0) }
-                documents[key] = controller; controller.showWindow(nil); controller.window?.makeKeyAndOrderFront(nil)
-                catalog?.window?.orderOut(nil); NSDocumentController.shared.noteNewRecentDocumentURL(url); NSApp.activate(ignoringOtherApps: true)
-                HitSlopFirebase.log("document_opened")
-            } catch { let alert = NSAlert(error: error); alert.messageText = "Could not open slop"; alert.runModal() }
-        }
-    }
-
-    private func createDocument(fromTemplate url: URL) {
-        showCatalog()
-        let slug: String
-        do {
-            let package = try SlopPackage(rootURL: url)
-            try package.validateAsTemplate()
-            slug = package.manifest.slug
-        } catch {
-            let alert = NSAlert(error: error)
-            alert.messageText = "Could not create slop"
-            if let window = catalog?.window { alert.beginSheetModal(for: window) }
-            else { alert.runModal() }
-            return
-        }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.slop]
-        panel.canCreateDirectories = true
-        panel.directoryURL = SlopCloud.defaultCreationDirectory()
-        panel.nameFieldStringValue = "\(slug).slop"
-        let complete: (NSApplication.ModalResponse) -> Void = { [weak self] response in
-            guard let self, response == .OK, let destination = panel.url else { return }
-            do {
-                try DocumentFactory(catalogURL: self.catalogURL).create(fromLocalPackage: url, at: destination)
-                SlopPreviewWriter.installExistingPreview(for: destination)
-                NSDocumentController.shared.noteNewRecentDocumentURL(destination)
-                self.openDocument(destination)
-            } catch {
-                let alert = NSAlert(error: error)
-                alert.messageText = "Could not create slop"
-                alert.runModal()
-            }
-        }
-        if let window = catalog?.window { panel.beginSheetModal(for: window, completionHandler: complete) }
-        else { complete(panel.runModal()) }
-    }
+    @objc func showCatalog() { coordinator.showCatalog() }
+    private func openDocument(_ url: URL) { coordinator.openDocument(url) }
 
     @objc private func openPanel() {
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.slop]; panel.allowsMultipleSelection = true
-        panel.directoryURL = SlopCloud.defaultCreationDirectory()
+        panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
         guard panel.runModal() == .OK else { return }; panel.urls.forEach(openDocument)
     }
-    @objc private func duplicateActive() { activeDocument?.duplicateFromMenu() }
-    @objc private func exportPNG() { activeDocument?.exportPNGFromMenu() }
-    @objc private func exportPDF() { activeDocument?.exportPDFFromMenu() }
-    @objc private func shareActive() { activeDocument?.shareFromMenu() }
-    @objc private func togglePin() { activeDocument?.togglePinFromMenu() }
-    @objc private func showSettings() { NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) }
+    @objc private func duplicateActive() { coordinator.sendToActiveDocument(.duplicate) }
+    @objc private func exportPNG() { coordinator.sendToActiveDocument(.exportPNG) }
+    @objc private func exportPDF() { coordinator.sendToActiveDocument(.exportPDF) }
+    @objc private func shareActive() { coordinator.sendToActiveDocument(.share) }
+    @objc private func togglePin() { coordinator.sendToActiveDocument(.pin(!coordinator.isActiveDocumentPinned)) }
+    @objc private func showSettings() {
+        if settingsWindow == nil {
+            let content = TabView {
+                coordinator.accountSettings.tabItem { Label("Account", systemImage: "person.crop.circle") }
+                UpdateSettingsView(updater: updater).tabItem { Label("Updates", systemImage: "arrow.triangle.2.circlepath") }
+            }.frame(width: 480, height: 340)
+            let window = NSWindow(contentViewController: NSHostingController(rootView: content))
+            window.title = "Settings"
+            window.styleMask = [.titled, .closable]
+            window.isReleasedWhenClosed = false
+            window.center()
+            settingsWindow = window
+        }
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
     @objc private func openWebsite() { NSWorkspace.shared.open(catalogURL) }
     @objc private func openRecent(_ sender: NSMenuItem) { if let url = sender.representedObject as? URL { openDocument(url) } }
-    @objc private func clearRecent() { NSDocumentController.shared.clearRecentDocuments(nil) }
-    private var activeDocument: SlopDocumentWindowController? { let candidate = NSApp.keyWindow ?? NSApp.mainWindow; return documents.values.first { $0.owns(candidate) } }
+    @objc private func clearRecent() { coordinator.clearRecentDocuments() }
 
     private func installMenus() {
         let main = NSMenu(), appItem = NSMenuItem(), fileItem = NSMenuItem(), editItem = NSMenuItem(), windowItem = NSMenuItem(), helpItem = NSMenuItem()
@@ -274,7 +213,7 @@ private struct UpdateSettingsView: View {
     }
     @discardableResult private func item(_ menu: NSMenu, _ title: String, _ action: Selector, _ key: String) -> NSMenuItem { let value = menu.addItem(withTitle: title, action: action, keyEquivalent: key); value.target = self; return value }
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if [#selector(duplicateActive), #selector(exportPNG), #selector(exportPDF), #selector(shareActive), #selector(togglePin)].contains(menuItem.action) { if menuItem.action == #selector(togglePin) { menuItem.state = activeDocument?.isPinned == true ? .on : .off }; return activeDocument != nil }
+        if [#selector(duplicateActive), #selector(exportPNG), #selector(exportPDF), #selector(shareActive), #selector(togglePin)].contains(menuItem.action) { if menuItem.action == #selector(togglePin) { menuItem.state = coordinator.isActiveDocumentPinned ? .on : .off }; return coordinator.canPerformDocumentCommands }
         return true
     }
 }

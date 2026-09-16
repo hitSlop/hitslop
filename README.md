@@ -66,6 +66,7 @@ tiny-app.slop/
 ├── data.schema.json            optional, generated
 ├── assets/                    optional, immutable
 ├── .agents/skills/hitslop-document/
+├── state/document.sqlite        host-owned Loro journal
 ├── stores/                    optional, host-owned document data
 │   ├── data.json
 │   ├── media/
@@ -83,18 +84,20 @@ or neither. See [Package format](docs/package-format.md) and
 
 ## The system at a glance
 
-- `apps/apple` — the macOS/iOS document host, catalog UI, Quick Look, export,
-  local/iCloud coordination, and the native capture CLI.
+- `apps/apple` — the macOS document host, catalog UI, Quick Look, export,
+  local SQLite persistence and sharing, and the native capture CLI.
 - `apps/landing` — the static Astro site served at `hitslop.com`.
-- `apps/firebase` — Firebase Functions, Firestore, Storage, Hosting, and catalog
-  rules for publishing and discovery.
+- `apps/cloudflare` — Worker API, D1 catalog, R2 artifacts, and Durable Object
+  rooms for shared document sync.
+- `packages/api` — typed HTTP contracts, oRPC client, and OpenAPI for native generation.
 - `packages/cli` — create, validate, preview, build, register, sign, and publish.
 - `packages/runtime` — the framework-neutral browser bridge.
 - `packages/svelte` — reactive adapters and optional icon/export components.
 - `packages/schema` — authoritative TypeBox schemas and generated Swift/JSON
   boundaries.
-- `examples/slops` — maintained source examples; `archive/templates` is
-  inventoried prior art, never a runtime package.
+- `examples/slops` — Quick Checklist, the sole active example; `examples/archive` preserves
+  other examples locally. Archive directories are ignored by Git and excluded
+  from the open-source checkout.
 
 The hosted catalog is the convenient default. The protocol and services are
 open, and [self-hosting](docs/self-hosting.md) is documented.
@@ -103,11 +106,11 @@ open, and [self-hosting](docs/self-hosting.md) is documented.
 
 ```sh
 bun install
-bun run release:check
+bun run test:local
 ```
 
 That first-launch gate checks generated schemas, the public TypeScript/Svelte
-packages, clean-room npm tarballs, Firebase package ingestion, documentation and
+packages, clean-room npm tarballs, Cloudflare package ingestion, documentation and
 tracked-file hygiene, the landing build, and the Swift package.
 `bun run examples:check` checks Quick Checklist; paused examples stay excluded. If
 you are changing platform TypeBox schemas, run `bun run schema:generate` first.
@@ -117,8 +120,9 @@ Start with the [documentation map](docs/README.md), then read
 and [Contributing](CONTRIBUTING.md).
 
 The MVP authoring path is macOS + Svelte + JSON, demonstrated by Quick Checklist.
-The macOS app is at `1.0.4` and public npm packages are at `0.3.0`.
-iOS remains at `0.1.0`; iOS, iCloud sync, and SQLite support are coming later.
+The macOS app is at `1.0.5` and public npm packages are at `0.3.0`.
+SQLite/Loro backs every JSON document. iOS is archived; iCloud document
+locations are unsupported. Live sharing uses Cloudflare rooms.
 
 ## License
 

@@ -1,28 +1,16 @@
 # @hitslop/runtime
 
-The framework-neutral browser bridge for hitSlop documents.
+Framework-neutral browser bridge and document controller for hitSlop.
 
-```ts
-import { capture, ready, slop } from "@hitslop/runtime";
+`@hitslop/runtime/adapter` exports `createDocumentController`, which owns
+validated confirmed frames, edit sequencing, draft ancestry, subscriptions, and
+the close/export flush barrier. Framework adapters must use it rather than
+implementing a second persistence queue. Native Swift Loro and SQLite own durability.
 
-const snapshot = await slop.json.open({ count: 0 });
-await slop.window.resize({ width: 560, height: 480 });
-ready();
-```
+The low-level API is `slop.document.open/apply/flush/releaseDraft/onChange`.
+Media and window APIs remain on `slop.media` and `slop.window`. Register visible
+draft flushers before calling `ready()`; teardown awaits the final flush.
+A missing native document capability is an error. Browser previews explicitly
+install the disposable host supplied by `slop dev`.
 
-Use `@hitslop/runtime/adapter` only when implementing a framework adapter; it
-exports the shared JSON persister and safe media helpers.
-
-`JsonPersister` batches idle writes for 150 ms, with a one-second maximum wait.
-Adapters supply detached snapshots and validate values at their I/O boundaries.
-`flush()` bypasses scheduling and drains pending writes; errors retain their
-original identity and code. Register adapter flushers with `registerFlush` so
-the host can await state that has not reached the bridge yet. Keep that
-registration until teardown's final save succeeds.
-The persister's `onError` callback receives `Error | null`; derive display text
-from the error's `message` rather than replacing the error object.
-
-Documentation: [Architecture](https://github.com/hitslop/hitslop/blob/master/docs/architecture.md) ·
-[Storage](https://github.com/hitslop/hitslop/blob/master/docs/storage.md)
-
-MIT © 2026 hitSlop contributors.
+See [Storage](../../docs/storage.md) and [Architecture](../../docs/architecture.md).

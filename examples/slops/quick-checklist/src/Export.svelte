@@ -1,6 +1,9 @@
 <script lang="ts">
+import type { ReadonlyJSON } from "@hitslop/runtime/adapter";
+type Checklist = ReadonlyJSON<ChecklistValue>;
+
   import Check from "@lucide/svelte/icons/check";
-  import type { Checklist } from "../schema";
+  import type { Checklist as ChecklistValue } from "../schema";
   import Brand from "./Brand.svelte";
   import * as s from "./styles.css";
   let { checklist, view }: { checklist: Checklist; view: "tasks" | "filed" } = $props();

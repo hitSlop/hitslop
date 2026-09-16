@@ -1,0 +1,14 @@
+# Build output, local history and generated contracts have their own writers.
+**/node_modules/
+**/dist/
+**/.build/
+**/.astro/
+**/.svelte-kit/
+**/.wrangler/
+archive/
+examples/archive/
+_vibe/
+.hitslop/
+**/generated/
+**/*.generated.*
+packages/cli/skills/

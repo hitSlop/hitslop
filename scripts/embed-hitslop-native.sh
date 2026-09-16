@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Build, embed, and sign a Release hitslop-native in an existing .app.
+# Build, embed, and sign a configuration-selected hitslop-native in an existing .app.
 # Usage: embed-hitslop-native.sh <HitSlop.app>
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -41,12 +41,15 @@ if [ -z "$arch_flags" ]; then
   exit 69
 fi
 
-echo "Building hitslop-native ($archs)…"
+configuration=${HITSLOP_NATIVE_CONFIGURATION:-release}
+case "$configuration" in debug|release) ;; *) echo "Expected debug or release configuration" >&2; exit 64 ;; esac
+
+echo "Building hitslop-native ($configuration, $archs)…"
 # shellcheck disable=SC2086
 /usr/bin/swift build \
   --package-path "$native_package" \
   --scratch-path "$scratch" \
-  --configuration release \
+  --configuration "$configuration" \
   --product hitslop-native \
   $arch_flags
 
@@ -55,7 +58,7 @@ native_bin=$(
   /usr/bin/swift build \
     --package-path "$native_package" \
     --scratch-path "$scratch" \
-    --configuration release \
+    --configuration "$configuration" \
     --product hitslop-native \
     --show-bin-path \
     $arch_flags
@@ -85,9 +88,13 @@ for module in HitSlopCore HitSlopRuntime; do
   fi
   embedded="$app/Contents/Helpers/HitSlopApple_${module}.bundle"
   /usr/bin/ditto "$resource_bundle" "$embedded"
-  /bin/cp "$script_dir/HitSlopNativeResources-Info.plist" "$embedded/Info.plist"
-  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.hitslop.app.native-resources.$module" "$embedded/Info.plist"
-  /usr/libexec/PlistBuddy -c "Set :CFBundleName $module Resources" "$embedded/Info.plist"
+  # SwiftPM's Xcode build system emits macOS Contents bundles; its native
+  # build system emits flat resource bundles. Preserve the emitted layout.
+  info="$embedded/Info.plist"
+  if [ -d "$embedded/Contents" ]; then info="$embedded/Contents/Info.plist"; fi
+  /bin/cp "$script_dir/HitSlopNativeResources-Info.plist" "$info"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.hitslop.app.native-resources.$module" "$info"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleName $module Resources" "$info"
   /usr/bin/codesign --force --sign "$signing_identity" "$embedded"
 done
 /usr/bin/codesign --force --options runtime --sign "$signing_identity" "$app/Contents/Helpers/hitslop-native"

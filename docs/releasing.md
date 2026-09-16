@@ -4,8 +4,14 @@
 
 The macOS release candidate is `1.0.5` (build `23`). The npm platform packages
 use `0.3.x` for JSON persistence improvements and the adapter error callback
-change; iOS remains at `0.1.0`.
+change. The iOS app is archived.
 Do not force unrelated products to share one version.
+
+## Local gate first
+
+Run `bun run test:local` and inspect its artifacts before creating release builds
+or publishing npm packages. See [Local testing](local-testing.md). It uses Debug
+native binaries and temporary local services; packing tarballs does not publish them.
 
 ## Release gate
 
@@ -19,7 +25,7 @@ bun run release:check
 ```
 
 The gate checks repository hygiene, generated schema drift, the public npm
-packages, the Firebase Function's hostile-package boundary, a clean-room tarball install,
+packages, the Cloudflare Worker's hostile-package boundary, a clean-room tarball install,
 and Swift tests/build. On macOS it also builds and renders with a relocated Release
 helper after removing its SwiftPM build directory, verifying both embedded
 resource bundles. CI runs the same first-launch boundary.
@@ -34,8 +40,8 @@ are cleaned before every build so stale deleted exports cannot enter npm.
 ## npm packages
 
 Run the focused npm foundation gate before publishing. It validates and packs
-the four public packages, installs their real tarballs outside the monorepo,
-tests the Firebase package-ingress boundary, and creates a fresh Svelte project
+the five public packages, installs their real tarballs outside the monorepo,
+tests the Cloudflare package-ingress boundary, and creates a fresh Svelte project
 through the complete init/check/build/validate path. Generated-file drift fails
 the gate instead of being silently regenerated:
 
@@ -51,19 +57,19 @@ to retain the printed temporary directory for visual inspection and debugging.
 Publish in dependency order:
 
 1. `@hitslop/schema`
-2. `@hitslop/runtime`
-3. `@hitslop/svelte`
-4. `@hitslop/cli`
+2. `@hitslop/api`
+3. `@hitslop/runtime`
+4. `@hitslop/svelte`
+5. `@hitslop/cli`
 
 Use `bun pm pack --dry-run` in every package before publishing. Verify the
 tarball includes only `dist`, permitted templates/generated schema,
 `package.json`, `README.md`, and `LICENSE`; confirm repository metadata,
 MIT license, and intended `0.3.x` version.
 
-In `0.3.0`, `JsonPersister.onError` receives `Error | null` instead of a
-message string. Adapter consumers should read `error.message` for display and
-retain the original error for its code. Existing immutable documents retain
-their bundled runtime; rebuild and publish templates to distribute these fixes.
+The initial v1 format uses one Loro/SQLite document contract, room protocol 1,
+and `hitslop-publish/1`. There is no pre-release data migration. Rebuild authored
+templates for the matching host; preserve unsupported old documents separately.
 
 Tag npm releases as `npm-v<version>` and macOS releases as
 `macos-v<version>`. The separate namespaces keep an npm-only release from
@@ -71,9 +77,9 @@ starting the signed macOS release workflow.
 
 ## Hosted services
 
-Deploy Firebase Functions, Firestore and Storage rules, generated schemas, and
-Hosting together from `apps/firebase`. Firebase Hosting targets
-`api.hitslop.com`; the static Astro Worker remains at `hitslop.com`.
+Deploy the API Worker, generated schema, D1 migrations, R2 binding, and SQLite
+Durable Object class from `apps/cloudflare`. Point `api.hitslop.com` at that
+Worker; the static Astro Worker remains at `hitslop.com`.
 
 Cloudflare Workers Builds connects `hitslop-landing` to `hitSlop/hitslop`, with
 production branch `master`, repository root `/`, and `BUN_VERSION=1.4.0`.
@@ -84,7 +90,7 @@ bun run --cwd packages/schema build && bun run --cwd apps/landing check && bun r
 ```
 
 The deploy command is `cd apps/landing && npx --no-install wrangler deploy`.
-Deploy compatible Firebase changes before pushing the landing update. After
+Deploy compatible Cloudflare API changes before pushing the landing update. After
 pushing `master`, verify both GitHub CI and the Cloudflare deployment for that
 commit. Preview builds are disabled for the MVP release.
 
@@ -109,11 +115,9 @@ Developer ID, notarization, App Store Connect `AuthKey_*.p8`, provisioning
 profiles, and Sparkle private keys remain outside Git. Publish Sparkle signatures
 and public update metadata only. Tag the exact tested commit and attach checksums
 to release artifacts.
-## Local Firebase selection
+## Local API selection
 
-Debug builds use the configured production catalog by default, with Analytics and
-Crashlytics collection disabled. Register the App Check debug token printed by
-Firebase when testing against production. To use local emulators, set
-`HITSLOP_USE_FIREBASE_EMULATORS=1` in the Xcode run scheme: Firestore (8080),
-Functions (5001), and artifact hosting (5002) then switch together. Release builds
-ignore this environment switch and retain production App Check and telemetry.
+Set `HITSLOP_CATALOG_URL=http://127.0.0.1:8787` for macOS catalog and CLI
+search/create, and `HITSLOP_REGISTRY_URL=http://127.0.0.1:8787` for CLI publishing.
+Run `bun run cloudflare:dev` with local bindings and an ignored `.env` signing
+secret. Firebase emulator configuration does not change the catalog endpoint.

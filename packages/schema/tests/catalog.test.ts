@@ -19,11 +19,20 @@ const template = {
 
 describe("CatalogResponse", () => {
   test("parses the public catalog wire shape", () => {
-    expect(parseCatalogResponse({ version: 1, templates: [template] }).templates[0]?.slug).toBe("counter");
+    expect(parseCatalogResponse({ version: 1, templates: [template] }).templates[0]?.slug).toBe(
+      "counter",
+    );
   });
 
   test("rejects malformed assets and unknown fields", () => {
-    expect(() => parseCatalogResponse({ version: 1, templates: [{ ...template, preview: { ...asset, sha256: "nope" } }] })).toThrow();
-    expect(() => parseCatalogResponse({ version: 1, templates: [{ ...template, privateRelease: true }] })).toThrow();
+    expect(() =>
+      parseCatalogResponse({
+        version: 1,
+        templates: [{ ...template, preview: { ...asset, sha256: "nope" } }],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseCatalogResponse({ version: 1, templates: [{ ...template, privateRelease: true }] }),
+    ).toThrow();
   });
 });

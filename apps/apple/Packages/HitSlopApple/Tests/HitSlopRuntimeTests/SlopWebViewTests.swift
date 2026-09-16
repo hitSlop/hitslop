@@ -4,6 +4,7 @@ import Foundation
 import HitSlopCore
 import ImageIO
 import Testing
+import WebKit
 @testable import HitSlopRuntime
 
 @Test func packagePathsMatchSharedTypeScriptCorpus() throws {
@@ -33,9 +34,10 @@ import Testing
     for request in ["[]", #"{"method":"json.open"}"#, #"{"method":"json.write"}"#, #"{"method":"legacy.query","sql":"SELECT 1"}"#, #"{"method":"media.open","name":4}"#, #"{"method":"media.write","name":"hero"}"#, #"{"method":"media.remove"}"#] {
         await #expect(throws: SlopBridgeFailure.self) { _ = try await worker.perform(Data(request.utf8)) }
     }
-    // JSON null is a value, not a missing field.
-    let result = try await worker.perform(Data(#"{"method":"json.open","value":null}"#.utf8))
-    #expect((result.value as? [String: Any])?["value"] is NSNull)
+    // There is no second writer beside the Loro owner, even for a valid JSON value.
+    await #expect(throws: SlopBridgeFailure.self) {
+        _ = try await worker.perform(Data(#"{"method":"json.open","value":null}"#.utf8))
+    }
 }
 
 @MainActor private final class WindowResizeDelegate: SlopRuntimeSessionDelegate {
@@ -226,6 +228,132 @@ import Testing
     }
     #expect(color == "rgb(4, 5, 6)")
     #expect(try await session.webView.evaluateJavaScript("window.pageMarker") as? Int == 7)
+}
+
+@Test @MainActor func guestLimitsFragmentsAndResourceBoundaries() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let html = #"""
+    <main id="section">Security fixture</main><script>
+    (async () => {
+      const post = body => window.webkit.messageHandlers.hitslop.postMessage(body);
+      let deep = {}; for (let i = 0; i < 70; i++) deep = {value: deep};
+      window.securityResults = await Promise.all([
+        post({method:'host.info', extra:'x'.repeat(65536)}),
+        post({method:'host.info', extra:deep}),
+        post({method:'document.apply', after:'x'.repeat(1048576)}),
+      ]);
+      location.hash = 'section';
+      window.resourceResults = await Promise.all(['/manifest.json','/state/document.sqlite','/stores/data.json','slop://other/'].map(async url => {
+        try { await fetch(url); return true; } catch { return false; }
+      }));
+      window.slop.ready();
+    })();
+    </script>
+    """#
+    try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    session.load(); try await session.waitUntilReady()
+    let replies = try #require(await session.webView.evaluateJavaScript("securityResults") as? [[String: Any]])
+    #expect(replies.count == 3)
+    for reply in replies { #expect((reply["error"] as? [String: Any])?["code"] as? String == "limit_exceeded") }
+    #expect(session.webView.url?.fragment == "section")
+    let resources = try #require(await session.webView.evaluateJavaScript("resourceResults") as? [Bool])
+    #expect(resources == [false, false, false, false])
+    #expect(!session.webView.configuration.preferences.javaScriptCanOpenWindowsAutomatically)
+}
+
+@MainActor private final class SecurityFrameRecorder: NSObject, WKScriptMessageHandler {
+    var frame: WKFrameInfo?
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) { frame = message.frameInfo }
+}
+
+@Test @MainActor func capturePolicyRequiresOwnInteractivePageWithoutGrantingAccess() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try Data("<script>window.webkit.messageHandlers.probe.postMessage(null); window.slop.ready();</script>".utf8).write(to: root.appendingPathComponent("app.html"))
+    for purpose in [SlopRuntimePurpose.interactive, .backgroundRender] {
+        let session = try SlopRuntimeSession(packageURL: root, purpose: purpose)
+        defer { session.close() }
+        let recorder = SecurityFrameRecorder()
+        session.webView.configuration.userContentController.add(recorder, name: "probe")
+        defer { session.webView.configuration.userContentController.removeScriptMessageHandler(forName: "probe") }
+        session.load(); try await session.waitUntilReady()
+        let frame = try #require(recorder.frame)
+        #expect(session.accepts(session.webView, frame: frame))
+        let foreign = WKWebView()
+        #expect(!session.accepts(foreign, frame: frame))
+        for kind in [WKMediaCaptureType.camera, .microphone, .cameraAndMicrophone] {
+            var decision: WKPermissionDecision?
+            session.webView(session.webView, requestMediaCapturePermissionFor: frame.securityOrigin, initiatedByFrame: frame, type: kind) { decision = $0 }
+            #expect(decision == (purpose == .interactive ? .prompt : .deny))
+            session.webView(foreign, requestMediaCapturePermissionFor: frame.securityOrigin, initiatedByFrame: frame, type: kind) { decision = $0 }
+            #expect(decision == .deny)
+        }
+        session.close()
+        #expect(!session.accepts(session.webView, frame: frame))
+        var closedDecision: WKPermissionDecision?
+        session.webView(session.webView, requestMediaCapturePermissionFor: frame.securityOrigin, initiatedByFrame: frame, type: .camera) { closedDecision = $0 }
+        #expect(closedDecision == .deny)
+    }
+}
+
+@MainActor private final class SecurityResizeDelegate: SlopRuntimeSessionDelegate {
+    func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize {
+        session.webView.setFrameSize(size); return size
+    }
+}
+
+@Test @MainActor func syntheticMediaStreamRendersUnderHardenedCSP() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try Data("<script>slop.ready()</script>".utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    // Video frame callbacks require a rendered view, unlike ordinary JS smoke tests.
+    let window = NSWindow(contentRect: session.webView.frame, styleMask: .borderless, backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.contentView = session.webView
+    window.orderFront(nil)
+    defer { session.close(); window.close() }
+    session.load(); try await session.waitUntilReady()
+    let result = try #require(await session.webView.callAsyncJavaScript(#"""
+      const source = document.createElement('canvas');
+      source.width = source.height = 64;
+      const context = source.getContext('2d');
+      const draw = () => { context.fillStyle = 'rgb(17,201,63)'; context.fillRect(0, 0, 64, 64); };
+      draw();
+      const stream = source.captureStream(10);
+      const video = document.createElement('video');
+      video.muted = true; video.playsInline = true; video.srcObject = stream;
+      document.body.append(video);
+      const drawing = setInterval(draw, 50);
+      let timeout;
+      try {
+        await Promise.race([
+          (async () => {
+            await video.play();
+            await new Promise(resolve => video.requestVideoFrameCallback(resolve));
+          })(),
+          new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error(`Stream did not render: ready=${video.readyState}, paused=${video.paused}, error=${video.error?.message}`)), 10000); })
+        ]);
+        const output = document.createElement('canvas');
+        output.width = output.height = 64;
+        const pixels = output.getContext('2d');
+        pixels.drawImage(video, 0, 0);
+        return { width: video.videoWidth, height: video.videoHeight,
+          pixel: Array.from(pixels.getImageData(32, 32, 1, 1).data) };
+      } finally {
+        clearTimeout(timeout); clearInterval(drawing);
+        stream.getTracks().forEach(track => track.stop());
+        video.srcObject = null; video.remove();
+      }
+      """#, arguments: [:], in: nil, contentWorld: .page) as? [String: Any])
+    #expect(result["width"] as? Int == 64)
+    #expect(result["height"] as? Int == 64)
+    let pixel = try #require(result["pixel"] as? [Int])
+    try #require(pixel.count == 4)
+    #expect(abs(pixel[0] - 17) <= 5 && abs(pixel[1] - 201) <= 5 && abs(pixel[2] - 63) <= 5)
 }
 
 private func webViewPackage(skinned: Bool, transparent: Bool = false) throws -> URL {

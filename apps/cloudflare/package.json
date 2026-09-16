@@ -1,0 +1,27 @@
+{
+  "name": "@hitslop/cloudflare",
+  "private": true,
+  "license": "MIT",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check": "tsc -p tsconfig.json",
+    "test": "bun run --cwd ../../packages/schema build && bun run --cwd ../../packages/api build && bun test tests",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@hitslop/schema": "0.3.0",
+    "fast-png": "^8.0.0",
+    "fflate": "^0.8.3",
+    "jose": "^6.1.0",
+    "@orpc/server": "2.0.0-beta.36",
+    "@orpc/openapi": "2.0.0-beta.36",
+    "@hitslop/api": "0.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.132.0"
+  }
+}

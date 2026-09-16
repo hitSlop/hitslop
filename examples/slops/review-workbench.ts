@@ -1,26 +1,19 @@
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { compileDataSchema } from "@hitslop/schema";
+import { applicationSchema, validateDocument } from "@hitslop/schema/document";
 import { loadDataSchema } from "../../packages/cli/src/data-schema";
 import { devHostJavaScript } from "../../packages/cli/src/dev-bridge";
 
 export type ReviewCase = { id: string; label: string; data: unknown };
 export type ReviewInfo = { cases: ReviewCase[]; fingerprint: string };
-const ignored = new Set([
-  "node_modules",
-  "dist",
-  ".impeccable",
-  ".git",
-  "DESIGN.md",
-  "README.md",
-]);
+const ignored = new Set(["node_modules", "dist", ".impeccable", ".git", "DESIGN.md", "README.md"]);
 
 export async function reviewFingerprint(directory: string): Promise<string> {
   const hash = createHash("sha256").update(devHostJavaScript);
   async function walk(path: string, prefix = "") {
-    for (const entry of (await readdir(path, { withFileTypes: true })).sort(
-      (a, b) => a.name.localeCompare(b.name),
+    for (const entry of (await readdir(path, { withFileTypes: true })).sort((a, b) =>
+      a.name.localeCompare(b.name),
     )) {
       if (ignored.has(entry.name) || entry.name.startsWith(".")) continue;
       const name = prefix + entry.name;
@@ -43,16 +36,13 @@ export async function loadReview(directory: string): Promise<ReviewInfo> {
   try {
     raw = await readFile(join(directory, "review.json"), "utf8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT")
-      return { cases: [], fingerprint };
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { cases: [], fingerprint };
     throw error;
   }
   const value = JSON.parse(raw);
   if (!value || !Array.isArray(value.cases) || !value.cases.length)
     throw new Error("review.json requires a nonempty cases array");
-  const validate = compileDataSchema(
-    await loadDataSchema(join(directory, "schema.ts")),
-  );
+  const schema = applicationSchema(await loadDataSchema(join(directory, "schema.ts")));
   const ids = new Set<string>();
   for (const item of value.cases) {
     if (
@@ -64,12 +54,10 @@ export async function loadReview(directory: string): Promise<ReviewInfo> {
       !item.label.trim() ||
       !Object.hasOwn(item, "data")
     )
-      throw new Error(
-        "Each review case needs a unique lowercase id, label, and data",
-      );
+      throw new Error("Each review case needs a unique lowercase id, label, and data");
     ids.add(item.id);
     try {
-      validate(item.data);
+      validateDocument(schema, item.data);
     } catch (error) {
       throw new Error(`Review case ${item.id}: ${String(error)}`);
     }
@@ -83,10 +71,7 @@ export const safeJSON = (value: unknown): string =>
     .replaceAll("\u2028", "\\u2028")
     .replaceAll("\u2029", "\\u2029");
 const escape = (text: string) =>
-  text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll('"', "&quot;");
+  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
 
 export function reviewHTML(
   slop: { slug: string; title: string; width: number; height: number },
@@ -151,13 +136,11 @@ function reviewClient(config: any) {
     select.append(option);
   }
   const requested = new URL(location.href).searchParams.get("case");
-  if ([...select.options].some((option) => option.value === requested))
-    select.value = requested!;
+  if ([...select.options].some((option) => option.value === requested)) select.value = requested!;
   function refresh() {
     const current = [...states.values()];
     const allReady =
-      current.length === 4 &&
-      current.every((state) => state.ready && !state.errors.length);
+      current.length === 4 && current.every((state) => state.ready && !state.errors.length);
     copy.disabled = stale || !allReady;
     message.textContent = stale
       ? "Source changed. Reload the workbench before reviewing."
@@ -224,11 +207,7 @@ function reviewClient(config: any) {
     refresh();
   }
   window.addEventListener("message", (event) => {
-    if (
-      event.origin !== location.origin ||
-      event.data?.type !== "hitslop:review"
-    )
-      return;
+    if (event.origin !== location.origin || event.data?.type !== "hitslop:review") return;
     const data = event.data;
     const state = states.get(data.pane);
     if (
@@ -289,8 +268,7 @@ function reviewClient(config: any) {
     } catch {
       packet.focus();
       packet.select();
-      message.textContent =
-        "Review packet ready below; copy the selected text.";
+      message.textContent = "Review packet ready below; copy the selected text.";
     }
   });
   reset();

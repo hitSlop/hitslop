@@ -18,13 +18,17 @@ export function mockHostPlugin(options: { themeHref?: string } = {}): Plugin {
 
 export async function runDev(root: string): Promise<void> {
   await loadManifest(root);
-  const themeHref = await readThemeCSS(root) !== undefined ? "/assets/theme.css" : undefined;
-  const server = await createServer({ root, plugins: [themePreviewPlugin(root), mockHostPlugin(themeHref ? { themeHref } : {})] });
+  const themeHref = (await readThemeCSS(root)) !== undefined ? "/assets/theme.css" : undefined;
+  const server = await createServer({
+    root,
+    plugins: [themePreviewPlugin(root), mockHostPlugin(themeHref ? { themeHref } : {})],
+  });
   await server.listen();
   const url = server.resolvedUrls?.local[0];
   if (!url) throw new Error("Vite did not expose a development URL");
   console.log(`hitSlop UI preview: ${url}`);
-  if (process.platform === "darwin") Bun.spawn(["open", url], { stdout: "ignore", stderr: "ignore" });
+  if (process.platform === "darwin")
+    Bun.spawn(["open", url], { stdout: "ignore", stderr: "ignore" });
 }
 
 export function themePreviewPlugin(root: string): Plugin {
@@ -39,7 +43,9 @@ export function themePreviewPlugin(root: string): Plugin {
           if (css === undefined) return next();
           response.setHeader("Content-Type", "text/css; charset=utf-8");
           response.end(css);
-        } catch (error) { next(error as Error); }
+        } catch (error) {
+          next(error as Error);
+        }
       });
     },
     handleHotUpdate({ file, server }) {

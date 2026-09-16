@@ -1,34 +1,23 @@
+import type { DocumentFrame } from "@hitslop/schema/bridge";
 import { expect, test } from "bun:test";
 import { devHostJavaScript, injectHost } from "../src/dev-bridge.ts";
 import { mockHostPlugin } from "../src/dev.ts";
 
 type Change = { kind: string; source: string; revision?: string | null };
 type PreviewSlop = {
-  json: {
-    open: <T>(value: T) => Promise<{ value: T; revision: string }>;
-    read: <T>() => Promise<{ value: T; revision: string }>;
-    write: <T>(
-      value: T,
-      expectedRevision?: string,
-    ) => Promise<{ revision: string }>;
-    onChange: (callback: (event: Change) => void) => () => void;
+  document: {
+    open: (initial?: unknown) => Promise<DocumentFrame>;
+    apply: (edit: { after: unknown }) => Promise<DocumentFrame>;
+    flush: () => Promise<DocumentFrame>;
+    onChange: (callback: (frame: DocumentFrame) => void) => () => void;
   };
   media: {
-    open: (
-      name: string,
-    ) => Promise<{ exists: boolean; revision: string | null }>;
-    write: (
-      name: string,
-      data: string,
-      mimeType: string,
-    ) => Promise<{ revision: string }>;
+    open: (name: string) => Promise<{ exists: boolean; revision: string | null }>;
+    write: (name: string, data: string, mimeType: string) => Promise<{ revision: string }>;
     remove: (name: string) => Promise<{ revision: null }>;
   };
   window: {
-    resize: (size: {
-      width: number;
-      height: number;
-    }) => Promise<{ width: number; height: number }>;
+    resize: (size: { width: number; height: number }) => Promise<{ width: number; height: number }>;
     drag: () => Promise<void>;
   };
   ready: () => void;
@@ -56,11 +45,7 @@ function previewHost(data?: unknown): {
   class PreviewEvent {
     constructor(public type: string) {}
   }
-  new Function("window", "document", "Event", devHostJavaScript)(
-    window,
-    document,
-    PreviewEvent,
-  );
+  new Function("window", "document", "Event", devHostJavaScript)(window, document, PreviewEvent);
   return { window, document };
 }
 
@@ -70,8 +55,7 @@ test("browser preview injects a disposable host and optional default theme", () 
   }).transformIndexHtml;
   if (!transform || typeof transform === "function")
     throw new Error("browser preview plugin is missing its HTML transform");
-  const html =
-    "<!doctype html><html><head><title>Fixture</title></head><body></body></html>";
+  const html = "<!doctype html><html><head><title>Fixture</title></head><body></body></html>";
   const result = (transform.handler as (value: string) => string)(html);
   expect(result.startsWith("<!doctype html><html><head>")).toBe(true);
   expect(result).toContain("data-hitslop-host");
@@ -79,33 +63,25 @@ test("browser preview injects a disposable host and optional default theme", () 
   expect(result).toContain("window.slop = Object.freeze");
   expect(result).not.toContain("fetch(");
   expect(result).not.toContain("setInterval");
-  expect(result.indexOf("window.slop = Object.freeze")).toBeLessThan(
-    result.indexOf("<title>"),
-  );
+  expect(result.indexOf("window.slop = Object.freeze")).toBeLessThan(result.indexOf("<title>"));
 });
 
-test("browser preview keeps JSON in memory and emits local changes", async () => {
-  const host = previewHost();
-  const slop = host.window.slop!;
-  const changes: Change[] = [];
-  const stop = slop.json.onChange((event) => changes.push(event));
-  const opened = await slop.json.open({ count: 1 });
-  expect(opened).toEqual({ value: { count: 1 }, revision: "dev:0" });
-  opened.value.count = 99;
-  expect(await slop.json.read()).toEqual({
-    value: { count: 1 },
-    revision: "dev:0",
+test("browser preview keeps document data in memory and publishes isolated frames", async () => {
+  const slop = previewHost().window.slop!;
+  const frames: DocumentFrame[] = [];
+  const stop = slop.document.onChange((frame) => frames.push(frame));
+  const opened = await slop.document.open({ count: 1 });
+  expect(opened).toMatchObject({ data: { count: 1 }, revision: "dev:0" });
+  (opened.data as { count: number }).count = 99;
+  expect((await slop.document.flush()).data).toEqual({ count: 1 });
+  expect(await slop.document.apply({ after: { count: 2 } })).toMatchObject({
+    data: { count: 2 },
+    publication: 1,
   });
-  expect(await slop.json.write({ count: 2 }, opened.revision)).toEqual({
-    revision: "dev:1",
-  });
-  expect(changes).toEqual([{ kind: "json", source: "app", revision: "dev:1" }]);
-  await expect(slop.json.write({ count: 3 }, "dev:0")).rejects.toMatchObject({
-    code: "revision_conflict",
-  });
+  expect(frames).toHaveLength(1);
   stop();
-  await slop.json.write({ count: 4 }, "dev:1");
-  expect(changes).toHaveLength(1);
+  await slop.document.apply({ after: { count: 4 } });
+  expect(frames).toHaveLength(1);
 });
 
 test("browser preview supplies media, window, and readiness stubs", async () => {
@@ -116,9 +92,7 @@ test("browser preview supplies media, window, and readiness stubs", async () => 
     exists: false,
     revision: null,
   });
-  expect((await slop.media.write("hero", "", "image/png")).revision).toBe(
-    "dev-media:1",
-  );
+  expect((await slop.media.write("hero", "", "image/png")).revision).toBe("dev-media:1");
   expect(await slop.media.remove("hero")).toEqual({ revision: null });
   expect(await slop.window.resize({ width: 500, height: 400 })).toEqual({
     width: 500,
@@ -134,12 +108,10 @@ test("review fixtures initialize isolated stores without changing defaults", asy
   const fixture = { count: 7, extra: "keep" };
   const a = previewHost(fixture).window.slop!;
   const b = previewHost(fixture).window.slop!;
-  expect((await a.json.open({ count: 0 })).value).toEqual(fixture);
-  await a.json.write({ count: 99 }, "dev:0");
-  expect((await b.json.open({ count: 0 })).value).toEqual(fixture);
-  expect(
-    (await previewHost().window.slop!.json.open({ count: 0 })).value,
-  ).toEqual({ count: 0 });
+  expect((await a.document.open({ count: 0 })).data).toEqual(fixture);
+  await a.document.apply({ after: { count: 99 } });
+  expect((await b.document.open({ count: 0 })).data).toEqual(fixture);
+  expect((await previewHost().window.slop!.document.open({ count: 0 })).data).toEqual({ count: 0 });
 });
 
 test("review injection escapes script terminators and stays out of normal previews", () => {
@@ -163,7 +135,9 @@ async function reviewDiagnostics(captureError?: string) {
   const events = new Map<string, Function>();
   const messages: any[] = [];
   let settle!: () => void;
-  const captured = new Promise<void>(resolve => { settle = resolve; });
+  const captured = new Promise<void>((resolve) => {
+    settle = resolve;
+  });
   const window = {
     __hitslopReviewConfig: { pane: "export", run: "1", fingerprint: "abc" },
     __hitslopDevCapture: captured,
@@ -171,11 +145,41 @@ async function reviewDiagnostics(captureError?: string) {
     __hitslopCapture: { measure: () => ({ width: 720, height: 900, dedicated: true }) },
     addEventListener: (name: string, callback: Function) => events.set(name, callback),
   };
-  const document = { fonts: { ready: Promise.resolve() }, images: [], documentElement: { scrollWidth: 720, scrollHeight: 900 }, body: {} };
-  class Observer { observe() {} disconnect() {} }
-  new Function("window", "document", "parent", "location", "innerWidth", "innerHeight", "requestAnimationFrame", "ResizeObserver", "console", "setTimeout", "clearTimeout", reviewHostJavaScript)(
-    window, document, { postMessage: (value: unknown) => messages.push(value) }, { origin: "http://localhost:4177" }, 720, 680,
-    (callback: Function) => queueMicrotask(() => callback(0)), Observer, { error() {} }, () => 1, () => {},
+  const document = {
+    fonts: { ready: Promise.resolve() },
+    images: [],
+    documentElement: { scrollWidth: 720, scrollHeight: 900 },
+    body: {},
+  };
+  class Observer {
+    observe() {}
+    disconnect() {}
+  }
+  new Function(
+    "window",
+    "document",
+    "parent",
+    "location",
+    "innerWidth",
+    "innerHeight",
+    "requestAnimationFrame",
+    "ResizeObserver",
+    "console",
+    "setTimeout",
+    "clearTimeout",
+    reviewHostJavaScript,
+  )(
+    window,
+    document,
+    { postMessage: (value: unknown) => messages.push(value) },
+    { origin: "http://localhost:4177" },
+    720,
+    680,
+    (callback: Function) => queueMicrotask(() => callback(0)),
+    Observer,
+    { error() {} },
+    () => 1,
+    () => {},
   );
   const opening = events.get("slop:ready")!();
   await Promise.resolve();
@@ -187,7 +191,18 @@ async function reviewDiagnostics(captureError?: string) {
 
 test("review readiness waits for capture completion and reports its real geometry", async () => {
   const { messages } = await reviewDiagnostics();
-  expect(messages.at(-1)).toMatchObject({ ready: true, fingerprint: "abc", measurement: { width: 720, height: 900, viewportWidth: 720, viewportHeight: 680, dedicated: true }, errors: [] });
+  expect(messages.at(-1)).toMatchObject({
+    ready: true,
+    fingerprint: "abc",
+    measurement: {
+      width: 720,
+      height: 900,
+      viewportWidth: 720,
+      viewportHeight: 680,
+      dedicated: true,
+    },
+    errors: [],
+  });
 });
 
 test("review capture failures remain unready and visible", async () => {

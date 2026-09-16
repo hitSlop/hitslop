@@ -39,10 +39,23 @@ export const transcript = style({
   lineHeight: 1.65,
 });
 export const step = style({ minWidth: 0, display: "grid", gap: 4 });
-export const note = style({ margin: "0 0 4px", color: "oklch(76% .025 255)", fontSize: 12, overflowWrap: "anywhere" });
-export const commandLine = style({ display: "grid", gridTemplateColumns: "12px minmax(0, 1fr)", gap: 10 });
+export const note = style({
+  margin: "0 0 4px",
+  color: "oklch(76% .025 255)",
+  fontSize: 12,
+  overflowWrap: "anywhere",
+});
+export const commandLine = style({
+  display: "grid",
+  gridTemplateColumns: "12px minmax(0, 1fr)",
+  gap: 10,
+});
 export const prompt = style({ color: "oklch(81% .13 155)", userSelect: "none" });
-export const command = style({ fontFamily: "inherit", fontSize: "inherit", overflowWrap: "anywhere" });
+export const command = style({
+  fontFamily: "inherit",
+  fontSize: "inherit",
+  overflowWrap: "anywhere",
+});
 
 export const result = style({
   padding: "20px clamp(20px, 3vw, 32px)",
@@ -51,7 +64,15 @@ export const result = style({
   gap: 14,
   background: "oklch(27% .04 155)",
 });
-export const fileIcon = style({ width: 28, height: 28, flexShrink: 0, stroke: "oklch(81% .13 155)", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" });
+export const fileIcon = style({
+  width: 28,
+  height: 28,
+  flexShrink: 0,
+  stroke: "oklch(81% .13 155)",
+  strokeWidth: 1.5,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+});
 export const resultCopy = style({ minWidth: 0, display: "grid", gap: 4 });
 export const output = style({ fontFamily: mono, fontSize: 14, overflowWrap: "anywhere" });
 export const resultHint = style({ fontSize: 12, color: "oklch(81% .025 155)" });

@@ -5,12 +5,7 @@ import { fileURLToPath } from "node:url";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 import { createServer, type Plugin } from "vite";
-import {
-  loadReview,
-  reviewHTML,
-  reviewFingerprint,
-  type ReviewInfo,
-} from "./review-workbench";
+import { loadReview, reviewHTML, reviewFingerprint, type ReviewInfo } from "./review-workbench";
 import { injectHost } from "../../packages/cli/src/dev-bridge.ts";
 import { readThemeCSS } from "../../packages/cli/src/theme.ts";
 
@@ -27,7 +22,6 @@ type GallerySlop = {
   width: number;
   height: number;
   hasTheme: boolean;
-  migrated: boolean;
 };
 
 type GalleryManifest = {
@@ -76,10 +70,7 @@ export async function discoverSlops(directory = root): Promise<GallerySlop[]> {
     )
       continue;
     const child = join(directory, entry.name);
-    if (
-      !(await exists(join(child, "manifest.json"))) ||
-      !(await exists(join(child, "index.html")))
-    )
+    if (!(await exists(join(child, "manifest.json"))) || !(await exists(join(child, "index.html"))))
       continue;
     const manifest = await readGalleryManifest(join(child, "manifest.json"));
     slops.push({
@@ -92,9 +83,6 @@ export async function discoverSlops(directory = root): Promise<GallerySlop[]> {
       hasTheme:
         (await exists(join(child, "theme.ts"))) ||
         (await exists(join(child, "assets", "theme.css"))),
-      migrated:
-        (await exists(join(child, "src", "main.ts"))) ||
-        (await exists(join(child, "src", "main.tsx"))),
     });
   }
   return slops.sort((a, b) => a.title.localeCompare(b.title));
@@ -112,7 +100,7 @@ export function galleryHTML(slops: GallerySlop[]): string {
     .map(
       (slop) => `
     <article class="slop-card">
-      <div class="card-meta"><span>${escapeHTML(slop.slug)}</span><em>${slop.migrated ? "migrated" : "source → src"}</em></div>
+      <div class="card-meta"><span>${escapeHTML(slop.slug)}</span></div>
       <strong>${escapeHTML(slop.title)}</strong>
       <p>${escapeHTML(slop.description)}</p>
       <small>${slop.width} × ${slop.height}</small>
@@ -125,7 +113,7 @@ export function galleryHTML(slops: GallerySlop[]): string {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>hitSlop migration gallery</title>
+    <title>hitSlop examples</title>
     <style>
       :root { color-scheme: light; font-family: "Avenir Next", Avenir, sans-serif; background: #f3f0e8; color: #211e28; }
       * { box-sizing: border-box; }
@@ -149,7 +137,7 @@ export function galleryHTML(slops: GallerySlop[]): string {
     </style>
   </head>
   <body>
-    <header><h1>Slop migration gallery</h1><p>One server, every authored slop. Choose a template to open its disposable browser preview.</p></header>
+    <header><h1>Slop examples</h1><p>One server, every authored slop. Choose a template to open its disposable browser preview.</p></header>
     <main>${cards}</main>
   </body>
 </html>`;
@@ -158,8 +146,7 @@ export function galleryHTML(slops: GallerySlop[]): string {
 const prefixRootPaths = (html: string, slug: string): string =>
   html.replace(
     /\b(src|href)=(["'])\/(?!\/)([^"']+)\2/g,
-    (_match, attribute, quote, path) =>
-      `${attribute}=${quote}/${slug}/${path}${quote}`,
+    (_match, attribute, quote, path) => `${attribute}=${quote}/${slug}/${path}${quote}`,
   );
 
 export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
@@ -193,9 +180,7 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
           void previous
             .then(async (info) => {
               if (
-                (await reviewFingerprint(
-                  join(directory, affected.directory),
-                )) === info.fingerprint
+                (await reviewFingerprint(join(directory, affected.directory))) === info.fingerprint
               )
                 return;
               reviews.delete(affected.slug);
@@ -208,8 +193,7 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
             .catch(() => reviews.delete(affected.slug));
         } else if (
           (_event === "change" || _event === "unlink") &&
-          (/\/packages\/[^/]+\/src\//.test(path) ||
-            path.endsWith("review-workbench.ts"))
+          (/\/packages\/[^/]+\/src\//.test(path) || path.endsWith("review-workbench.ts"))
         ) {
           reviews.clear();
           server.ws.send({
@@ -283,10 +267,7 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
           response.end();
           return;
         }
-        const source = await readFile(
-          join(directory, slop.directory, "index.html"),
-          "utf8",
-        );
+        const source = await readFile(join(directory, slop.directory, "index.html"), "utf8");
         const prefixed = prefixRootPaths(source, slug);
         let review;
         if (requestURL.searchParams.has("reviewPane")) {
@@ -323,9 +304,7 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
   };
 }
 
-const requestedSlug = process.argv
-  .slice(2)
-  .find((argument: string) => !argument.startsWith("-"));
+const requestedSlug = process.argv.slice(2).find((argument: string) => !argument.startsWith("-"));
 const requestedPath = requestedSlug
   ? process.argv.includes("--review")
     ? `/__review/${encodeURIComponent(requestedSlug)}`

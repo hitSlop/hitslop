@@ -61,7 +61,9 @@ export const previewAction = style({
   transition: "transform 220ms cubic-bezier(.22,1,.36,1), opacity 180ms ease-out",
   selectors: { [`${previewStage}:focus-visible &`]: { transform: "translateY(0)", opacity: 1 } },
   "@media": {
-    [hover]: { selectors: { [`${previewStage}:hover &`]: { transform: "translateY(0)", opacity: 1 } } },
+    [hover]: {
+      selectors: { [`${previewStage}:hover &`]: { transform: "translateY(0)", opacity: 1 } },
+    },
     [reducedMotion]: { transition: "none" },
   },
 });
@@ -115,7 +117,11 @@ export const byline = style({
   color: "var(--muted)",
   fontSize: ".58rem",
 });
-export const authorLink = style({ color: "var(--muted)", textDecoration: "underline", textUnderlineOffset: 2 });
+export const authorLink = style({
+  color: "var(--muted)",
+  textDecoration: "underline",
+  textUnderlineOffset: 2,
+});
 export const footer = style({
   marginTop: 13,
   paddingTop: 12,
@@ -127,5 +133,12 @@ export const footer = style({
   borderTop: "1px solid var(--rule)",
 });
 export const fileSize = style({ color: "var(--muted)", fontSize: ".59rem" });
-export const download = style({ minHeight: 44, display: "inline-flex", alignItems: "center", gap: 7, fontSize: ".66rem", fontWeight: 750 });
+export const download = style({
+  minHeight: 44,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 7,
+  fontSize: ".66rem",
+  fontWeight: 750,
+});
 export const downloadArrow = style({ fontSize: ".85rem" });

@@ -1,7 +1,7 @@
 # Active examples
 
 Supported TypeBox/Svelte examples live at the top of this folder. Other projects
-remain in [_backlog](_backlog/README.md) until they are promoted.
+remain in [the archive](../archive/README.md) until they are promoted.
 
 ```sh
 bun slop dev examples/slops/quick-checklist

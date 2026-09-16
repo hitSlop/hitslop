@@ -17,7 +17,7 @@ export const devHostJavaScript = `(() => {
       }, 0));
     }, {once:true});
   }
-  const listeners = { json: new Set(), media: new Set() };
+  const listeners = { document: new Set(), media: new Set() };
   let jsonValue;
   let jsonRevision = 0;
   let jsonOpened = false;
@@ -30,30 +30,30 @@ export const devHostJavaScript = `(() => {
     return () => listeners[kind].delete(callback);
   };
   const revision = () => 'dev:' + jsonRevision;
+  const frame = () => ({ publication: jsonRevision, revision: revision(), data: clone(jsonValue), dirty: false, error: null, projectionError: null });
 
   const resize = async (size) => size;
   const drag = async () => undefined;
 
   window.slop = Object.freeze({
-    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['host.info', 'json.open', 'json.read', 'json.write', 'window.resize', 'window.drag'] }),
+    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['host.info', 'document.open', 'document.apply', 'document.flush', 'window.resize', 'window.drag'] }),
     flush: async () => undefined,
-    json: Object.freeze({
+    document: Object.freeze({
       open: async (value) => {
-        if (!jsonOpened) { jsonValue = clone(window.__hitslopReviewConfig && Object.hasOwn(window.__hitslopReviewConfig, 'data') ? window.__hitslopReviewConfig.data : value); jsonOpened = true; }
-        return { value: clone(jsonValue), revision: revision() };
+        if (!jsonOpened) {
+          jsonValue = clone(window.__hitslopReviewConfig && Object.hasOwn(window.__hitslopReviewConfig, 'data') ? window.__hitslopReviewConfig.data : value);
+          if (jsonValue === undefined) throw new Error('Preview requires initial document data');
+          jsonOpened = true;
+        }
+        return frame();
       },
-      read: async () => {
-        if (!jsonOpened) throw new Error('JSON preview store has not been opened');
-        return { value: clone(jsonValue), revision: revision() };
+      apply: async (edit) => {
+        jsonValue = clone(edit.after); jsonRevision++;
+        const next = frame(); listeners.document.forEach(callback => callback(next)); return next;
       },
-      write: async (value, expectedRevision) => {
-        if (expectedRevision !== undefined && expectedRevision !== revision()) throw Object.assign(new Error('Document changed'), { code: 'revision_conflict' });
-        jsonValue = clone(value); jsonOpened = true; jsonRevision += 1;
-        const result = { revision: revision() };
-        emit('json', { source: 'app', revision: result.revision });
-        return result;
-      },
-      onChange: (callback) => watch('json', callback)
+      flush: async () => frame(),
+      releaseDraft: async () => frame(),
+      onChange: (callback) => watch('document', callback)
     }),
     media: Object.freeze({
       open: async () => ({ exists: false, revision: null }),

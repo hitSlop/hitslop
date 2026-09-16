@@ -1,72 +1,48 @@
 # @hitslop/svelte
 
-Packaging uses this workspace's TypeScript 6 compiler API; checks use TypeScript
-7 through `@typescript/native`, as does the root toolchain. The Bun patch for
-`@sveltejs/package` resolves TypeScript from the project being packaged instead
-of the packager's install directory. Keep the packager version pinned while the
-patch is needed, and recheck this resolution when upgrading it.
-
-Svelte 5 state adapters for JSON, images, and named files in a hitSlop
-document.
+Svelte 5 adapters for host-owned documents and media.
 
 ```svelte
 <script lang="ts">
-  import { jsonStore } from "@hitslop/svelte";
+  import { documentStore, documentText } from "@hitslop/svelte";
   import { ready } from "@hitslop/runtime";
-  import { onDestroy } from "svelte";
-  import counterSchema from "../schema";
-
-  const document = jsonStore({
-    schema: counterSchema,
-    initial: { count: 0 },
-  });
+  import schema from "../schema";
+  import initial from "../initial";
+  const document = documentStore({ schema, initial });
   $effect(() => { if (document.isReady) ready(); });
-  onDestroy(() => document.destroy());
 </script>
 
-<button disabled={!document.isReady || document.isLoading} onclick={() => document.current.count += 1}>
+<button disabled={!document.isReady}
+  onclick={() => document.change(data => { data.count++; }).catch(() => {})}>
   {document.current.count}
 </button>
+{#if document.error}<p role="alert">{document.error}</p>{/if}
 ```
 
-Exports: `jsonStore`, `imageStore`, `fileStore`, and their
-class/type counterparts. JSON stores accept the default export of root TypeBox
-`schema.ts` directly, with data types inferred from that schema. No preparation
-or generated files are needed for editor types or typechecking. The adapter
-validates initial, loaded, externally changed, and outgoing values using the
-TypeBox interpreter; it does not coerce, insert defaults, strip unknown fields,
-or write browser storage.
+`current` is frozen confirmed data. Use `change` for structural edits; never
+assign to `current` or bind an input to it. Use `documentText` for text inputs:
 
-Once loaded, JSON edits save after 150 ms without another change, or after one
-second of continuous editing. Only one write runs at a time; edits during a write
-coalesce into the newest follow-up snapshot. `await document.flush()` captures
-current state immediately, bypasses the delay, and waits for pending writes.
-Concurrent flushes share the same drain. Schema validation runs at I/O boundaries,
-so invalid edits remain in memory and are never written.
+```svelte
+<input use:documentText={{ store: document,
+  read: data => data.title,
+  write: (data, value) => { data.title = value; } }} />
+```
 
-`isDirty` stays true while changes are waiting, saving, or failed; `isSaving` is
-true during a write. `error` contains the display message and `errorCode` contains
-the `SlopError` code when available, including `validation_failed`,
-`revision_conflict`, and `storage_error`. A failed save retains the latest edits.
-Call `flush()` to retry, or make a new edit to resume automatic saving. Repeated
-observations of an identical value do not retry a failed save.
+Text drafts preserve their base revision, selection, and composition until
+submitted. The runtime controller serializes edits and validates incoming and
+outgoing values without coercion or defaults. Mutators run synchronously so DOM
+event values can be captured; mutate only their argument and keep UI side effects
+outside the callback.
 
-External file changes load while the store is clean. While dirty, local edits
-win: a revision conflict reads the new revision and retries the latest full
-local snapshot once. This does not merge another writer's fields. Another
-conflict stops saving and surfaces an error. After loading, explicit `reload()`
-discards edits made before the call and adopts the file; edits made during the
-read survive. Retrying a failed initial load also preserves local edits.
+`flush()` captures visible drafts and waits for durable confirmation. `destroy()`
+is asynchronous and drains before unregistering. Await it before navigation;
+on failure the owner remains usable. Failed edits block flush until explicit
+`discardFailedChanges()`. `reload()` retries an open; it does not discard failed
+edits. Display `error` and offer recovery. Offline network status does not prevent
+local saves.
 
-Call `destroy()` on teardown to stop observation and immediately drain a detached
-final snapshot. It is synchronous and safe to call twice. Pending or failed saves
-stay registered with the runtime flush barrier until a flush succeeds. For a
-user-initiated teardown where errors should prevent navigation, await `flush()`
-before removing the component. A destroyed store cannot reload or resume editing.
-
-See the [Svelte authoring examples](https://github.com/hitslop/hitslop/tree/master/examples/slops).
-
-MIT © 2026 hitSlop contributors.
+Schemas and explicit `initial.ts` defaults are shared between app and builder.
+See [Storage](../../docs/storage.md) for Loro annotations and external JSON edits.
 
 ## Capture views
 

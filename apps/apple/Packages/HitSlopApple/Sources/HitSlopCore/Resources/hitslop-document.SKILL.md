@@ -19,13 +19,16 @@ app-specific data and styling guidance.
 - Read `data.schema.json` when present before changing `stores/data.json`.
 - Treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`, this
   skill, and `QuickLook/Icon.png` as immutable application files.
-- User data belongs only in `stores/`. `QuickLook/Preview.png` may be
+- User-editable data belongs in `stores/`; `state/` is private host bookkeeping. `QuickLook/Preview.png` may be
   refreshed by the host. `Icon\r` is Finder metadata, not document content.
 
 ## Edit data safely
 
-- For JSON, validate the complete value against the schema, write a temporary
-  sibling file, then atomically replace `stores/data.json`.
+- For JSON, preserve the exact `$slop` envelope and its `baseRevision`; edit only
+  `data`. Validate against packaged `data.schema.json`, write a temporary sibling,
+  then atomically replace `stores/data.json`. Do not invent a revision or edit
+  `state/document.sqlite`. Re-read the file after the host accepts the change
+  before starting another edit. Invalid external bytes remain for review.
 - Named attachments belong in `stores/media/`. Names start with a lowercase
   ASCII letter and contain only lowercase letters, digits, and hyphens. Replace
   a media file atomically; use only supported image or bounded ZIP content.

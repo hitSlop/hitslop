@@ -1,14 +1,17 @@
-import * as Type from "typebox";
+import * as S from "@hitslop/schema/document";
 
-const checklistSchema = Type.Object({
-  title: Type.String(),
-  tasks: Type.Array(Type.Object({
-    id: Type.String(),
-    text: Type.String(),
-    done: Type.Boolean(),
-    archived: Type.Boolean(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+const checklistSchema = S.Document({
+  title: S.Text(),
+  tasks: S.List(
+    S.Object({
+      id: S.String(),
+      text: S.Text(),
+      done: S.Boolean(),
+      archived: S.Boolean(),
+    }),
+    "id",
+  ),
+});
 
-export type Checklist = Type.Static<typeof checklistSchema>;
+export type Checklist = S.Static<typeof checklistSchema>;
 export default checklistSchema;

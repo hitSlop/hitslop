@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "protocol",
+        "bootId",
+        "peers"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "welcome"
+          ]
+        },
+        "protocol": {
+          "type": "integer",
+          "enum": [
+            1
+          ]
+        },
+        "bootId": {
+          "type": "string"
+        },
+        "peers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "title": "RoomPeer",
+            "additionalProperties": false
+          },
+          "maxItems": 20
+        }
+      },
+      "title": "RoomWelcome",
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "peers"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "presence"
+          ]
+        },
+        "peers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "title": "RoomPeer",
+            "additionalProperties": false
+          },
+          "maxItems": 20
+        }
+      },
+      "title": "RoomPresence",
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "documentId",
+        "schema",
+        "updates"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "updates"
+          ]
+        },
+        "documentId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9-]{1,80}$"
+        },
+        "schema": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "updates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "sequence",
+              "batch"
+            ],
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 10000
+              },
+              "batch": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "hash",
+                  "bytes"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
+                  },
+                  "hash": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "bytes": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 699052
+                  }
+                },
+                "title": "RoomBatch",
+                "additionalProperties": false
+              }
+            },
+            "title": "RoomUpdate",
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 32
+        }
+      },
+      "title": "RoomUpdates",
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "head",
+        "bootId",
+        "peers"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ready"
+          ]
+        },
+        "head": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "bootId": {
+          "type": "string"
+        },
+        "peers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "title": "RoomPeer",
+            "additionalProperties": false
+          },
+          "maxItems": 20
+        }
+      },
+      "title": "RoomReady",
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "id",
+        "hash",
+        "sequence"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ack"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 10000
+        }
+      },
+      "title": "RoomAck",
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "status",
+        "message"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "error"
+          ]
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 400,
+          "maximum": 599
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "title": "RoomError",
+      "additionalProperties": false
+    }
+  ],
+  "title": "RoomServerMessage"
+}

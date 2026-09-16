@@ -23,9 +23,7 @@ export default defineConfig({
         baseUrl: "https://github.com/hitSlop/hitslop/edit/master/apps/landing/",
       },
       lastUpdated: true,
-      social: [
-        { icon: "github", label: "GitHub", href: "https://github.com/hitSlop/hitslop" },
-      ],
+      social: [{ icon: "github", label: "GitHub", href: "https://github.com/hitSlop/hitslop" }],
       sidebar: [
         { label: "Overview", slug: "docs" },
         {

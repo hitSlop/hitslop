@@ -1,5 +1,5 @@
-import * as Type from "typebox";
+import * as S from "@hitslop/schema/document";
 
-export default Type.Object({
-  count: Type.Integer({ description: "Current tally count value" }),
-}, { additionalProperties: true });
+export default S.Document({
+  count: S.Integer({ description: "Current tally count value" }),
+});

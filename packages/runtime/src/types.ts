@@ -1,30 +1,32 @@
-export type SlopStoreKind = "json" | "media";
+export type SlopStoreKind = "media" | "document";
 import type { HostInfo, SlopChange } from "@hitslop/schema/bridge";
 export type { HostInfo, SlopChange } from "@hitslop/schema/bridge";
-export type SlopSnapshot<T> = { value: T; revision: string };
 export type SlopMediaSnapshot = { exists: boolean; revision: string | null };
 export type SlopWindowSize = { width: number; height: number };
 
 export interface SlopHost {
-  jsonOpen<T>(initialValue: T): Promise<SlopSnapshot<T>>;
-  jsonRead<T>(): Promise<SlopSnapshot<T>>;
-  jsonWrite<T>(value: T, expectedRevision?: string): Promise<{ revision: string }>;
+  document: DocumentHost;
   mediaOpen(name: string): Promise<SlopMediaSnapshot>;
   mediaWrite(name: string, data: string, mimeType: string): Promise<{ revision: string }>;
   mediaRemove(name: string): Promise<{ revision: null }>;
   resizeWindow(size: SlopWindowSize): Promise<SlopWindowSize>;
   dragWindow(): Promise<void>;
-  watch(kind: SlopStoreKind, callback: (event: SlopChange) => void): () => void;
+  watch(kind: "media", callback: (event: SlopChange) => void): () => void;
+}
+
+export type { DocumentFrame, DocumentApply } from "@hitslop/schema/bridge";
+import type { DocumentFrame, DocumentApply } from "@hitslop/schema/bridge";
+export interface DocumentHost {
+  open(initial?: unknown): Promise<DocumentFrame>;
+  apply(value: DocumentApply): Promise<DocumentFrame>;
+  flush(): Promise<DocumentFrame>;
+  releaseDraft(value: { session: string; draft: string }): Promise<DocumentFrame>;
+  onChange(callback: (frame: DocumentFrame) => void): () => void;
 }
 
 export type WindowSlop = {
   info?: () => Promise<HostInfo>;
-  json: {
-    open: (initialValue: unknown) => Promise<SlopSnapshot<unknown>>;
-    read: () => Promise<SlopSnapshot<unknown>>;
-    write: (value: unknown, expectedRevision?: string) => Promise<{ revision: string }>;
-    onChange: (callback: (event: SlopChange) => void) => () => void;
-  };
+  document: DocumentHost;
   media: {
     open: (name: string) => Promise<SlopMediaSnapshot>;
     write: (name: string, data: string, mimeType: string) => Promise<{ revision: string }>;
@@ -39,4 +41,8 @@ export type WindowSlop = {
   flush?: () => Promise<void>;
 };
 
-declare global { interface Window { slop?: WindowSlop } }
+declare global {
+  interface Window {
+    slop?: WindowSlop;
+  }
+}

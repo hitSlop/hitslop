@@ -5,22 +5,25 @@ description: Work on hitSlop Apple hosting, local storage, iCloud coordination, 
 
 # hitSlop native host
 
-- Apple Swift code belongs in `apps/apple/Packages/HitSlopApple`; keep the two
-  Xcode app targets thin. AppKit-only code belongs in `HitSlopHost`,
+- Apple Swift code belongs in `apps/apple/Packages/HitSlopApple`; keep the macOS
+  Xcode app target thin. AppKit-only code belongs in `HitSlopHost`,
   `HitSlopCatalog`, or `HitSlopNativeCLI`.
-- `HitSlopRegistry` performs direct Firestore catalog subscriptions and records
-  a creation through the Firebase callable Function only after a document is
-  successfully created.
+- Catalog clients use the generated oRPC/OpenAPI client for the Cloudflare API.
+  D1 owns catalog metadata and creation counts; R2 owns immutable artifacts.
+  Follow all pagination cursors and record a creation only after the document
+  is successfully created. Firebase provides authentication and telemetry.
 - `DocumentFactory` verifies SHA-256, caches hosted artifacts at
   `cache/<publisher>/<slug>/<release>.slop`, and copies locally. Never silently
   update an existing document.
-- JSON replacement is atomic. The structured data store is lazy and is not
-  declared by the manifest.
+- Native Loro owns all JSON-backed documents. Commit validated forks to
+  `state/document.sqlite` before publication; `stores/data.json` is a revision
+  envelope projection. Storage remains implicit in the manifest.
 - Generated Swift manifest models and the bundled validation schema come from
   `bun run schema:generate`; never edit them directly.
 - That command also generates bridge request validation, method/error enums,
   and the guest JavaScript bundle from the TypeScript protocol/runtime sources.
-- Storage runs on a serial worker. Normal macOS close/quit must await the guest
+- JSON runs on the document actor with cross-process SQLite transactions; media
+  and theme use the storage worker. Normal macOS close/quit must await the guest
   flush barrier. Mutable JSON/theme errors do not prevent the app shell opening;
   validate JSON at store access and retain the previous valid theme on failure.
 - Document guidance is optional when opening and never exact-text validated.
@@ -35,8 +38,8 @@ description: Work on hitSlop Apple hosting, local storage, iCloud coordination, 
   extensions.
 - Skinned windows use an exact-size RGBA PNG as visible backing and mask, with
   10% alpha click-through and a transparent WebView.
-- On iOS, surface iCloud coordination and flush failures; do not silently lose
-  a store update.
+- iOS is archived. Reject iCloud document locations before opening or creating
+  writable documents; never copy projections without their SQLite state.
 
 - Background captures use disposable snapshots. Never
   point a rendering runtime at original writable stores. Interactive exports

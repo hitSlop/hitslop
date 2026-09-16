@@ -1,149 +1,31 @@
 import AppKit
 import HitSlopCore
 import HitSlopHost
-import HitSlopRegistry
+import ComposableArchitecture
+@_exported import HitSlopFeatures
 import HitSlopRuntime
 import SwiftUI
 
-enum CatalogFilter: Hashable {
-    case all, myTemplates, recents, category(String)
-
-    var title: String {
-        switch self {
-        case .all: "All Slops"
-        case .myTemplates: "Mine"
-        case .recents: "Recents"
-        case .category(let category): categoryLabel(category)
-        }
-    }
-}
-
-private struct TemplateCreationFailure: Identifiable {
-    let id = UUID()
-    let title: String
-    let message: String
-}
-
-private struct RecentCatalogItem: Identifiable {
-    let url: URL
-    let package: SlopPackage?
-    let packageBytes: Int64
-    let createdAt: Date?
-    let updatedAt: Date?
-
-    var id: String { "recent:\(url.standardizedFileURL.path)" }
-    var title: String { package?.manifest.title ?? url.deletingPathExtension().lastPathComponent }
-    var description: String { package?.manifest.description ?? "A local hitSlop document." }
-    var categories: [String] { package?.manifest.categories.map(\.rawValue) ?? [] }
-    var authorName: String? { package?.manifest.author.name }
-    var authorURL: URL? { package?.manifest.author.url.flatMap(URL.init(string:)) }
-    var searchableText: String { ([title, description, authorName ?? ""] + categories).joined(separator: " ").localizedLowercase }
-    var previewURL: URL? { package?.previewURL }
-    var iconURL: URL? { package?.iconURL }
-
-    init(url: URL) {
-        self.url = url
-        package = try? SlopPackage(rootURL: url)
-        packageBytes = slopPackageByteCount(url)
-        let values = try? url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
-        createdAt = values?.creationDate
-        updatedAt = values?.contentModificationDate
-    }
-}
-
-private enum CatalogEntry: Identifiable {
-    case template(CatalogItem)
-    case recent(RecentCatalogItem)
-
-    var id: String { switch self { case .template(let item): item.id; case .recent(let item): item.id } }
-    var title: String { switch self { case .template(let item): item.title; case .recent(let item): item.title } }
-    var description: String { switch self { case .template(let item): item.description; case .recent(let item): item.description } }
-    var categories: [String] { switch self { case .template(let item): item.categories; case .recent(let item): item.categories } }
-    var authorName: String? { switch self { case .template(let item): item.authorName; case .recent(let item): item.authorName } }
-    var authorURL: URL? { switch self { case .template(let item): item.authorURL; case .recent(let item): item.authorURL } }
-    var searchableText: String { switch self { case .template(let item): item.searchableText; case .recent(let item): item.searchableText } }
-}
-
 public struct CatalogView: View {
-    @StateObject private var model: RegistryModel
-    @StateObject private var localStore: LocalTemplateStore
-    @State private var query = ""
-    @State private var filter: CatalogFilter = .all
-    @State private var catalogSort: RegistrySort = .popular
-    @State private var selectedID: String?
-    @State private var searchTask: Task<Void, Never>?
-    @State private var creatingTemplateTitle: String?
-    @State private var creationFailure: TemplateCreationFailure?
-    @State private var recentRevision = 0
+    @Bindable var store: StoreOf<CatalogFeature>
+    let account: StoreOf<AccountFeature>
     @FocusState private var searchFocused: Bool
     @Environment(\.scenePhase) private var scenePhase
-    private let openDocumentAction: (URL) -> Void
 
-    public init(catalogURL: URL, templatesURL: URL = DocumentFactory.defaultTemplatesRoot, openDocument: @escaping (URL) -> Void) {
-        _model = StateObject(wrappedValue: RegistryModel(catalogURL: catalogURL))
-        _localStore = StateObject(wrappedValue: LocalTemplateStore(templatesURL: templatesURL))
-        openDocumentAction = openDocument
-    }
-
-    private let categories = ["productivity", "utilities", "finance", "media", "games", "developer-tools", "education", "business", "personal", "other"]
-    private var searchTerm: String { query.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase }
-    private var hostedItems: [CatalogItem] { model.templates.map { CatalogItem(source: .hosted($0)) } }
-    private var localItems: [CatalogItem] { localStore.templates.map { CatalogItem(source: .local($0)) } }
-    private var recentItems: [RecentCatalogItem] {
-        _ = recentRevision
-        return NSDocumentController.shared.recentDocumentURLs.filter {
-            $0.pathExtension.lowercased() == "slop"
-                && FileManager.default.fileExists(atPath: $0.path)
-                && !DocumentFactory.isManagedTemplatePackage($0, templatesRoot: localStore.templatesURL)
-        }.map(RecentCatalogItem.init)
-    }
-    private var visibleEntries: [CatalogEntry] {
-        let entries: [CatalogEntry] = switch filter {
-        case .all, .category: hostedItems.map(CatalogEntry.template)
-        case .myTemplates: localItems.map(CatalogEntry.template)
-        case .recents: recentItems.map(CatalogEntry.recent)
-        }
-        guard !searchTerm.isEmpty, filter == .myTemplates || filter == .recents else { return entries }
-        return entries.filter { $0.searchableText.contains(searchTerm) }
-    }
-    private var selectedEntry: CatalogEntry? { visibleEntries.first { $0.id == selectedID } }
-    private var visibleIDs: [String] { visibleEntries.map(\.id) }
-    private var showsCatalogSort: Bool {
-        switch filter { case .all, .category: true; case .myTemplates, .recents: false }
+    public init(store: StoreOf<CatalogFeature>, account: StoreOf<AccountFeature>) {
+        self.store = store; self.account = account
     }
 
     public var body: some View {
         NavigationSplitView {
-            CatalogSidebar(
-                filter: filter,
-                categories: categories,
-                localCount: localItems.count,
-                recentCount: recentItems.count,
-                select: select
-            )
+            CatalogSidebarFeatureView(store: store, account: account)
             .navigationSplitViewColumnWidth(min: 168, ideal: 184, max: 204)
         } content: {
-            CatalogRail(
-                title: filter.title,
-                entries: visibleEntries,
-                selectedID: $selectedID,
-                query: $query,
-                searchFocused: $searchFocused,
-                catalogURL: model.catalogURL,
-                errorMessage: showsCatalogSort ? model.errorMessage : nil,
-                localIssues: filter == .myTemplates ? localStore.issues : [],
-                sort: $catalogSort,
-                showsSort: showsCatalogSort
-            )
+            CatalogResultsFeatureView(store: store, searchFocused: $searchFocused)
             .navigationSplitViewColumnWidth(min: 236, ideal: 264, max: 304)
             .ignoresSafeArea(.container, edges: .top)
         } detail: {
-            CatalogDetail(
-                entry: selectedEntry,
-                catalogURL: model.catalogURL,
-                isCreating: creatingTemplateTitle != nil,
-                primaryAction: performPrimaryAction
-            )
+            CatalogDetailFeatureView(store: store)
             .frame(minWidth: 460)
             .ignoresSafeArea(.container, edges: .top)
         }
@@ -151,104 +33,49 @@ public struct CatalogView: View {
         .background {
             Button("Focus template search") { searchFocused = true }
                 .keyboardShortcut("k", modifiers: .command)
-                .frame(width: 1, height: 1)
-                .opacity(0)
+                .frame(width: 1, height: 1).opacity(0)
         }
-        .onAppear { synchronizeSelection() }
-        .onChange(of: visibleIDs) { _, _ in synchronizeSelection() }
-        .onChange(of: query) { _, value in scheduleSearch(value) }
-        .onChange(of: catalogSort) { _, value in
-            switch filter {
-            case .all: model.list(sort: value)
-            case .category(let category): model.list(category: category, sort: value)
-            case .myTemplates, .recents: break
-            }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                localStore.refresh()
-                recentRevision &+= 1
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .hitSlopPreviewDidChange)) { _ in recentRevision &+= 1 }
-        .onOpenURL { url in if url.pathExtension == "slop" { openDocumentAction(url) } }
-        .alert(item: $creationFailure) { failure in
-            Alert(title: Text("Could not create \(failure.title)"), message: Text(failure.message), dismissButton: .default(Text("OK")))
-        }
+        .onAppear { store.send(.start) }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { store.send(.refreshSources) } }
+        .onReceive(NotificationCenter.default.publisher(for: .hitSlopPreviewDidChange)) { _ in store.send(.refreshRecents) }
+        .alert($store.scope(state: \.$alert, action: \.alert))
         .preferredColorScheme(.light)
     }
+}
 
-    private func synchronizeSelection() {
-        if let selectedID, visibleIDs.contains(selectedID) { return }
-        selectedID = visibleIDs.first
-    }
-
-    private func select(_ next: CatalogFilter) {
-        filter = next
-        selectedID = nil
-        guard searchTerm.isEmpty else {
-            scheduleSearch(query)
-            return
-        }
-        switch next {
-        case .all: model.list(sort: catalogSort)
-        case .category(let category): model.list(category: category, sort: catalogSort)
-        case .myTemplates, .recents: break
+private struct CatalogSidebarFeatureView: View {
+    let store: StoreOf<CatalogFeature>
+    let account: StoreOf<AccountFeature>
+    private let categories = ["productivity", "utilities", "finance", "media", "games", "developer-tools", "education", "business", "personal", "other"]
+    var body: some View {
+        CatalogSidebar(filter: store.filter, categories: categories, localCount: store.local.count, recentCount: store.recents.count, account: account) {
+            store.send(.filterChanged($0))
         }
     }
+}
 
-    private func scheduleSearch(_ value: String) {
-        searchTask?.cancel()
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        searchTask = Task {
-            try? await Task.sleep(for: .milliseconds(180))
-            guard !Task.isCancelled else { return }
-            switch filter {
-            case .all:
-                trimmed.isEmpty ? model.list(sort: catalogSort) : model.search(trimmed)
-            case .category(let category):
-                trimmed.isEmpty ? model.list(category: category, sort: catalogSort) : model.search(trimmed, category: category)
-            case .myTemplates, .recents:
-                synchronizeSelection()
-            }
-        }
+private struct CatalogResultsFeatureView: View {
+    @Bindable var store: StoreOf<CatalogFeature>
+    var searchFocused: FocusState<Bool>.Binding
+    var body: some View {
+        CatalogRail(
+            title: store.filter.title, entries: store.visibleEntries,
+            selectedID: $store.selectedID.sending(\.selected),
+            query: $store.query.sending(\.queryChanged), searchFocused: searchFocused,
+            errorMessage: store.filter.isHosted ? store.hostedIssues.first : nil,
+            localIssues: store.filter == .myTemplates ? store.localIssues : [],
+            sort: $store.sort.sending(\.sortChanged), showsSort: store.filter.isHosted,
+            isLoading: store.isLoading && store.filter.isHosted,
+            onRefresh: { store.send(.refreshSources) }
+        )
     }
+}
 
-    private func performPrimaryAction(_ entry: CatalogEntry) {
-        switch entry {
-        case .recent(let item): openDocumentAction(item.url)
-        case .template(let item): createDocument(from: item)
-        }
-    }
-
-    private func createDocument(from item: CatalogItem) {
-        guard creatingTemplateTitle == nil else { return }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "slop")!]
-        panel.canCreateDirectories = true
-        panel.directoryURL = SlopCloud.defaultCreationDirectory()
-        let slug: String = switch item.source { case .hosted(let template): template.slug; case .local(let template): template.manifest.slug }
-        panel.nameFieldStringValue = "\(slug).slop"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        withAnimation(.easeOut(duration: 0.16)) { creatingTemplateTitle = item.title }
-        Task { @MainActor in
-            do {
-                switch item.source {
-                case .hosted(let template):
-                    _ = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template.remoteTemplate(), at: url)
-                    SlopPreviewWriter.installExistingPreview(for: url)
-                    await model.recordCreation(template: template)
-                case .local(let template):
-                    try DocumentFactory(catalogURL: model.catalogURL).create(fromLocalPackage: template.packageURL, at: url)
-                    SlopPreviewWriter.installExistingPreview(for: url)
-                }
-                NSDocumentController.shared.noteNewRecentDocumentURL(url)
-                openDocumentAction(url)
-            } catch {
-                creationFailure = TemplateCreationFailure(title: item.title, message: error.localizedDescription)
-            }
-            withAnimation(.easeOut(duration: 0.16)) { creatingTemplateTitle = nil }
+private struct CatalogDetailFeatureView: View {
+    let store: StoreOf<CatalogFeature>
+    var body: some View {
+        CatalogDetail(entry: store.selectedEntry, isCreating: store.creating != nil, isQuitting: store.isQuitting) {
+            store.send(.primaryAction($0))
         }
     }
 }
@@ -258,6 +85,8 @@ private struct CatalogSidebar: View {
     let categories: [String]
     let localCount: Int
     let recentCount: Int
+    let account: StoreOf<AccountFeature>
+    @State private var showsAccount = false
     let select: (CatalogFilter) -> Void
 
     var body: some View {
@@ -299,10 +128,18 @@ private struct CatalogSidebar: View {
                     }.buttonStyle(.plain)
                 }
                 HStack(spacing: 9) {
-                    BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
-                    if let discord = CatalogLinks.discord {
-                        BrandLink(name: "discord", label: "Discord", destination: discord)
+                    Button { showsAccount = true } label: {
+                        AccountAvatar(user: account.user)
+                            .contentShape(Circle())
                     }
+                    .buttonStyle(.plain)
+                    .help(account.user?.email.map { "Account: \($0)" } ?? "Account")
+                    .accessibilityLabel("Account")
+                    .popover(isPresented: $showsAccount) {
+                        AccountSettingsView(store: account)
+                    }
+                    BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
+                    BrandLink(name: "discord", label: "Discord", destination: CatalogLinks.discord)
                 }
                 Text("Mini apps · local data · fun").font(.caption2).foregroundStyle(.tertiary)
             }
@@ -316,26 +153,35 @@ private struct CatalogSidebar: View {
 private struct BrandLink: View {
     let name: String
     let label: String
-    let destination: URL
+    let destination: URL?
 
     var body: some View {
-        Link(destination: destination) {
-            Group {
-                if let image = brandImage(named: name) {
-                    Image(nsImage: image).resizable().scaledToFit()
-                } else {
-                    Image(systemName: "link")
-                }
+        Group {
+            if let destination {
+                Link(destination: destination) { icon }
+            } else {
+                Button {} label: { icon }
+                    .disabled(true)
             }
-            .frame(width: 15, height: 15)
-            .frame(width: 30, height: 30)
-            .foregroundStyle(.secondary)
-            .background(Color.primary.opacity(0.055), in: Circle())
-            .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel(label)
+        .help(destination == nil ? "\(label) — coming soon" : label)
+        .accessibilityLabel(destination == nil ? "\(label) — coming soon" : label)
+    }
+
+    private var icon: some View {
+        Group {
+            if let image = brandImage(named: name) {
+                Image(nsImage: image).resizable().scaledToFit()
+            } else {
+                Image(systemName: "link")
+            }
+        }
+        .frame(width: 15, height: 15)
+        .frame(width: 30, height: 30)
+        .foregroundStyle(.secondary)
+        .background(Color.primary.opacity(0.055), in: Circle())
+        .contentShape(Circle())
     }
 }
 
@@ -372,11 +218,12 @@ private struct CatalogRail: View {
     @Binding var selectedID: String?
     @Binding var query: String
     var searchFocused: FocusState<Bool>.Binding
-    let catalogURL: URL
     let errorMessage: String?
     let localIssues: [String]
-    @Binding var sort: RegistrySort
+    @Binding var sort: CatalogSort
     let showsSort: Bool
+    let isLoading: Bool
+    let onRefresh: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -386,10 +233,17 @@ private struct CatalogRail: View {
                     Text(title).font(.headline.weight(.semibold))
                     Spacer()
                     Text("\(entries.count)").font(.caption.monospacedDigit()).foregroundStyle(.tertiary)
+                    Button(action: onRefresh) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Refresh")
+                    .disabled(isLoading)
+                    .accessibilityLabel("Refresh catalog")
                 }
                 if showsSort {
                     Picker("Catalog order", selection: $sort) {
-                        ForEach(RegistrySort.allCases) { option in Text(option.title).tag(option) }
+                        ForEach(CatalogSort.allCases) { option in Text(option.title).tag(option) }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -409,12 +263,14 @@ private struct CatalogRail: View {
                     .help(localIssues.joined(separator: "\n"))
             }
 
-            if entries.isEmpty {
+            if entries.isEmpty && isLoading {
+                ProgressView("Loading slops…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if entries.isEmpty {
                 ContentUnavailableView("Nothing here", systemImage: "sparkles.rectangle.stack", description: Text("Try another search or category."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(entries, selection: $selectedID) { entry in
-                    CatalogRow(entry: entry, catalogURL: catalogURL)
+                    CatalogRow(entry: entry)
                         .tag(entry.id)
                 }
                 .listStyle(.sidebar)
@@ -450,11 +306,10 @@ private struct CatalogSearchBar: View {
 
 private struct CatalogRow: View {
     let entry: CatalogEntry
-    let catalogURL: URL
 
     var body: some View {
         HStack(spacing: 11) {
-            CatalogImageView(urls: iconURLs, fallback: .applicationIcon)
+            CatalogImageView(urls: entry.iconURLs, fallback: .applicationIcon)
                 .frame(width: 52, height: 52)
                 .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -472,28 +327,14 @@ private struct CatalogRow: View {
     }
 
     private var sourceLabel: String {
-        switch entry {
-        case .recent: "LOCAL DOCUMENT"
-        case .template(let item): item.isLocal ? "READY LOCALLY" : "CATALOG"
-        }
-    }
-
-    private var iconURLs: [URL] {
-        switch entry {
-        case .recent(let item): [item.iconURL, item.previewURL].compactMap { $0 }
-        case .template(let item):
-            switch item.source {
-            case .local(let template): [template.iconURL, template.previewURL]
-            case .hosted(let template): [artifactURL(catalogURL: catalogURL, key: template.currentRelease.icon.key), artifactURL(catalogURL: catalogURL, key: template.currentRelease.preview.key)].compactMap { $0 }
-            }
-        }
+        entry.isRecent ? "LOCAL DOCUMENT" : entry.isLocal ? "READY LOCALLY" : "CATALOG"
     }
 }
 
 private struct CatalogDetail: View {
     let entry: CatalogEntry?
-    let catalogURL: URL
     let isCreating: Bool
+    let isQuitting: Bool
     let primaryAction: (CatalogEntry) -> Void
 
     var body: some View {
@@ -535,7 +376,7 @@ private struct CatalogDetail: View {
                             }
                         }
 
-                        CatalogImageView(urls: previewURLs(for: entry), fallback: .preview)
+                        CatalogImageView(urls: entry.previewURLs, fallback: .preview)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(alignment: .leading, spacing: 0) {
@@ -562,6 +403,7 @@ private struct CatalogDetail: View {
                         icon: primaryIcon(for: entry),
                         isWorking: isCreating
                     ) { primaryAction(entry) }
+                    .disabled(isQuitting)
                     .padding(22)
                 }
             } else {
@@ -570,61 +412,16 @@ private struct CatalogDetail: View {
         }
     }
 
-    private func primaryTitle(for entry: CatalogEntry) -> String {
-        switch entry { case .recent: "Open"; case .template: "Create" }
-    }
-
-    private func primaryIcon(for entry: CatalogEntry) -> String {
-        switch entry { case .recent: "arrow.up.forward.app"; case .template: "sparkles" }
-    }
-
-    private func previewURLs(for entry: CatalogEntry) -> [URL] {
-        switch entry {
-        case .recent(let item): [item.previewURL, item.iconURL].compactMap { $0 }
-        case .template(let item):
-            switch item.source {
-            case .local(let template): [template.previewURL, template.iconURL]
-            case .hosted(let template): [artifactURL(catalogURL: catalogURL, key: template.currentRelease.preview.key), artifactURL(catalogURL: catalogURL, key: template.currentRelease.icon.key)].compactMap { $0 }
-            }
-        }
-    }
-
+    private func primaryTitle(for entry: CatalogEntry) -> String { entry.isRecent ? "Open" : "Create" }
+    private func primaryIcon(for entry: CatalogEntry) -> String { entry.isRecent ? "arrow.up.forward.app" : "sparkles" }
     private func facts(for entry: CatalogEntry) -> [CatalogFact] {
-        switch entry {
-        case .recent(let item):
-            return commonFacts(
-                source: "Local document",
-                manifest: item.package?.manifest,
-                packageBytes: item.packageBytes,
-                updatedAt: item.updatedAt,
-                extra: item.createdAt.map { [CatalogFact(icon: "calendar", title: "Created", value: $0.formatted(date: .abbreviated, time: .omitted))] } ?? []
-            )
-        case .template(let item):
-            var extra: [CatalogFact] = []
-            if let release = item.releaseNumber { extra.append(CatalogFact(icon: "shippingbox", title: "Release", value: "Release \(release)")) }
-            if let creationCount = item.creationCount { extra.append(CatalogFact(icon: "doc.on.doc", title: "Creations", value: "\(creationCount)")) }
-            return commonFacts(
-                source: item.isLocal ? "Installed locally" : "Online catalog",
-                manifest: item.manifest,
-                packageBytes: item.packageBytes ?? 0,
-                updatedAt: item.updatedAt,
-                extra: extra
-            )
-        }
-    }
-
-    private func commonFacts(source: String, manifest: SlopManifest?, packageBytes: Int64, updatedAt: Date?, extra: [CatalogFact]) -> [CatalogFact] {
-        var result = [CatalogFact(icon: "externaldrive", title: "Source", value: source)]
-        result.append(contentsOf: extra)
-        if let presentation = manifest?.presentation {
-            result.append(CatalogFact(icon: "rectangle", title: "Initial size", value: "\(presentation.width) × \(presentation.height)"))
-        }
-        if packageBytes > 0 {
-            result.append(CatalogFact(icon: "doc", title: "Package size", value: ByteCountFormatter.string(fromByteCount: packageBytes, countStyle: .file)))
-        }
-        if let updatedAt {
-            result.append(CatalogFact(icon: "clock", title: "Updated", value: updatedAt.formatted(date: .abbreviated, time: .shortened)))
-        }
+        var result = [CatalogFact(icon: "externaldrive", title: "Source", value: entry.isRecent ? "Local document" : entry.isLocal ? "Installed locally" : "Online catalog")]
+        if entry.isRecent, let date = entry.createdAt { result.append(CatalogFact(icon: "calendar", title: "Created", value: date.formatted(date: .abbreviated, time: .omitted))) }
+        if let release = entry.releaseNumber { result.append(CatalogFact(icon: "shippingbox", title: "Release", value: "Release \(release)")) }
+        if let count = entry.creationCount { result.append(CatalogFact(icon: "doc.on.doc", title: "Creations", value: "\(count)")) }
+        if let size = entry.initialSize { result.append(CatalogFact(icon: "rectangle", title: "Initial size", value: size)) }
+        if entry.packageBytes > 0 { result.append(CatalogFact(icon: "doc", title: "Package size", value: ByteCountFormatter.string(fromByteCount: entry.packageBytes, countStyle: .file))) }
+        if let date = entry.updatedAt { result.append(CatalogFact(icon: "clock", title: "Updated", value: date.formatted(date: .abbreviated, time: .shortened))) }
         return result
     }
 }
@@ -722,12 +519,6 @@ private struct CatalogImageView: View {
             }
         }
     }
-}
-
-private func artifactURL(catalogURL: URL, key: String) -> URL? {
-    var components = URLComponents(url: catalogURL.appendingPathComponent("api/artifact"), resolvingAgainstBaseURL: false)
-    components?.queryItems = [URLQueryItem(name: "key", value: key)]
-    return components?.url
 }
 
 @MainActor private func loadCatalogImage(_ url: URL) async -> NSImage? {

@@ -6,11 +6,17 @@ import { readThemeCSS } from "../src/theme.ts";
 import { evaluateModule } from "../src/evaluate-module.ts";
 
 const roots: string[] = [];
-afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
+afterEach(async () => {
+  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
 
 test("theme evaluation reloads transitive edits and recovers after errors", async () => {
-  const root = await mkdtemp(join(tmpdir(), "hitslop-theme-")); roots.push(root);
-  await writeFile(join(root, "theme.ts"), 'import color from "./color"; export default { css: `:root { --slop-ink: ${color}; }` };');
+  const root = await mkdtemp(join(tmpdir(), "hitslop-theme-"));
+  roots.push(root);
+  await writeFile(
+    join(root, "theme.ts"),
+    'import color from "./color"; export default { css: `:root { --slop-ink: ${color}; }` };',
+  );
   await writeFile(join(root, "color.ts"), 'export default "red";');
   expect(await readThemeCSS(root)).toContain("red");
   await writeFile(join(root, "color.ts"), 'export default "blue";');

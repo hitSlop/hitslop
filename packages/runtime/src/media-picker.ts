@@ -2,7 +2,10 @@
 // (such as @hitslop/svelte). No reactivity in here: adapters own state.
 
 export const safeMediaName = (name: string, label = "Media"): string => {
-  if (!/^[a-z][a-z0-9-]{0,63}$/.test(name)) throw new Error(`${label} store names must use lowercase letters, numbers, and hyphens`);
+  if (!/^(?:[a-z][a-z0-9-]{0,63}|[a-f0-9]{64})$/.test(name))
+    throw new Error(
+      `${label} store names must use lowercase letters, numbers, and hyphens, or a SHA-256 hex digest`,
+    );
   return name;
 };
 
@@ -29,11 +32,15 @@ export const chooseLocalFile = (accept: string, onFile: (file: File) => void): v
   input.type = "file";
   input.accept = accept;
   input.hidden = true;
-  input.addEventListener("change", () => {
-    const file = input.files?.[0];
-    input.remove();
-    if (file) onFile(file);
-  }, { once: true });
+  input.addEventListener(
+    "change",
+    () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (file) onFile(file);
+    },
+    { once: true },
+  );
   input.addEventListener("cancel", () => input.remove(), { once: true });
   document.body.append(input);
   input.click();

@@ -1,4 +1,7 @@
-const apiOrigin = (import.meta.env.PUBLIC_HITSLOP_API_URL || "https://api.hitslop.com").replace(/\/$/, "");
+const apiOrigin = (import.meta.env.PUBLIC_HITSLOP_API_URL || "https://api.hitslop.com").replace(
+  /\/$/,
+  "",
+);
 
 export const SITE_LINKS = {
   repository: "https://github.com/hitslop/hitslop",

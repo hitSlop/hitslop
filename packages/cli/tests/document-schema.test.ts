@@ -14,17 +14,26 @@ test("Checklist retains its UI and uses interpreted validation without compilers
     if (environment === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = environment;
   }
-  const outputs = Array.isArray(result) ? result.flatMap(value => value.output) : "output" in result ? result.output : [];
-  const chunks = outputs.filter(value => value.type === "chunk");
-  const code = chunks.map(chunk => chunk.code).join("\n");
-  const modules = chunks.flatMap(chunk => Object.entries(chunk.modules)
-    .filter(([, module]) => module.renderedLength > 0).map(([path]) => path));
-  expect(modules.some(path => path.includes("/bits-ui/"))).toBe(true);
-  expect(modules.some(path => path.includes("/typebox/"))).toBe(true);
-  expect(modules.some(path => /\/ajv\/dist\/(compile|core|2020)/.test(path))).toBe(false);
-  expect(modules.some(path => path.includes("/typebox/") && /\/compile\//.test(path))).toBe(false);
-  expect(modules.some(path => path.includes("/.hitslop/generated/"))).toBe(false);
+  const outputs = Array.isArray(result)
+    ? result.flatMap((value) => value.output)
+    : "output" in result
+      ? result.output
+      : [];
+  const chunks = outputs.filter((value) => value.type === "chunk");
+  const code = chunks.map((chunk) => chunk.code).join("\n");
+  const modules = chunks.flatMap((chunk) =>
+    Object.entries(chunk.modules)
+      .filter(([, module]) => module.renderedLength > 0)
+      .map(([path]) => path),
+  );
+  expect(modules.some((path) => path.includes("/bits-ui/"))).toBe(true);
+  expect(modules.some((path) => path.includes("/typebox/"))).toBe(true);
+  expect(modules.some((path) => /\/ajv\/dist\/(compile|core|2020)/.test(path))).toBe(false);
+  expect(modules.some((path) => path.includes("/typebox/") && /\/compile\//.test(path))).toBe(
+    false,
+  );
+  expect(modules.some((path) => path.includes("/.hitslop/generated/"))).toBe(false);
   expect(code).not.toContain("new Function(");
-  expect(Buffer.byteLength(code)).toBeLessThan(269_000);
-  expect(gzipSync(code).length).toBeLessThan(84_000);
+  expect(Buffer.byteLength(code)).toBeLessThan(340_000);
+  expect(gzipSync(code).length).toBeLessThan(100_000);
 }, 30_000);

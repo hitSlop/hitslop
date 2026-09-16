@@ -334,9 +334,10 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
 @Test @MainActor func iconFailureDoesNotDiscardPreviewAndRenderingDoesNotInitializeOriginalStores() async throws {
     let root = try rendererPackage(duplicateIcon: true)
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try addDocumentFixture(root)
     let app = root.appendingPathComponent("app.html")
     var html = try String(contentsOf: app, encoding: .utf8)
-    html = html.replacingOccurrences(of: "window.slop.ready()", with: "window.slop.json.open({captureCount:1}).then(()=>window.slop.ready())")
+    html = html.replacingOccurrences(of: "window.slop.ready()", with: "window.slop.document.open().then(()=>window.slop.ready())")
     try Data(html.utf8).write(to: app)
     let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
     #expect(assets.previewPNG != nil)
@@ -365,20 +366,22 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
 @Test @MainActor func backgroundCaptureKeepsExistingJSONMediaAndThemeUnchanged() async throws {
     let root = try rendererPackage()
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try addDocumentFixture(root)
     let session = try SlopRuntimeSession(packageURL: root)
     session.load(); try await session.waitUntilReady()
-    _ = try await session.webView.callAsyncJavaScript(#"""
-      await slop.json.open({count:1});
-      await slop.media.write('photo','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','image/png');
+    let fixtureResult = try await session.webView.callAsyncJavaScript(#"""
+      try { await slop.document.open(); } catch (e) { return "open: " + e.message; }
+      try { await slop.media.write('photo','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','image/png'); } catch (e) { return 'media: ' + e.message; }
       return true;
     """#, arguments: [:], in: nil, contentWorld: .page)
+    #expect(fixtureResult as? Bool == true, "\(fixtureResult)")
     try await session.flush(); session.close()
     try Data(":root{--slop-ink:#123456}".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
-    let paths = ["stores/data.json", "stores/media/photo", "stores/theme.css"]
+    let paths = ["state/document.sqlite", "stores/data.json", "stores/media/photo", "stores/theme.css"]
     let originals = try paths.map { try Data(contentsOf: root.appendingPathComponent($0)) }
     let app = root.appendingPathComponent("app.html")
     let html = try String(contentsOf: app, encoding: .utf8).replacingOccurrences(of: "window.slop.ready()", with: #"""
-      (async()=>{const s=await slop.json.read();await slop.json.write({count:99},s.revision);await slop.media.remove('photo');slop.ready()})()
+      (async()=>{const s=await slop.document.open();await slop.document.apply({session:"capture",sequence:1,base:s.revision,after:{count:99}});await slop.media.remove('photo');slop.ready()})()
     """#)
     try Data(html.utf8).write(to: app)
     let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
@@ -427,7 +430,11 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     let stores = snapshot.url.appendingPathComponent("stores")
     try FileManager.default.createDirectory(at: stores, withIntermediateDirectories: true)
     let tasks: [[String: Any]] = (0..<120).map { ["id":"task-\($0)","text":"Task \($0) with a second line\nand extra detail", "done":$0 == 0,"archived":false] } + [["id":"filed","text":"Only filed item","done":true,"archived":true]]
-    try JSONSerialization.data(withJSONObject: ["title":"A long checklist", "tasks":tasks]).write(to: stores.appendingPathComponent("data.json"))
+    let owner = try #require(try SlopLoroDocument.open(package: SlopPackage(rootURL: snapshot.url)))
+    let frame = try await owner.frame()
+    let data = try SlopDocumentJSON(data: JSONSerialization.data(withJSONObject: ["title":"A long checklist", "tasks":tasks]))
+    _ = try await owner.apply(SlopDocumentEdit(session: "test", sequence: 1, base: frame.revision, after: data))
+    try await owner.close()
     let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true)
     defer { session.close() }
     let window = NSWindow(contentRect: session.webView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -446,7 +453,30 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     let image = try #require(CGImageSourceCreateWithData(png as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
     #expect(image.width == 960)
     let firstIcon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
-    _ = try await session.webView.callAsyncJavaScript("const s=await slop.json.read(); s.value.tasks.forEach(t=>t.done=true); await slop.json.write(s.value,s.revision); await new Promise(r=>setTimeout(r,100)); return true", arguments: [:], in: nil, contentWorld: .page)
+    _ = try await session.webView.callAsyncJavaScript("const s=await slop.document.open(); s.data.tasks.forEach(t=>t.done=true); await slop.document.apply({session:'test-icon',sequence:1,base:s.revision,after:s.data}); await new Promise(r=>setTimeout(r,100)); return true", arguments: [:], in: nil, contentWorld: .page)
     let completedIcon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
     #expect(firstIcon != completedIcon)
+    if let output = ProcessInfo.processInfo.environment["HITSLOP_PILOT_OUTPUT"] {
+        let directory = URL(fileURLWithPath: output)
+        try #require(long.dataRepresentation()).write(to: directory.appendingPathComponent("long-checklist.pdf"))
+        try #require(filed.dataRepresentation()).write(to: directory.appendingPathComponent("filed-checklist.pdf"))
+        try png.write(to: directory.appendingPathComponent("filed-checklist.png"))
+        try firstIcon.write(to: directory.appendingPathComponent("icon.png"))
+        try completedIcon.write(to: directory.appendingPathComponent("completed-icon.png"))
+    }
+}
+
+private func addDocumentFixture(_ root: URL) throws {
+    let schema = #"{"type":"object","properties":{"count":{"type":"integer"}},"required":["count"],"additionalProperties":true,"x-hitslop":{"version":1,"container":"map"}}"#
+    try v1Envelope(schema).write(to: root.appendingPathComponent("data.schema.json"))
+    try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
+    try Data(#"{"count":1}"#.utf8).write(to: root.appendingPathComponent("assets/initial.json"))
+}
+
+private func v1Envelope(_ schema: String) throws -> Data {
+    let application = try JSONSerialization.jsonObject(with: Data(schema.utf8))
+    return try JSONSerialization.data(withJSONObject: ["type": "object", "additionalProperties": false,
+        "required": ["$slop", "data"], "properties": ["data": application,
+        "$slop": ["type": "object", "additionalProperties": false, "required": ["format", "baseRevision"],
+        "properties": ["format": ["const": 1], "baseRevision": ["type": "string", "minLength": 1]]]]])
 }

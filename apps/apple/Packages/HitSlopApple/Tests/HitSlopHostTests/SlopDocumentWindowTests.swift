@@ -26,6 +26,7 @@ import Testing
     #expect(window.styleMask.contains(.borderless))
     #expect(window.styleMask.contains(.miniaturizable))
     #expect(window.styleMask.contains(.resizable))
+    #expect(window.validateMenuItem(NSMenuItem(title: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")))
     #expect(window.representedURL?.standardizedFileURL == root.standardizedFileURL)
     #expect(window.miniwindowTitle == "Miniwindow Fixture")
     #expect(window.miniwindowImage != nil)
@@ -42,6 +43,17 @@ import Testing
 
     #expect(window.styleMask.contains(.miniaturizable))
     #expect(!window.styleMask.contains(.resizable))
+}
+
+@Test func openInMenuIncludesEditorsAndTerminals() {
+    let titles = slopOpenInCatalog().map(\.0)
+    #expect(titles.contains("Open in Cursor"))
+    #expect(titles.contains("Open in Visual Studio Code"))
+    #expect(titles.contains("Open in Terminal"))
+    #expect(titles.contains("Open in iTerm"))
+    #expect(titles.contains("Open in Warp"))
+    #expect(titles.contains("Open in Wave"))
+    #expect(titles.contains("Open in Ghostty"))
 }
 
 @Test func dockMenuImageFallsBackToTheWorkspaceIcon() {

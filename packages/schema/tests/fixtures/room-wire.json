@@ -1,0 +1,105 @@
+{
+  "server": [
+    {
+      "type": "welcome",
+      "protocol": 1,
+      "bootId": "fixture-boot",
+      "peers": []
+    },
+    {
+      "type": "presence",
+      "peers": [
+        {
+          "id": "friend",
+          "name": "Friend"
+        }
+      ]
+    },
+    {
+      "type": "updates",
+      "documentId": "fixture-room",
+      "schema": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "updates": [
+        {
+          "sequence": 2,
+          "batch": {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+            "bytes": "AQ=="
+          }
+        }
+      ]
+    },
+    {
+      "type": "ready",
+      "head": 2,
+      "bootId": "fixture-boot",
+      "peers": []
+    },
+    {
+      "type": "ack",
+      "id": "11111111-1111-4111-8111-111111111111",
+      "hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "sequence": 2
+    },
+    {
+      "type": "error",
+      "status": 403,
+      "message": "Access revoked"
+    }
+  ],
+  "client": [
+    {
+      "type": "hello",
+      "protocol": 1,
+      "documentId": "fixture-room",
+      "schema": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "after": 1,
+      "batchSize": 8
+    },
+    {
+      "type": "applied",
+      "sequence": 2
+    },
+    {
+      "type": "append",
+      "protocol": 1,
+      "documentId": "fixture-room",
+      "schema": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "batch": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+        "bytes": "AQ=="
+      }
+    }
+  ],
+  "invalidServer": [
+    {
+      "type": "welcome",
+      "protocol": 1
+    },
+    {
+      "type": "ack"
+    },
+    {
+      "type": "future"
+    },
+    {
+      "type": "presence",
+      "peers": [],
+      "head": 2
+    }
+  ],
+  "invalidClient": [
+    {
+      "type": "hello",
+      "protocol": 1
+    },
+    {
+      "type": "applied"
+    },
+    {
+      "type": "append"
+    }
+  ]
+}

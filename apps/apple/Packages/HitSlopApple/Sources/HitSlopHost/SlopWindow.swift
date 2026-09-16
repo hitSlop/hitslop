@@ -11,6 +11,12 @@ private final class FramelessDocumentWindow: NSWindow {
     override func performClose(_ sender: Any?) {
         if delegate?.windowShouldClose?(self) ?? true { close() }
     }
+    override func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        // AppKit disables Close for borderless windows despite our custom
+        // performClose implementation and asynchronous save-on-close delegate.
+        if menuItem.action == #selector(NSWindow.performClose(_:)) { return true }
+        return super.validateMenuItem(menuItem)
+    }
 }
 
 func slopDocumentWindowStyleMask(resizable: Bool) -> NSWindow.StyleMask {
@@ -140,14 +146,26 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
 }
 
+public enum SlopDocumentCommand: Equatable, Sendable {
+    case pin(Bool), exportPNG, exportPDF, duplicate, share, reveal, copyPath, openEditor(URL), retry, close
+}
+
 @MainActor public final class SlopDocumentWindowController: NSWindowController, NSWindowDelegate, SlopRuntimeSessionDelegate {
     public let packageURL: URL
     public let session: SlopRuntimeSession
     public var onClose: (() -> Void)?
+    public var onPrepareClose: (() async -> Void)?
+    public var onCloseCancelled: (() -> Void)?
     public var onOpenDocument: ((URL) -> Void)?
+    public var onCommand: ((SlopDocumentCommand) -> Void)?
+    public var onRuntimeReady: (() -> Void)?
+    public var onRuntimeFailure: ((String) -> Void)?
+    public var onShare: (() -> Void)?
     private let opened: SlopOpenedDocument
     private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?, hideWork: DispatchWorkItem?
     private var failedOverlay: NSHostingView<FailureOverlay>?
+    private var presentedRuntimeError: String?
+    private var commandsEnabled = true
 
     public init(packageURL: URL) throws {
         let opened = try SlopOpenedDocument(presentedURL: packageURL)
@@ -168,7 +186,6 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         window.contentView = container; window.center()
         super.init(window: window)
         window.delegate = self; session.delegate = self; container.changed = { [weak self] in $0 ? self?.showToolbar() : self?.scheduleHide() }
-        opened.onFlushError = { [weak self] error in self?.present("Could not save to iCloud", error) }
         setupToolbar()
         SlopDocumentAssetRefreshQueue.invalidate(self.packageURL)
         SlopPreviewWriter.installExistingPreview(for: self.packageURL)
@@ -176,7 +193,10 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     required init?(coder: NSCoder) { nil }
 
-    public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) { failedOverlay?.removeFromSuperview(); failedOverlay = nil }
+    public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {
+        if let onRuntimeReady { onRuntimeReady() }
+        else { updateRuntimeFailure(nil) }
+    }
     public func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo requested: CGSize) throws -> CGSize {
         guard let window else { throw SlopPackageError.invalid("document window is unavailable") }
         let frame = dynamicSlopWindowFrame(current: window.frame, requested: requested, visible: window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame)
@@ -188,7 +208,10 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         guard let window else { throw SlopPackageError.invalid("document window is unavailable") }
         try session.performWindowDrag(on: window)
     }
-    public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) { showFailure(error) }
+    public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {
+        if let onRuntimeFailure { onRuntimeFailure(error.localizedDescription) }
+        else { updateRuntimeFailure(error.localizedDescription) }
+    }
 
     private func setupToolbar() {
         let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 388, height: 44), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -200,7 +223,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         window?.addChildWindow(panel, ordered: .above); panel.orderOut(nil); toolbar = panel; toolbarHost = host
     }
     private func toolbarView() -> SlopToolbar {
-        SlopToolbar(drag: { [weak self] event in self?.dragWindow(with: event) }, pinned: isPinned, close: { [weak self] in self?.close() }, minimize: { [weak self] in self?.miniaturizeFromToolbar() }, pin: { [weak self] in self?.togglePin() }, duplicate: { [weak self] in self?.duplicate() }, png: { [weak self] in self?.export(.png) }, pdf: { [weak self] in self?.export(.pdf) }, share: { [weak self] in self?.share() }, reveal: { [weak self] in self?.reveal() }, copyPath: { [weak self] in self?.copyPath() }, editors: installedEditors(), openEditor: { [weak self] url in self?.openInEditor(url) })
+        SlopToolbar(drag: { [weak self] event in self?.dragWindow(with: event) }, pinned: isPinned, commandsEnabled: commandsEnabled, close: { [weak self] in self?.request(.close) }, minimize: { [weak self] in self?.miniaturizeFromToolbar() }, pin: { [weak self] in self?.request(.pin(!(self?.isPinned ?? false))) }, duplicate: { [weak self] in self?.request(.duplicate) }, png: { [weak self] in self?.request(.exportPNG) }, pdf: { [weak self] in self?.request(.exportPDF) }, share: { [weak self] in self?.request(.share) }, reveal: { [weak self] in self?.request(.reveal) }, copyPath: { [weak self] in self?.request(.copyPath) }, editors: installedEditors(), openEditor: { [weak self] url in self?.request(.openEditor(url)) })
     }
     private func dragWindow(with event: NSEvent) { hideWork?.cancel(); window?.performDrag(with: event); showToolbar() }
     private func miniaturizeFromToolbar() { hideWork?.cancel(); toolbar?.orderOut(nil); window?.miniaturize(nil) }
@@ -223,11 +246,64 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         slopDockMenuImage(iconURL: session.package.iconURL, fallbackURL: packageURL)
     }
     public func owns(_ candidate: NSWindow?) -> Bool { candidate === window || candidate === toolbar }
-    public func togglePinFromMenu() { togglePin() }
-    public func duplicateFromMenu() { duplicate() }
-    public func exportPNGFromMenu() { export(.png) }
-    public func exportPDFFromMenu() { export(.pdf) }
-    public func shareFromMenu() { share() }
+    public func togglePinFromMenu() { request(.pin(!isPinned)) }
+    public func duplicateFromMenu() { request(.duplicate) }
+    public func exportPNGFromMenu() { request(.exportPNG) }
+    public func exportPDFFromMenu() { request(.exportPDF) }
+    public func shareFromMenu() { request(.share) }
+    public func updatePresentation(pinned: Bool, commandsEnabled: Bool, runtimeError: String?) {
+        updateRuntimeFailure(runtimeError)
+        guard isPinned != pinned || self.commandsEnabled != commandsEnabled else { return }
+        window?.level = pinned ? .floating : .normal
+        self.commandsEnabled = commandsEnabled
+        toolbarHost?.rootView = toolbarView()
+    }
+    private func request(_ command: SlopDocumentCommand) {
+        if let onCommand { onCommand(command); return }
+        Task { do { if let url = try await perform(command) { onOpenDocument?(url) } } catch { present("Could not complete command", error) } }
+    }
+    public func perform(_ command: SlopDocumentCommand) async throws -> URL? {
+        switch command {
+        case .pin(let pinned): window?.level = pinned ? .floating : .normal; toolbarHost?.rootView = toolbarView()
+        case .duplicate:
+            let panel = NSSavePanel(); panel.allowedContentTypes = [.slop]
+            panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + " copy.slop"
+            panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
+            let response = await withCheckedContinuation { continuation in
+                if let window { panel.beginSheetModal(for: window) { continuation.resume(returning: $0) } }
+                else { panel.begin { continuation.resume(returning: $0) } }
+            }
+            guard response == .OK, let target = panel.url else { return nil }
+            try await session.flush()
+            let destination = try SlopDuplicator.duplicate(from: session.package.rootURL, to: target)
+            do {
+                if let document = session.collaborativeDocument {
+                    let copy = try await document.independentCopy(to: destination)
+                    try await copy.close()
+                }
+                return destination
+            } catch {
+                try? FileManager.default.removeItem(at: destination)
+                throw error
+            }
+        case .exportPNG: export(.png)
+        case .exportPDF: export(.pdf)
+        case .share:
+            if let onShare { onShare() } else { share() }
+        case .reveal: reveal()
+        case .copyPath: copyPath()
+        case .openEditor(let app): try await openInEditor(app)
+        case .retry:
+            updateRuntimeFailure(nil)
+            session.reload()
+        case .close:
+            try await prepareToClose()
+            do { try await session.finish() } catch { onCloseCancelled?(); throw error }
+            closePrepared = true
+            window?.close()
+        }
+        return nil
+    }
     public func revealFromDock() {
         showWindow(nil)
         window?.deminiaturize(nil)
@@ -236,13 +312,12 @@ private struct ToolbarDragHandle: NSViewRepresentable {
 
     private func duplicate() {
         guard let window else { return }; let panel = NSSavePanel(); panel.allowedContentTypes = [.slop]; panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + " copy.slop"
-        panel.directoryURL = SlopCloud.defaultCreationDirectory()
+        panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let self, let target = panel.url else { return }
                 Task {
                     do {
                         try await self.session.flush()
-                        try self.opened.flush()
                         self.onOpenDocument?(try SlopDuplicator.duplicate(from: self.session.package.rootURL, to: target))
                     } catch { self.present("Could not duplicate", error) }
                 }
@@ -258,21 +333,23 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     private func reveal() { NSWorkspace.shared.activateFileViewerSelecting([packageURL]) }
     private func copyPath() { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(packageURL.path, forType: .string) }
     private func installedEditors() -> [(String, URL)] {
-        // Resolve via Launch Services first so non-/Applications installs work.
-        [
-            ("Open in Cursor", "com.todesktop.230313mzl4w4u92", "/Applications/Cursor.app"),
-            ("Open in Visual Studio Code", "com.microsoft.VSCode", "/Applications/Visual Studio Code.app"),
-            ("Open in VS Code Insiders", "com.microsoft.VSCodeInsiders", "/Applications/Visual Studio Code - Insiders.app"),
-        ].compactMap { title, bundleID, fallbackPath in
+        slopOpenInCatalog().compactMap { title, bundleID, fallbackPath in
             if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) { return (title, url) }
             return FileManager.default.fileExists(atPath: fallbackPath) ? (title, URL(fileURLWithPath: fallbackPath)) : nil
         }
     }
-    private func openInEditor(_ app: URL) { NSWorkspace.shared.open([packageURL], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration()) }
+    private func openInEditor(_ app: URL) async throws {
+        let directory = URL(fileURLWithPath: packageURL.path, isDirectory: true)
+        _ = try await NSWorkspace.shared.open([directory], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+    }
 
-    private func showFailure(_ error: Error) {
-        guard let content = window?.contentView else { return }; failedOverlay?.removeFromSuperview()
-        let overlay = NSHostingView(rootView: FailureOverlay(message: error.localizedDescription, retry: { [weak self] in self?.failedOverlay?.removeFromSuperview(); self?.failedOverlay = nil; self?.session.reload() }))
+    private func updateRuntimeFailure(_ message: String?) {
+        guard presentedRuntimeError != message else { return }
+        presentedRuntimeError = message
+        failedOverlay?.removeFromSuperview()
+        failedOverlay = nil
+        guard let message, let content = window?.contentView else { return }
+        let overlay = NSHostingView(rootView: FailureOverlay(message: message, retry: { [weak self] in self?.request(.retry) }))
         overlay.frame = content.bounds; overlay.autoresizingMask = [.width, .height]; content.addSubview(overlay); failedOverlay = overlay
     }
     public func windowDidMove(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
@@ -284,7 +361,8 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     public func prepareToClose() async throws {
         try await session.flush()
-        try opened.flush()
+        await onPrepareClose?()
+        do { try await session.flush() } catch { onCloseCancelled?(); throw error }
         do {
             let snapshot = try SlopRenderSnapshot(packageURL: session.package.rootURL)
             SlopDocumentAssetRefreshQueue.schedule(snapshot: snapshot, presentedURL: packageURL)
@@ -295,12 +373,13 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     }
     public func windowShouldClose(_ sender: NSWindow) -> Bool {
         if closePrepared { return true }
+        if let onCommand { onCommand(.close); return false }
         guard !preparingClose else { return false }
         preparingClose = true
         Task {
             defer { preparingClose = false }
-            do { try await prepareToClose(); closePrepared = true; sender.close() }
-            catch { present("Changes could not be saved", error) }
+            do { try await prepareToClose(); try await session.finish(); closePrepared = true; sender.close() }
+            catch { onCloseCancelled?(); present("Changes could not be saved", error) }
         }
         return false
     }
@@ -321,20 +400,36 @@ private struct FailureOverlay: View {
 
 private struct SlopToolbar: View {
     let drag: (NSEvent) -> Void
-    let pinned: Bool, close: () -> Void, minimize: () -> Void, pin: () -> Void, duplicate: () -> Void, png: () -> Void, pdf: () -> Void, share: () -> Void, reveal: () -> Void, copyPath: () -> Void
+    let pinned: Bool, commandsEnabled: Bool, close: () -> Void, minimize: () -> Void, pin: () -> Void, duplicate: () -> Void, png: () -> Void, pdf: () -> Void, share: () -> Void, reveal: () -> Void, copyPath: () -> Void
     let editors: [(String, URL)], openEditor: (URL) -> Void
     var body: some View {
         HStack(spacing: 3) {
             ToolbarDragHandle(onDrag: drag).frame(width: 20, height: 25).help("Drag window")
             Divider().frame(height: 16)
-            icon("xmark", "Close", close); icon("minus", "Minimize", minimize); icon(pinned ? "pin.fill" : "pin", pinned ? "Unpin" : "Always on Top", pin); Divider().frame(height: 16)
+            icon("xmark", "Close", close); icon("minus", "Minimize", minimize); icon(pinned ? "pin.fill" : "pin", pinned ? "Unpin" : "Always on Top", pin).disabled(!commandsEnabled); Divider().frame(height: 16)
+            Group {
             icon("doc.on.doc", "Duplicate", duplicate)
             Menu { Button("Export PNG…", action: png); Button("Export PDF…", action: pdf) } label: { Image(systemName: "arrow.down.doc").frame(width: 25, height: 25) }.menuStyle(.borderlessButton).fixedSize().help("Export")
             icon("square.and.arrow.up", "Share", share)
             Menu { ForEach(editors, id: \.1) { editor in Button(editor.0) { openEditor(editor.1) } }; if !editors.isEmpty { Divider() }; Button("Reveal in Finder", action: reveal); Button("Copy Path", action: copyPath) } label: { Image(systemName: "arrow.up.forward.square").frame(width: 25, height: 25) }.menuStyle(.borderlessButton).fixedSize().help("Open in")
+            }.disabled(!commandsEnabled)
         }.padding(.horizontal, 9).padding(.vertical, 6).background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.25))).padding(2)
     }
     private func icon(_ name: String, _ help: String, _ action: @escaping () -> Void) -> some View { Button(action: action) { Image(systemName: name).frame(width: 25, height: 25).contentShape(Rectangle()) }.buttonStyle(.plain).help(help) }
+}
+
+/// Launch Services first, then these fallback paths, so non-/Applications installs still appear.
+func slopOpenInCatalog() -> [(String, String, String)] {
+    [
+        ("Open in Cursor", "com.todesktop.230313mzl4w4u92", "/Applications/Cursor.app"),
+        ("Open in Visual Studio Code", "com.microsoft.VSCode", "/Applications/Visual Studio Code.app"),
+        ("Open in VS Code Insiders", "com.microsoft.VSCodeInsiders", "/Applications/Visual Studio Code - Insiders.app"),
+        ("Open in Terminal", "com.apple.Terminal", "/System/Applications/Utilities/Terminal.app"),
+        ("Open in iTerm", "com.googlecode.iterm2", "/Applications/iTerm.app"),
+        ("Open in Warp", "dev.warp.Warp-Stable", "/Applications/Warp.app"),
+        ("Open in Wave", "dev.commandline.waveterm", "/Applications/Wave.app"),
+        ("Open in Ghostty", "com.mitchellh.ghostty", "/Applications/Ghostty.app"),
+    ]
 }
 
 public extension UTType { static let slop = UTType(exportedAs: "com.hitslop.slop", conformingTo: .package) }

@@ -14,10 +14,6 @@ public enum HitSlopFirebase {
         #endif
     }
 
-    public static func catalogURL(default url: URL) -> URL {
-        usesEmulators ? URL(string: "http://127.0.0.1:5002")! : url
-    }
-
     public static func configure() {
         guard FirebaseApp.allApps?.isEmpty != false else { return }
         #if DEBUG

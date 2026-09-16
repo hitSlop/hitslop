@@ -19,7 +19,8 @@ import Testing
     _ = try await session.webView.evaluateJavaScript("document.querySelector('button[aria-label=\"Increase count\"]').click()")
     try await session.flush()
     let jsonURL = document.appendingPathComponent("stores/data.json")
-    let saved = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: jsonURL)) as? [String: Any])
+    let savedEnvelope = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: jsonURL)) as? [String: Any])
+    let saved = try #require(savedEnvelope["data"] as? [String: Any])
     #expect(saved["count"] as? Int == 1)
     session.close()
 
@@ -28,7 +29,9 @@ import Testing
     reopened.load()
     try await reopened.waitUntilReady()
     #expect(try await reopened.webView.evaluateJavaScript("document.querySelector('output').textContent") as? String == "1")
-    try Data(#"{"count":42,"future":{"keep":true}}"#.utf8).write(to: jsonURL, options: .atomic)
+    var external = savedEnvelope
+    external["data"] = ["count": 42, "future": ["keep": true]]
+    try JSONSerialization.data(withJSONObject: external).write(to: jsonURL, options: .atomic)
     let deadline = ContinuousClock.now.advanced(by: .seconds(4))
     var count: String?
     repeat {
@@ -39,7 +42,8 @@ import Testing
     #expect(count == "42")
     _ = try await reopened.webView.evaluateJavaScript("document.querySelector('button[aria-label=\"Increase count\"]').click()")
     try await reopened.flush()
-    let updated = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: jsonURL)) as? [String: Any])
+    let updatedEnvelope = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: jsonURL)) as? [String: Any])
+    let updated = try #require(updatedEnvelope["data"] as? [String: Any])
     #expect(updated["count"] as? Int == 43)
     #expect((updated["future"] as? [String: Bool])?["keep"] == true)
 }

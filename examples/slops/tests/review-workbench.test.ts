@@ -9,7 +9,7 @@ async function fixture(run: (path: string) => Promise<void>) {
   try {
     await writeFile(
       join(path, "schema.ts"),
-      'export default { type: "object", properties: { text: { type: "string" } }, required: ["text"], additionalProperties: true };',
+      'export default { type: "object", "x-hitslop": { version: 1, container: "map" }, properties: { text: { type: "string" } }, required: ["text"], additionalProperties: true };',
     );
     await run(path);
   } finally {
@@ -22,9 +22,7 @@ test("review fixtures are optional, validated, and uniquely named", async () =>
     expect((await loadReview(path)).cases).toEqual([]);
     const write = (cases: unknown) =>
       writeFile(join(path, "review.json"), JSON.stringify({ cases }));
-    await write([
-      { id: "empty", label: "Empty", data: { text: "", extra: 1 } },
-    ]);
+    await write([{ id: "empty", label: "Empty", data: { text: "", extra: 1 } }]);
     expect((await loadReview(path)).cases[0]?.data).toEqual({
       text: "",
       extra: 1,
@@ -61,9 +59,7 @@ test("workbench safely embeds labels and uses fixed review panes", () => {
     },
     {
       fingerprint: "abc",
-      cases: [
-        { id: "test", label: "</script><script>alert(2)</script>", data: {} },
-      ],
+      cases: [{ id: "test", label: "</script><script>alert(2)</script>", data: {} }],
     },
   );
   expect(html).not.toContain("<script>alert(");

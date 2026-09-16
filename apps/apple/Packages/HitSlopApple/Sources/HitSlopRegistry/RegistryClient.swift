@@ -1,35 +1,14 @@
 import Combine
-import FirebaseFirestore
-import FirebaseFunctions
 import Foundation
-import HitSlopCore
-import HitSlopFirebase
+import HitSlopRuntime
 
-extension RegistryTemplate: Identifiable {
-    public var searchText: String {
-        ([title, description, authorName] + categories).joined(separator: " ").localizedLowercase
-    }
+public typealias RegistryTemplate = SlopCatalogTemplate
 
-    public var currentManifest: SlopManifest? {
-        guard let data = currentRelease.manifestJSON.data(using: .utf8) else { return nil }
-        return try? JSONDecoder().decode(SlopManifest.self, from: data)
-    }
-
-    public func remoteTemplate() -> SlopRemoteTemplate {
-        SlopRemoteTemplate(
-            publisherKeyID: publisherKeyID,
-            slug: slug,
-            release: currentRelease.number,
-            artifactKey: currentRelease.artifact.key,
-            artifactSha256: currentRelease.artifact.sha256
-        )
-    }
-}
+extension RegistryTemplate: Identifiable {}
 
 public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
     case popular
     case new
-
     public var id: String { rawValue }
     public var title: String { self == .popular ? "Popular" : "New" }
 }
@@ -38,103 +17,63 @@ public enum RegistrySort: String, CaseIterable, Identifiable, Sendable {
     @Published public private(set) var templates: [RegistryTemplate] = []
     @Published public private(set) var errorMessage: String?
     public let catalogURL: URL
-
-    private let firestore: Firestore
-    private let functions: Functions
-    private var listener: ListenerRegistration?
-    private var catalog: [(template: RegistryTemplate, searchText: String)] = []
+    private let api: SlopCloudAPI
+    private var loadTask: Task<Void, Never>?
+    private var catalog: [RegistryTemplate] = []
     private var term = ""
     private var category: String?
     private var sort: RegistrySort = .popular
 
     public init(catalogURL: URL) {
-        self.catalogURL = HitSlopFirebase.catalogURL(default: catalogURL)
-        firestore = Firestore.firestore()
-        functions = Functions.functions(region: "us-central1")
-        if HitSlopFirebase.usesEmulators {
-        firestore.useEmulator(withHost: "127.0.0.1", port: 8080)
-        let settings = firestore.settings
-        settings.cacheSettings = MemoryCacheSettings()
-        settings.isSSLEnabled = false
-        firestore.settings = settings
-        functions.useEmulator(withHost: "127.0.0.1", port: 5001)
+        self.catalogURL = catalogURL
+        self.api = SlopCloudAPI(origin: catalogURL)
+        refresh()
+    }
+
+    deinit { loadTask?.cancel() }
+
+    public func refresh() {
+        loadTask?.cancel()
+        loadTask = Task { [weak self, api] in
+            do {
+                let templates = try await api.catalog()
+                try Task.checkCancellation()
+                guard let self else { return }
+                catalog = templates
+                errorMessage = nil
+                applyFilters()
+            } catch {
+                guard !Task.isCancelled else { return }
+                self?.errorMessage = error.localizedDescription
+            }
         }
-        subscribe()
     }
 
     public func search(_ term: String, category: String? = nil) {
-        let categoryChanged = self.category != category
         self.term = term.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase
         self.category = category
-        if categoryChanged { subscribe() } else { applyFilters() }
+        applyFilters()
     }
 
     public func list(category: String? = nil, sort: RegistrySort = .popular) {
         term = ""
-        let queryChanged = self.category != category || self.sort != sort
         self.category = category
         self.sort = sort
-        if queryChanged { subscribe() } else { applyFilters() }
+        applyFilters()
     }
 
     public func recordCreation(template: RegistryTemplate) async {
-        do {
-            _ = try await functions.httpsCallable("recordCreation").call(["templateId": template.id])
-            HitSlopFirebase.log("template_created", parameters: ["template_slug": template.slug])
-        } catch {
-            HitSlopFirebase.record(error)
-        }
-    }
-
-    private func subscribe() {
-        listener?.remove()
-        var query: Query = firestore.collection("templates")
-            .whereField("visibility", isEqualTo: "public")
-        if let category {
-            query = query.whereField("categories", arrayContains: category)
-        }
-        switch sort {
-        case .popular:
-            query = query
-                .order(by: "creationCount", descending: true)
-                .order(by: "firstPublishedAt", descending: true)
-        case .new:
-            query = query.order(by: "firstPublishedAt", descending: true)
-        }
-        listener = query
-            .limit(to: 200)
-            .addSnapshotListener { [weak self] snapshot, error in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if let error {
-                        self.errorMessage = error.localizedDescription
-                        HitSlopFirebase.record(error)
-                        HitSlopFirebase.log("catalog_load_failed")
-                        return
-                    }
-                    var invalidCount = 0
-                    self.catalog = (snapshot?.documents ?? []).compactMap { document in
-                        do {
-                            let template = try document.data(as: RegistryTemplate.self)
-                            guard template.id == document.documentID else {
-                                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Registry template id does not match document id"))
-                            }
-                            return (template: template, searchText: template.searchText)
-                        }
-                        catch {
-                            invalidCount += 1
-                            HitSlopFirebase.record(error)
-                            return nil
-                        }
-                    }
-                    self.errorMessage = invalidCount == 0 ? nil : "Skipped \(invalidCount) invalid catalog entries."
-                    self.applyFilters()
-                    HitSlopFirebase.log("catalog_loaded", parameters: ["template_count": self.catalog.count, "catalog_sort": self.sort.rawValue])
-                }
-            }
+        try? await api.recordCreation(templateId: template.id)
     }
 
     private func applyFilters() {
-        templates = catalog.filter { term.isEmpty || $0.searchText.contains(term) }.map(\.template)
+        templates = catalog.filter { template in
+            (term.isEmpty || template.searchText.contains(term)) &&
+            (category == nil || template.categories.contains { $0.rawValue == category })
+        }.sorted {
+            if sort == .popular, $0.creationCount != $1.creationCount { return $0.creationCount > $1.creationCount }
+            if $0.release.publishedAt != $1.release.publishedAt { return $0.release.publishedAt > $1.release.publishedAt }
+            return $0.id < $1.id
+        }
     }
 }

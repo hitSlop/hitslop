@@ -51,29 +51,53 @@ public extension SlopRuntimeSessionDelegate {
     weak var session: SlopRuntimeSession?
     private let package: SlopPackage
     private let storage: SlopStorageWorker
+    private let document: SlopLoroDocument?
+    private let documentError: Error?
     private let requestSchema: JSONSchema
+    private var lease = SlopRequestLease()
+    private var inFlight = 0
+    private var mediaWriteInFlight = false
 
     init(package: SlopPackage) throws {
         self.package = package
         storage = SlopStorageWorker(package: package)
+        do { document = try SlopLoroDocument.open(package: package); documentError = nil }
+        catch { document = nil; documentError = error }
         requestSchema = try JSONSchema(data: Data(contentsOf: Bundle.module.url(forResource: "bridge-request.schema", withExtension: "json")!))
     }
-    func close() { storage.close() }
+    fileprivate var collaborativeDocument: SlopLoroDocument? { document }
+    func finish() async throws { if let document { try await document.close() }; storage.close() }
+    func invalidate() {
+        lease.invalidate()
+    }
+    func reset() async {
+        lease.invalidate()
+        if let document { await document.resetGuestSessions() }
+        lease = SlopRequestLease()
+    }
+    func close() {
+        invalidate(); storage.close()
+        if let document { Task { await document.shutDown() } }
+    }
     func revisions() async -> SlopRevisions { await storage.revisions() }
-
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
         func failure(_ error: Error) {
-            let code = (error as? SlopBridgeFailure)?.code ?? .storageError
-            replyHandler(["ok": false, "error": ["code": code.rawValue, "message": error.localizedDescription]], nil)
+            print("[hitSlop bridge] \(error.localizedDescription)")
+            let publicError = SlopRuntimeSecurity.publicFailure(error)
+            replyHandler(["ok": false, "error": ["code": publicError.code.rawValue, "message": publicError.message]], nil)
         }
         do {
-            guard message.frameInfo.isMainFrame, message.frameInfo.securityOrigin.protocol == "slop",
+            guard let session, session.accepts(message.webView, frame: message.frameInfo),
                   let body = message.body as? [String: Any], let raw = body["method"] as? String,
                   let method = SlopBridgeMethod(rawValue: raw) else { throw SlopBridgeFailure(.invalidRequest, "Malformed document request") }
+            try lease.check()
+            let limit = SlopRuntimeSecurity.requestLimit(method)
+            try SlopJSONLimits.checkObject(body, maximumBytes: limit)
             let data = try JSONSerialization.data(withJSONObject: body)
-            guard data.count <= 36 * 1024 * 1024 else { throw SlopBridgeFailure(.limitExceeded, "Host request exceeds 36 MiB") }
+            try SlopJSONLimits.check(data, maximumBytes: limit)
+            guard inFlight < 8, method != .mediaWrite || !mediaWriteInFlight else { throw SlopBridgeFailure(.limitExceeded, "Too many outstanding host requests; wait for the previous operation") }
             let validation = try JSON(data: data).validate(with: requestSchema)
-            guard validation.isValid else { throw SlopBridgeFailure(.invalidRequest, "Malformed host request: \(validation)") }
+            guard validation.isValid else { throw SlopBridgeFailure(.invalidRequest, "Malformed host request") }
             let value: Any
             switch method {
             case .hostInfo:
@@ -84,9 +108,9 @@ public extension SlopRuntimeSessionDelegate {
                 if package.isSkinned { capabilities.removeAll { $0 == "window.resize" } }
                 value = ["protocolVersion": slopProtocolVersion, "capabilities": capabilities]
             case .log: print("[slop guest] \(body["message"] as? String ?? "")"); value = NSNull()
-            case .ready: session?.bridgeDidBecomeReady(); value = NSNull()
+            case .ready: session.bridgeDidBecomeReady(); value = NSNull()
             case .windowResize:
-                guard !package.isSkinned, let session else { throw SlopBridgeFailure(.unsupported, "PNG-skinned documents have a fixed window size") }
+                guard !package.isSkinned else { throw SlopBridgeFailure(.unsupported, "PNG-skinned documents have a fixed window size") }
                 guard let width = body["width"] as? NSNumber, let height = body["height"] as? NSNumber else {
                     throw SlopBridgeFailure(.invalidRequest, "Missing window dimensions")
                 }
@@ -94,15 +118,30 @@ public extension SlopRuntimeSessionDelegate {
                 let applied = try session.bridgeDidRequestResize(size)
                 value = ["width": applied.width, "height": applied.height]
             case .windowDrag:
-                guard let session else { throw SlopBridgeFailure(.closed, "Document is closed") }
                 try session.bridgeDidRequestWindowDrag()
                 value = NSNull()
             default:
+                inFlight += 1
+                if method == .mediaWrite { mediaWriteInFlight = true }
+                let requestLease = lease
                 Task {
+                    defer { inFlight -= 1; if method == .mediaWrite { mediaWriteInFlight = false } }
                     do {
-                        let result = try await storage.perform(data)
-                        if let kind = result.kind { session?.bridgeDidCommit(kind: kind, revision: result.revision, name: result.name) }
-                        replyHandler(["ok": true, "value": result.value], nil)
+                        try requestLease.check()
+                        let result: Any
+                        switch method {
+                        case .documentOpen, .documentApply, .documentFlush, .documentReleaseDraft:
+                            guard let document else { throw documentError ?? SlopBridgeFailure(.unsupported, "This slop does not use document data") }
+                            result = try await document.guestRequest(method, body: data, lease: requestLease).jsonValue()
+                            try requestLease.check()
+                            if method == .documentApply { session.bridgeDidCommit(kind: .document, revision: nil) }
+                        default:
+                            let stored = try await storage.perform(data, lease: requestLease)
+                            try requestLease.check()
+                            result = stored.value
+                            if let kind = stored.kind { session.bridgeDidCommit(kind: kind, revision: stored.revision, name: stored.name) }
+                        }
+                        replyHandler(["ok": true, "value": result], nil)
                     } catch { failure(error) }
                 }
                 return
@@ -114,7 +153,7 @@ public extension SlopRuntimeSessionDelegate {
 private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     private let package: SlopPackage
     private let theme: SlopThemeStore
-    init(package: SlopPackage) { self.package = package; theme = SlopThemeStore(url: package.themeOverrideURL, defaultURL: package.rootURL.appendingPathComponent("assets/theme.css")) }
+    init(package: SlopPackage) { self.package = package; theme = SlopThemeStore(url: package.themeOverrideURL, defaultURL: package.rootURL.appendingPathComponent("assets/theme.css"), rootURL: package.rootURL) }
     func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
         guard let url = task.request.url else { task.didFailWithError(SlopPackageError.invalid("missing resource URL")); return }
         do {
@@ -122,7 +161,8 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
             let headers = [
                 "Content-Type": resource.mime, "Content-Length": String(resource.data.count), "Cache-Control": "no-store",
                 "Cross-Origin-Resource-Policy": "same-origin",
-                "Content-Security-Policy": "default-src 'none'; script-src slop: 'unsafe-inline' 'wasm-unsafe-eval'; style-src slop: 'unsafe-inline'; img-src slop: data: blob: https: http:; media-src slop: data: blob: https: http:; font-src slop: data: https: http:; connect-src slop: blob: https: http: wss: ws:; worker-src blob:"
+                "X-Content-Type-Options": "nosniff",
+                "Content-Security-Policy": "default-src 'none'; script-src slop: 'unsafe-inline' 'wasm-unsafe-eval'; style-src slop: 'unsafe-inline'; img-src slop: data: blob: https: http:; media-src slop: data: blob: https: http:; font-src slop: data: https: http:; connect-src slop: blob: https: http: wss: ws:; worker-src blob:; base-uri 'none'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; form-action 'none'"
             ]
             guard let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers) else { throw SlopPackageError.invalid("could not serve resource") }
             task.didReceive(response); task.didReceive(resource.data); task.didFinish()
@@ -130,7 +170,8 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     }
     func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
     private func resource(for url: URL) throws -> (data: Data, mime: String) {
-        if ["", "/", "/index.html"].contains(url.path) { return (try Data(contentsOf: package.entryURL), "text/html; charset=utf-8") }
+        guard SlopRuntimeSecurity.isOrigin(url) else { throw SlopPackageError.invalid("foreign resource origin") }
+        if ["", "/", "/index.html"].contains(url.path) { return (try SlopFile.read(package.entryURL, within: package.rootURL), "text/html; charset=utf-8") }
         if url.path == "/theme.css" {
             return (theme.stylesheet(), "text/css; charset=utf-8")
         }
@@ -138,12 +179,12 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
             let name = String(url.path.dropFirst("/media/".count)).removingPercentEncoding ?? ""
             let resource = try package.mediaURL(name: name)
             guard FileManager.default.fileExists(atPath: resource.path) else { throw SlopPackageError.missing(url.path) }
-            let data = try Data(contentsOf: resource)
+            let data = try SlopFile.read(resource, within: package.rootURL)
             return (data, try SlopMediaStore.mediaMIMEType(data))
         }
         let resource = try package.assetURL(path: url.path)
         guard FileManager.default.fileExists(atPath: resource.path) else { throw SlopPackageError.missing(url.path) }
-        return (try Data(contentsOf: resource), Self.mime(resource.pathExtension))
+        return (try SlopFile.read(resource, within: package.rootURL), Self.mime(resource.pathExtension))
     }
     private static func mime(_ ext: String) -> String {
         ["js":"text/javascript", "mjs":"text/javascript", "wasm":"application/wasm", "png":"image/png", "jpg":"image/jpeg", "jpeg":"image/jpeg", "gif":"image/gif", "webp":"image/webp", "svg":"image/svg+xml", "css":"text/css", "json":"application/json", "woff":"font/woff", "woff2":"font/woff2", "mp3":"audio/mpeg", "mp4":"video/mp4"][ext.lowercased()] ?? "application/octet-stream"
@@ -153,22 +194,33 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
 @MainActor public final class SlopRuntimeSession: NSObject, WKNavigationDelegate {
     public let package: SlopPackage
     public let webView: WKWebView
+    public let purpose: SlopRuntimePurpose
+    private var acceptingRequests = true
+    private var reloadTask: Task<Void, Never>?
+    #if os(macOS)
+    private var openPanel: NSOpenPanel?
+    #endif
     let usesTransparentBackground: Bool
     public weak var delegate: (any SlopRuntimeSessionDelegate)?
     public var onStoreCommit: (() -> Void)?
+    public var collaborativeDocument: SlopLoroDocument? { bridge.collaborativeDocument }
     public private(set) var isReady = false
     private let bridge: SlopBridge
     private let schemeHandler: SlopSchemeHandler
-    private var timer: Timer?, jsonRevision: String?, mediaRevision: String?, themeRevision: String?, sequence = 0, retryCount = 0, closed = false, lastError: Error?
+    private var timer: Timer?, mediaRevision: String?, themeRevision: String?, sequence = 0, retryCount = 0, closed = false, lastError: Error?
     private var refreshTask: Task<Void, Never>?
+    private var documentEvents: Task<Void, Never>?
     #if os(macOS)
     private var packageWatcher: SlopPackageWatcher?
     #endif
 
-    public init(packageURL: URL, renderTargetsEnabled: Bool = false) throws {
+    public init(packageURL: URL, renderTargetsEnabled: Bool = false, purpose: SlopRuntimePurpose = .interactive) throws {
+        try SlopLocalDocument.requireLocal(packageURL)
+        self.purpose = purpose
         let package = try SlopPackage(rootURL: packageURL); self.package = package
         usesTransparentBackground = package.usesTransparentBackground
         let configuration = WKWebViewConfiguration(); configuration.websiteDataStore = .nonPersistent()
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         let handler = SlopSchemeHandler(package: package); schemeHandler = handler; configuration.setURLSchemeHandler(handler, forURLScheme: "slop")
         if renderTargetsEnabled {
             configuration.userContentController.addUserScript(WKUserScript(
@@ -203,15 +255,74 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         #endif
     }
 
-    public func load() { isReady = false; webView.load(URLRequest(url: URL(string: "slop://app/")!)) }
-    public func reload() { isReady = false; webView.reload() }
+    public func load() {
+        isReady = false
+        if documentEvents == nil, let document = bridge.collaborativeDocument {
+            documentEvents = Task { [weak self] in
+                do {
+                    try await document.start()
+                    for await frame in try await document.events() {
+                        guard let self, !self.closed else { return }
+                        let value = try frame.jsonValue()
+                        _ = try? await self.webView.callAsyncJavaScript(
+                            "window.__hitslopDocumentPublish?.(frame)",
+                            arguments: ["frame": value],
+                            in: nil,
+                            contentWorld: .page
+                        )
+                    }
+                } catch {
+                    await MainActor.run {
+                        guard let session = self else { return }
+                        session.delegate?.runtimeSession(session, didFail: error)
+                    }
+                }
+            }
+        }
+        webView.load(URLRequest(url: URL(string: "slop://app/")!))
+    }
+    public func reload() {
+        guard !closed else { return }
+        acceptingRequests = false; isReady = false; bridge.invalidate()
+        webView.stopLoading()
+        #if os(macOS)
+        openPanel?.cancel(nil); openPanel = nil
+        #endif
+        reloadTask?.cancel()
+        reloadTask = Task {
+            #if os(macOS)
+            await webView.setCameraCaptureState(.none)
+            await webView.setMicrophoneCaptureState(.none)
+            #endif
+            await bridge.reset()
+            guard !closed, !Task.isCancelled else { return }
+            acceptingRequests = true
+            webView.reload()
+        }
+    }
+    func accepts(_ sender: WKWebView?, frame: WKFrameInfo) -> Bool {
+        !closed && acceptingRequests && sender === webView && frame.isMainFrame
+            && frame.securityOrigin.protocol == "slop" && frame.securityOrigin.host == "app"
+            && frame.securityOrigin.port == 0
+    }
     public func flush() async throws {
         guard !closed else { throw SlopBridgeFailure(.closed, "Document is closed") }
         _ = try await webView.callAsyncJavaScript("await window.__hitslopFlush?.(); await window.slop?.flush?.(); return true", arguments: [:], in: nil, contentWorld: .page)
+        if let document = bridge.collaborativeDocument { try await document.flush() }
     }
+    public func finish() async throws { try await flush(); try await bridge.finish() }
     public func close() {
         guard !closed else { return }
-        closed = true
+        closed = true; acceptingRequests = false
+        reloadTask?.cancel(); reloadTask = nil
+        bridge.invalidate()
+        webView.stopLoading()
+        #if os(macOS)
+        openPanel?.cancel(nil); openPanel = nil
+        webView.setCameraCaptureState(.none, completionHandler: nil)
+        webView.setMicrophoneCaptureState(.none, completionHandler: nil)
+        #endif
+        documentEvents?.cancel(); documentEvents = nil
         refreshTask?.cancel(); refreshTask = nil
         timer?.invalidate(); timer = nil
         #if os(macOS)
@@ -231,10 +342,6 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     }
     fileprivate func bridgeDidBecomeReady() { guard !isReady else { return }; isReady = true; retryCount = 0; delegate?.runtimeSessionDidBecomeReady(self) }
     fileprivate func bridgeDidCommit(kind: SlopStoreKind, revision: String?, name: String? = nil) {
-        switch kind {
-        case .json: jsonRevision = revision
-        case .media: break
-        }
         emit(kind: kind, revision: revision, source: "app", name: name); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
     }
     fileprivate func bridgeDidRequestResize(_ size: CGSize) throws -> CGSize {
@@ -267,7 +374,9 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         let revisions = await bridge.revisions()
         guard !closed else { return }
         guard requestedAtSequence == sequence else { scheduleExternalRefresh(); return }
-        if revisions.json != jsonRevision { jsonRevision = revisions.json; emit(kind: .json, revision: revisions.json, source: "external") }
+        if let document = bridge.collaborativeDocument {
+            do { try await document.flush() } catch { delegate?.runtimeSession(self, didFail: error) }
+        }
         if revisions.media != mediaRevision { mediaRevision = revisions.media; emit(kind: .media, revision: revisions.media, source: "external") }
         if revisions.theme != themeRevision { themeRevision = revisions.theme; reloadTheme(); onStoreCommit?() }
     }
@@ -284,26 +393,46 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         webView.callAsyncJavaScript("window.__hitslopEmit?.(event)", arguments: ["event": event], in: nil, in: .page) { _ in }
     }
     public func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
-        let scheme = action.request.url?.scheme?.lowercased()
-        if scheme == "slop" || scheme == "about" { decisionHandler(.allow) }
-        else { if action.navigationType == .linkActivated, let url = action.request.url {
+        guard webView === self.webView, !closed, let url = action.request.url else { decisionHandler(.cancel); return }
+        switch SlopRuntimeSecurity.navigation(url, targetIsMainFrame: action.targetFrame?.isMainFrame == true,
+            isLink: action.navigationType == .linkActivated, trustedSource: accepts(webView, frame: action.sourceFrame),
+            isDownload: action.shouldPerformDownload, purpose: purpose) {
+        case .allow:
+            decisionHandler(.allow)
+        case .openExternal:
             #if os(macOS)
             NSWorkspace.shared.open(url)
             #else
             UIApplication.shared.open(url)
             #endif
-        }; decisionHandler(.cancel) }
+            decisionHandler(.cancel)
+        case .cancel:
+            decisionHandler(.cancel)
+        }
+    }
+    public func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse, decisionHandler: @escaping @MainActor (WKNavigationResponsePolicy) -> Void) {
+        guard webView === self.webView, !closed, response.isForMainFrame, response.canShowMIMEType,
+              let url = response.response.url, SlopRuntimeSecurity.isDocument(url) else { decisionHandler(.cancel); return }
+        decisionHandler(.allow)
     }
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { recover(error) }
     public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { recover(error) }
     public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { recover(SlopPackageError.invalid("slop web process stopped")) }
-    private func recover(_ error: Error) { lastError = error; if retryCount == 0 { retryCount = 1; load() } else { delegate?.runtimeSession(self, didFail: error) } }
+    private func recover(_ error: Error) { guard !closed, acceptingRequests else { return }; lastError = error; if retryCount == 0 { retryCount = 1; reload() } else { delegate?.runtimeSession(self, didFail: error) } }
 }
 
 #if os(macOS)
 extension SlopRuntimeSession: WKUIDelegate {
+    public func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? { nil }
+    public func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void) {
+        let allowed = purpose == .interactive && accepts(webView, frame: frame)
+            && origin.protocol == "slop" && origin.host == "app" && origin.port == 0
+        decisionHandler(allowed ? .prompt : .deny)
+    }
     public func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping @MainActor @Sendable ([URL]?) -> Void) {
+        guard purpose == .interactive, accepts(webView, frame: frame), openPanel == nil else { completionHandler(nil); return }
         let panel = NSOpenPanel()
+        openPanel = panel
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = parameters.allowsMultipleSelection
@@ -311,7 +440,11 @@ extension SlopRuntimeSession: WKUIDelegate {
         // expose an input's `accept` list here, so keep the native picker in
         // sync with the host store and include Winamp's ZIP-based extension.
         panel.allowedContentTypes = [.image, .zip, UTType(filenameExtension: "wsz")].compactMap { $0 }
-        panel.begin { response in completionHandler(response == .OK ? panel.urls : nil) }
+        panel.begin { [weak self] response in
+            guard let self else { completionHandler(nil); return }
+            self.openPanel = nil
+            completionHandler(response == .OK && self.accepts(webView, frame: frame) ? panel.urls : nil)
+        }
     }
 }
 

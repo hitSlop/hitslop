@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import Testing
+import ZIPFoundation
 @testable import HitSlopCore
 
 @Test func rejectsTraversal() { #expect(!SlopPackage.isSafeRelativePath("../data.json")); #expect(SlopPackage.isSafeRelativePath("stores/data.json")) }
@@ -111,7 +112,7 @@ import Testing
     try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
     try Data("{}\n".utf8).write(to: root.appendingPathComponent("stores/data.json"))
     try Data(":root { --slop-accent: tomato; }\n".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
-    try Data(#"{"type":"object"}"#.utf8).write(to: root.appendingPathComponent("data.schema.json"))
+    try writeV1Schema(root)
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
     #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: false) }
     try Data("{}\n".utf8).write(to: root.appendingPathComponent("stores/state.json"))
@@ -137,17 +138,15 @@ import Testing
 @Test func decodesDataSchemasAtOpenAndRejectsOtherDialects() throws {
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let url = root.appendingPathComponent("data.schema.json")
-    for schema in [#"{"type":"object"}"#, #"{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object"}"#] {
-        try Data(schema.utf8).write(to: url)
-        #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
-    }
+    try writeV1Schema(root)
+    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
     for schema in [#"{"type":"bogus"}"#, #"{"type":"string","minLength":"wrong"}"#, "[]", "true",
                    #"{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"}"#,
                    #"{"$schema":null,"type":"object"}"#] {
         try Data(schema.utf8).write(to: url)
         #expect(throws: (any Error).self) { _ = try SlopPackage(rootURL: root) }
     }
-    try Data(#"{"type":"object","required":["count"],"properties":{"count":{"type":"integer"}}}"#.utf8).write(to: url)
+    try writeV1Schema(root)
     try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
     try Data(#"{"count":"broken"}"#.utf8).write(to: root.appendingPathComponent("stores/data.json"))
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
@@ -226,4 +225,49 @@ private func writeSkin(to url: URL, width: Int, height: Int) throws {
           let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else { throw SlopPackageError.invalid("could not create test skin") }
     CGImageDestinationAddImage(destination, image, nil)
     guard CGImageDestinationFinalize(destination) else { throw SlopPackageError.invalid("could not write test skin") }
+}
+
+
+@Test func sharedAppOmitsPrivateFilesAndDoesNotRequireCatalogPreview() throws {
+    let root = try fixture()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    for name in ["stores", "state"] { try FileManager.default.createDirectory(at: root.appendingPathComponent(name), withIntermediateDirectories: true) }
+    try Data("private".utf8).write(to: root.appendingPathComponent("stores/data.json"))
+    try Data("private".utf8).write(to: root.appendingPathComponent("state/document.sqlite"))
+    let archive = root.deletingLastPathComponent().appendingPathComponent("share.zip")
+    try SlopArchive.packSharedApp(root).write(to: archive)
+    let destination = root.deletingLastPathComponent().appendingPathComponent("joined.slop")
+    try SlopArchive.extractDocument(archive, to: destination)
+    #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("state").path))
+    #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores").path))
+    #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("QuickLook/Preview.png").path))
+    let original = try Data(contentsOf: destination.appendingPathComponent("app.html"))
+    #expect(throws: SlopPackageError.self) { try SlopArchive.extractDocument(archive, to: destination) }
+    #expect(try Data(contentsOf: destination.appendingPathComponent("app.html")) == original)
+}
+
+@Test func joinRejectsExpansionBombBeforeCreatingDestination() throws {
+    let root = try fixture()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let zip = root.deletingLastPathComponent().appendingPathComponent("oversized.zip")
+    let archive = try Archive(url: zip, accessMode: .create)
+    try archive.addEntry(with: "assets/bomb", type: .file, uncompressedSize: Int64(26 * 1024 * 1024), compressionMethod: .deflate) { _, size in Data(repeating: 0, count: size) }
+    let destination = root.deletingLastPathComponent().appendingPathComponent("joined.slop")
+    #expect(throws: SlopPackageError.self) { try SlopArchive.extractDocument(zip, to: destination) }
+    #expect(!FileManager.default.fileExists(atPath: destination.path))
+}
+
+private func writeV1Schema(_ root: URL) throws {
+    let schema = #"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"count":{"type":"integer"}},"required":["count"],"additionalProperties":true}"#
+    try v1Envelope(schema).write(to: root.appendingPathComponent("data.schema.json"))
+    try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
+    try Data(#"{"count":0}"#.utf8).write(to: root.appendingPathComponent("assets/initial.json"))
+}
+
+private func v1Envelope(_ schema: String) throws -> Data {
+    let application = try JSONSerialization.jsonObject(with: Data(schema.utf8))
+    return try JSONSerialization.data(withJSONObject: ["type": "object", "additionalProperties": false,
+        "required": ["$slop", "data"], "properties": ["data": application,
+        "$slop": ["type": "object", "additionalProperties": false, "required": ["format", "baseRevision"],
+        "properties": ["format": ["const": 1], "baseRevision": ["type": "string", "minLength": 1]]]]])
 }

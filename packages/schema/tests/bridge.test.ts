@@ -6,7 +6,13 @@ import { validate } from "../src/validation.ts";
 test("bridge requests retain nested JSON without defaults", () => {
   const packaged = compileDataSchema(dataSchemaFromJSON(BridgeRequestSchema));
   for (const value of [
-    { method: "json.write", value: { list: [null, true, 3, { future: "keep" }] } },
+    {
+      method: "document.apply",
+      session: "test",
+      sequence: 1,
+      base: "revision",
+      after: { list: [null, true, 3, { future: "keep" }] },
+    },
     { method: "media.open", name: "hero-image" },
   ]) {
     const before = JSON.stringify(value);
@@ -26,7 +32,16 @@ test("bridge requests retain nested JSON without defaults", () => {
 });
 
 test("bridge replies validate recursive JSON and error codes", () => {
-  expect(() => validate(BridgeReplySchema, { ok: true, value: { nested: [[null, 1]] } })).not.toThrow();
-  expect(() => validate(BridgeReplySchema, { ok: false, error: { code: "validation_failed", message: "Invalid" } })).not.toThrow();
-  expect(() => validate(BridgeReplySchema, { ok: false, error: { code: "unknown", message: "Invalid" } })).toThrow();
+  expect(() =>
+    validate(BridgeReplySchema, { ok: true, value: { nested: [[null, 1]] } }),
+  ).not.toThrow();
+  expect(() =>
+    validate(BridgeReplySchema, {
+      ok: false,
+      error: { code: "validation_failed", message: "Invalid" },
+    }),
+  ).not.toThrow();
+  expect(() =>
+    validate(BridgeReplySchema, { ok: false, error: { code: "unknown", message: "Invalid" } }),
+  ).toThrow();
 });

@@ -12,7 +12,8 @@ my-app/
 ├── manifest.json
 ├── package.json
 ├── AGENTS.md                    portable coding-agent notes; platform skills live in ~/.hitslop/skills
-├── schema.ts                    required when using Svelte jsonStore
+├── schema.ts                    required when using documentStore
+├── initial.ts                   explicit document defaults, emitted as assets/initial.json
 ├── theme.ts                     optional single-source theme definition
 ├── document-guide.md            optional app-specific agent guidance
 ├── index.html
@@ -55,13 +56,15 @@ native compatibility test before being advertised as supported.
 A writable document may lazily add canonical data:
 
 ```text
-stores/data.json
+state/document.sqlite         native Loro history, outbox, receipts
+state/share-bootstrap.zip     frozen immutable app for share retries
+stores/data.json               $slop revision envelope plus data
 stores/media/<safe-name>
 stores/theme.css               optional owner theme overrides
 Icon\r                         Finder-managed local metadata on macOS
 ```
 
-Templates and published artifacts must never contain `stores/`, `Icon\r`,
+Templates and published artifacts must never contain `stores/`, `state/`, `Icon\r`,
 source, `node_modules`, build directories,
 `style.css`, or `document.json`.
 

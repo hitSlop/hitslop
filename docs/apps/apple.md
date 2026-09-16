@@ -1,6 +1,6 @@
 # Apple apps and Swift package
 
-`apps/apple` contains one Xcode project with thin macOS and iOS app targets.
+`apps/apple` contains one Xcode project with a thin macOS app target.
 Shared implementation lives in
 `apps/apple/Packages/HitSlopApple`, a Swift 6 package supporting macOS 14 and
 iOS 17.
@@ -10,10 +10,12 @@ iOS 17.
 - **HitSlopCore** validates packages/manifests, copies documents safely,
   and manages named media. It is platform-neutral apart from system image facilities.
 - **HitSlopRuntime** hosts the WebKit scheme/bridge, JSON storage,
-  working-copy/cloud coordination, document creation, and guest readiness.
+  Loro/SQLite ownership, sharing, document creation, and guest readiness.
 - **HitSlopFirebase** configures Analytics, Crashlytics, App Check, and the
-  Firebase AI Logic foundation.
-- **HitSlopRegistry** is the Firestore catalog and Functions client.
+  Firebase authentication.
+- **HitSlopRegistry** presents the public Cloudflare catalog using the generated
+  oRPC/OpenAPI client. D1 owns catalog metadata and creation counts; R2 owns artifacts.
+  Catalog reads follow every pagination cursor before filtering and sorting.
 - **HitSlopHost** is macOS AppKit: windows, masks, hidden rendering, Quick Look
   images, PNG/PDF export, and Finder custom icons.
 - **HitSlopCatalog** is the macOS catalog UI and immutable local/hosted template
@@ -46,11 +48,11 @@ preserving explicit CLI updates. Refresh runs in the background; failures are
 logged and retried on a later launch without blocking documents. Existing user
 directories and unrelated links are never replaced.
 
-## iOS
+## Deferred platforms
 
-iOS documents use the user's iCloud container. Runtime changes are staged in a
-working copy and explicitly coordinated back. Errors propagate to the UI; a
-failed coordination must never be reported as saved.
+iOS and the SQLite document lab are archived under `archive/apple`, outside the
+active Xcode project and CI. iCloud locations are rejected before a writable
+session or destination is created. Live sharing uses rooms, not file syncing.
 
 ## Development
 
@@ -59,6 +61,6 @@ swift test --package-path apps/apple/Packages/HitSlopApple
 swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native
 ```
 
-The macOS app is version `1.0.5`; iOS remains `0.1.0`. Release signing,
+The macOS app is version `1.0.5`. Release signing,
 notarization, Sparkle, and App Store credentials are local/CI secrets, never
 repository files.

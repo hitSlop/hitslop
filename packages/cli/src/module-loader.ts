@@ -10,10 +10,12 @@ try {
   const path = process.argv[2];
   if (!path) throw new Error("Missing module path");
   const kind = process.argv[3];
-  if (kind !== "schema" && kind !== "theme") throw new Error("Unknown module kind");
+  if (kind !== "schema" && kind !== "theme" && kind !== "initial")
+    throw new Error("Unknown module kind");
   const { default: definition } = await import(pathToFileURL(path).href);
   const value = kind === "theme" ? definition?.css : definition;
-  if (kind === "theme" && typeof value !== "string") throw new Error("theme.ts must default-export defineTheme(...)");
+  if (kind === "theme" && typeof value !== "string")
+    throw new Error("theme.ts must default-export defineTheme(...)");
   assertJSON(value);
   result = { ok: true, value };
 } catch (error) {

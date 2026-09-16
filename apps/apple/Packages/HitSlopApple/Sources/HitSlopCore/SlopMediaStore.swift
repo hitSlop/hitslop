@@ -5,14 +5,19 @@ import ZIPFoundation
 
 public final class SlopMediaStore: @unchecked Sendable {
     public let directoryURL: URL
+    private let rootURL: URL
     /// Stat-first cache for the change poller: re-read and re-hash entry contents
     /// only when the listing fingerprint (names, sizes, modification dates) changes.
     private let cacheLock = NSLock()
     private var revisionCache: (fingerprint: String, revision: String?)?
 
-    public init(directoryURL: URL) { self.directoryURL = directoryURL }
+    public init(directoryURL: URL, rootURL: URL? = nil) {
+        self.directoryURL = directoryURL
+        self.rootURL = rootURL ?? directoryURL.deletingLastPathComponent()
+    }
 
     public static func isValidName(_ name: String) -> Bool {
+        if name.count == 64, name.allSatisfy({ ("0"..."9").contains($0) || ("a"..."f").contains($0) }) { return true }
         guard (1...64).contains(name.count), let first = name.first, first.isASCII, first.isLowercase, first.isLetter else { return false }
         return name.allSatisfy { character in
             character.isASCII && (character.isLowercase && character.isLetter || character.isNumber || character == "-")
@@ -27,7 +32,7 @@ public final class SlopMediaStore: @unchecked Sendable {
     public func open(_ name: String) throws -> (exists: Bool, revision: String?) {
         let url = try url(for: name)
         guard FileManager.default.fileExists(atPath: url.path) else { return (false, nil) }
-        let data = try Data(contentsOf: url)
+        let data = try SlopFile.read(url, within: rootURL)
         _ = try Self.mediaMIMEType(data)
         return (true, Self.revision(data))
     }
@@ -65,7 +70,7 @@ public final class SlopMediaStore: @unchecked Sendable {
         cacheLock.unlock()
         var hasher = SHA256()
         for url in urls {
-            let data = try Data(contentsOf: url)
+            let data = try SlopFile.read(url, within: rootURL)
             // Revisions describe disk bytes, including damaged content. Validate
             // on access so one broken file cannot suppress other media updates.
             hasher.update(data: Data(url.lastPathComponent.utf8)); hasher.update(data: data)

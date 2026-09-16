@@ -102,7 +102,7 @@ struct SlopDocumentAssets: Sendable {
     }
 
     static func documentAssetsPNGData(snapshot: SlopRenderSnapshot) async throws -> SlopDocumentAssets {
-        let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true)
+        let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true, purpose: .backgroundRender)
         defer { session.close() }
         let window = hiddenWindow(session)
         defer { window.contentView = nil }
@@ -127,7 +127,7 @@ struct SlopDocumentAssets: Sendable {
     public static func targetPNGData(packageURL: URL, target: SlopRenderTarget) async throws -> Data? {
         let snapshot = try SlopRenderSnapshot(packageURL: packageURL)
         defer { snapshot.remove() }
-        let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true)
+        let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true, purpose: .backgroundRender)
         defer { session.close() }
         let window = hiddenWindow(session)
         defer { window.contentView = nil }
@@ -184,7 +184,7 @@ struct SlopDocumentAssets: Sendable {
     private static func render(packageURL: URL, output: CaptureOutput) async throws -> Data {
         let snapshot = try SlopRenderSnapshot(packageURL: packageURL)
         defer { snapshot.remove() }
-        let session = try SlopRuntimeSession(packageURL: snapshot.url)
+        let session = try SlopRuntimeSession(packageURL: snapshot.url, purpose: .backgroundRender)
         defer { session.close() }
         let window = hiddenWindow(session)
         defer { window.contentView = nil }

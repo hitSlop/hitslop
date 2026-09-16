@@ -14,20 +14,33 @@ export type InstallOptions = TemplateCaptureOptions & {
 };
 
 export type InstallResult = { directory: string; manifest: SlopManifest; replaced: boolean };
-const exists = async (path: string): Promise<boolean> => stat(path).then(() => true).catch(() => false);
+const exists = async (path: string): Promise<boolean> =>
+  stat(path)
+    .then(() => true)
+    .catch(() => false);
 
-export async function installTemplate(input: string, options: InstallOptions = {}): Promise<InstallResult> {
+export async function installTemplate(
+  input: string,
+  options: InstallOptions = {},
+): Promise<InstallResult> {
   const source = resolve(input);
-  const runtime = await isRuntimePackage(source) ? source : (await buildSlop(source)).directory;
+  const runtime = (await isRuntimePackage(source)) ? source : (await buildSlop(source)).directory;
   const manifest = await loadManifest(runtime);
   await validateTemplatePackage(runtime);
 
-  const templatesRoot = resolve(options.templatesRoot ?? process.env.HITSLOP_TEMPLATES_ROOT ?? join(homedir(), ".hitslop", "templates"));
+  const templatesRoot = resolve(
+    options.templatesRoot ??
+      process.env.HITSLOP_TEMPLATES_ROOT ??
+      join(homedir(), ".hitslop", "templates"),
+  );
   const target = join(templatesRoot, `${manifest.slug}.slop`);
   const replaced = await exists(target);
   if (replaced && !options.force) {
-    if (!options.confirmOverwrite) throw new Error(`Template ${manifest.slug} is already installed. Pass --force to replace it.`);
-    if (!await options.confirmOverwrite(target)) throw new Error("Install cancelled.");
+    if (!options.confirmOverwrite)
+      throw new Error(
+        `Template ${manifest.slug} is already installed. Pass --force to replace it.`,
+      );
+    if (!(await options.confirmOverwrite(target))) throw new Error("Install cancelled.");
   }
 
   await mkdir(templatesRoot, { recursive: true });
@@ -42,14 +55,18 @@ export async function installTemplate(input: string, options: InstallOptions = {
       await makePackageWritable(target);
       await rename(target, backup);
     }
-    try { await rename(staging, target); }
-    catch (error) { if (replaced && await exists(backup)) await rename(backup, target); throw error; }
+    try {
+      await rename(staging, target);
+    } catch (error) {
+      if (replaced && (await exists(backup))) await rename(backup, target);
+      throw error;
+    }
     await makePackageImmutable(target);
     await rm(backup, { recursive: true, force: true });
     return { directory: target, manifest, replaced };
   } finally {
     await rm(stagingRoot, { recursive: true, force: true });
-    if (await exists(backup) && !await exists(target)) {
+    if ((await exists(backup)) && !(await exists(target))) {
       await rename(backup, target);
       await makePackageImmutable(target).catch(() => {});
     } else await rm(backup, { recursive: true, force: true });
@@ -57,11 +74,17 @@ export async function installTemplate(input: string, options: InstallOptions = {
 }
 
 async function isRuntimePackage(path: string): Promise<boolean> {
-  return await exists(join(path, "manifest.json")) && await exists(join(path, "app.html"));
+  return (await exists(join(path, "manifest.json"))) && (await exists(join(path, "app.html")));
 }
 
-export async function validateTemplatePackage(path: string, options: { requirePreview?: boolean } = {}): Promise<void> {
-  await validateRuntimePackage(path, { template: true, requirePreview: options.requirePreview ?? false });
+export async function validateTemplatePackage(
+  path: string,
+  options: { requirePreview?: boolean } = {},
+): Promise<void> {
+  await validateRuntimePackage(path, {
+    template: true,
+    requirePreview: options.requirePreview ?? false,
+  });
 }
 
 export async function makePackageWritable(root: string): Promise<void> {
@@ -80,7 +103,7 @@ export async function makePackageImmutable(root: string): Promise<void> {
     const info = await lstat(path);
     if (info.isSymbolicLink()) throw new Error(`Runtime packages cannot contain symlinks: ${path}`);
     if (info.isDirectory()) for (const entry of await readdir(path)) await walk(join(path, entry));
-    await chmod(path, (info.mode & 0o777) & ~0o222);
+    await chmod(path, info.mode & 0o777 & ~0o222);
   };
   await walk(root);
 }

@@ -22,9 +22,9 @@ files.
 
 ## @hitslop/runtime
 
-Application-facing exports are `slop`, `ready`, `capture`, and `sql`.
+Application-facing exports are `slop`, `ready`, `capture`, `flush`, and `hostInfo`.
 They cover JSON, named media, window resize/drag, host readiness,
-renderer detection, and parameterized statement composition.
+capture lifecycle, and host capability discovery.
 
 `@hitslop/runtime/adapter` exposes lower-level persistence/media primitives
 for framework adapter authors. Ordinary slops should use the root package or a
@@ -35,15 +35,15 @@ the main application API.
 
 Svelte 5 rune-aware classes/functions:
 
-- `jsonStore` / `JsonStore`
+- `documentStore` / `DocumentStore` and `documentText`
 - `imageStore` / `ImageStore`
 - `fileStore` / `FileStore`
 
 These expose reactive value/loading/error/persistence state while delegating all
-durability to the runtime host. `jsonStore` accepts the schema directly
+durability to the runtime host. `documentStore` accepts the schema directly
 from root TypeBox `schema.ts`, alongside its initial value, and
 validates data at the persistence boundary. Quick Checklist
-and the CLI counter starter share this workflow; backlog examples remain deferred.
+and the CLI counter starter share this workflow; archived examples remain deferred.
 
 The React adapter is paused in `archive/packages/react`, outside the workspace
 and release pipeline. The runtime remains suitable for future framework adapters.

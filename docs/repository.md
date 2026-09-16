@@ -4,18 +4,19 @@
 
 | Path | Responsibility |
 | --- | --- |
-| `apps/apple` | Thin iOS and macOS targets plus project/release configuration |
+| `apps/apple` | Thin macOS target plus project/release configuration |
 | `apps/apple/Packages/HitSlopApple` | Shared Swift Core, Runtime, Registry, Host, Catalog, and native CLI |
-| `apps/firebase` | Firebase Functions, Firestore, Storage, Hosting, and security rules |
+| `apps/cloudflare` | oRPC API, D1 catalog, R2 artifacts, and SQLite document rooms |
 | `apps/landing` | Static Astro site for `hitslop.com` |
+| `packages/api` | oRPC HTTP contracts, typed client, OpenAPI 3.1 and Swift client input |
 | `packages/cli` | Authoring, browser preview fake, build, capture, identity, register, publish |
 | `packages/runtime` | Framework-neutral host API and adapter building blocks |
 | `packages/svelte` | Svelte 5 state adapters |
 | `archive/packages/react` | Paused React adapter, excluded from workspaces/releases |
 | `packages/schema` | TypeBox source, JSON Schema, publish protocol, generated Swift |
-| `examples/slops` | Maintained authored examples |
-| `archive/templates` | Explicitly inventoried prior art outside build paths |
-| `Prototypes` | Explicitly inventoried experiments outside build paths |
+| `examples/slops` | Quick Checklist and the active gallery/test harness |
+| `archive/templates` | Local ignored prior art |
+| `archive/prototypes` | Local ignored experiments |
 
 ## Change discipline
 
@@ -37,8 +38,8 @@ bun install
 bun run check
 bun run test
 bun run build
-bun run release:check
- bun run examples:check
+bun run test:local
+bun run examples:check
 
 bun slop dev examples/slops/quick-checklist
 bun slop build examples/slops/quick-checklist
@@ -49,6 +50,8 @@ swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-na
 
 ## Prior art
 
-Only directories named in `SLOPS.todo` are retained prior art. They are
-reference material, not publishable packages. Unlisted archive/prototype
-directories are ignored so personal experiments cannot drift into a release.
+Other examples live in `examples/archive`; deferred Apple targets and historical
+plans live in `archive/apple` and `archive/docs`. Older templates/prototypes
+are inventoried in `SLOPS.todo`. All archive directories are local reference
+material, ignored by Git and excluded from the open-source checkout. Restore
+individual projects into active source only after updating them to the v1 contract.

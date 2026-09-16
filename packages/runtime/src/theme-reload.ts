@@ -4,7 +4,7 @@ export function createThemeReload(document: Pick<Document, "querySelector">) {
   return (revision: string): void => {
     pending?.remove();
     pending = undefined;
-    const current = document.querySelector<HTMLLinkElement>('link[data-hitslop-theme]');
+    const current = document.querySelector<HTMLLinkElement>("link[data-hitslop-theme]");
     if (!current) return;
     const next = current.cloneNode() as HTMLLinkElement;
     pending = next;

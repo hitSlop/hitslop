@@ -23,7 +23,7 @@ or prototype directories stay ignored.
 
 - [ ] Inventory each repository template and map it to one canonical slug in `examples/slops/`, consolidating overlapping versions instead of copying duplicates.
 - [ ] Migrate selected archived templates into current authored packages under `examples/slops/`; repair manifests, storage, accessibility, responsive behavior, export state, and visuals as part of each migration.
-- [ ] Move `Prototypes/ambient-mixer` to `examples/slops/ambient-sound-mixer` when its P0 build begins.
+- [ ] Move `archive/prototypes/ambient-mixer` to `examples/slops/ambient-sound-mixer` when its P0 build begins.
 - [ ] Retire repository-local archived and prototype source copies after their canonical replacement is verified.
 
 ## Current examples
@@ -51,7 +51,7 @@ so it is intentionally excluded from the implemented count.
 - [x] **Pocket Spreadsheet** — Money / Instrument + Paper — Fast tabular modeling with formulas (=SUM, =AVG, arithmetic), multi-cell selection stats, and CSV export. **Visual:** vintage green-bar accounting ledger housed in a dark slate chassis with formula fx bar and emerald selection box. The icon is a dark chassis with green-bar grid, active selection cell, and fx =SUM formula bar.
 - [x] **Contact Card** — Personal / Paper + Skin — Edit identity, avatar, contact details, links, location, and a short introduction. **Visual:** translucent mint pager crossed with a compact Rolodex card. The icon is a frosted mint rounded badge with circular avatar aperture and contact rule bars. **Prior art:** legacy Swift `ContactCRM` template.
 - [ ] **Subscription Tracker — quality review required** — Money / Paper — Track recurring costs, renewal dates, billing periods, and paused services with one document-wide currency preference and canonical JSON persistence. **Visual:** calm off-white ledger with green renewal signals and tabular totals. **Reference:** `archive/templates/subscription-tracker`.
-- [x] **Ambient Sound Mixer** — Music / Instrument — Mix, mute, solo, and save volume presets for a small set of ambient channels with synthesized audio. **Visual:** smoked-glass hi-fi mixer with physical faders and green LED level bars. The icon is a dark rackmount audio mixer with 5 vertical faders and glowing LED bars. **Reference:** `Prototypes/ambient-mixer`.
+- [x] **Ambient Sound Mixer** — Music / Instrument — Mix, mute, solo, and save volume presets for a small set of ambient channels with synthesized audio. **Visual:** smoked-glass hi-fi mixer with physical faders and green LED level bars. The icon is a dark rackmount audio mixer with 5 vertical faders and glowing LED bars. **Reference:** `archive/prototypes/ambient-mixer`.
 - [x] **Countdown & Milestones** — Planning / Instrument — Count down to a target date and track intermediate checkpoints. **Visual:** compact digital departure display housed in a capsule body. The icon is a dark titanium capsule bezel with glowing amber 7-segment digital counter and milestone progress track. **Reference:** `archive/templates/countdown-milestones`.
 - [x] **Slide Deck** — Pitch / Stage + Studio — Single-file presentation suite inspired by Bento with structured slide archetypes (Title, Split, Metric, Quote, Cards), live inline canvas editing, and fullscreen presenter mode. **Visual:** dark studio projector chassis housing a 16:9 widescreen canvas with Swiss red typography and orange active dot. The icon is a dark projector shell with 16:9 screen, header tag pill, split columns, and orange play badge. **Reference:** `_docs/bento-main`.
 
@@ -133,7 +133,7 @@ packages to copy:
 - `archive/templates/subscription-tracker`
 - `archive/templates/trip-planner`
 - `archive/templates/weekly-planner`
-- `Prototypes/ambient-mixer`
+- `archive/prototypes/ambient-mixer`
 
 Every maintained template must live under `examples/slops/`, follow current
 manifests and storage conventions, support direct local editing, and use

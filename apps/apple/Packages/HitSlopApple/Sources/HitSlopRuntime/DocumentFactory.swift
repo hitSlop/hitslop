@@ -10,7 +10,7 @@ import HitSlopCore
         self.templatesRoot = templatesRoot
     }
 
-    public static var defaultTemplatesRoot: URL {
+    nonisolated public static var defaultTemplatesRoot: URL {
         #if os(macOS)
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hitslop/templates", isDirectory: true)
         #else
@@ -25,7 +25,7 @@ import HitSlopCore
 
     /// Catalog masters live under the templates root. Resolve POSIX symlinks so
     /// a link outside the tree cannot open one as a document.
-    public static func isManagedTemplatePackage(_ url: URL, templatesRoot: URL = defaultTemplatesRoot) -> Bool {
+    nonisolated public static func isManagedTemplatePackage(_ url: URL, templatesRoot: URL = defaultTemplatesRoot) -> Bool {
         let candidate = url.standardizedFileURL.resolvingSymlinksInPath().pathComponents
         let root = templatesRoot.standardizedFileURL.resolvingSymlinksInPath().pathComponents
         guard candidate.count > root.count else { return false }
@@ -37,10 +37,10 @@ import HitSlopCore
         var downloaded = false
         if (try? SlopPackage(rootURL: cached)) == nil {
             try FileManager.default.createDirectory(at: cached.deletingLastPathComponent(), withIntermediateDirectories: true)
-            var components = URLComponents(url: catalogURL.appendingPathComponent("api/artifact"), resolvingAgainstBaseURL: false)!
-            components.queryItems = [URLQueryItem(name: "key", value: template.artifactKey)]
-            let (archive, response) = try await URLSession.shared.download(from: components.url!)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { throw SlopPackageError.invalid("template download failed") }
+            let data = try await SlopCloudAPI(origin: catalogURL).artifact(template.artifactKey)
+            let archive = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
+            try data.write(to: archive, options: .atomic)
+            defer { try? FileManager.default.removeItem(at: archive) }
             downloaded = true
             try SlopArchive.extract(archive, to: cached, expectedSHA256: template.artifactSha256)
         }

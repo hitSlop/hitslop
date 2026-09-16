@@ -2,6 +2,7 @@ import Foundation
 
 public enum SlopDuplicator {
     @discardableResult public static func duplicate(from sourceURL: URL, to requestedDestination: URL) throws -> URL {
+        try SlopLocalDocument.requireLocal(requestedDestination)
         let source = try SlopPackage(rootURL: sourceURL)
         let destination = requestedDestination.pathExtension.lowercased() == "slop" ? requestedDestination : requestedDestination.appendingPathExtension("slop")
         let fileManager = FileManager.default

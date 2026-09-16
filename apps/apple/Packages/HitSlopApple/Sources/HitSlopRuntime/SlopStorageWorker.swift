@@ -9,7 +9,6 @@ struct SlopStorageResult: @unchecked Sendable {
     var name: String? = nil
 }
 struct SlopRevisions: Sendable {
-    let json: String?
     let media: String?
     let theme: String?
 }
@@ -19,29 +18,28 @@ struct SlopRevisions: Sendable {
 final class SlopStorageWorker: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.hitslop.document-storage", qos: .userInitiated)
     private let package: SlopPackage
-    private let json: SlopJSONStore
     private let media: SlopMediaStore
     private let theme: SlopThemeStore
     private var closed = false
 
     init(package: SlopPackage) {
         self.package = package
-        json = SlopJSONStore(url: package.jsonStoreURL, schemaURL: package.rootURL.appendingPathComponent("data.schema.json"))
-        media = SlopMediaStore(directoryURL: package.mediaStoresURL)
-        theme = SlopThemeStore(url: package.themeOverrideURL)
+        media = SlopMediaStore(directoryURL: package.mediaStoresURL, rootURL: package.rootURL)
+        theme = SlopThemeStore(url: package.themeOverrideURL, rootURL: package.rootURL)
     }
     func close() { queue.sync { closed = true } }
     func revisions() async -> SlopRevisions {
         await withCheckedContinuation { continuation in
             queue.async {
-                continuation.resume(returning: SlopRevisions(json: try? self.json.revision(), media: try? self.media.directoryRevision(), theme: try? self.theme.revision()))
+                continuation.resume(returning: SlopRevisions(media: try? self.media.directoryRevision(), theme: try? self.theme.revision()))
             }
         }
     }
-    func perform(_ data: Data) async throws -> SlopStorageResult {
+    func perform(_ data: Data, lease: SlopRequestLease? = nil) async throws -> SlopStorageResult {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
+                    try lease?.check()
                     guard !self.closed else { throw SlopBridgeFailure(.closed, "Document is closed") }
                     guard let body = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                         throw SlopBridgeFailure(.invalidRequest, "Expected a request object")
@@ -60,16 +58,6 @@ final class SlopStorageWorker: @unchecked Sendable {
             throw SlopBridgeFailure(.invalidRequest, "Missing or unknown method")
         }
         switch method {
-        case .jsonOpen:
-            let missing = !FileManager.default.fileExists(atPath: package.jsonStoreURL.path)
-            let snapshot = try json.open(field("value", in: body, as: Any.self))
-            return .init(value: ["value": snapshot.value, "revision": snapshot.revision], kind: missing ? .json : nil, revision: snapshot.revision)
-        case .jsonRead:
-            let snapshot = try json.read()
-            return .init(value: ["value": snapshot.value, "revision": snapshot.revision])
-        case .jsonWrite:
-            let revision = try json.write(field("value", in: body, as: Any.self), expectedRevision: body["expectedRevision"] as? String)
-            return .init(value: ["revision": revision], kind: .json, revision: revision)
         case .mediaOpen:
             let snapshot = try media.open(field("name", in: body))
             return .init(value: ["exists": snapshot.exists, "revision": snapshot.revision as Any? ?? NSNull()])

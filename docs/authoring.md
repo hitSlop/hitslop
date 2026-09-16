@@ -44,16 +44,18 @@ Storage is implicit; do not add declarations to the manifest. See
 [Storage](storage.md) for concurrency and copy semantics.
 
 Quick Checklist's current JSON-store contract uses a root `schema.ts` that
-default-exports a TypeBox schema (`import * as Type from "typebox"`).
+default-exports an `S.Document` schema (`import * as S from "@hitslop/schema/document"`).
+Use `S.Document({ ... })` for the root and root `initial.ts` for explicit defaults.
+The builder emits a v1 envelope schema and immutable `assets/initial.json`.
 Import that schema directly where the store is created:
 
 ```ts
+import { documentStore } from "@hitslop/svelte";
 import dataSchema from "../schema";
+import initial from "../initial";
 
-const document = jsonStore({
-  schema: dataSchema,
-  initial: { count: 0 },
-});
+const document = documentStore({ schema: dataSchema, initial });
+await document.change(data => { data.count++; });
 ```
 
 ## Build
@@ -62,7 +64,7 @@ Editor types and typechecking need no generated files or running dev server.
 The store uses TypeBox runtime validation without coercion, defaults, or field
 removal. The builder evaluates `schema.ts` separately to emit `data.schema.json`;
 keep schemas deterministic (no time, randomness, or environment-dependent shapes).
-The CLI counter starter uses the same workflow; backlog examples remain deferred.
+The CLI counter starter uses the same workflow; archived examples remain deferred.
 
 ```sh
 bun run validate

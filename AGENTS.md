@@ -3,15 +3,15 @@
 `.slop` packages are framework-neutral runtime web apps with optional host-owned
 JSON, named media, and theme override data. Read `manifest.json` first.
 
-- Active authored templates live in `examples/slops/`; paused examples live in
-  `examples/slops/_backlog/` and older templates in `archive/templates/`.
+- Quick Checklist is the only active template in `examples/slops/`; other examples live in
+  `examples/archive/` and older templates in `archive/templates/`.
   Backlog source is excluded from gallery discovery, builds, tests, and checks.
   Runtime packages never contain source, dependencies,
   build caches, seed stores, or editable stylesheets.
 - Preview with `bun slop dev examples/slops/<id>` and build with
   `bun slop build examples/slops/<id>`.
-- For work tracked by `SLOPMIGRATION.md`, read and follow
-  `SLOPMIGRATIONRUNNER.md` before editing a slop.
+- Historical migration notes in `archive/docs/` are reference-only. Restored
+  examples must meet the current v1 contract and local test gate.
 - Use `_vibe/` as local visual reference material. It is inspiration-only and
   must not be copied into source, runtime packages, or the open-source release.
 - For example design work, read `examples/slops/PRODUCT.md` and the shared
@@ -35,14 +35,14 @@ JSON, named media, and theme override data. Read `manifest.json` first.
 - Browser previews are disposable: no bridge server, disk stores, or polling.
   Routine migrations use the shared gallery for UI smoke tests; persistence and
   native behavior are reserved for explicit release-gate work.
-- Author JSON schemas with `import * as Type from "typebox"` in root `schema.ts`.
-  Import that schema directly into `jsonStore({ schema, initial })`.
+- Author JSON schemas with `S.Document` from `@hitslop/schema/document` in root `schema.ts`.
+  Import that schema directly into `documentStore({ schema, initial })`.
   Types are inferred from the schema; the store uses TypeBox runtime validation.
   No generated files or dev server are needed for editor types. Schemas must be
   deterministic because the app and package builder evaluate them separately.
   Validation never coerces, inserts defaults, or strips fields. Use explicit
   initial values and `additionalProperties: true` to preserve unknown fields.
-  Quick Checklist and the CLI counter starter use this workflow; backlog examples remain deferred.
+  Quick Checklist and the CLI counter starter use this workflow; archived examples remain deferred.
 - Quick Checklist is the platform pilot. Define its theme once in root
   `theme.ts` with `defineTheme` from `@hitslop/runtime/theme`; builds generate
   immutable `assets/theme.css`. Keep owner overrides in `stores/theme.css`.
@@ -68,7 +68,16 @@ JSON, named media, and theme override data. Read `manifest.json` first.
   SHA-256, and copies one to the user-selected path. Local `slop register`
   writes `~/.hitslop/templates/<slug>.slop`. Anything under
   `~/.hitslop/templates` is a catalog master, never a writable document.
-  Firebase stores only public catalog metadata and immutable published artifacts;
-  it never stores a local document.
+  Cloudflare D1 stores public catalog metadata and R2 stores immutable published
+  artifacts. Catalog clients use the oRPC API; they never access D1 directly.
+  Firebase provides authentication and telemetry, not catalog storage.
 - TypeBox is authoritative. Run `bun run schema:generate` after schema changes;
   JSON Schema then generates the Swift types and validates Swift manifests.
+
+- Every JSON-backed document uses native Loro and `state/document.sqlite`.
+  `stores/data.json` is the editable `$slop` revision envelope plus `data`.
+  Use `documentStore.change` and `documentText`; confirmed `current` is read-only.
+  Root `initial.ts` defines defaults shared with the build. See `docs/storage.md`.
+- Share uploads an immutable sender app bundle to R2 and a seed to a raw Durable
+  Object. The room owns mutable ACLs/invitations; D1 owns immutable metadata.
+  iOS is archived; iCloud document locations and legacy persistence formats are rejected.

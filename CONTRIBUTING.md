@@ -8,7 +8,9 @@ Thanks for helping make tiny software feel personal again.
 2. Run `bun install` from the repository root.
 3. Read [the repository guide](docs/repository.md) and the nearest `AGENTS.md`.
 4. Make a focused change with tests or a reproducible manual check.
-5. Run `bun run release:check` before opening a pull request.
+5. Run `bun run format` for authored JavaScript/TypeScript, then `bun run format:check`.
+   Generated contracts and archived source are excluded.
+6. Run `bun run test:local` before opening a pull request.
 
 For a new mini app, start in `examples/slops/` and follow
 [the authoring guide](docs/authoring.md). Do not commit generated `app.html`,
