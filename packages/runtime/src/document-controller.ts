@@ -24,6 +24,38 @@ const freeze = <T>(value: T): ReadonlyJSON<T> => {
   return value as ReadonlyJSON<T>;
 };
 
+/** Own incoming JSON while reusing already frozen, equal subtrees. */
+function reconcile(previous: unknown, next: unknown): unknown {
+  if (previous === next) return previous;
+  if (!next || typeof next !== "object") return next;
+  if (Array.isArray(next)) {
+    const old = Array.isArray(previous) ? previous : [];
+    const children = next.map((child, index) => reconcile(old[index], child));
+    if (
+      Array.isArray(previous) &&
+      old.length === children.length &&
+      children.every((child, index) => child === old[index])
+    )
+      return previous;
+    return Object.freeze(children);
+  }
+  const old =
+    previous && typeof previous === "object" && !Array.isArray(previous)
+      ? (previous as Record<string, unknown>)
+      : undefined;
+  const entries = Object.entries(next).map(
+    ([key, child]) =>
+      [key, reconcile(old && Object.hasOwn(old, key) ? old[key] : undefined, child)] as const,
+  );
+  if (
+    old &&
+    Object.keys(old).length === entries.length &&
+    entries.every(([key, child]) => Object.hasOwn(old, key) && old[key] === child)
+  )
+    return previous;
+  return Object.freeze(Object.fromEntries(entries));
+}
+
 /** Framework-neutral sequencing, confirmed state and close/recovery barrier. */
 export function createDocumentController<S extends TSchema>(options: {
   schema: S;
@@ -56,13 +88,24 @@ export function createDocumentController<S extends TSchema>(options: {
   };
   const adopt = (value: unknown) => {
     const next = validate(DocumentFrameSchema, value);
-    validateDocument(options.schema, next.data);
     if (destroyed || (frame && next.publication < frame.publication)) return;
     if (frame && next.publication === frame.publication && next.revision !== frame.revision) {
       throw new Error("Host changed a document revision without a publication");
     }
-    frame = next;
-    current = freeze(structuredClone(next.data as unknown)) as ReadonlyJSON<Value>;
+    if (!frame || next.revision !== frame.revision) {
+      validateDocument(options.schema, next.data);
+      current = reconcile(current, next.data) as ReadonlyJSON<Value>;
+    }
+    if (
+      frame &&
+      next.publication === frame.publication &&
+      next.dirty === frame.dirty &&
+      next.error === frame.error &&
+      next.projectionError === frame.projectionError
+    )
+      return;
+    // Never retain the mutable transport object, including in draft ancestry.
+    frame = { ...next, data: current as DocumentFrame["data"] };
     notify();
   };
   let implicit: DraftContext | undefined;
@@ -252,6 +295,7 @@ export function createDocumentController<S extends TSchema>(options: {
       queue = Promise.resolve();
       recovery++;
       adopt(next);
+      notify();
     },
     async reload() {
       opening = open();

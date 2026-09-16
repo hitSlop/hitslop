@@ -5,15 +5,26 @@ import Loro
 public final class SlopDocumentReplica {
     public let schema: SlopDocumentSchema
     let doc: LoroDoc
+    private var cachedCurrent: SlopDocumentJSON?
+    /// Executor-confined diagnostics shared by forks; never part of document state.
+    final class Work {
+        var materializations = 0
+        var listSearches = 0
+        var listMoves = 0
+    }
+    let work: Work
 
-    private init(schema: SlopDocumentSchema, document: LoroDoc) {
+    private init(schema: SlopDocumentSchema, document: LoroDoc, current: SlopDocumentJSON?, work: Work) {
         self.schema = schema
         self.doc = document
+        cachedCurrent = current
+        self.work = work
     }
-    func fork() -> SlopDocumentReplica { SlopDocumentReplica(schema: schema, document: doc.fork()) }
+    func fork() -> SlopDocumentReplica { SlopDocumentReplica(schema: schema, document: doc.fork(), current: cachedCurrent, work: work) }
 
     public init(schema: SlopDocumentSchema, initial: SlopDocumentJSON, snapshot: Data? = nil, peer: UInt64? = nil) throws {
         self.schema = schema
+        work = Work()
         doc = LoroDoc()
         if let peer { try doc.setPeerId(peer: peer) }
         if let snapshot {
@@ -27,14 +38,23 @@ public final class SlopDocumentReplica {
         }
         try schema.validate(current())
     }
-    public func current() throws -> SlopDocumentJSON { try SlopDocumentJSON(loro: doc.getMap(id: "data").getDeepValue()) }
+    private func materialize(_ document: LoroDoc) throws -> SlopDocumentJSON {
+        work.materializations += 1
+        return try SlopDocumentJSON(loro: document.getMap(id: "data").getDeepValue())
+    }
+    public func current() throws -> SlopDocumentJSON {
+        if let cachedCurrent { return cachedCurrent }
+        let value = try materialize(doc)
+        cachedCurrent = value
+        return value
+    }
     public func value(at revision: String) throws -> SlopDocumentJSON {
         guard let bytes = Data(base64Encoded: revision) else { throw SlopDocumentError("Invalid revision") }
         let frontiers = try Frontiers.decode(bytes: bytes)
         guard doc.frontiersToVv(frontiers: frontiers) != nil else { throw SlopDocumentError("Unknown revision") }
         let historical = try doc.forkAt(frontiers: frontiers)
         guard historical.stateFrontiers().eq(other: frontiers) else { throw SlopDocumentError("Unavailable revision history") }
-        return try SlopDocumentJSON(loro: historical.getMap(id: "data").getDeepValue())
+        return try materialize(historical)
     }
     public func snapshot() throws -> Data { try doc.exportSnapshot() }
     public func revision() -> String { doc.oplogFrontiers().encode().base64EncodedString() }
@@ -45,10 +65,10 @@ public final class SlopDocumentReplica {
         guard doc.frontiersToVv(frontiers: frontiers) != nil else { throw SlopDocumentError("Unknown revision") }
         let staged = try doc.forkAt(frontiers: frontiers)
         guard staged.stateFrontiers().eq(other: frontiers) else { throw SlopDocumentError("Unavailable revision history") }
-        let before = try SlopDocumentJSON(loro: staged.getMap(id: "data").getDeepValue())
+        let before = try base == revision() ? current() : materialize(staged)
         try schema.validate(before)
-        try Self.applyMap(staged.getMap(id: "data"), schema.mapping, before, after)
-        try schema.validate(SlopDocumentJSON(loro: staged.getMap(id: "data").getDeepValue()))
+        try Self.applyMap(staged.getMap(id: "data"), schema.mapping, before, after, work)
+        try schema.validate(materialize(staged))
         staged.commit()
         let authored = staged.oplogFrontiers().encode().base64EncodedString()
         try receive(staged.exportUpdates(vv: doc.oplogVv()))
@@ -58,8 +78,12 @@ public final class SlopDocumentReplica {
         let staged = doc.fork()
         let status = try staged.import(bytes: bytes)
         guard status.pending?.isEmpty != false else { throw SlopDocumentError("Missing Loro dependencies") }
-        try schema.validate(SlopDocumentJSON(loro: staged.getMap(id: "data").getDeepValue()))
+        let value = try materialize(staged)
+        try schema.validate(value)
+        // Import can throw; never retain a pre-import cache after mutation starts.
+        cachedCurrent = nil
         _ = try doc.import(bytes: bytes)
+        cachedCurrent = value
     }
     public func updates(since other: SlopDocumentReplica) throws -> Data { try doc.exportUpdates(vv: other.doc.oplogVv()) }
     public func versionVector() -> Data { doc.oplogVv().encode() }
@@ -103,7 +127,7 @@ public final class SlopDocumentReplica {
             try seed(.map(map, key), field, child)
         }
     }
-    private static func apply(_ slot: Slot, _ node: SlopDocumentMapping, _ before: SlopDocumentJSON, _ after: SlopDocumentJSON) throws {
+    private static func apply(_ slot: Slot, _ node: SlopDocumentMapping, _ before: SlopDocumentJSON, _ after: SlopDocumentJSON, _ work: Work) throws {
         if before == after { return }
         switch node {
         case .text:
@@ -111,24 +135,33 @@ public final class SlopDocumentReplica {
             try text.update(s: after.string ?? "", options: UpdateOptions(timeoutMs: nil, useRefinedDiff: false))
         case .map, .record:
             guard let map = slot.get()?.asLoroMap() else { throw SlopDocumentError("Expected map container") }
-            try applyMap(map, node, before, after)
+            try applyMap(map, node, before, after, work)
         case .list(let key, let item):
             guard let list = slot.get()?.asLoroMovableList() else { throw SlopDocumentError("Expected movable list") }
-            try applyList(list, key, item, before.array, after.array)
+            try applyList(list, key, item, before.array, after.array, work)
         case .atomic: try slot.value(after, inserting: false)
         }
     }
-    private static func applyMap(_ map: LoroMap, _ node: SlopDocumentMapping, _ before: SlopDocumentJSON, _ after: SlopDocumentJSON) throws {
+    private static func applyMap(_ map: LoroMap, _ node: SlopDocumentMapping, _ before: SlopDocumentJSON, _ after: SlopDocumentJSON, _ work: Work) throws {
         for key in before.object.keys where after.object[key] == nil { try map.delete(key: key) }
         for (key, child) in after.object.sorted(by: { $0.key < $1.key }) {
             let field: SlopDocumentMapping
             switch node { case .map(let fields): field = fields[key] ?? .atomic; case .record(let v): field = v; default: throw SlopDocumentError("Expected map") }
-            if let previous = before.object[key] { try apply(.map(map, key), field, previous, child) }
+            if let previous = before.object[key] { try apply(.map(map, key), field, previous, child, work) }
             else { try seed(.map(map, key), field, child) }
         }
     }
-    private static func applyList(_ list: LoroMovableList, _ key: String, _ item: SlopDocumentMapping, _ before: [SlopDocumentJSON], _ after: [SlopDocumentJSON]) throws {
+    private static func applyList(_ list: LoroMovableList, _ key: String, _ item: SlopDocumentMapping, _ before: [SlopDocumentJSON], _ after: [SlopDocumentJSON], _ work: Work) throws {
+        // This list belongs to the fork at `before`, so its positions are exact.
+        // Typing or toggling a row must not search or reconcile unchanged order.
+        if before.count == after.count && zip(before, after).allSatisfy({ $0[key] == $1[key] }) {
+            for i in after.indices where before[i] != after[i] {
+                try apply(.list(list, UInt32(i)), item, before[i], after[i], work)
+            }
+            return
+        }
         func index(_ id: String) -> UInt32? {
+            work.listSearches += 1
             for i in 0..<list.len() {
                 let v = list.get(index: i)
                 if v?.asLoroMap()?.get(key: key)?.asValue() == .string(value: id) { return i }
@@ -153,10 +186,13 @@ public final class SlopDocumentReplica {
             try seed(.list(list, min(UInt32(i), list.len())), item, entry.1)
         }
         for (id, child) in entries {
-            if let previous = old[id], let i = index(id) { try apply(.list(list, i), item, previous, child) }
+            if let previous = old[id], let i = index(id) { try apply(.list(list, i), item, previous, child, work) }
         }
         for (i, entry) in entries.enumerated() {
-            if let from = index(entry.0), from != UInt32(i) { try list.mov(from: from, to: UInt32(i)) }
+            if let from = index(entry.0), from != UInt32(i) {
+                work.listMoves += 1
+                try list.mov(from: from, to: UInt32(i))
+            }
         }
     }
 }

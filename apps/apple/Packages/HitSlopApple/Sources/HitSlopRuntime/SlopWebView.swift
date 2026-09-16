@@ -375,7 +375,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         guard !closed else { return }
         guard requestedAtSequence == sequence else { scheduleExternalRefresh(); return }
         if let document = bridge.collaborativeDocument {
-            do { try await document.flush() } catch { delegate?.runtimeSession(self, didFail: error) }
+            do { try await document.refreshExternal() } catch { delegate?.runtimeSession(self, didFail: error) }
         }
         if revisions.media != mediaRevision { mediaRevision = revisions.media; emit(kind: .media, revision: revisions.media, source: "external") }
         if revisions.theme != themeRevision { themeRevision = revisions.theme; reloadTheme(); onStoreCommit?() }

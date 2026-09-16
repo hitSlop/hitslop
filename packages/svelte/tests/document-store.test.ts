@@ -73,6 +73,50 @@ test("confirmed values are immutable and change uses the native edit API", async
   await store.destroy();
 });
 
+test("status publications do not rerun document data consumers", async () => {
+  // @ts-expect-error Svelte exposes this effect test harness without declarations.
+  const { effect_root, render_effect, flush } = await import("svelte/internal/client");
+  let state = frame();
+  let publish!: (frame: DocumentFrame) => void;
+  host({
+    open: async () => state,
+    flush: async () => state,
+    onChange: (callback: typeof publish) => {
+      publish = callback;
+      return () => {};
+    },
+  });
+  const store = documentStore({ schema, initial: { count: 0 } });
+  await store.flush();
+  let dataRuns = 0,
+    statusRuns = 0;
+  const dispose = effect_root(() => {
+    render_effect(() => {
+      store.current;
+      dataRuns++;
+    });
+    render_effect(() => {
+      store.isDirty;
+      statusRuns++;
+    });
+  });
+  try {
+    state = { ...state, publication: 1, dirty: true };
+    publish(state);
+    flush();
+    expect(store.isDirty).toBe(true);
+    expect(dataRuns).toBe(1);
+    expect(statusRuns).toBe(2);
+    state = frame(1, 2);
+    publish(state);
+    flush();
+    expect(dataRuns).toBe(2);
+  } finally {
+    dispose();
+    await store.destroy();
+  }
+});
+
 test("rejected edits remain failures across flush, reload, and remote publication", async () => {
   host({
     apply: async () => {

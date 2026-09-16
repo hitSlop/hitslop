@@ -182,13 +182,19 @@ export const assertUniqueListIds = (mapping: SyncNode, value: unknown, path = "v
   }
 };
 
+// Document schemas are deterministic, immutable contracts for the store lifetime.
+const documentMappings = new WeakMap<TSchema, SyncNode>();
 export const validateDocument = <S extends TSchema>(schema: S, value: unknown): Static<S> => {
   if (!isSyncSchema(schema) || syncMeta(schema)?.container !== "map")
     throw new Error("Document schema root must be S.Document v1");
   assertJSON(value, new Set(), 64);
   if (new TextEncoder().encode(JSON.stringify(value)).byteLength > 1024 * 1024)
     throw new Error("Document JSON exceeds 1 MiB");
-  const mapping = syncMapping(schema);
+  let mapping = documentMappings.get(schema);
+  if (!mapping) {
+    mapping = syncMapping(schema);
+    documentMappings.set(schema, mapping);
+  }
   const checked = validate(schema, value);
   assertUniqueListIds(mapping, checked);
   return checked;

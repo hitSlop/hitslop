@@ -19,34 +19,39 @@ export type DocumentStoreOptions<S extends TSchema> = { schema: S; initial: NoIn
 
 export function documentStore<S extends TSchema>(options: DocumentStoreOptions<S>) {
   const controller = createDocumentController(options);
-  let version = $state(0);
+  let data = $state.raw(controller.current);
+  const readStatus = () => ({
+    isReady: controller.isReady,
+    isLoading: controller.isLoading,
+    isDirty: controller.isDirty,
+    hasFailedChanges: controller.hasFailedChanges,
+    error: controller.error,
+    frame: controller.frame,
+    recovery: controller.recovery,
+  });
+  let status = $state.raw(readStatus());
   const unsubscribe = controller.subscribe(() => {
-    version++;
+    data = controller.current;
+    status = readStatus();
   });
   const store = {
     get current() {
-      version;
-      return controller.current;
+      return data;
     },
     get isReady() {
-      version;
-      return controller.isReady;
+      return status.isReady;
     },
     get isLoading() {
-      version;
-      return controller.isLoading;
+      return status.isLoading;
     },
     get isDirty() {
-      version;
-      return controller.isDirty;
+      return status.isDirty;
     },
     get hasFailedChanges() {
-      version;
-      return controller.hasFailedChanges;
+      return status.hasFailedChanges;
     },
     get error() {
-      version;
-      return controller.error;
+      return status.error;
     },
     change: controller.change,
     flush: controller.flush,
@@ -59,12 +64,10 @@ export function documentStore<S extends TSchema>(options: DocumentStoreOptions<S
   };
   owners.set(store, {
     get frame() {
-      version;
-      return controller.frame;
+      return status.frame;
     },
     get recovery() {
-      version;
-      return controller.recovery;
+      return status.recovery;
     },
     begin: controller.begin,
     end: controller.end,

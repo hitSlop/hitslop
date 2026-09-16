@@ -141,7 +141,6 @@ private struct CatalogSidebar: View {
                     BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
                     BrandLink(name: "discord", label: "Discord", destination: CatalogLinks.discord)
                 }
-                Text("Mini apps · local data · fun").font(.caption2).foregroundStyle(.tertiary)
             }
             .padding(14)
             .overlay(alignment: .top) { Divider() }

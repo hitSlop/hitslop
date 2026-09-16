@@ -65,3 +65,33 @@ test("bridge preserves structured native errors and valid nested JSON", async ()
   }));
   expect((await call("document.open", {})).data).toEqual({ tasks: [null, { extra: true }] });
 });
+
+test("shallow document envelopes still reject missing fields and non-JSON payloads", async () => {
+  const good = {
+    publication: 0,
+    revision: "r",
+    data: {},
+    dirty: false,
+    error: null,
+    projectionError: null,
+  };
+  for (const data of [undefined, NaN, { nested: undefined }, new Date(), new Array(1)]) {
+    const call = createBridgeCall(async () => ({ ok: true, value: { ...good, data } }));
+    await expect(call("document.open", {})).rejects.toThrow();
+    await expect(
+      call("document.apply", { session: "s", sequence: 1, base: "r", after: data as never }),
+    ).rejects.toThrow();
+  }
+  const { data: _, ...missing } = good;
+  await expect(
+    createBridgeCall(async () => ({ ok: true, value: missing }))("document.open", {}),
+  ).rejects.toThrow();
+  let deep: unknown = {};
+  for (let i = 0; i < 65; i++) deep = { child: deep };
+  await expect(
+    createBridgeCall(async () => ({ ok: true, value: { ...good, data: deep } }))(
+      "document.open",
+      {},
+    ),
+  ).rejects.toThrow();
+});

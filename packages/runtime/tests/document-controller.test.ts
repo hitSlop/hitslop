@@ -4,6 +4,66 @@ import { installHost, type DocumentFrame, type SlopHost } from "../src/index.ts"
 import { createDocumentController } from "../src/document-controller.ts";
 const schema = S.Document({ text: S.Text(), count: S.Integer() });
 const initial = { text: "", count: 0 };
+
+test("same-revision frames preserve owned data and new revisions share equal subtrees", async () => {
+  const host = fixture();
+  const nestedSchema = S.Document({
+    rows: S.Array(S.Object({ text: S.String() })),
+    extra: S.Object({ value: S.Number() }),
+  });
+  const data = { rows: [{ text: "a" }, { text: "b" }], extra: { value: 1 } };
+  let frame: DocumentFrame = {
+    publication: 1,
+    revision: "one",
+    data,
+    dirty: false,
+    error: null,
+    projectionError: null,
+  };
+  host.document.open = async () => frame;
+  host.document.flush = async () => frame;
+  const store = createDocumentController({ schema: nestedSchema, initial: data });
+  try {
+    await store.flush();
+    const before = store.current;
+    data.rows[0]!.text = "transport object changed";
+    expect(store.current.rows[0]!.text).toBe("a");
+    // A status publication need not touch the already validated data at all.
+    frame = {
+      ...frame,
+      publication: 2,
+      dirty: true,
+      data: {
+        get rows() {
+          throw new Error("data traversed");
+        },
+      } as never,
+    };
+    host.push(frame);
+    expect(store.current).toBe(before);
+    expect(store.isDirty).toBe(true);
+    frame = {
+      ...frame,
+      publication: 3,
+      revision: "two",
+      data: { rows: [{ text: "edited" }, { text: "b" }], extra: { value: 1 } },
+    };
+    host.push(frame);
+    expect(store.current).not.toBe(before);
+    expect(store.current.rows[0]).not.toBe(before.rows[0]);
+    expect(store.current.rows[1]).toBe(before.rows[1]);
+    expect(store.current.extra).toBe(before.extra);
+    expect(Object.isFrozen(store.current.rows[0])).toBe(true);
+    let notifications = 0;
+    const unsubscribe = store.subscribe(() => notifications++);
+    host.push(frame);
+    expect(notifications).toBe(0);
+    unsubscribe();
+  } finally {
+    await store.destroy();
+    host.uninstall();
+  }
+});
 function fixture() {
   let frame: DocumentFrame = {
     publication: 0,

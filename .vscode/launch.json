@@ -19,6 +19,26 @@
       "target": "hitslop-native",
       "configuration": "release",
       "preLaunchTask": "swift: Build Release hitslop-native (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Debug hitslop-document-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-document-spike",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug hitslop-document-spike (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Release hitslop-document-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-document-spike",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release hitslop-document-spike (apps/apple/Packages/HitSlopApple)"
     }
   ]
 }

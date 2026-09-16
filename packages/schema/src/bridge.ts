@@ -28,7 +28,9 @@ export const JSONValueSchema = Type.Unsafe<JSONValue>({
   $defs: jsonDefinitions,
   $ref: "#/$defs/json",
 });
-const json = Type.Unsafe<JSONValue>({ $ref: "#/$defs/json" });
+// Envelopes validate shape; bridge boundaries check plain JSON once. Application
+// schemas validate document contents. Do not recursively recheck every envelope.
+const json = Type.Unsafe<JSONValue>({});
 const object = <P extends Type.TProperties>(properties: P) =>
   Type.Object(properties, { additionalProperties: false, $defs: jsonDefinitions });
 const method = <P extends Type.TProperties, R extends Type.TSchema>(params: P, response: R) => ({

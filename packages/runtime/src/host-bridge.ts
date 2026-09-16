@@ -78,6 +78,7 @@ window.__hitslopDocumentPublish = (value) => {
   let frame: DocumentFrame;
   try {
     frame = validate(DocumentFrameSchema, value);
+    assertJSON(frame.data, new Set(), 64);
   } catch (error) {
     console.error(error);
     return;
@@ -99,7 +100,6 @@ const bridge: WindowSlop = {
   document: {
     open: () => call("document.open", {}),
     apply: (value) => {
-      assertJSON(value.after);
       return call("document.apply", {
         session: value.session,
         sequence: value.sequence,

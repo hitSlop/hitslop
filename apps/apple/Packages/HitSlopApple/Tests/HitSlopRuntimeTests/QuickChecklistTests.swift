@@ -84,6 +84,39 @@ import Testing
     #expect((final["futureField"] as? [String: Bool])?["keep"] == true)
     #expect(final["title"] as? String == "After external edit")
 }
+@Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_PILOT_PACKAGE"] != nil))
+@MainActor func quickChecklistLargeListKeepsRapidRowInput() async throws {
+    let source = URL(fileURLWithPath: ProcessInfo.processInfo.environment["HITSLOP_PILOT_PACKAGE"]!)
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("checklist-large-\(UUID()).slop")
+    try FileManager.default.copyItem(at: source, to: root)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let document = try #require(try SlopLoroDocument.open(package: SlopPackage(rootURL: root)))
+    let frame = try await document.frame()
+    var data = frame.data
+    data["tasks"] = .array((0..<500).map { index in
+        .object(["id": .string("row-\(index)"), "text": .string("Task \(index)"), "done": .bool(false), "archived": .bool(false)])
+    })
+    _ = try await document.apply(.init(session: "seed", sequence: 1, base: frame.revision, after: data))
+    try await document.close()
+    let session = try SlopRuntimeSession(packageURL: root)
+    defer { session.close() }
+    session.load()
+    try await session.waitUntilReady()
+    _ = try await session.webView.evaluateJavaScript(#"""
+    const target = document.querySelector('textarea[aria-label="Task 250"]');
+    target.focus();
+    for (let i = 1; i <= 20; i++) {
+      target.value = 'Rapid edit ' + i;
+      target.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    """#)
+    try await session.flush()
+    #expect(try await session.webView.evaluateJavaScript("document.querySelector('textarea[aria-label=\"Task 250\"]').value") as? String == "Rapid edit 20")
+    let saved = try SlopDocumentJSON(data: Data(contentsOf: root.appendingPathComponent("stores/data.json")))["data"]["tasks"].array
+    #expect(saved.count == 500)
+    #expect(saved[249]["text"] == .string("Rapid edit 20"))
+    #expect(saved[250]["text"] == .string("Task 250"))
+}
 #endif
 
 #if os(macOS)

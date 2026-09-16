@@ -34,8 +34,13 @@ upload acknowledgement deletes only its outbox entry.
 edit `data`. The host merges against that base revision, validates, and records
 a receipt so a stale file cannot be replayed as a new edit. Invalid external
 bytes are preserved for review. A committed pending projection is retried after
-an interrupted file replacement. Open, activation, filesystem events, and flush
-trigger reconciliation; there is no document polling loop.
+an interrupted file replacement. Edits remain durable in SQLite before acknowledgement;
+projection file writes coalesce after 250 ms of inactivity, with a two-second
+maximum scheduling delay during continuous edits. Flush, close, export, backup,
+and sharing preparation drain pending projection work immediately. Open,
+activation, and filesystem events reconcile external changes; filesystem
+refreshes do not force a projection write for each database commit. There is no
+document polling loop.
 
 Close/export awaits visible guest drafts and durable commits. Close also drains
 network work before closing the owner. Failed edits remain failures until
