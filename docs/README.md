@@ -23,6 +23,8 @@
 
 ## Design proposals
 
+- [Single-file SQLite experiment](sqlite-document-spike.md) — working macOS proof
+  of embedded applications, shared themes, and Finder previews/icons.
 - [Document architecture and sharing](sync-v1.md) — `S.*` schemas, Loro,
   versioned file edits, native persistence, and authenticated Firebase rooms.
 

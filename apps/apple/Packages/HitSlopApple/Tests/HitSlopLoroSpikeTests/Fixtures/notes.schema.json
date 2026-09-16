@@ -1,0 +1,123 @@
+{
+  "type": "object",
+  "required": [
+    "$slop",
+    "data"
+  ],
+  "properties": {
+    "$slop": {
+      "type": "object",
+      "required": [
+        "format",
+        "baseRevision"
+      ],
+      "properties": {
+        "format": {
+          "type": "number",
+          "const": 1
+        },
+        "baseRevision": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "notes",
+        "settings",
+        "tags",
+        "choice"
+      ],
+      "properties": {
+        "notes": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {
+              "type": "object",
+              "required": [
+                "text",
+                "done"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "x-hitslop": {
+                    "container": "text"
+                  }
+                },
+                "done": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true,
+              "x-hitslop": {
+                "container": "map"
+              }
+            }
+          },
+          "x-hitslop": {
+            "container": "record"
+          }
+        },
+        "settings": {
+          "type": "object",
+          "required": [
+            "count",
+            "label",
+            "enabled"
+          ],
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 12
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true,
+          "x-hitslop": {
+            "container": "map"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-hitslop": {
+            "container": "atomic"
+          }
+        },
+        "choice": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "x-hitslop": {
+            "container": "atomic"
+          }
+        }
+      },
+      "additionalProperties": true,
+      "x-hitslop": {
+        "version": 1,
+        "container": "map"
+      }
+    }
+  },
+  "additionalProperties": false
+}

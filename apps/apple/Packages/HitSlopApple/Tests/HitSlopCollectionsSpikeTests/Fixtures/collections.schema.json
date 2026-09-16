@@ -1,0 +1,83 @@
+{
+  "format": "hitslop-collections-1",
+  "collections": {
+    "todos": {
+      "fields": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "number"
+        }
+      },
+      "indexes": {
+        "by_completed": [
+          "completed",
+          "createdAt"
+        ],
+        "by_created": [
+          "createdAt"
+        ]
+      }
+    }
+  },
+  "document": {
+    "type": "object",
+    "required": [
+      "todos"
+    ],
+    "properties": {
+      "todos": {
+        "type": "object",
+        "patternProperties": {
+          "^.*$": {
+            "type": "object",
+            "required": [
+              "title",
+              "completed",
+              "createdAt",
+              "_id",
+              "_deleted"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "completed": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "number"
+              },
+              "_id": {
+                "type": "string"
+              },
+              "_deleted": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "x-hitslop": {
+              "container": "map"
+            }
+          }
+        },
+        "x-hitslop": {
+          "container": "record"
+        }
+      }
+    },
+    "additionalProperties": false,
+    "x-hitslop": {
+      "version": 1,
+      "container": "map"
+    }
+  }
+}

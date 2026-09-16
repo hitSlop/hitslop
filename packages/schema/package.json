@@ -35,7 +35,8 @@
     "./manifest.schema.json": "./generated/manifest.schema.json",
     "./authoring-manifest.schema.json": "./generated/authoring-manifest.schema.json",
     "./sync": "./dist/sync.js",
-    "./document-runtime": "./dist/document-runtime.js"
+    "./document-runtime": "./dist/document-runtime.js",
+    "./collections": "./dist/collections.js"
   },
   "scripts": {
     "generate": "bun run build && bun src/generate.ts",

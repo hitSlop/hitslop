@@ -1,0 +1,16 @@
+import { globalStyle, style } from "@vanilla-extract/css";
+import theme from "../theme";
+const t = theme.vars;
+globalStyle("body", { margin: 0, background: t.surface, color: t.ink, fontFamily: '"Avenir Next", system-ui, sans-serif', fontSize: 16 });
+export const page = style({ padding: 28, maxWidth: 760, margin: "auto", "@media": { "(max-width: 380px)": { padding: 16 } } });
+export const heading = style({ fontSize: 32, margin: "0 0 8px", letterSpacing: "-.04em" });
+export const caption = style({ color: t.muted, margin: "0 0 24px" });
+export const form = style({ display: "flex", gap: 8, marginBottom: 24 });
+export const input = style({ minWidth: 0, flex: 1, border: `1px solid ${t.rule}`, borderRadius: 6, padding: 12, font: "inherit", background: t.panel, color: t.ink, ":focus-visible": { outline: `2px solid ${t.accent}` } });
+export const button = style({ minHeight: 44, border: 0, borderRadius: 6, padding: "8px 14px", background: t.accent, color: "white", font: "inherit", cursor: "pointer", ":disabled": { opacity: .5 }, ":focus-visible": { outline: `2px solid ${t.accent}`, outlineOffset: 3 } });
+export const table = style({ width: "100%", borderCollapse: "collapse", textAlign: "left", marginBottom: 20 });
+export const row = style({ borderBottom: `1px solid ${t.rule}` });
+export const cell = style({ padding: "12px 8px", overflowWrap: "anywhere" });
+export const check = style({ width: 28, height: 28, border: `1px solid ${t.muted}`, borderRadius: 4, color: t.accent, background: t.panel, cursor: "pointer", ":focus-visible": { outline: `2px solid ${t.accent}`, outlineOffset: 3 } });
+export const done = style({ textDecoration: "line-through", color: t.muted });
+export const footer = style({ display: "flex", justifyContent: "space-between", gap: 8 });

@@ -21,6 +21,9 @@ in-progress, and completed authored template. The exact inventory below is
 retained as prior art, not as parallel template homes. Unlisted local archive
 or prototype directories stay ignored.
 
+Platform experiment: `Prototypes/native-loro-relay` is the isolated Cloudflare
+Durable Object relay for the native Loro decision spike; it is not a template.
+
 - [ ] Inventory each repository template and map it to one canonical slug in `examples/slops/`, consolidating overlapping versions instead of copying duplicates.
 - [ ] Migrate selected archived templates into current authored packages under `examples/slops/`; repair manifests, storage, accessibility, responsive behavior, export state, and visuals as part of each migration.
 - [ ] Move `Prototypes/ambient-mixer` to `examples/slops/ambient-sound-mixer` when its P0 build begins.
@@ -140,3 +143,5 @@ manifests and storage conventions, support direct local editing, and use
 `data-slop-export="hide"` for controls that should not appear in PNG, PDF,
 Quick Look, or catalog captures. A legacy implementation is reference material
 until it has been migrated, reviewed, and made canonical there.
+
+- Prototypes/collections-todo/ — isolated schema/codegen/SQLite/Loro collections spike; excluded from gallery and production documents.

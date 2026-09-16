@@ -1,0 +1,107 @@
+name: SQLiteDocumentLab
+options:
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: 78UAXU8QG8
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "Developer ID Application: Mushroom DAO Holdings Corp. (78UAXU8QG8)"
+    CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+    OTHER_CODE_SIGN_FLAGS: --timestamp=none
+    ENABLE_HARDENED_RUNTIME: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  HitSlopApple:
+    path: ../Packages/HitSlopApple
+targets:
+  SQLiteDocumentLab:
+    type: application
+    platform: macOS
+    sources: [App.swift]
+    dependencies:
+      - package: HitSlopApple
+        product: HitSlopSQLiteSpikeHost
+      - target: SQLitePreview
+      - target: SQLiteThumbnail
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.sqlite-lab
+    info:
+      path: Generated/App-Info.plist
+      properties:
+        CFBundleDisplayName: SQLite Document Lab
+        NSPrincipalClass: NSApplication
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: SQLite Document Experiment
+            CFBundleTypeRole: Editor
+            LSHandlerRank: Owner
+            LSItemContentTypes: [com.hitslop.sqlite-lab.document]
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.hitslop.sqlite-lab.document
+            UTTypeDescription: SQLite Document Experiment
+            UTTypeConformsTo: [public.data, public.content]
+            UTTypeTagSpecification:
+              public.filename-extension: [slopsql]
+  SQLitePreview:
+    type: app-extension
+    platform: macOS
+    sources: [PreviewProvider.swift]
+    dependencies:
+      - package: HitSlopApple
+        product: HitSlopSQLiteArchive
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.sqlite-lab.preview
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+    entitlements:
+      path: Generated/Preview.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true
+    info:
+      path: Generated/Preview-Info.plist
+      properties:
+        CFBundleDisplayName: SQLite Document Preview
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.quicklook.preview
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PreviewProvider
+          NSExtensionAttributes:
+            QLIsDataBasedPreview: true
+            QLSupportedContentTypes: [com.hitslop.sqlite-lab.document]
+            QLSupportsSearchableItems: false
+  SQLiteThumbnail:
+    type: app-extension
+    platform: macOS
+    sources: [ThumbnailProvider.swift]
+    dependencies:
+      - package: HitSlopApple
+        product: HitSlopSQLiteArchive
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hitslop.sqlite-lab.thumbnail
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+    entitlements:
+      path: Generated/Thumbnail.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true
+    info:
+      path: Generated/Thumbnail-Info.plist
+      properties:
+        CFBundleDisplayName: SQLite Document Thumbnail
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.quicklook.thumbnail
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ThumbnailProvider
+          NSExtensionAttributes:
+            QLSupportedContentTypes: [com.hitslop.sqlite-lab.document]
+            QLThumbnailMinimumDimension: 0
+schemes:
+  SQLiteDocumentLab:
+    build:
+      targets:
+        SQLiteDocumentLab: all

@@ -1,0 +1,296 @@
+[
+  {
+    "name": "valid-checklist",
+    "schema": "checklist",
+    "data": {
+      "title": "Little things, today",
+      "tasks": [
+        {
+          "id": "first-draft",
+          "text": "Send the first draft",
+          "done": true,
+          "archived": false
+        },
+        {
+          "id": "walk",
+          "text": "Take a walk without my phone",
+          "done": false,
+          "archived": false
+        },
+        {
+          "id": "weekend",
+          "text": "Make a little room for the weekend",
+          "done": false,
+          "archived": false
+        }
+      ]
+    },
+    "valid": true
+  },
+  {
+    "name": "unknown-fields",
+    "schema": "checklist",
+    "data": {
+      "title": "Little things, today",
+      "tasks": [
+        {
+          "id": "first-draft",
+          "text": "Send the first draft",
+          "done": true,
+          "archived": false
+        },
+        {
+          "id": "walk",
+          "text": "Take a walk without my phone",
+          "done": false,
+          "archived": false
+        },
+        {
+          "id": "weekend",
+          "text": "Make a little room for the weekend",
+          "done": false,
+          "archived": false
+        }
+      ],
+      "future": {
+        "retain": true
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "duplicate-ids",
+    "schema": "checklist",
+    "data": {
+      "title": "Little things, today",
+      "tasks": [
+        {
+          "id": "first-draft",
+          "text": "Send the first draft",
+          "done": true,
+          "archived": false
+        },
+        {
+          "id": "first-draft",
+          "text": "Send the first draft",
+          "done": true,
+          "archived": false
+        }
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "empty-id",
+    "schema": "checklist",
+    "data": {
+      "title": "Little things, today",
+      "tasks": [
+        {
+          "id": "",
+          "text": "Send the first draft",
+          "done": true,
+          "archived": false
+        }
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "missing-title",
+    "schema": "checklist",
+    "data": {
+      "tasks": [
+        {
+          "id": "first-draft",
+          "text": "Send the first draft",
+          "done": true,
+          "archived": false
+        },
+        {
+          "id": "walk",
+          "text": "Take a walk without my phone",
+          "done": false,
+          "archived": false
+        },
+        {
+          "id": "weekend",
+          "text": "Make a little room for the weekend",
+          "done": false,
+          "archived": false
+        }
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "no-coercion",
+    "schema": "checklist",
+    "data": {
+      "title": "Little things, today",
+      "tasks": [
+        {
+          "id": "first-draft",
+          "text": "Send the first draft",
+          "done": "false",
+          "archived": false
+        }
+      ]
+    },
+    "valid": false
+  },
+  {
+    "name": "valid-record",
+    "schema": "notes",
+    "data": {
+      "notes": {
+        "first": {
+          "text": "hello",
+          "done": false
+        }
+      },
+      "settings": {
+        "count": 2,
+        "label": "Notes",
+        "enabled": true
+      },
+      "tags": [
+        "one"
+      ],
+      "choice": null
+    },
+    "valid": true
+  },
+  {
+    "name": "record-type",
+    "schema": "notes",
+    "data": {
+      "notes": {
+        "first": {
+          "text": false,
+          "done": true
+        }
+      },
+      "settings": {
+        "count": 2,
+        "label": "Notes",
+        "enabled": true
+      },
+      "tags": [
+        "one"
+      ],
+      "choice": null
+    },
+    "valid": false
+  },
+  {
+    "name": "minimum",
+    "schema": "notes",
+    "data": {
+      "notes": {
+        "first": {
+          "text": "hello",
+          "done": false
+        }
+      },
+      "settings": {
+        "count": -1,
+        "label": "Notes",
+        "enabled": true
+      },
+      "tags": [
+        "one"
+      ],
+      "choice": null
+    },
+    "valid": false
+  },
+  {
+    "name": "integer",
+    "schema": "notes",
+    "data": {
+      "notes": {
+        "first": {
+          "text": "hello",
+          "done": false
+        }
+      },
+      "settings": {
+        "count": 1.5,
+        "label": "Notes",
+        "enabled": true
+      },
+      "tags": [
+        "one"
+      ],
+      "choice": null
+    },
+    "valid": false
+  },
+  {
+    "name": "maxlength",
+    "schema": "notes",
+    "data": {
+      "notes": {
+        "first": {
+          "text": "hello",
+          "done": false
+        }
+      },
+      "settings": {
+        "count": 2,
+        "label": "too long for this",
+        "enabled": true
+      },
+      "tags": [
+        "one"
+      ],
+      "choice": null
+    },
+    "valid": false
+  },
+  {
+    "name": "atomic-union",
+    "schema": "notes",
+    "data": {
+      "notes": {
+        "first": {
+          "text": "hello",
+          "done": false
+        }
+      },
+      "settings": {
+        "count": 2,
+        "label": "Notes",
+        "enabled": true
+      },
+      "tags": [
+        "one"
+      ],
+      "choice": 42
+    },
+    "valid": false
+  },
+  {
+    "name": "unicode-length",
+    "schema": "notes",
+    "data": {
+      "notes": {
+        "first": {
+          "text": "hello",
+          "done": false
+        }
+      },
+      "settings": {
+        "count": 2,
+        "label": "😀😀😀😀😀😀😀",
+        "enabled": true
+      },
+      "tags": [
+        "one"
+      ],
+      "choice": null
+    },
+    "valid": true
+  }
+]

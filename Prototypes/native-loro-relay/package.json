@@ -1,0 +1,12 @@
+{
+  "name": "@hitslop/native-loro-relay-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8791",
+    "check": "tsc --noEmit",
+    "test": "bun tests/relay.ts",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": { "wrangler": "^4.130.0", "@cloudflare/workers-types": "5.20260915.1", "typescript": "^7.0.2" }
+}

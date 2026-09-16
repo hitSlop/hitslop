@@ -12,6 +12,7 @@
   import Ellipsis from "@lucide/svelte/icons/ellipsis";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import checklistSchema from "../schema";
+  import initial from "../initial";
   import type { Checklist } from "../schema";
   import Icon from "./Icon.svelte";
   import Export from "./Export.svelte";
@@ -20,29 +21,7 @@
 
   const checklist = documentStore({
     schema: checklistSchema,
-    initial: {
-      title: "Little things, today",
-      tasks: [
-        {
-          id: "first-draft",
-          text: "Send the first draft",
-          done: true,
-          archived: false,
-        },
-        {
-          id: "walk",
-          text: "Take a walk without my phone",
-          done: false,
-          archived: false,
-        },
-        {
-          id: "weekend",
-          text: "Make a little room for the weekend",
-          done: false,
-          archived: false,
-        },
-      ],
-    },
+    initial,
   });
   let activeView = $state<"tasks" | "filed">("tasks");
   let draft = $state("");

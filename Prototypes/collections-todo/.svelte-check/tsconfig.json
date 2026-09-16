@@ -1,0 +1,32 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDirs": [
+      "..",
+      "svelte"
+    ],
+    "allowArbitraryExtensions": true,
+    "noEmit": true,
+    "incremental": false,
+    "tsBuildInfoFile": "tsbuildinfo.json"
+  },
+  "files": [
+    "../../../node_modules/.bun/svelte-check@4.7.6+a3107cd762483df7/node_modules/svelte-check/dist/src/svelte-shims-v4.d.ts",
+    "../../../node_modules/.bun/svelte-check@4.7.6+a3107cd762483df7/node_modules/svelte-check/dist/src/svelte-jsx-v4.d.ts"
+  ],
+  "include": [
+    "../src/**/*",
+    "../_generated/**/*.ts",
+    "../schema.ts",
+    "../theme.ts",
+    "../vite.config.ts",
+    "svelte/src/**/*",
+    "svelte/_generated/**/*.ts",
+    "svelte/schema.ts",
+    "svelte/theme.ts",
+    "svelte/vite.config.ts"
+  ],
+  "exclude": [
+    "../src/App.svelte"
+  ]
+}

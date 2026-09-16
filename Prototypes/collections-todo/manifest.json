@@ -1,0 +1,9 @@
+{
+  "$schema": "https://api.hitslop.com/schemas/v1/authoring-manifest.schema.json",
+  "slug": "collections-todo",
+  "author": { "name": "hitSlop" },
+  "title": "Collection Tasks",
+  "description": "An isolated typed-collections and replication experiment.",
+  "categories": ["productivity"],
+  "presentation": { "width": 560, "height": 640 }
+}

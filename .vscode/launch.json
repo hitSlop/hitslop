@@ -19,6 +19,66 @@
       "target": "hitslop-native",
       "configuration": "release",
       "preLaunchTask": "swift: Build Release hitslop-native (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Debug hitslop-collections-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-collections-spike",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug hitslop-collections-spike (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Release hitslop-collections-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-collections-spike",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release hitslop-collections-spike (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Debug hitslop-sqlite-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-sqlite-spike",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug hitslop-sqlite-spike (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Release hitslop-sqlite-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-sqlite-spike",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release hitslop-sqlite-spike (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Debug hitslop-loro-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-loro-spike",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug hitslop-loro-spike (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Release hitslop-loro-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-loro-spike",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release hitslop-loro-spike (apps/apple/Packages/HitSlopApple)"
     }
   ]
 }

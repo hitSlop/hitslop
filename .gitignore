@@ -81,6 +81,11 @@ archive/templates/*
 !archive/templates/weekly-planner/
 !archive/templates/weekly-planner/**
 Prototypes/*
+!Prototypes/native-loro-relay/
+!Prototypes/native-loro-relay/**
+Prototypes/native-loro-relay/node_modules/
+Prototypes/native-loro-relay/.wrangler/
+Prototypes/native-loro-relay/.dev.vars*
 !Prototypes/sync-wasm/
 !Prototypes/sync-wasm/*.ts
 !Prototypes/sync-wasm/*.html
@@ -90,3 +95,10 @@ Prototypes/sync-wasm/dist/
 Prototypes/sync-wasm/node_modules/
 !Prototypes/ambient-mixer/
 !Prototypes/ambient-mixer/**
+
+# Isolated generated-collections experiment.
+!Prototypes/collections-todo/
+!Prototypes/collections-todo/**
+Prototypes/collections-todo/node_modules/
+Prototypes/collections-todo/dist/
+Prototypes/collections-todo/_generated/

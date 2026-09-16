@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "checkJs": false, "lib": ["ES2023"] },
+  "include": ["compare.ts", "control-host.ts", "keyboard.ts", "generate-contract.ts", "incremental.ts", "incremental-e2e.ts"]
+}

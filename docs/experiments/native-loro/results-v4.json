@@ -1,0 +1,809 @@
+{
+  "experiment": "native-loro-incremental-v4",
+  "recordedAt": "2026-09-15T18:55:59.182Z",
+  "loro": "1.13.3",
+  "protocol": 2,
+  "confirmation": "durable",
+  "passed": true,
+  "buildAndUnitTests": true,
+  "local": {
+    "legacy": [
+      {
+        "name": "expired credentials rejected",
+        "passed": true
+      },
+      {
+        "name": "unknown membership denied",
+        "passed": true
+      },
+      {
+        "name": "persist and fanout",
+        "passed": true
+      },
+      {
+        "name": "duplicate append retains sequence",
+        "passed": true
+      },
+      {
+        "name": "schema mismatch rejected",
+        "passed": true
+      },
+      {
+        "name": "oversized snapshot rejected",
+        "passed": true
+      },
+      {
+        "name": "replay bounds one unacknowledged snapshot",
+        "passed": true
+      },
+      {
+        "name": "noncontiguous replay acknowledgement rejected",
+        "passed": true
+      },
+      {
+        "name": "lost ack follows durable storage",
+        "passed": true,
+        "details": {
+          "head": 3,
+          "close": {
+            "code": 1012,
+            "reason": "Injected lost acknowledgement"
+          },
+          "messages": [
+            {
+              "type": "snapshot"
+            },
+            {
+              "type": "snapshot"
+            },
+            {
+              "type": "ready"
+            },
+            {
+              "type": "ready"
+            },
+            {
+              "type": "snapshot"
+            }
+          ]
+        }
+      },
+      {
+        "name": "lost ack retry is idempotent",
+        "passed": true
+      },
+      {
+        "name": "object restart preserves replay and stored bytes",
+        "passed": true
+      },
+      {
+        "name": "quota rejection leaves history intact",
+        "passed": true
+      },
+      {
+        "name": "revocation closes live connections",
+        "passed": true
+      },
+      {
+        "name": "revoked member denied on reconnect",
+        "passed": true
+      },
+      {
+        "name": "stored bytes count unique snapshots",
+        "passed": true
+      }
+    ],
+    "protocol": [
+      {
+        "name": "immutable bootstrap seed is available",
+        "passed": true
+      },
+      {
+        "name": "seed replacement rejected",
+        "passed": true
+      },
+      {
+        "name": "snapshot protocol cannot join incremental room",
+        "passed": true
+      },
+      {
+        "name": "append acknowledges immutable ID, hash and sequence",
+        "passed": true
+      },
+      {
+        "name": "same batch retry does not append",
+        "passed": true
+      },
+      {
+        "name": "ID reuse with changed bytes rejected",
+        "passed": true
+      },
+      {
+        "name": "hash mismatch rejected",
+        "passed": true
+      },
+      {
+        "name": "schema mismatch rejected",
+        "passed": true
+      },
+      {
+        "name": "oversized single delta rejected",
+        "passed": true
+      },
+      {
+        "name": "replay sends one unacknowledged delta",
+        "passed": true
+      },
+      {
+        "name": "ordered replay retains both deltas",
+        "passed": true
+      },
+      {
+        "name": "lost ACK retry keeps original sequence",
+        "passed": true
+      },
+      {
+        "name": "restart preserves deduplication and complete log",
+        "passed": true
+      },
+      {
+        "name": "already stored retry remains valid at quota",
+        "passed": true
+      },
+      {
+        "name": "quota preserves retained history",
+        "passed": true
+      }
+    ],
+    "native": {
+      "endpoint": "http://127.0.0.1:8791",
+      "passed": true,
+      "checks": [
+        {
+          "name": "offline batches retain identical IDs and bytes after force quit",
+          "passed": true
+        },
+        {
+          "name": "independent offline branches converge through incremental bytes",
+          "passed": true
+        },
+        {
+          "name": "UI and disk show the same confirmed JSON",
+          "passed": true
+        },
+        {
+          "name": "lost ACK retries append exactly once",
+          "passed": true
+        },
+        {
+          "name": "before-send: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "before-send: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "after-server-ack: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "after-server-ack: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "after-outbox-commit: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "after-outbox-commit: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "receive commit survives crash before applied ACK",
+          "passed": true
+        },
+        {
+          "name": "accepted external JSON creates one durable outgoing batch",
+          "passed": true
+        },
+        {
+          "name": "external JSON reaches the other native view",
+          "passed": true
+        },
+        {
+          "name": "Durable Object restart preserves history and resumes delivery",
+          "passed": true
+        },
+        {
+          "name": "remote imports do not generate an echo upload",
+          "passed": true
+        },
+        {
+          "name": "1000-edit update payload is at least 90% smaller than snapshots",
+          "passed": true,
+          "details": {
+            "workloadMilliseconds": 24553.057041999993,
+            "edits": 1000,
+            "snapshotUploadBytes": 31756876,
+            "incrementalUploadBytes": 121890,
+            "reductionPercent": 99.616177611425,
+            "workloadSyncMilliseconds": 296238.377125,
+            "currentSnapshotBytes": 1372601,
+            "seedBytes": 984,
+            "bootstrapMilliseconds": 13480.709792000009,
+            "retainedEntries": 1090,
+            "retainedBytes": 1412422,
+            "oversizedDeltaBytes": 1000108
+          }
+        },
+        {
+          "name": "all 1000 ordered updates replay and drain durably",
+          "passed": true
+        },
+        {
+          "name": "current full snapshot exceeds the 512 KiB message cap",
+          "passed": true
+        },
+        {
+          "name": "late join still receives the original small seed",
+          "passed": true
+        },
+        {
+          "name": "third device reconstructs large history from seed plus every delta",
+          "passed": true
+        },
+        {
+          "name": "quota keeps a durable local edit and retry batch",
+          "passed": true
+        },
+        {
+          "name": "explicit retry after quota relief drains the same batch",
+          "passed": true
+        },
+        {
+          "name": "revocation blocks sharing while local saves continue",
+          "passed": true
+        },
+        {
+          "name": "malformed authorized-peer bytes preserve state and cursor",
+          "passed": true,
+          "details": {
+            "error": "Loro.LoroError.DecodeError(message: \"Decode error: (Invalid import data)\")"
+          }
+        },
+        {
+          "name": "malformed rejection leaves checkpoint unchanged after restart",
+          "passed": true
+        },
+        {
+          "name": "malformed failure allows further durable local work",
+          "passed": true
+        },
+        {
+          "name": "schema authorized-peer bytes preserve state and cursor",
+          "passed": true,
+          "details": {
+            "error": "Document failed JSON Schema validation: INVALID:\n  [1] value $['title'] => true not matching schema  at $['properties']['title']['type']; reason: Invalid type; expected string but found boolean"
+          }
+        },
+        {
+          "name": "schema rejection leaves checkpoint unchanged after restart",
+          "passed": true
+        },
+        {
+          "name": "schema failure allows further durable local work",
+          "passed": true
+        },
+        {
+          "name": "missing authorized-peer bytes preserve state and cursor",
+          "passed": true,
+          "details": {
+            "error": "Missing Loro dependencies"
+          }
+        },
+        {
+          "name": "missing rejection leaves checkpoint unchanged after restart",
+          "passed": true
+        },
+        {
+          "name": "missing failure allows further durable local work",
+          "passed": true
+        },
+        {
+          "name": "oversized fixture is a single delta over the cap",
+          "passed": true
+        },
+        {
+          "name": "oversized update stays durably local across restart",
+          "passed": true
+        },
+        {
+          "name": "oversized failure allows further durable local work",
+          "passed": true
+        }
+      ],
+      "metrics": {
+        "workloadMilliseconds": 24553.057041999993,
+        "edits": 1000,
+        "snapshotUploadBytes": 31756876,
+        "incrementalUploadBytes": 121890,
+        "reductionPercent": 99.616177611425,
+        "workloadSyncMilliseconds": 296238.377125,
+        "currentSnapshotBytes": 1372601,
+        "seedBytes": 984,
+        "bootstrapMilliseconds": 13480.709792000009,
+        "retainedEntries": 1090,
+        "retainedBytes": 1412422,
+        "oversizedDeltaBytes": 1000108
+      }
+    }
+  },
+  "hosted": {
+    "legacy": [
+      {
+        "name": "expired credentials rejected",
+        "passed": true
+      },
+      {
+        "name": "unknown membership denied",
+        "passed": true
+      },
+      {
+        "name": "persist and fanout",
+        "passed": true
+      },
+      {
+        "name": "duplicate append retains sequence",
+        "passed": true
+      },
+      {
+        "name": "schema mismatch rejected",
+        "passed": true
+      },
+      {
+        "name": "oversized snapshot rejected",
+        "passed": true
+      },
+      {
+        "name": "replay bounds one unacknowledged snapshot",
+        "passed": true
+      },
+      {
+        "name": "noncontiguous replay acknowledgement rejected",
+        "passed": true
+      },
+      {
+        "name": "lost ack follows durable storage",
+        "passed": true,
+        "details": {
+          "head": 3,
+          "close": {
+            "code": 1012,
+            "reason": "Injected lost acknowledgement"
+          },
+          "messages": [
+            {
+              "type": "snapshot"
+            },
+            {
+              "type": "snapshot"
+            },
+            {
+              "type": "ready"
+            },
+            {
+              "type": "ready"
+            },
+            {
+              "type": "snapshot"
+            }
+          ]
+        }
+      },
+      {
+        "name": "lost ack retry is idempotent",
+        "passed": true
+      },
+      {
+        "name": "object restart preserves replay and stored bytes",
+        "passed": true
+      },
+      {
+        "name": "quota rejection leaves history intact",
+        "passed": true
+      },
+      {
+        "name": "revocation closes live connections",
+        "passed": true
+      },
+      {
+        "name": "revoked member denied on reconnect",
+        "passed": true
+      },
+      {
+        "name": "stored bytes count unique snapshots",
+        "passed": true
+      }
+    ],
+    "protocol": [
+      {
+        "name": "immutable bootstrap seed is available",
+        "passed": true
+      },
+      {
+        "name": "seed replacement rejected",
+        "passed": true
+      },
+      {
+        "name": "snapshot protocol cannot join incremental room",
+        "passed": true
+      },
+      {
+        "name": "append acknowledges immutable ID, hash and sequence",
+        "passed": true
+      },
+      {
+        "name": "same batch retry does not append",
+        "passed": true
+      },
+      {
+        "name": "ID reuse with changed bytes rejected",
+        "passed": true
+      },
+      {
+        "name": "hash mismatch rejected",
+        "passed": true
+      },
+      {
+        "name": "schema mismatch rejected",
+        "passed": true
+      },
+      {
+        "name": "oversized single delta rejected",
+        "passed": true
+      },
+      {
+        "name": "replay sends one unacknowledged delta",
+        "passed": true
+      },
+      {
+        "name": "ordered replay retains both deltas",
+        "passed": true
+      },
+      {
+        "name": "lost ACK retry keeps original sequence",
+        "passed": true
+      },
+      {
+        "name": "restart preserves deduplication and complete log",
+        "passed": true
+      },
+      {
+        "name": "already stored retry remains valid at quota",
+        "passed": true
+      },
+      {
+        "name": "quota preserves retained history",
+        "passed": true
+      }
+    ],
+    "native": {
+      "endpoint": "https://hitslop-native-loro-spike.internal-slide.workers.dev",
+      "passed": true,
+      "checks": [
+        {
+          "name": "offline batches retain identical IDs and bytes after force quit",
+          "passed": true
+        },
+        {
+          "name": "independent offline branches converge through incremental bytes",
+          "passed": true
+        },
+        {
+          "name": "UI and disk show the same confirmed JSON",
+          "passed": true
+        },
+        {
+          "name": "lost ACK retries append exactly once",
+          "passed": true
+        },
+        {
+          "name": "before-send: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "before-send: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "after-server-ack: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "after-server-ack: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "after-outbox-commit: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "after-outbox-commit: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "receive commit survives crash before applied ACK",
+          "passed": true
+        },
+        {
+          "name": "accepted external JSON creates one durable outgoing batch",
+          "passed": true
+        },
+        {
+          "name": "external JSON reaches the other native view",
+          "passed": true
+        },
+        {
+          "name": "Durable Object restart preserves history and resumes delivery",
+          "passed": true
+        },
+        {
+          "name": "remote imports do not generate an echo upload",
+          "passed": true
+        },
+        {
+          "name": "1000-edit update payload is at least 90% smaller than snapshots",
+          "passed": true,
+          "details": {
+            "workloadMilliseconds": 24465.273583000002,
+            "edits": 1000,
+            "snapshotUploadBytes": 31674167,
+            "incrementalUploadBytes": 121890,
+            "reductionPercent": 99.61517535725565,
+            "workloadSyncMilliseconds": 363569.747042,
+            "currentSnapshotBytes": 1371443,
+            "seedBytes": 971,
+            "bootstrapMilliseconds": 83603.89087499992,
+            "retainedEntries": 1090,
+            "retainedBytes": 1412409,
+            "oversizedDeltaBytes": 1000108
+          }
+        },
+        {
+          "name": "all 1000 ordered updates replay and drain durably",
+          "passed": true
+        },
+        {
+          "name": "current full snapshot exceeds the 512 KiB message cap",
+          "passed": true
+        },
+        {
+          "name": "late join still receives the original small seed",
+          "passed": true
+        },
+        {
+          "name": "third device reconstructs large history from seed plus every delta",
+          "passed": true
+        },
+        {
+          "name": "quota keeps a durable local edit and retry batch",
+          "passed": true
+        },
+        {
+          "name": "explicit retry after quota relief drains the same batch",
+          "passed": true
+        },
+        {
+          "name": "revocation blocks sharing while local saves continue",
+          "passed": true
+        },
+        {
+          "name": "malformed authorized-peer bytes preserve state and cursor",
+          "passed": true,
+          "details": {
+            "error": "Loro.LoroError.DecodeError(message: \"Decode error: (Invalid import data)\")"
+          }
+        },
+        {
+          "name": "malformed rejection leaves checkpoint unchanged after restart",
+          "passed": true
+        },
+        {
+          "name": "malformed failure allows further durable local work",
+          "passed": true
+        },
+        {
+          "name": "schema authorized-peer bytes preserve state and cursor",
+          "passed": true,
+          "details": {
+            "error": "Document failed JSON Schema validation: INVALID:\n  [1] value $['title'] => true not matching schema  at $['properties']['title']['type']; reason: Invalid type; expected string but found boolean"
+          }
+        },
+        {
+          "name": "schema rejection leaves checkpoint unchanged after restart",
+          "passed": true
+        },
+        {
+          "name": "schema failure allows further durable local work",
+          "passed": true
+        },
+        {
+          "name": "missing authorized-peer bytes preserve state and cursor",
+          "passed": true,
+          "details": {
+            "error": "Missing Loro dependencies"
+          }
+        },
+        {
+          "name": "missing rejection leaves checkpoint unchanged after restart",
+          "passed": true
+        },
+        {
+          "name": "missing failure allows further durable local work",
+          "passed": true
+        },
+        {
+          "name": "oversized fixture is a single delta over the cap",
+          "passed": true
+        },
+        {
+          "name": "oversized update stays durably local across restart",
+          "passed": true
+        },
+        {
+          "name": "oversized failure allows further durable local work",
+          "passed": true
+        }
+      ],
+      "metrics": {
+        "workloadMilliseconds": 24465.273583000002,
+        "edits": 1000,
+        "snapshotUploadBytes": 31674167,
+        "incrementalUploadBytes": 121890,
+        "reductionPercent": 99.61517535725565,
+        "workloadSyncMilliseconds": 363569.747042,
+        "currentSnapshotBytes": 1371443,
+        "seedBytes": 971,
+        "bootstrapMilliseconds": 83603.89087499992,
+        "retainedEntries": 1090,
+        "retainedBytes": 1412409,
+        "oversizedDeltaBytes": 1000108
+      }
+    }
+  },
+  "completedAt": "2026-09-15T19:14:38.025Z",
+  "scope": "isolated spike 4; no production migration",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "bun": "1.3.13",
+  "nativeUnitTests": 26,
+  "progressProbe": "durable queue count",
+  "payloadAccounting": "Decoded Loro binary bytes; excludes base64, message envelopes, ACKs, and transport headers",
+  "diagnostics": {
+    "initialHosted": {
+      "reason": "240-second backlog timeout while replay was progressing",
+      "passed": false,
+      "checks": [
+        {
+          "name": "offline batches retain identical IDs and bytes after force quit",
+          "passed": true
+        },
+        {
+          "name": "independent offline branches converge through incremental bytes",
+          "passed": true
+        },
+        {
+          "name": "UI and disk show the same confirmed JSON",
+          "passed": true
+        },
+        {
+          "name": "lost ACK retries append exactly once",
+          "passed": true
+        },
+        {
+          "name": "before-send: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "before-send: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "after-server-ack: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "after-server-ack: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "after-outbox-commit: durable outbox survives the correct boundary",
+          "passed": true
+        },
+        {
+          "name": "after-outbox-commit: reconnect converges without duplicate append",
+          "passed": true
+        },
+        {
+          "name": "receive commit survives crash before applied ACK",
+          "passed": true
+        },
+        {
+          "name": "accepted external JSON creates one durable outgoing batch",
+          "passed": true
+        },
+        {
+          "name": "external JSON reaches the other native view",
+          "passed": true
+        },
+        {
+          "name": "Durable Object restart preserves history and resumes delivery",
+          "passed": true
+        },
+        {
+          "name": "remote imports do not generate an echo upload",
+          "passed": true
+        },
+        {
+          "name": "1000-edit update payload is at least 90% smaller than snapshots",
+          "passed": true,
+          "details": {
+            "workloadMilliseconds": 25148.165042000008,
+            "edits": 1000,
+            "snapshotUploadBytes": 31689029,
+            "incrementalUploadBytes": 121890,
+            "reductionPercent": 99.61535583813566
+          }
+        },
+        {
+          "name": "execution",
+          "passed": false,
+          "details": "Error: Timed out: durable outboxes and replay cursors settle"
+        }
+      ],
+      "metrics": {
+        "workloadMilliseconds": 25148.165042000008,
+        "edits": 1000,
+        "snapshotUploadBytes": 31689029,
+        "incrementalUploadBytes": 121890,
+        "reductionPercent": 99.61535583813566
+      }
+    },
+    "profiledHosted": {
+      "reason": "Intentionally interrupted after profiling found full-queue serialization in the harness progress poll; replaced with count query",
+      "passed": false,
+      "metrics": {
+        "workloadMilliseconds": 23704.666374999997,
+        "edits": 1000,
+        "snapshotUploadBytes": 31670106,
+        "incrementalUploadBytes": 121890,
+        "reductionPercent": 99.61512601189273
+      }
+    },
+    "earlierLocal": {
+      "passed": true,
+      "metrics": {
+        "workloadMilliseconds": 24254.086541999997,
+        "edits": 1000,
+        "snapshotUploadBytes": 31698887,
+        "incrementalUploadBytes": 121890,
+        "reductionPercent": 99.61547545817618,
+        "workloadSyncMilliseconds": 47383.772125,
+        "currentSnapshotBytes": 1371614,
+        "seedBytes": 984,
+        "bootstrapMilliseconds": 16527.976708000017,
+        "retainedEntries": 1090,
+        "retainedBytes": 1412422,
+        "oversizedDeltaBytes": 1000108
+      }
+    }
+  },
+  "limitations": [
+    "One edit per upload and one entry per replay acknowledgement; final hosted 1000-edit catch-up took about 364 seconds",
+    "Local catch-up timings varied substantially between runs; this is not a controlled performance SLA",
+    "No compaction or log repair; retains every update until test quota",
+    "Oversized seeds/individual updates are blocked, retained local outboxes require a future recovery policy",
+    "No production auth/invites, runtime cutover, preview change, or system IME certification"
+  ]
+}

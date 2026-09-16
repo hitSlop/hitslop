@@ -1,0 +1,2 @@
+import HitSlopSQLiteSpikeHost
+SQLiteSpikeApplication.launch()

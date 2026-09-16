@@ -16,15 +16,15 @@ private final class SyncPathLocks: @unchecked Sendable {
     }
 }
 
-/// Byte-only recoverable transactions. Loro and JSON reconciliation stay in JS.
-final class SlopSyncStorage {
+/// Byte-only recoverable transactions; callers own document interpretation.
+package final class SlopSyncStorage {
     private let root: URL
     private let lock: NSRecursiveLock
     private let stateFiles = ["state/identity.json", "state/checkpoint.loro", "state/materialization.json"]
     private let projection = "stores/data.json"
     private let pendingPath = "state/journal/pending.json"
-    var afterReplace: ((String) throws -> Void)?
-    init(root: URL) {
+    package var afterReplace: ((String) throws -> Void)?
+    package init(root: URL) {
         self.root = root.resolvingSymlinksInPath().standardizedFileURL
         lock = SyncPathLocks.shared.forPath(self.root.path)
     }
@@ -71,7 +71,7 @@ final class SlopSyncStorage {
                 "external": external?.base64EncodedString() as Any? ?? NSNull(),
                 "generation": generation, "externalHash": hash(external) as Any? ?? NSNull()]
     }
-    func open() throws -> [String: Any] {
+    package func open() throws -> [String: Any] {
         lock.lock(); defer { lock.unlock() }
         try recover()
         return try snapshot()
@@ -100,7 +100,7 @@ final class SlopSyncStorage {
         try FileManager.default.removeItem(at: root.appendingPathComponent(pendingPath))
         try syncDirectory(root.appendingPathComponent("state/journal"))
     }
-    func commit(_ body: [String: Any]) throws -> [String: Any] {
+    package func commit(_ body: [String: Any]) throws -> [String: Any] {
         lock.lock(); defer { lock.unlock() }
         guard try bytes(pendingPath) == nil else { throw SlopBridgeFailure(.storageError, "Recover pending transaction before saving") }
         let before = try snapshot()

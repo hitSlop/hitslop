@@ -30,7 +30,8 @@
       "types": "./dist/index.d.ts",
       "svelte": "./dist/index.js",
       "default": "./dist/index.js"
-    }
+    },
+    "./collections": "./dist/collections.js"
   },
   "scripts": {
     "build": "bun ../../scripts/clean-dist.ts && svelte-package -i src -o dist",

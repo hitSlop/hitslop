@@ -1,0 +1,26 @@
+{
+  "name": "@hitslop/collections-todo-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun ../../packages/cli/src/cli.ts dev . --experimental-collections",
+    "build": "bun ../../packages/cli/src/cli.ts build . --experimental-collections",
+    "check": "svelte-check --tsgo --tsconfig tsconfig.json"
+  },
+  "dependencies": {
+    "@hitslop/schema": "workspace:*",
+    "@hitslop/runtime": "workspace:*",
+    "@hitslop/svelte": "workspace:*",
+    "svelte": "^5.57.0",
+    "bits-ui": "^2.19.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@vanilla-extract/css": "^1.21.2",
+    "@vanilla-extract/vite-plugin": "^5.2.6",
+    "vite": "^8.2.2",
+    "svelte-check": "^4.7.6",
+    "typescript": "^6.0.3",
+    "@typescript/native": "npm:typescript@^7.0.2"
+  }
+}

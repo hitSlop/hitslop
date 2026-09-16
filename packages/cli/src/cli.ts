@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { buildCollections, devCollections, collectionsNative } from "./collections.ts";
 import { Crust } from "@crustjs/core";
 import { join } from "node:path";
 import { stat } from "node:fs/promises";
@@ -81,7 +82,7 @@ app = app.command("create", command => command.args([{ name: "template", type: "
     emitResult(created, created.path);
   }));
 app = app.command("inspect", command => command.args([{ name: "path", type: "path", default: "." }] as const)
-  .run(async ({ args }) => { const document = await inspectDocument(args.path); emitResult(document, JSON.stringify(document, null, 2)); }));
+  .run(async ({ args }) => { const document = args.path.endsWith(".slopsql") ? JSON.parse(await collectionsNative(["call", args.path, JSON.stringify({method:"inspect"})])) : await inspectDocument(args.path); emitResult(document, JSON.stringify(document, null, 2)); }));
 app = app.command("open", command => command.args([{ name: "path", type: "path", default: "." }] as const)
   .run(async ({ args }) => { const opened = await openDocument(args.path, args => runNative(args, { quiet: true })); emitResult(opened, `Opened ${opened.path}`); }));
 app = app.command("init", (command) => command.meta({ description: "Create a Svelte hitSlop project and manifest." }).args([{ name: "directory", type: "path", default: "my-slop" }] as const).flags({
@@ -104,8 +105,12 @@ app = app.command("validate", (command) => command.meta({ description: "Validate
   const manifest = runtime ? await validateRuntimePackage(args.path) : await validateAuthoringProject(args.path);
   emitResult({ valid: true, slug: manifest.slug }, `valid\t${manifest.slug}`);
 }));
-app = app.command("dev", (command) => command.meta({ description: "Preview the UI in a browser with disposable fake stores." }).args([{ name: "path", type: "path", default: "." }] as const).run(({ args }) => runDev(args.path)));
-app = app.command("build", (command) => command.args([{ name: "path", type: "path", default: "." }] as const).run(async ({ args }) => { const result = await buildSlop(args.path); emitResult({ path: result.directory }, result.directory); }));
+app = app.command("dev", (command) => command.meta({ description: "Preview the UI in a browser with disposable fake stores." }).args([{ name: "path", type: "path", default: "." }] as const).flags({ "experimental-collections": { type: "boolean" } }).run(({ args, flags }) => flags["experimental-collections"] ? devCollections(args.path) : runDev(args.path)));
+app = app.command("build", (command) => command.args([{ name: "path", type: "path", default: "." }] as const).flags({ "experimental-collections": { type: "boolean" } }).run(async ({ args, flags }) => { if (flags["experimental-collections"]) { const path = await buildCollections(args.path); emitResult({ path }, path); return; } const result = await buildSlop(args.path); emitResult({ path: result.directory }, result.directory); }));
+app = app.command("collections", command => command.args([{ name: "operation", type: "string" }, { name: "path", type: "path" }, { name: "collection", type: "string" }] as const).flags({ args: { type: "string", description: "JSON arguments for this experimental collection operation" } }).run(async ({ args, flags }) => {
+  if (!args.operation || !args.path || !args.collection) throw new Error("Usage: slop collections OP FILE COLLECTION --args JSON");
+  const result = JSON.parse(await collectionsNative(["call", args.path, JSON.stringify({ collection: args.collection, operation: args.operation, args: JSON.parse(flags.args ?? "{}") })])); emitResult(result, JSON.stringify(result, null, 2));
+}));
 app = app.command("register", (command) => command.meta({ description: "Build and register a template in the local hitSlop catalog." }).args([{ name: "path", type: "path", default: "." }] as const).flags({
   force: { type: "boolean", description: "Replace an existing local template without prompting." },
   preview: { type: "path", description: "Use this PNG instead of capturing a fresh native preview." },

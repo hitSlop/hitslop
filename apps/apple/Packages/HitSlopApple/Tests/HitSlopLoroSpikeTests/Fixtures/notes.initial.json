@@ -1,0 +1,17 @@
+{
+  "notes": {
+    "first": {
+      "text": "hello",
+      "done": false
+    }
+  },
+  "settings": {
+    "count": 2,
+    "label": "Notes",
+    "enabled": true
+  },
+  "tags": [
+    "one"
+  ],
+  "choice": null
+}

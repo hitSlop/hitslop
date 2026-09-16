@@ -121,6 +121,10 @@ The MVP authoring path is macOS + Svelte + JSON, demonstrated by Quick Checklist
 The macOS app is at `1.0.4` and public npm packages are at `0.3.0`.
 iOS remains at `0.1.0`; iOS, iCloud sync, and SQLite support are coming later.
 
+An isolated [SQLite document experiment](docs/sqlite-document-spike.md) proves
+single-file storage, shared Loro themes, and regenerated Finder previews/icons.
+It uses `.slopsql`; production `.slop` documents remain packages.
+
 ## License
 
 MIT © 2026 hitSlop contributors. See [LICENSE](LICENSE) and

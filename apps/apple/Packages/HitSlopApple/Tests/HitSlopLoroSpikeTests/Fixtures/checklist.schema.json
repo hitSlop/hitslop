@@ -1,0 +1,82 @@
+{
+  "type": "object",
+  "required": [
+    "$slop",
+    "data"
+  ],
+  "properties": {
+    "$slop": {
+      "type": "object",
+      "required": [
+        "format",
+        "baseRevision"
+      ],
+      "properties": {
+        "format": {
+          "type": "number",
+          "const": 1
+        },
+        "baseRevision": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "title",
+        "tasks"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "text",
+              "done",
+              "archived"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string",
+                "x-hitslop": {
+                  "container": "text"
+                }
+              },
+              "done": {
+                "type": "boolean"
+              },
+              "archived": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": true,
+            "x-hitslop": {
+              "container": "map"
+            }
+          },
+          "x-hitslop": {
+            "container": "movable-list",
+            "key": "id"
+          }
+        }
+      },
+      "additionalProperties": true,
+      "x-hitslop": {
+        "version": 1,
+        "container": "map"
+      }
+    }
+  },
+  "additionalProperties": false
+}
