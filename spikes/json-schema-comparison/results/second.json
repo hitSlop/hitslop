@@ -1,0 +1,4389 @@
+{
+  "batches": 5,
+  "benchmarkErrors": [],
+  "cases": [
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['count'] => \"0\" not matching schema  at $['properties']['count']['type']; reason: Invalid type; expected integer but found string",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"count\" : 0,\n  \"items\" : [\n\n  ]\n} not matching schema 2F076BD8-5028-4889-B9FA-D5F1A866942B at $['required']; reason: Missing required property: done",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['count'] => -1 not matching schema  at $['properties']['count']['minimum']; reason: Integer number -1 below minimum value of 0.0.",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['count'] => 0.5 not matching schema  at $['properties']['count']['type']; reason: Invalid type; expected integer but found number",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['items'][0]['text'] => \"\" not matching schema  at $['properties']['items']['items']['$ref']['properties']['text']['minLength']; reason: String '' is less than minimum length of 1",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"not an email\" not matching schema C69E060F-773E-4C64-B895-87C482523701 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => 3 not matching schema E6026011-B2D3-4A34-A479-5BEE6B84A2D4 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => 1.5 not matching schema 695DAE48-D97C-4CDE-B1C1-A685F05D535C at $['type']; reason: Invalid type; expected integer but found number",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"1\" not matching schema B2FE38E0-D534-4F2B-8D21-3A16EB57D1FB at $['type']; reason: Invalid type; expected integer but found string",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => true not matching schema 54F3936B-7B76-46EB-B6A4-1D0EDEEBE30B at $['type']; reason: Invalid type; expected integer but found boolean",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => 11 not matching schema 71B80782-9F25-4842-B391-B3C524EB2CE0 at $['maximum']; reason: Integer number 11 exceeds maximum value of 10.0.",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => [\n  {\n    \"a\" : [\n      1,\n      2\n    ]\n  },\n  {\n    \"a\" : [\n      1,\n      2\n    ]\n  }\n] not matching schema F96FF9CA-A54F-497C-BE83-D2D0E84B0D6D at $['uniqueItems']; reason: Array items not unique",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => [\n  {\n    \"a\" : 1,\n    \"b\" : 2\n  },\n  {\n    \"a\" : 1,\n    \"b\" : 2\n  }\n] not matching schema 7A2221CA-9DAD-4436-874F-E9A9D458FAEA at $['uniqueItems']; reason: Array items not unique",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => [\n  1,\n  1\n] not matching schema C39E63E8-E7FC-4369-8150-DBAD412DFA87 at $['uniqueItems']; reason: Array items not unique",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['extra'] => 1 not matching schema  at $['unevaluatedProperties']; reason: Schema always fails validation",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n\n} not matching schema  at $['allOf'][0]['required']; reason: Missing required property: title",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['children'][0]['text'] => 3 not matching schema  at $['$ref']['properties']['children']['items']['$ref']['properties']['text']['type']; reason: Invalid type; expected string but found integer",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => 1 not matching schema 58897B79-B8DB-433F-8420-A29A61513466 at $['oneOf']; reason: More than one schema validates",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"1\" not matching schema FEBB5AC9-9D72-4C09-A73F-39BDF40C18CC at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"\\/relative\" not matching schema 031FA36F-AF80-4715-9CAD-682E160E3FC6 at $['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"\\/relative\" needs to conform with format 'uri' at location $['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"https:\\/\\/example.com\\/with space\" not matching schema 24128EEE-8177-4757-9FAA-8B207C9A2E51 at $['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"https:\\/\\/example.com\\/with space\" needs to conform with format 'uri' at location $['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"https:\\/\\/example.com\\/%zz\" not matching schema 40DDE6F8-BF10-431D-9C93-0272FD047519 at $['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"https:\\/\\/example.com\\/%zz\" needs to conform with format 'uri' at location $['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"not a URI\" not matching schema 496EB03E-E642-4546-B437-14F38A3F5B42 at $['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"not a URI\" needs to conform with format 'uri' at location $['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"\\/with space\" not matching schema FE7EEF38-7DE4-44E2-A9EE-DE215111B24F at $['format']; reason: String does not match format 'uri-reference'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"\\/with space\" needs to conform with format 'uri-reference' at location $['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"\\/%zz\" not matching schema 5883150A-B370-432E-A740-12129EB4D166 at $['format']; reason: String does not match format 'uri-reference'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"\\/%zz\" needs to conform with format 'uri-reference' at location $['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"2026-09-08\" not matching schema A8C61AF2-A40F-4084-8BCD-E96DCC5A81BD at $['format']; reason: String does not match format 'date-time'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"2026-09-08\" needs to conform with format 'date-time' at location $['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"not a date\" not matching schema 85ECA045-86E5-4683-A60B-86844B404E7E at $['format']; reason: String does not match format 'date-time'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"not a date\" needs to conform with format 'date-time' at location $['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "manifest",
+      "matched": true,
+      "name": "actual",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"$schema\" : \"https:\\/\\/api.hitslop.com\\/schemas\\/v1\\/manifest.schema.json\",\n  \"categories\" : [\n    \"productivity\",\n    \"personal\"\n  ],\n  \"description\" : \"A blush pocket utility for capturing, finishing, and filing short task lists.\",\n  \"presentation\" : {\n    \"height\" : 620,\n    \"shape\" : \"rounded\",\n    \"width\" : 480\n  },\n  \"slug\" : \"quick-checklist\",\n  \"title\" : \"Quick Checklist\"\n} not matching schema https://api.hitslop.com/schemas/v1/manifest.schema.json at $['required']; reason: Missing required property: author",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "missing-author",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['presentation'] => {\n  \"height\" : 620,\n  \"shape\" : \"rounded\",\n  \"width\" : 1\n} not matching schema  at $['properties']['presentation']['anyOf']; reason: None of the schema validates\nFORMAT CONSTRAINTS:\n  [1] string $['author']['url'] => \"https:\\/\\/hitslop.com\" needs to conform with format 'uri' at location $['properties']['author']['properties']['url']['format']; valid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "invalid-width",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['future'] => true not matching schema  at $['additionalProperties']; reason: Schema always fails validation\nFORMAT CONSTRAINTS:\n  [1] string $['author']['url'] => \"https:\\/\\/hitslop.com\" needs to conform with format 'uri' at location $['properties']['author']['properties']['url']['format']; valid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "extra-property",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['author']['url'] => \"https:\\/\\/example.com\\/with space\" not matching schema  at $['properties']['author']['properties']['url']['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $['author']['url'] => \"https:\\/\\/example.com\\/with space\" needs to conform with format 'uri' at location $['properties']['author']['properties']['url']['format']; invalid",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "invalid-author-uri",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "name": "document-apply",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"after\" : {\n    \"list\" : [\n      null,\n      true,\n      3,\n      {\n        \"future\" : \"keep\"\n      }\n    ]\n  },\n  \"base\" : \"revision\",\n  \"method\" : \"document.apply\",\n  \"sequence\" : \"1\",\n  \"session\" : \"spike\"\n} not matching schema 7C00CCB5-4A73-4B4B-AC19-DA81A7D1A558 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "wrong-sequence-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "name": "media-open",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"method\" : \"unknown\"\n} not matching schema 3FB71F93-684F-412F-8925-C37E138E9F4C at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "unknown-method",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"extra\" : true,\n  \"method\" : \"host.info\"\n} not matching schema BFC74B7C-FC2F-4BD0-9AC8-4F8B2763AD7C at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "extra-property",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"height\" : 300,\n  \"method\" : \"window.resize\",\n  \"width\" : 1\n} not matching schema A6B6458D-9C5C-452F-B290-A68DCBA43A82 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "invalid-window-size",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "checklist",
+      "matched": true,
+      "name": "actual-initial",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "checklist",
+      "matched": true,
+      "name": "unknown-fields",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"tasks\" : [\n\n  ]\n} not matching schema 81899399-541D-47B0-B2AB-9D301D803424 at $['required']; reason: Missing required property: title",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "missing-title",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['title'] => 42 not matching schema  at $['properties']['title']['type']; reason: Invalid type; expected string but found integer",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "wrong-title-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['tasks'][0]['done'] => \"false\" not matching schema  at $['properties']['tasks']['items']['properties']['done']['type']; reason: Invalid type; expected boolean but found string",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "wrong-nested-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "DecodingError.dataCorrupted: Data was corrupted. Debug description: The given data was not valid JSON.. Underlying error: Error Domain=NSCocoaErrorDomain Code=3840 \"Unexpected end of file\" UserInfo={NSDebugDescription=Unexpected end of file}",
+      "engine": "dynamic-current",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "malformed-json",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "parse"
+    },
+    {
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "bridge-format-policy",
+      "matched": true,
+      "name": "formats-are-annotations",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['count'] => \"0\" not matching schema  at $['properties']['count']['type']; reason: Invalid type; expected integer but found string",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"count\" : 0,\n  \"items\" : [\n\n  ]\n} not matching schema CBBAA345-D850-468A-9D07-7ECCFACD74F6 at $['required']; reason: Missing required property: done",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['count'] => -1 not matching schema  at $['properties']['count']['minimum']; reason: Integer number -1 below minimum value of 0.0.",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['count'] => 0.5 not matching schema  at $['properties']['count']['type']; reason: Invalid type; expected integer but found number",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['items'][0]['text'] => \"\" not matching schema  at $['properties']['items']['items']['$ref']['properties']['text']['minLength']; reason: String '' is less than minimum length of 1",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"not an email\" not matching schema B43D1740-1DEF-48C1-84B9-A9028AC88894 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => 3 not matching schema B43D1740-1DEF-48C1-84B9-A9028AC88894 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => 1.5 not matching schema 833DBFDD-FBCA-4850-A159-9C88DE5129A4 at $['type']; reason: Invalid type; expected integer but found number",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"1\" not matching schema 833DBFDD-FBCA-4850-A159-9C88DE5129A4 at $['type']; reason: Invalid type; expected integer but found string",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => true not matching schema 833DBFDD-FBCA-4850-A159-9C88DE5129A4 at $['type']; reason: Invalid type; expected integer but found boolean",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => 11 not matching schema 833DBFDD-FBCA-4850-A159-9C88DE5129A4 at $['maximum']; reason: Integer number 11 exceeds maximum value of 10.0.",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => [\n  {\n    \"a\" : [\n      1,\n      2\n    ]\n  },\n  {\n    \"a\" : [\n      1,\n      2\n    ]\n  }\n] not matching schema BACFCB95-1AF2-4D5F-8A6D-C6617BD11B77 at $['uniqueItems']; reason: Array items not unique",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => [\n  {\n    \"a\" : 1,\n    \"b\" : 2\n  },\n  {\n    \"a\" : 1,\n    \"b\" : 2\n  }\n] not matching schema BACFCB95-1AF2-4D5F-8A6D-C6617BD11B77 at $['uniqueItems']; reason: Array items not unique",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => [\n  1,\n  1\n] not matching schema BACFCB95-1AF2-4D5F-8A6D-C6617BD11B77 at $['uniqueItems']; reason: Array items not unique",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['extra'] => 1 not matching schema  at $['unevaluatedProperties']; reason: Schema always fails validation",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n\n} not matching schema  at $['allOf'][0]['required']; reason: Missing required property: title",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['children'][0]['text'] => 3 not matching schema  at $['$ref']['properties']['children']['items']['$ref']['properties']['text']['type']; reason: Invalid type; expected string but found integer",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => 1 not matching schema EAB2F906-930B-4899-9623-70752EFE0A9F at $['oneOf']; reason: More than one schema validates",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"1\" not matching schema EAB2F906-930B-4899-9623-70752EFE0A9F at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"\\/relative\" not matching schema E307F174-B709-4580-9106-EB102163C2C7 at $['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"\\/relative\" needs to conform with format 'uri' at location $['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"https:\\/\\/example.com\\/with space\" not matching schema E307F174-B709-4580-9106-EB102163C2C7 at $['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"https:\\/\\/example.com\\/with space\" needs to conform with format 'uri' at location $['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"https:\\/\\/example.com\\/%zz\" not matching schema E307F174-B709-4580-9106-EB102163C2C7 at $['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"https:\\/\\/example.com\\/%zz\" needs to conform with format 'uri' at location $['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"not a URI\" not matching schema E307F174-B709-4580-9106-EB102163C2C7 at $['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"not a URI\" needs to conform with format 'uri' at location $['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"\\/with space\" not matching schema 6864D97D-2E67-4735-B243-3C6329106EE6 at $['format']; reason: String does not match format 'uri-reference'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"\\/with space\" needs to conform with format 'uri-reference' at location $['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"\\/%zz\" not matching schema 6864D97D-2E67-4735-B243-3C6329106EE6 at $['format']; reason: String does not match format 'uri-reference'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"\\/%zz\" needs to conform with format 'uri-reference' at location $['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"2026-09-08\" not matching schema E6310B30-0338-407E-85C9-81CFDBBA8240 at $['format']; reason: String does not match format 'date-time'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"2026-09-08\" needs to conform with format 'date-time' at location $['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => \"not a date\" not matching schema E6310B30-0338-407E-85C9-81CFDBBA8240 at $['format']; reason: String does not match format 'date-time'\nFORMAT CONSTRAINTS:\n  [1] string $ => \"not a date\" needs to conform with format 'date-time' at location $['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "manifest",
+      "matched": true,
+      "name": "actual",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"$schema\" : \"https:\\/\\/api.hitslop.com\\/schemas\\/v1\\/manifest.schema.json\",\n  \"categories\" : [\n    \"productivity\",\n    \"personal\"\n  ],\n  \"description\" : \"A blush pocket utility for capturing, finishing, and filing short task lists.\",\n  \"presentation\" : {\n    \"height\" : 620,\n    \"shape\" : \"rounded\",\n    \"width\" : 480\n  },\n  \"slug\" : \"quick-checklist\",\n  \"title\" : \"Quick Checklist\"\n} not matching schema https://api.hitslop.com/schemas/v1/manifest.schema.json at $['required']; reason: Missing required property: author",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "missing-author",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['presentation'] => {\n  \"height\" : 620,\n  \"shape\" : \"rounded\",\n  \"width\" : 1\n} not matching schema  at $['properties']['presentation']['anyOf']; reason: None of the schema validates\nFORMAT CONSTRAINTS:\n  [1] string $['author']['url'] => \"https:\\/\\/hitslop.com\" needs to conform with format 'uri' at location $['properties']['author']['properties']['url']['format']; valid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "invalid-width",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['future'] => true not matching schema  at $['additionalProperties']; reason: Schema always fails validation\nFORMAT CONSTRAINTS:\n  [1] string $['author']['url'] => \"https:\\/\\/hitslop.com\" needs to conform with format 'uri' at location $['properties']['author']['properties']['url']['format']; valid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "extra-property",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['author']['url'] => \"https:\\/\\/example.com\\/with space\" not matching schema  at $['properties']['author']['properties']['url']['format']; reason: String does not match format 'uri'\nFORMAT CONSTRAINTS:\n  [1] string $['author']['url'] => \"https:\\/\\/example.com\\/with space\" needs to conform with format 'uri' at location $['properties']['author']['properties']['url']['format']; invalid",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "invalid-author-uri",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "name": "document-apply",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"after\" : {\n    \"list\" : [\n      null,\n      true,\n      3,\n      {\n        \"future\" : \"keep\"\n      }\n    ]\n  },\n  \"base\" : \"revision\",\n  \"method\" : \"document.apply\",\n  \"sequence\" : \"1\",\n  \"session\" : \"spike\"\n} not matching schema 31969A21-0A0B-426A-BB23-8AF3664D05A5 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "wrong-sequence-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "name": "media-open",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"method\" : \"unknown\"\n} not matching schema 31969A21-0A0B-426A-BB23-8AF3664D05A5 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "unknown-method",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"extra\" : true,\n  \"method\" : \"host.info\"\n} not matching schema 31969A21-0A0B-426A-BB23-8AF3664D05A5 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "extra-property",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"height\" : 300,\n  \"method\" : \"window.resize\",\n  \"width\" : 1\n} not matching schema 31969A21-0A0B-426A-BB23-8AF3664D05A5 at $['anyOf']; reason: None of the schema validates",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "invalid-window-size",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "checklist",
+      "matched": true,
+      "name": "actual-initial",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "checklist",
+      "matched": true,
+      "name": "unknown-fields",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $ => {\n  \"tasks\" : [\n\n  ]\n} not matching schema E5700FDB-6EC7-4E8B-8043-D8B5EAEB69E2 at $['required']; reason: Missing required property: title",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "missing-title",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['title'] => 42 not matching schema  at $['properties']['title']['type']; reason: Invalid type; expected string but found integer",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "wrong-title-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "INVALID:\n  [1] value $['tasks'][0]['done'] => \"false\" not matching schema  at $['properties']['tasks']['items']['properties']['done']['type']; reason: Invalid type; expected boolean but found string",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "wrong-nested-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "DecodingError.dataCorrupted: Data was corrupted. Debug description: The given data was not valid JSON.. Underlying error: Error Domain=NSCocoaErrorDomain Code=3840 \"Unexpected end of file\" UserInfo={NSDebugDescription=Unexpected end of file}",
+      "engine": "dynamic-reused",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "malformed-json",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "parse"
+    },
+    {
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "bridge-format-policy",
+      "matched": true,
+      "name": "formats-are-annotations",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/count/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/properties/count/type\",\n      \"instanceLocation\" : \"/count\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.integer]' but found 'string'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'done' is missing\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/count/minimum\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/properties/count/minimum\",\n      \"instanceLocation\" : \"/count\",\n      \"error\" : \"-1 is below minimum value of 0\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/count/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/properties/count/type\",\n      \"instanceLocation\" : \"/count\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.integer]' but found 'number'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/items/items/$ref/properties/text/minLength\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/$defs/item/properties/text/minLength\",\n      \"instanceLocation\" : \"/items/0/text\",\n      \"error\" : \"String '' is shorter than minimum length of 1\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String 'not an email' is not valid for format 'email'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/const\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Expected constant value '\\\"local\\\"' but found '\\\"not an email\\\"'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/type\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.string]' but found 'integer'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/const\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Expected constant value '\\\"local\\\"' but found '3'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/type\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.integer]' but found 'number'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/type\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.integer]' but found 'string'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/type\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.integer]' but found 'boolean'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/maximum\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/maximum\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"11 exceeds maximum value of 10\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/uniqueItems\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/uniqueItems\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Array items are not unique as required\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/uniqueItems\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/uniqueItems\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Array items are not unique as required\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/uniqueItems\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/uniqueItems\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Array items are not unique as required\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/unevaluatedProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/unevaluatedProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/allOf/0/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/allOf/0/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'title' is missing\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/$ref/properties/children/items/$ref/properties/text/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/$defs/node/properties/text/type\",\n      \"instanceLocation\" : \"/children/0/text\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.string]' but found 'integer'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/oneOf\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/oneOf\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Failed to satisfy exactly one schema: \"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/oneOf/0/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/oneOf/0/type\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.integer]' but found 'string'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/oneOf/1/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/oneOf/1/type\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.number]' but found 'string'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "exclusive union branches",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String '/relative' is not valid for format 'uri'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String 'https://example.com/with space' is not valid for format 'uri'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String 'https://example.com/%zz' is not valid for format 'uri'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String 'not a URI' is not valid for format 'uri'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "URI format assertions",
+      "matched": true,
+      "name": "case-6",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String '/with space' is not valid for format 'uri-reference'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String '/%zz' is not valid for format 'uri-reference'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "name": "case-5",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-1",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-2",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String '2026-09-08' is not valid for format 'date-time'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-3",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/format\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/format\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"String 'not a date' is not valid for format 'date-time'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "date time format assertions",
+      "matched": true,
+      "name": "case-4",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "manifest",
+      "matched": true,
+      "name": "actual",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/required\",\n      \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'author' is missing\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "missing-author",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/presentation/anyOf/0/properties/width/minimum\",\n      \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#/properties/presentation/anyOf/0/properties/width/minimum\",\n      \"instanceLocation\" : \"/presentation/width\",\n      \"error\" : \"1 is below minimum value of 240\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/presentation/anyOf/1/properties/width/minimum\",\n      \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#/properties/presentation/anyOf/1/properties/width/minimum\",\n      \"instanceLocation\" : \"/presentation/width\",\n      \"error\" : \"1 is below minimum value of 240\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/presentation/anyOf/1/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#/properties/presentation/anyOf/1/additionalProperties\",\n      \"instanceLocation\" : \"/presentation/shape\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/presentation/anyOf/1/required\",\n      \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#/properties/presentation/anyOf/1/required\",\n      \"instanceLocation\" : \"/presentation\",\n      \"error\" : \"Required property 'skin' is missing\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "invalid-width",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#/additionalProperties\",\n      \"instanceLocation\" : \"/future\",\n      \"error\" : \"\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "extra-property",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/author/properties/url/format\",\n      \"absoluteKeywordLocation\" : \"https://api.hitslop.com/schemas/v1/manifest.schema.json#/properties/author/properties/url/format\",\n      \"instanceLocation\" : \"/author/url\",\n      \"error\" : \"String 'https://example.com/with space' is not valid for format 'uri'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "manifest",
+      "matched": true,
+      "name": "invalid-author-uri",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "name": "document-apply",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"host.info\\\"' but found '\\\"document.apply\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/additionalProperties\",\n      \"instanceLocation\" : \"/session\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/additionalProperties\",\n      \"instanceLocation\" : \"/sequence\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/additionalProperties\",\n      \"instanceLocation\" : \"/base\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/additionalProperties\",\n      \"instanceLocation\" : \"/after\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"log\\\"' but found '\\\"document.apply\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/additionalProperties\",\n      \"instanceLocation\" : \"/session\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/additionalProperties\",\n      \"instanceLocation\" : \"/sequence\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/additionalProperties\",\n      \"instanceLocation\" : \"/base\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/additionalProperties\",\n      \"instanceLocation\" : \"/after\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'message' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"ready\\\"' but found '\\\"document.apply\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/additionalProperties\",\n      \"instanceLocation\" : \"/session\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/additionalProperties\",\n      \"instanceLocation\" : \"/sequence\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/additionalProperties\",\n      \"instanceLocation\" : \"/base\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/additionalProperties\",\n      \"instanceLocation\" : \"/after\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.open\\\"' but found '\\\"document.apply\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/additionalProperties\",\n      \"instanceLocation\" : \"/session\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/additionalProperties\",\n      \"instanceLocation\" : \"/sequence\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/additionalProperties\",\n      \"instanceLocation\" : \"/base\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/additionalProperties\",\n      \"instanceLocation\" : \"/after\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/properties/sequence/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/properties/sequence/type\",\n      \"instanceLocation\" : \"/sequence\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.integer]' but found 'string'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.flush\\\"' but found '\\\"document.apply\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/additionalProperties\",\n      \"instanceLocation\" : \"/session\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/additionalProperties\",\n      \"instanceLocation\" : \"/sequence\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/additionalProperties\",\n      \"instanceLocation\" : \"/base\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/additionalProperties\",\n      \"instanceLocation\" : \"/after\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected co",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "wrong-sequence-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "name": "media-open",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"host.info\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"log\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'message' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"ready\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.open\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.apply\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'session' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.flush\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.releaseDraft\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'session' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/7/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"media.open\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/7/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'name' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/8/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/8/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"media.write\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/8/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/8/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'name' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/9/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/9/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"media.remove\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/9/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/9/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'name' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/10/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/10/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"window.resize\\\"' but found '\\\"unknown\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/10/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/10/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'width' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/11/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/11/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"window.drag\\\"' but found '\\\"unknown\\\"'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "unknown-method",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"log\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'message' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"ready\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.open\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.apply\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'session' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.flush\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.releaseDraft\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'session' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/7/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"media.open\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/7/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/7/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'name' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/8/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/8/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"media.write\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/8/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/8/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/8/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/8/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'name' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/9/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/9/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"media.remove\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/9/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/9/additionalProperties\",\n      \"instanceLocation\" : \"/extra\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/9/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/9/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'name' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/10/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/10/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"window.resize\\\"' but found '\\\"host.info\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/10/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/10/additionalProperties\",\n      \"instanceLocation\" : \"/extr",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "extra-property",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"host.info\\\"' but found '\\\"window.resize\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/additionalProperties\",\n      \"instanceLocation\" : \"/width\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/0/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/0/additionalProperties\",\n      \"instanceLocation\" : \"/height\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"log\\\"' but found '\\\"window.resize\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/additionalProperties\",\n      \"instanceLocation\" : \"/width\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/additionalProperties\",\n      \"instanceLocation\" : \"/height\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/1/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/1/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'message' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"ready\\\"' but found '\\\"window.resize\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/additionalProperties\",\n      \"instanceLocation\" : \"/width\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/2/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/2/additionalProperties\",\n      \"instanceLocation\" : \"/height\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.open\\\"' but found '\\\"window.resize\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/additionalProperties\",\n      \"instanceLocation\" : \"/width\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/3/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/3/additionalProperties\",\n      \"instanceLocation\" : \"/height\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.apply\\\"' but found '\\\"window.resize\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/additionalProperties\",\n      \"instanceLocation\" : \"/width\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/additionalProperties\",\n      \"instanceLocation\" : \"/height\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/4/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/4/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'session' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.flush\\\"' but found '\\\"window.resize\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/additionalProperties\",\n      \"instanceLocation\" : \"/width\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/5/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/5/additionalProperties\",\n      \"instanceLocation\" : \"/height\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"document.releaseDraft\\\"' but found '\\\"window.resize\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/additionalProperties\",\n      \"instanceLocation\" : \"/width\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/additionalProperties\",\n      \"instanceLocation\" : \"/height\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/6/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/6/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'session' is missing\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/properties/method/const\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/7/properties/method/const\",\n      \"instanceLocation\" : \"/method\",\n      \"error\" : \"Expected constant value '\\\"media.open\\\"' but found '\\\"window.resize\\\"'\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/7/additionalProperties\",\n      \"instanceLocation\" : \"/width\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/additionalProperties\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/anyOf/7/additionalProperties\",\n      \"instanceLocation\" : \"/height\",\n      \"error\" : \"\"\n    },\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/anyOf/7/required\",\n      \"absoluteKeywordLoca",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "bridge",
+      "matched": true,
+      "name": "invalid-window-size",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "checklist",
+      "matched": true,
+      "name": "actual-initial",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "checklist",
+      "matched": true,
+      "name": "unknown-fields",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/required\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/required\",\n      \"instanceLocation\" : \"\",\n      \"error\" : \"Required property 'title' is missing\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "missing-title",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/title/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/properties/title/type\",\n      \"instanceLocation\" : \"/title\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.string]' but found 'integer'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "wrong-title-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "{\n  \"valid\" : false,\n  \"keywordLocation\" : \"\",\n  \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#\",\n  \"instanceLocation\" : \"\",\n  \"errors\" : [\n    {\n      \"valid\" : false,\n      \"keywordLocation\" : \"/properties/tasks/items/properties/done/type\",\n      \"absoluteKeywordLocation\" : \"https://swift-json-schema.invalid/in-memory#/properties/tasks/items/properties/done/type\",\n      \"instanceLocation\" : \"/tasks/0/done\",\n      \"error\" : \"Expected type '[OrderedJSON.JSONType.boolean]' but found 'string'\"\n    }\n  ]\n}",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "wrong-nested-type",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "validation",
+      "preserved": true
+    },
+    {
+      "diagnostics": "JSONParseError(message: \"Unexpected end of input while reading value\", byteOffset: 9, line: 1, column: 10)",
+      "engine": "jsonschema-reused",
+      "expected": false,
+      "group": "checklist",
+      "matched": true,
+      "name": "malformed-json",
+      "outcomes": [
+        false,
+        false,
+        false
+      ],
+      "phase": "parse"
+    },
+    {
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "bridge-format-policy",
+      "matched": true,
+      "name": "formats-are-annotations",
+      "outcomes": [
+        true,
+        true,
+        true
+      ],
+      "phase": "validation",
+      "preserved": true
+    }
+  ],
+  "iterationsPerBatch": 50,
+  "repeatedCorrectnessPasses": 3,
+  "schemas": [
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "manifest",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "checklist",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-current",
+      "expected": true,
+      "group": "bridge-format-policy",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": false,
+      "engine": "dynamic-current",
+      "error": "DecodingError.dataCorrupted: Data was corrupted. Debug description: Invalid JSONSchema encoding",
+      "expected": false,
+      "group": "invalid-type",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "dynamic-current",
+      "error": "DecodingError.dataCorrupted: Data was corrupted. Debug description: Invalid JSONSchema encoding",
+      "expected": false,
+      "group": "invalid-minLength",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "dynamic-current",
+      "error": "DecodingError.dataCorrupted: Data was corrupted. Debug description: Invalid JSONSchema encoding",
+      "expected": false,
+      "group": "invalid-schema-array",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "dynamic-current",
+      "error": "DecodingError.dataCorrupted: Data was corrupted. Debug description: The given data was not valid JSON.. Underlying error: Error Domain=NSCocoaErrorDomain Code=3840 \"Unexpected end of file\" UserInfo={NSDebugDescription=Unexpected end of file}",
+      "expected": false,
+      "group": "malformed-schema-json",
+      "matched": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "manifest",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "checklist",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "dynamic-reused",
+      "expected": true,
+      "group": "bridge-format-policy",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": false,
+      "engine": "dynamic-reused",
+      "error": "DecodingError.dataCorrupted: Data was corrupted. Debug description: Invalid JSONSchema encoding",
+      "expected": false,
+      "group": "invalid-type",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "dynamic-reused",
+      "error": "DecodingError.dataCorrupted: Data was corrupted. Debug description: Invalid JSONSchema encoding",
+      "expected": false,
+      "group": "invalid-minLength",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "dynamic-reused",
+      "error": "DecodingError.dataCorrupted: Data was corrupted. Debug description: Invalid JSONSchema encoding",
+      "expected": false,
+      "group": "invalid-schema-array",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "dynamic-reused",
+      "error": "DecodingError.dataCorrupted: Data was corrupted. Debug description: The given data was not valid JSON.. Underlying error: Error Domain=NSCocoaErrorDomain Code=3840 \"Unexpected end of file\" UserInfo={NSDebugDescription=Unexpected end of file}",
+      "expected": false,
+      "group": "malformed-schema-json",
+      "matched": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "non-mutating document validation",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "format assertions and union branches",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "integer representation and bounds",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "deep array uniqueness",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "unevaluated properties across composition",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "recursive local references and nested unknown fields",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "exclusive union branches",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "URI format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "URI reference format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "date time format assertions",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "manifest",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "bridge",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "checklist",
+      "matched": false,
+      "preserved": false
+    },
+    {
+      "accepted": true,
+      "engine": "jsonschema-reused",
+      "expected": true,
+      "group": "bridge-format-policy",
+      "matched": true,
+      "preserved": true
+    },
+    {
+      "accepted": false,
+      "engine": "jsonschema-reused",
+      "error": "Invalid schema: {\"valid\":false,\"keywordLocation\":\"\",\"absoluteKeywordLocation\":\"https://json-schema.org/draft/2020-12/schema#\",\"instanceLocation\":\"\",\"errors\":[{\"valid\":false,\"keywordLocation\":\"/allOf/3/$ref/properties/type/anyOf/0/$ref/enum\",\"absoluteKeywordLocation\":\"https://json-schema.org/draft/2020-12/meta/validation#/$defs/simpleTypes/enum\",\"instanceLocation\":\"/type\",\"error\":\"'\\\"bogus\\\"' is not one of the allowed values: \\\"array\\\", \\\"boolean\\\", \\\"integer\\\", \\\"null\\\", \\\"number\\\", \\\"object\\\", \\\"string\\\"\"},{\"valid\":false,\"keywordLocation\":\"/allOf/3/$ref/properties/type/anyOf/1/type\",\"absoluteKeywordLocation\":\"https://json-schema.org/draft/2020-12/meta/validation#/properties/type/anyOf/1/type\",\"instanceLocation\":\"/type\",\"error\":\"Expected type '[OrderedJSON.JSONType.array]' but found 'string'\"}]}",
+      "expected": false,
+      "group": "invalid-type",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "jsonschema-reused",
+      "error": "Invalid schema: {\"valid\":false,\"keywordLocation\":\"\",\"absoluteKeywordLocation\":\"https://json-schema.org/draft/2020-12/schema#\",\"instanceLocation\":\"\",\"errors\":[{\"valid\":false,\"keywordLocation\":\"/allOf/3/$ref/properties/minLength/$ref/$ref/type\",\"absoluteKeywordLocation\":\"https://json-schema.org/draft/2020-12/meta/validation#/$defs/nonNegativeInteger/type\",\"instanceLocation\":\"/minLength\",\"error\":\"Expected type '[OrderedJSON.JSONType.integer]' but found 'string'\"}]}",
+      "expected": false,
+      "group": "invalid-minLength",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "jsonschema-reused",
+      "error": "schemaShouldBeBooleanOrObject",
+      "expected": false,
+      "group": "invalid-schema-array",
+      "matched": true
+    },
+    {
+      "accepted": false,
+      "engine": "jsonschema-reused",
+      "error": "JSONParseError(message: \"Unexpected end of input while reading value\", byteOffset: 8, line: 1, column: 9)",
+      "expected": false,
+      "group": "malformed-schema-json",
+      "matched": true
+    }
+  ],
+  "timings": [
+    {
+      "batchMicroseconds": [
+        1192.655,
+        1312.26168,
+        1228.65166,
+        1221.69416,
+        1266.96
+      ],
+      "bytes": 1978,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 1312.26168,
+      "medianMicroseconds": 1228.65166,
+      "minimumMicroseconds": 1192.655,
+      "mode": "schema-prepare",
+      "workload": "manifest"
+    },
+    {
+      "batchMicroseconds": [
+        1580.63916,
+        1526.2625,
+        1522.12916,
+        1527.4233199999999,
+        1608.1225
+      ],
+      "bytes": 1978,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 1608.1225,
+      "medianMicroseconds": 1527.4233199999999,
+      "minimumMicroseconds": 1522.12916,
+      "mode": "schema-prepare",
+      "workload": "manifest"
+    },
+    {
+      "batchMicroseconds": [
+        13124.113319999999,
+        12886.70582,
+        13970.66416,
+        13559.854159999999,
+        14820.27666
+      ],
+      "bytes": 1978,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 14820.27666,
+      "medianMicroseconds": 13559.854159999999,
+      "minimumMicroseconds": 12886.70582,
+      "mode": "schema-prepare",
+      "workload": "manifest"
+    },
+    {
+      "batchMicroseconds": [
+        4551.365,
+        4971.45,
+        5682.061659999999,
+        5670.09668,
+        4727.39418
+      ],
+      "bytes": 5264,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 5682.061659999999,
+      "medianMicroseconds": 4971.45,
+      "minimumMicroseconds": 4551.365,
+      "mode": "schema-prepare",
+      "workload": "bridge"
+    },
+    {
+      "batchMicroseconds": [
+        17855.86332,
+        16665.65082,
+        16685.0675,
+        16785.6325,
+        20037.2075
+      ],
+      "bytes": 5264,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 20037.2075,
+      "medianMicroseconds": 16785.6325,
+      "minimumMicroseconds": 16665.65082,
+      "mode": "schema-prepare",
+      "workload": "bridge"
+    },
+    {
+      "batchMicroseconds": [
+        74272.00832000001,
+        84552.85334,
+        77950.37084,
+        75503.47834,
+        76608.83834
+      ],
+      "bytes": 5264,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 84552.85334,
+      "medianMicroseconds": 76608.83834,
+      "minimumMicroseconds": 74272.00832000001,
+      "mode": "schema-prepare",
+      "workload": "bridge"
+    },
+    {
+      "batchMicroseconds": [
+        319.08666,
+        324.66916000000003,
+        310.12668,
+        318.73834,
+        317.21332
+      ],
+      "bytes": 607,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 324.66916000000003,
+      "medianMicroseconds": 318.73834,
+      "minimumMicroseconds": 310.12668,
+      "mode": "schema-prepare",
+      "workload": "checklist"
+    },
+    {
+      "batchMicroseconds": [
+        401.75084000000004,
+        385.54582000000005,
+        391.47666,
+        374.38917999999995,
+        363.60916
+      ],
+      "bytes": 607,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 401.75084000000004,
+      "medianMicroseconds": 385.54582000000005,
+      "minimumMicroseconds": 363.60916,
+      "mode": "schema-prepare",
+      "workload": "checklist"
+    },
+    {
+      "batchMicroseconds": [
+        5568.355820000001,
+        5232.08416,
+        5388.499159999999,
+        6808.755840000001,
+        6525.888320000001
+      ],
+      "bytes": 607,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 6808.755840000001,
+      "medianMicroseconds": 5568.355820000001,
+      "minimumMicroseconds": 5232.08416,
+      "mode": "schema-prepare",
+      "workload": "checklist"
+    },
+    {
+      "batchMicroseconds": [
+        385.68665999999996,
+        366.67332000000005,
+        371.06165999999996,
+        367.69915999999995,
+        374.02916
+      ],
+      "bytes": 371,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 385.68665999999996,
+      "medianMicroseconds": 371.06165999999996,
+      "minimumMicroseconds": 366.67332000000005,
+      "mode": "validate-parsed",
+      "workload": "manifest-valid"
+    },
+    {
+      "batchMicroseconds": [
+        382.945,
+        388.18168,
+        385.555,
+        399.86084000000005,
+        433.84332
+      ],
+      "bytes": 371,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 433.84332,
+      "medianMicroseconds": 388.18168,
+      "minimumMicroseconds": 382.945,
+      "mode": "parse-and-validate",
+      "workload": "manifest-valid"
+    },
+    {
+      "batchMicroseconds": [
+        100.24915999999999,
+        92.32834000000001,
+        91.53584000000001,
+        95.13332,
+        90.965
+      ],
+      "bytes": 371,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 100.24915999999999,
+      "medianMicroseconds": 92.32834000000001,
+      "minimumMicroseconds": 90.965,
+      "mode": "validate-parsed",
+      "workload": "manifest-valid"
+    },
+    {
+      "batchMicroseconds": [
+        122.89168,
+        123.18834000000001,
+        129.60415999999998,
+        134.97165999999999,
+        124.69416
+      ],
+      "bytes": 371,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 134.97165999999999,
+      "medianMicroseconds": 124.69416,
+      "minimumMicroseconds": 122.89168,
+      "mode": "parse-and-validate",
+      "workload": "manifest-valid"
+    },
+    {
+      "batchMicroseconds": [
+        253.77416000000002,
+        264.85,
+        249.41918,
+        239.7775,
+        242.31333999999998
+      ],
+      "bytes": 371,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 264.85,
+      "medianMicroseconds": 249.41918,
+      "minimumMicroseconds": 239.7775,
+      "mode": "validate-parsed",
+      "workload": "manifest-valid"
+    },
+    {
+      "batchMicroseconds": [
+        292.0475,
+        291.04416000000003,
+        286.16334,
+        279.04584,
+        274.44166
+      ],
+      "bytes": 371,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 292.0475,
+      "medianMicroseconds": 286.16334,
+      "minimumMicroseconds": 274.44166,
+      "mode": "parse-and-validate",
+      "workload": "manifest-valid"
+    },
+    {
+      "batchMicroseconds": [
+        101.22334000000001,
+        100.3525,
+        100.4825,
+        101.0025,
+        103.4525
+      ],
+      "bytes": 369,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 103.4525,
+      "medianMicroseconds": 101.0025,
+      "minimumMicroseconds": 100.3525,
+      "mode": "validate-parsed",
+      "workload": "manifest-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        138.6625,
+        136.09665999999999,
+        126.77084,
+        135.24832,
+        126.08666
+      ],
+      "bytes": 369,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 138.6625,
+      "medianMicroseconds": 135.24832,
+      "minimumMicroseconds": 126.08666,
+      "mode": "parse-and-validate",
+      "workload": "manifest-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        325.51581999999996,
+        302.90584,
+        313.40916,
+        302.97916000000004,
+        281.86582
+      ],
+      "bytes": 369,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 325.51581999999996,
+      "medianMicroseconds": 302.97916000000004,
+      "minimumMicroseconds": 281.86582,
+      "mode": "validate-parsed",
+      "workload": "manifest-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        336.15834,
+        332.3,
+        320.70416,
+        310.29334,
+        330.96418
+      ],
+      "bytes": 369,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 336.15834,
+      "medianMicroseconds": 330.96418,
+      "minimumMicroseconds": 310.29334,
+      "mode": "parse-and-validate",
+      "workload": "manifest-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        378.35,
+        353.4175,
+        368.62832000000003,
+        367.29668,
+        361.38084000000003
+      ],
+      "bytes": 369,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 378.35,
+      "medianMicroseconds": 367.29668,
+      "minimumMicroseconds": 353.4175,
+      "mode": "validate-parsed",
+      "workload": "manifest-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        395.5225,
+        410.06415999999996,
+        393.415,
+        412.93834000000004,
+        407.7475
+      ],
+      "bytes": 369,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 412.93834000000004,
+      "medianMicroseconds": 407.7475,
+      "minimumMicroseconds": 393.415,
+      "mode": "parse-and-validate",
+      "workload": "manifest-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        794.23666,
+        809.25834,
+        811.2725,
+        805.31834,
+        854.69832
+      ],
+      "bytes": 125,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 854.69832,
+      "medianMicroseconds": 809.25834,
+      "minimumMicroseconds": 794.23666,
+      "mode": "validate-parsed",
+      "workload": "bridge-valid"
+    },
+    {
+      "batchMicroseconds": [
+        821.955,
+        835.7258400000001,
+        792.2225,
+        800.5591800000001,
+        856.5866599999999
+      ],
+      "bytes": 125,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 856.5866599999999,
+      "medianMicroseconds": 821.955,
+      "minimumMicroseconds": 792.2225,
+      "mode": "parse-and-validate",
+      "workload": "bridge-valid"
+    },
+    {
+      "batchMicroseconds": [
+        13987.41418,
+        16909.9375,
+        17229.701680000002,
+        13382.14416,
+        13629.48332
+      ],
+      "bytes": 125,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 17229.701680000002,
+      "medianMicroseconds": 13987.41418,
+      "minimumMicroseconds": 13382.14416,
+      "mode": "validate-parsed",
+      "workload": "bridge-valid"
+    },
+    {
+      "batchMicroseconds": [
+        14158.43,
+        14432.33582,
+        14263.61832,
+        13730.32,
+        13175.6725
+      ],
+      "bytes": 125,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 14432.33582,
+      "medianMicroseconds": 14158.43,
+      "minimumMicroseconds": 13175.6725,
+      "mode": "parse-and-validate",
+      "workload": "bridge-valid"
+    },
+    {
+      "batchMicroseconds": [
+        162.7775,
+        169.5075,
+        153.76166,
+        159.68584,
+        154.43666
+      ],
+      "bytes": 125,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 169.5075,
+      "medianMicroseconds": 159.68584,
+      "minimumMicroseconds": 153.76166,
+      "mode": "validate-parsed",
+      "workload": "bridge-valid"
+    },
+    {
+      "batchMicroseconds": [
+        191.86584,
+        179.87166000000002,
+        183.63168000000002,
+        193.1175,
+        181.94918
+      ],
+      "bytes": 125,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 193.1175,
+      "medianMicroseconds": 183.63168000000002,
+      "minimumMicroseconds": 179.87166000000002,
+      "mode": "parse-and-validate",
+      "workload": "bridge-valid"
+    },
+    {
+      "batchMicroseconds": [
+        13037.5625,
+        12670.53582,
+        12990.77,
+        12407.248319999999,
+        14123.84
+      ],
+      "bytes": 127,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 14123.84,
+      "medianMicroseconds": 12990.77,
+      "minimumMicroseconds": 12407.248319999999,
+      "mode": "validate-parsed",
+      "workload": "bridge-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        13736.1025,
+        12840.34416,
+        13514.815840000001,
+        12966.20084,
+        12585.98916
+      ],
+      "bytes": 127,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 13736.1025,
+      "medianMicroseconds": 12966.20084,
+      "minimumMicroseconds": 12585.98916,
+      "mode": "parse-and-validate",
+      "workload": "bridge-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        154.46166,
+        156.05834000000002,
+        155.13834,
+        154.105,
+        167.74166000000002
+      ],
+      "bytes": 127,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 167.74166000000002,
+      "medianMicroseconds": 155.13834,
+      "minimumMicroseconds": 154.105,
+      "mode": "validate-parsed",
+      "workload": "bridge-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        179.10916,
+        195.39582,
+        201.40418000000003,
+        200.66832,
+        207.685
+      ],
+      "bytes": 127,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 207.685,
+      "medianMicroseconds": 200.66832,
+      "minimumMicroseconds": 179.10916,
+      "mode": "parse-and-validate",
+      "workload": "bridge-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        790.0375,
+        780.7716800000001,
+        790.3933199999999,
+        1003.5433400000001,
+        898.0175
+      ],
+      "bytes": 127,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 1003.5433400000001,
+      "medianMicroseconds": 790.3933199999999,
+      "minimumMicroseconds": 780.7716800000001,
+      "mode": "validate-parsed",
+      "workload": "bridge-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        848.42916,
+        785.47916,
+        790.93916,
+        771.26666,
+        766.93
+      ],
+      "bytes": 127,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 848.42916,
+      "medianMicroseconds": 785.47916,
+      "minimumMicroseconds": 766.93,
+      "mode": "parse-and-validate",
+      "workload": "bridge-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        167.99334,
+        176.40416000000002,
+        168.69582,
+        176.62833999999998,
+        184.34
+      ],
+      "bytes": 876,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 184.34,
+      "medianMicroseconds": 176.40416000000002,
+      "minimumMicroseconds": 167.99334,
+      "mode": "validate-parsed",
+      "workload": "checklist-10-valid"
+    },
+    {
+      "batchMicroseconds": [
+        303.6225,
+        296.01668,
+        281.29,
+        287.13666,
+        273.73918000000003
+      ],
+      "bytes": 876,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 303.6225,
+      "medianMicroseconds": 287.13666,
+      "minimumMicroseconds": 273.73918000000003,
+      "mode": "parse-and-validate",
+      "workload": "checklist-10-valid"
+    },
+    {
+      "batchMicroseconds": [
+        511.3775,
+        523.66166,
+        517.70168,
+        518.81084,
+        516.2925
+      ],
+      "bytes": 876,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 523.66166,
+      "medianMicroseconds": 517.70168,
+      "minimumMicroseconds": 511.3775,
+      "mode": "validate-parsed",
+      "workload": "checklist-10-valid"
+    },
+    {
+      "batchMicroseconds": [
+        636.02584,
+        649.0858400000001,
+        674.6583400000001,
+        1290.44082,
+        691.57
+      ],
+      "bytes": 876,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 1290.44082,
+      "medianMicroseconds": 674.6583400000001,
+      "minimumMicroseconds": 636.02584,
+      "mode": "parse-and-validate",
+      "workload": "checklist-10-valid"
+    },
+    {
+      "batchMicroseconds": [
+        261.795,
+        261.68834,
+        272.33834,
+        267.405,
+        264.91334
+      ],
+      "bytes": 876,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 272.33834,
+      "medianMicroseconds": 264.91334,
+      "minimumMicroseconds": 261.68834,
+      "mode": "validate-parsed",
+      "workload": "checklist-10-valid"
+    },
+    {
+      "batchMicroseconds": [
+        400.36834000000005,
+        408.23666,
+        389.49,
+        378.42665999999997,
+        375.51084000000003
+      ],
+      "bytes": 876,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 408.23666,
+      "medianMicroseconds": 389.49,
+      "minimumMicroseconds": 375.51084000000003,
+      "mode": "parse-and-validate",
+      "workload": "checklist-10-valid"
+    },
+    {
+      "batchMicroseconds": [
+        581.27166,
+        571.60916,
+        567.8991599999999,
+        536.5908400000001,
+        542.74
+      ],
+      "bytes": 878,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 581.27166,
+      "medianMicroseconds": 567.8991599999999,
+      "minimumMicroseconds": 536.5908400000001,
+      "mode": "validate-parsed",
+      "workload": "checklist-10-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        595.0266799999999,
+        595.14,
+        608.22334,
+        603.16084,
+        679.6575
+      ],
+      "bytes": 878,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 679.6575,
+      "medianMicroseconds": 603.16084,
+      "minimumMicroseconds": 595.0266799999999,
+      "mode": "parse-and-validate",
+      "workload": "checklist-10-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        251.2725,
+        233.4375,
+        245.54418,
+        236.0675,
+        223.11166
+      ],
+      "bytes": 878,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 251.2725,
+      "medianMicroseconds": 236.0675,
+      "minimumMicroseconds": 223.11166,
+      "mode": "validate-parsed",
+      "workload": "checklist-10-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        353.27834,
+        348.46168,
+        330.62665999999996,
+        349.90666,
+        356.63332
+      ],
+      "bytes": 878,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 356.63332,
+      "medianMicroseconds": 349.90666,
+      "minimumMicroseconds": 330.62665999999996,
+      "mode": "parse-and-validate",
+      "workload": "checklist-10-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        171.60083999999998,
+        181.21916000000002,
+        185.525,
+        206.92084,
+        197.03168000000002
+      ],
+      "bytes": 878,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 206.92084,
+      "medianMicroseconds": 185.525,
+      "minimumMicroseconds": 171.60083999999998,
+      "mode": "validate-parsed",
+      "workload": "checklist-10-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        354.3775,
+        325.74418000000003,
+        327.57581999999996,
+        327.82665999999995,
+        323.75334
+      ],
+      "bytes": 878,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 354.3775,
+      "medianMicroseconds": 327.57581999999996,
+      "minimumMicroseconds": 323.75334,
+      "mode": "parse-and-validate",
+      "workload": "checklist-10-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        1895.06,
+        1851.49332,
+        1771.5475,
+        1692.88584,
+        1687.46084
+      ],
+      "bytes": 8661,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 1895.06,
+      "medianMicroseconds": 1771.5475,
+      "minimumMicroseconds": 1687.46084,
+      "mode": "validate-parsed",
+      "workload": "checklist-100-valid"
+    },
+    {
+      "batchMicroseconds": [
+        2734.8125,
+        3104.6091600000004,
+        2829.09832,
+        2967.2525,
+        2842.92
+      ],
+      "bytes": 8661,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 3104.6091600000004,
+      "medianMicroseconds": 2842.92,
+      "minimumMicroseconds": 2734.8125,
+      "mode": "parse-and-validate",
+      "workload": "checklist-100-valid"
+    },
+    {
+      "batchMicroseconds": [
+        1746.87916,
+        1760.51584,
+        1735.24,
+        1774.99334,
+        1708.09666
+      ],
+      "bytes": 8661,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 1774.99334,
+      "medianMicroseconds": 1746.87916,
+      "minimumMicroseconds": 1708.09666,
+      "mode": "validate-parsed",
+      "workload": "checklist-100-valid"
+    },
+    {
+      "batchMicroseconds": [
+        2945.2266600000003,
+        3080.9141600000003,
+        2953.38084,
+        3015.7033399999996,
+        3190.94
+      ],
+      "bytes": 8661,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 3190.94,
+      "medianMicroseconds": 3015.7033399999996,
+      "minimumMicroseconds": 2945.2266600000003,
+      "mode": "parse-and-validate",
+      "workload": "checklist-100-valid"
+    },
+    {
+      "batchMicroseconds": [
+        5883.034159999999,
+        5669.28918,
+        5892.789159999999,
+        5969.641659999999,
+        5694.60584
+      ],
+      "bytes": 8661,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 5969.641659999999,
+      "medianMicroseconds": 5883.034159999999,
+      "minimumMicroseconds": 5669.28918,
+      "mode": "validate-parsed",
+      "workload": "checklist-100-valid"
+    },
+    {
+      "batchMicroseconds": [
+        5921.30082,
+        6145.615,
+        6000.21582,
+        5691.778340000001,
+        5577.54834
+      ],
+      "bytes": 8661,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 6145.615,
+      "medianMicroseconds": 5921.30082,
+      "minimumMicroseconds": 5577.54834,
+      "mode": "parse-and-validate",
+      "workload": "checklist-100-valid"
+    },
+    {
+      "batchMicroseconds": [
+        1604.91,
+        1609.40418,
+        1622.55168,
+        1614.1475,
+        1599.68916
+      ],
+      "bytes": 8663,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 1622.55168,
+      "medianMicroseconds": 1609.40418,
+      "minimumMicroseconds": 1599.68916,
+      "mode": "validate-parsed",
+      "workload": "checklist-100-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        2666.93918,
+        2751.0458399999998,
+        2720.2025,
+        2682.28,
+        2710.09166
+      ],
+      "bytes": 8663,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 2751.0458399999998,
+      "medianMicroseconds": 2710.09166,
+      "minimumMicroseconds": 2666.93918,
+      "mode": "parse-and-validate",
+      "workload": "checklist-100-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        5092.52834,
+        5037.10584,
+        5012.89584,
+        4952.588339999999,
+        5149.79416
+      ],
+      "bytes": 8663,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 5149.79416,
+      "medianMicroseconds": 5037.10584,
+      "minimumMicroseconds": 4952.588339999999,
+      "mode": "validate-parsed",
+      "workload": "checklist-100-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        5883.99334,
+        5782.06168,
+        5827.32584,
+        6622.26916,
+        6847.3775
+      ],
+      "bytes": 8663,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 6847.3775,
+      "medianMicroseconds": 5883.99334,
+      "minimumMicroseconds": 5782.06168,
+      "mode": "parse-and-validate",
+      "workload": "checklist-100-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        1637.66082,
+        1609.89582,
+        1618.87668,
+        1708.66082,
+        1635.90332
+      ],
+      "bytes": 8663,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 1708.66082,
+      "medianMicroseconds": 1635.90332,
+      "minimumMicroseconds": 1609.89582,
+      "mode": "validate-parsed",
+      "workload": "checklist-100-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        2702.27668,
+        2885.55666,
+        2793.94582,
+        2727.30416,
+        2867.6683399999997
+      ],
+      "bytes": 8663,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 2885.55666,
+      "medianMicroseconds": 2793.94582,
+      "minimumMicroseconds": 2702.27668,
+      "mode": "parse-and-validate",
+      "workload": "checklist-100-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        56974.246660000004,
+        54856.9225,
+        52756.033339999994,
+        56016.955,
+        61451.02084
+      ],
+      "bytes": 88311,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 61451.02084,
+      "medianMicroseconds": 56016.955,
+      "minimumMicroseconds": 52756.033339999994,
+      "mode": "validate-parsed",
+      "workload": "checklist-1000-valid"
+    },
+    {
+      "batchMicroseconds": [
+        66232.48,
+        71647.96918,
+        64382.12,
+        66737.02668,
+        67948.1475
+      ],
+      "bytes": 88311,
+      "checksum": 270,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 71647.96918,
+      "medianMicroseconds": 66737.02668,
+      "minimumMicroseconds": 64382.12,
+      "mode": "parse-and-validate",
+      "workload": "checklist-1000-valid"
+    },
+    {
+      "batchMicroseconds": [
+        17744.01584,
+        18981.72418,
+        19858.96584,
+        18856.166680000002,
+        20540.26584
+      ],
+      "bytes": 88311,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 20540.26584,
+      "medianMicroseconds": 18981.72418,
+      "minimumMicroseconds": 17744.01584,
+      "mode": "validate-parsed",
+      "workload": "checklist-1000-valid"
+    },
+    {
+      "batchMicroseconds": [
+        33337.8325,
+        28985.840839999997,
+        31113.015,
+        32111.611660000002,
+        34431.059160000004
+      ],
+      "bytes": 88311,
+      "checksum": 270,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 34431.059160000004,
+      "medianMicroseconds": 32111.611660000002,
+      "minimumMicroseconds": 28985.840839999997,
+      "mode": "parse-and-validate",
+      "workload": "checklist-1000-valid"
+    },
+    {
+      "batchMicroseconds": [
+        18405.1125,
+        18423.95834,
+        22913.033339999998,
+        26967.7375,
+        22398.66168
+      ],
+      "bytes": 88311,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 26967.7375,
+      "medianMicroseconds": 22398.66168,
+      "minimumMicroseconds": 18405.1125,
+      "mode": "validate-parsed",
+      "workload": "checklist-1000-valid"
+    },
+    {
+      "batchMicroseconds": [
+        32655.654160000002,
+        32148.74666,
+        29053.9675,
+        31415.175,
+        28918.05166
+      ],
+      "bytes": 88311,
+      "checksum": 270,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 32655.654160000002,
+      "medianMicroseconds": 31415.175,
+      "minimumMicroseconds": 28918.05166,
+      "mode": "parse-and-validate",
+      "workload": "checklist-1000-valid"
+    },
+    {
+      "batchMicroseconds": [
+        18225.44416,
+        17907.98082,
+        19184.23916,
+        18994.9075,
+        18828.16666
+      ],
+      "bytes": 88313,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 19184.23916,
+      "medianMicroseconds": 18828.16666,
+      "minimumMicroseconds": 17907.98082,
+      "mode": "validate-parsed",
+      "workload": "checklist-1000-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        29482.859160000004,
+        29090.65668,
+        28083.3625,
+        28099.8525,
+        30916.499160000003
+      ],
+      "bytes": 88313,
+      "checksum": 540,
+      "engine": "dynamic-current",
+      "maximumMicroseconds": 30916.499160000003,
+      "medianMicroseconds": 29090.65668,
+      "minimumMicroseconds": 28083.3625,
+      "mode": "parse-and-validate",
+      "workload": "checklist-1000-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        16869.95334,
+        17987.29082,
+        16110.33582,
+        18295.87416,
+        18378.78834
+      ],
+      "bytes": 88313,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 18378.78834,
+      "medianMicroseconds": 17987.29082,
+      "minimumMicroseconds": 16110.33582,
+      "mode": "validate-parsed",
+      "workload": "checklist-1000-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        31746.32832,
+        28801.7025,
+        29673.935,
+        28663.85,
+        28069.865
+      ],
+      "bytes": 88313,
+      "checksum": 540,
+      "engine": "dynamic-reused",
+      "maximumMicroseconds": 31746.32832,
+      "medianMicroseconds": 28801.7025,
+      "minimumMicroseconds": 28069.865,
+      "mode": "parse-and-validate",
+      "workload": "checklist-1000-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        73527.41666,
+        74536.85,
+        77334.5475,
+        83491.87084,
+        74319.26666000001
+      ],
+      "bytes": 88313,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 83491.87084,
+      "medianMicroseconds": 74536.85,
+      "minimumMicroseconds": 73527.41666,
+      "mode": "validate-parsed",
+      "workload": "checklist-1000-invalid"
+    },
+    {
+      "batchMicroseconds": [
+        98746.16915999999,
+        105062.02166,
+        114159.5075,
+        387163.00668,
+        210206.32084
+      ],
+      "bytes": 88313,
+      "checksum": 540,
+      "engine": "jsonschema-reused",
+      "maximumMicroseconds": 387163.00668,
+      "medianMicroseconds": 114159.5075,
+      "minimumMicroseconds": 98746.16915999999,
+      "mode": "parse-and-validate",
+      "workload": "checklist-1000-invalid"
+    }
+  ],
+  "warmupIterations": 20,
+  "discrepancyCount": 1,
+  "environment": {
+    "date": "2026-09-17T15:02:17.766Z",
+    "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+    "machine": "arm64",
+    "chip": "Apple M1",
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83",
+    "commit": "b3fd8154f65170d5212408d840f170a791612e9c",
+    "runLabel": "second",
+    "fixtureSHA256": "b4d5b4888fd947748e87c7f9dc2cddddf23015b22deabb2343bcb171e969f309",
+    "dependencyVersions": {
+      "DynamicJSON": "1.0.2",
+      "JSONSchema": "0.14.1"
+    },
+    "provenance": [
+      {
+        "path": "apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/data-conformance.json",
+        "sha256": "5246252dc5611178a5d1ced2cd865096a92bdae914e5a2a934290cbcd9733490"
+      },
+      {
+        "path": "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/manifest.schema.json",
+        "sha256": "95e415125032d00befbb81e2debc0d4906c0d31ac4822c44f94105035dd72ff6"
+      },
+      {
+        "path": "examples/slops/quick-checklist/manifest.json",
+        "sha256": "3db15aa100a2af47ed160c22de21cf231c60209366f20753098888cba264cf15"
+      },
+      {
+        "path": "apps/apple/Packages/HitSlopApple/Sources/HitSlopRuntime/Resources/bridge-request.schema.json",
+        "sha256": "ff7843e7efd62f378508624a4ec273cdc45ed3f0b16d9d4439f451c3bed4f4d2"
+      },
+      {
+        "path": "examples/slops/quick-checklist/schema.ts",
+        "sha256": "7841f860dd20389dd56a9f36580676571ebb54140732d6ddd359dfdf35a38b3c"
+      },
+      {
+        "path": "examples/slops/quick-checklist/initial.ts",
+        "sha256": "ac21bad0c519eb617a54c157e539ea75f81fdc0949f6deb900b6dd5deddaba07"
+      },
+      {
+        "path": "packages/schema/src/document.ts",
+        "sha256": "8f2af0dcc601a540b7288e08b250ba2a9f76664cbd7cfec6450ece784d3b7b9c"
+      },
+      {
+        "path": "packages/schema/src/data.ts",
+        "sha256": "c7cb149bdd8055cea038f38f7ab5b9f61b1fa742f9754aa8a08ff4c012662bbc"
+      },
+      {
+        "path": "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/SlopJSONValidation.swift",
+        "sha256": "6fb44811893a18ec18dfb87da3413402305a35fc71e775f0cf390d4154a64be2"
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+test-results/
+playwright-report/
+.evidence/
+.impeccable/review/

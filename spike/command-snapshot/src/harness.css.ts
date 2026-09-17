@@ -1,0 +1,41 @@
+import { style, globalStyle } from "@vanilla-extract/css";
+import theme from "./theme.ts";
+const t = theme.vars;
+globalStyle("*", { boxSizing: "border-box" });
+globalStyle(":root", { fontFamily: t.font, color: t.ink, background: "#f3eee9", fontSynthesis: "none", colorScheme: "light" });
+globalStyle("body", { margin: 0 });
+globalStyle("button, input, textarea", { font: "inherit", color: "inherit" });
+globalStyle("textarea", { resize: "none" });
+globalStyle("button", { cursor: "pointer" });
+globalStyle("button:disabled", { cursor: "default", opacity: .55 });
+globalStyle("button:focus-visible, input:focus-visible, textarea:focus-visible", { outline: `2px solid ${t.accent}`, outlineOffset: 3 });
+globalStyle("::selection", { background: t.highlight, color: t.ink });
+globalStyle("textarea, input", { caretColor: t.accent });
+globalStyle("html", { scrollbarColor: `${t.muted} #f3eee9` });
+export const board = style({ maxWidth: 1160, margin: "0 auto", padding: "28px 32px 40px", "@media": { "(max-width: 700px)": { padding: "20px 14px" } } });
+export const intro = style({ display: "flex", justifyContent: "space-between", alignItems: "end", gap: 24, marginBottom: 24, "@media": { "(max-width: 700px)": { display: "block" } } });
+export const title = style({ fontFamily: t.headingFont, fontSize: 32, fontWeight: 500, margin: "0 0 8px", letterSpacing: "-.025em" });
+export const description = style({ margin: 0, fontSize: 14, lineHeight: 1.5, maxWidth: 620 });
+export const toolbar = style({ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", padding: "16px 0", borderBlock: `1px solid ${t.controlBorder}`, marginBottom: 22 });
+export const label = style({ fontSize: 13, fontWeight: 650 });
+export const latency = style({ display: "flex", gap: 4 });
+export const button = style({ padding: "7px 12px", minHeight: 36, color: t.ink, border: `1px solid ${t.controlBorder}`, background: "transparent", borderRadius: 6,
+  selectors: { '&[data-state="active"]': { background: t.ink, color: t.paper, borderColor: t.ink }, '&:hover:not(:disabled):not([data-state="active"])' : { background: t.control } },
+  ":focus-visible": { outline: `2px solid ${t.accent}`, outlineOffset: 3 },
+});
+export const columns = style({ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 30, "@media": { "(max-width: 850px)": { gridTemplateColumns: "minmax(0, 1fr)", maxWidth: 520, margin: "0 auto" } } });
+export const client = style({ minWidth: 0 });
+export const clientHeader = style({ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 10 });
+export const clientTitle = style({ margin: 0, fontSize: 17, fontWeight: 650 });
+export const status = style({ fontSize: 12, fontVariantNumeric: "tabular-nums", lineHeight: 1.5 });
+export const frame = style({ borderRadius: 18, overflow: "hidden", boxShadow: "0 8px 24px #43283016" });
+export const controls = style({ display: "flex", flexWrap: "wrap", gap: 7, padding: "13px 0" });
+export const fault = style({ minHeight: 20, fontSize: 12, margin: "0 0 6px", color: t.accent });
+export const counter = style({ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 12, paddingTop: 12, borderTop: `1px solid ${t.controlBorder}`, fontSize: 13 });
+export const count = style({ fontSize: 20, fontVariantNumeric: "tabular-nums", fontWeight: 650, minWidth: 20 });
+export const footer = style({ margin: "26px 0 0", fontSize: 13, lineHeight: 1.6, maxWidth: 800 });
+export const recovery = style({ padding: 12, border: `1px solid ${t.accent}`, marginTop: 12, fontSize: 13 });
+export const retainedText = style({ whiteSpace: "pre-wrap", overflowWrap: "anywhere", background: t.paper, padding: 10 });
+export const fine = style({ fontSize: 12, margin: "4px 0 0", lineHeight: 1.5 });
+export const tools = style({ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 });
+export const measurement = style({ whiteSpace: "pre-wrap", fontFamily: "ui-monospace, monospace", fontSize: 12, lineHeight: 1.5, overflowWrap: "anywhere" });
