@@ -25,13 +25,13 @@ publish ──signed ZIP──> Cloudflare Worker ──artifact──> R2
 
 The guest WebView is untrusted package code. It runs in an ephemeral WebKit data
 store behind the `slop://` scheme, which serves `app.html`, immutable `assets/`,
-named media, and the dedicated writable theme override endpoint. It cannot
+document media, and the dedicated writable theme override endpoint. It cannot
 resolve the manifest, arbitrary stores, Quick Look images, or
 arbitrary file URLs.
 
 The native host validates the manifest before loading, exposes a narrow message
-bridge, validates media by content, and owns every filesystem mutation. JSON edits are validated on a fork and committed to SQLite before publication.
-`stores/data.json` is an atomically replaced projection of that history. Named media replacement is
+bridge, validates media by content, and owns every filesystem mutation. JSON commands are applied to a candidate and validated before SQLite commit and publication.
+`stores/data.json` is an atomically replaced projection of committed state. Media import is
 atomic.
 
 The publish gateway treats the submitted ZIP as hostile. It verifies the
@@ -52,8 +52,8 @@ These three things must never be confused:
   change `stores/`, refresh `QuickLook/Preview.png`, or gain Finder metadata.
 
 Cloudflare D1 and R2 store public catalog metadata and immutable published artifacts,
-while live sharing separately stores an immutable sender app in R2 and Loro
-updates in a per-document Durable Object. A release does not mutate existing documents.
+while live sharing separately stores an immutable sender app in R2 and authoritative JSON
+snapshots in a per-document Durable Object. A release does not mutate existing documents.
 The public `templates` collection carries a nested current-release projection so
 native clients never join against private release history. Successful document
 copies increment a lifetime popularity counter; release updates preserve that
@@ -65,14 +65,12 @@ The framework-neutral API is deliberately ID-free:
 
 ```ts
 slop.document.open()
-slop.document.apply({ session, sequence, base, after })
+slop.document.send({ documentId, schemaHash, authority, leaseId, requestId, ops })
 slop.document.flush()
-slop.document.releaseDraft({ session, draft })
-slop.document.onChange(callback)
+slop.document.subscribe(callback)
 
-slop.media.open(name)
-slop.media.write(name, base64, mimeType)
-slop.media.remove(name)
+slop.media.open(sha256)
+slop.media.add(base64, "image" | "file")
 slop.media.onChange(callback)
 
 slop.window.resize({ width, height })
@@ -111,7 +109,7 @@ Run `bun run schema:generate` after schema changes. Generated output is
 committed and CI rejects drift.
 
 Each Svelte app with a JSON store also default-exports its data schema from root
-`schema.ts` and attaches it to `documentStore({ schema, initial })`. The CLI emits
+`schema.ts` and attaches it to `createDocument({ schema, initial })`. The CLI emits
 that app-specific persisted-value contract as `data.schema.json` during build.
 The native host and CLI validate it without coercion or field removal.
 
@@ -154,12 +152,13 @@ See [Capture views](capture.md) for authoring, dimensions, and limits.
   Storage objects, public catalog metadata, and release numbering.
 - [Packages](packages.md) provide authoring and browser APIs.
 
-## Local and shared replicas
+## Local and shared authorities
 
-All JSON-backed documents use native Swift Loro and `state/document.sqlite`.
+Local JSON documents use a Swift command interpreter and `state/document.sqlite`.
+Shared documents use the same command semantics in the room, with Swift as gateway.
 There is no guest WASM sync engine and no second JSON persister. The runtime
 controller manages authored drafts; the host alone validates and commits them.
 One raw Durable Object per shared document owns invitations, membership, and
-opaque update ordering. D1 does not duplicate mutable room ACL state. HTTP clients
+command validation, JSON snapshots and receipt deduplication. D1 does not duplicate mutable room ACL state. HTTP clients
 use the oRPC contract and generated OpenAPI Swift client; Worker-to-DO calls use
 native RPC. See [Storage](storage.md) for durability, joining, and recovery.

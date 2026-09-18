@@ -1,6 +1,5 @@
 import { fail } from "../src/errors.ts";
 import { route as productionRoute, type Env } from "../src/index.ts";
-import type { Registry } from "../src/store.ts";
 import type { Authenticate } from "../src/auth.ts";
 
 // Never imported by the production Worker. Only the local test entry opts in.
@@ -12,5 +11,5 @@ export const testAuthenticate: Authenticate = async (request) => {
   const uid = match[1]!;
   return { uid, name: uid, email: `${uid}@example.test` };
 };
-export const route = (request: Request, env: Env, registry?: Registry) =>
-  productionRoute(request, env, registry, testAuthenticate);
+export const route = (request: Request, env: Env) =>
+  productionRoute(request, env, testAuthenticate);

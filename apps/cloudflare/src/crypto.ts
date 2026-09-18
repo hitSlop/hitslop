@@ -1,3 +1,4 @@
+import { fail } from "./errors.ts";
 const encoder = new TextEncoder();
 
 export const hex = (data: ArrayBuffer | Uint8Array) =>
@@ -105,4 +106,18 @@ export async function verifyRoomToken(key: string, token: string): Promise<RoomC
   const claims = JSON.parse(new TextDecoder().decode(unbase64url(parts[0]!))) as RoomClaims;
   if (!validClaims(claims)) throw new Error("Unauthorized");
   return claims;
+}
+
+export async function roomClaims(
+  request: Request,
+  env: { TOKEN_KEY: string },
+): Promise<RoomClaims> {
+  try {
+    return await verifyRoomToken(
+      env.TOKEN_KEY,
+      request.headers.get("authorization")?.replace(/^Bearer /, "") ?? "",
+    );
+  } catch {
+    return fail("Unauthorized", 401);
+  }
 }

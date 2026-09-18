@@ -1,7 +1,7 @@
 # hitSlop
 
 `.slop` packages are framework-neutral runtime web apps with optional host-owned
-JSON, named media, and theme override data. Read `manifest.json` first.
+JSON, document media, and theme override data. Read `manifest.json` first.
 
 - Quick Checklist is the only active template in `examples/slops/`; other examples live in
   `examples/archive/` and older templates in `archive/templates/`.
@@ -27,8 +27,7 @@ JSON, named media, and theme override data. Read `manifest.json` first.
   `stores/data.json`, `stores/theme.css`, and user-selected
   supported media under `stores/media/`,
   and optional `QuickLook/Preview.png` and `QuickLook/Icon.png`.
-- Manifest storage is implicit. A slop can use JSON, named media, either, or
-  neither. Replace JSON and media atomically.
+- Manifest storage is implicit. A slop can use JSON with optional document attachments, or no persistence. Replace JSON and media atomically.
 - Manifest `author.name` is required and `author.url` may be an HTTP(S) URL.
   Attribution belongs to the signed artifact; the publisher identity is only a
   signing key.
@@ -36,7 +35,7 @@ JSON, named media, and theme override data. Read `manifest.json` first.
   Routine migrations use the shared gallery for UI smoke tests; persistence and
   native behavior are reserved for explicit release-gate work.
 - Author JSON schemas with `S.Document` from `@hitslop/schema/document` in root `schema.ts`.
-  Import that schema directly into `documentStore({ schema, initial })`.
+  Import that schema directly into `createDocument({ schema, initial })`.
   Types are inferred from the schema; the store uses TypeBox runtime validation.
   No generated files or dev server are needed for editor types. Schemas must be
   deterministic because the app and package builder evaluate them separately.
@@ -62,7 +61,8 @@ JSON, named media, and theme override data. Read `manifest.json` first.
   document's initial Finder custom icon from immutable `QuickLook/Icon.png`.
   Optional authored icon targets refresh Finder metadata on close. Background
   capture uses disposable snapshots; dedicated Svelte export/icon views share
-  data with the editor through `ExportTarget` and `IconTarget`.
+  data with the editor through `<Slop>` capture snippets. Standalone `ExportTarget`
+  and `IconTarget` remain available.
 - Catalog selection caches immutable artifacts at
   `~/.hitslop/templates/cache/<publisher>/<slug>/<release>.slop`, verifies
   SHA-256, and copies one to the user-selected path. Local `slop register`
@@ -74,10 +74,13 @@ JSON, named media, and theme override data. Read `manifest.json` first.
 - TypeBox is authoritative. Run `bun run schema:generate` after schema changes;
   JSON Schema then generates the Swift types and validates Swift manifests.
 
-- Every JSON-backed document uses native Loro and `state/document.sqlite`.
+- Every JSON-backed document uses command/snapshot sync and `state/document.sqlite`.
   `stores/data.json` is the editable `$slop` revision envelope plus `data`.
-  Use `documentStore.change` and `documentText`; confirmed `current` is read-only.
+  Use schema-derived `store.fields` and store verbs; `transaction(tx => ...)` batches commands.
+  Confirmed `data` is read-only; `{@attach store.text(path)}` owns local typing drafts.
+  `createDocument` owns readiness and teardown. Wrap document editors in `<Slop document={store}>`
+  for host error reporting, context, loading semantics, and capture snippets.
   Root `initial.ts` defines defaults shared with the build. See `docs/storage.md`.
-- Share uploads an immutable sender app bundle to R2 and a seed to a raw Durable
+- Share uploads an immutable sender app bundle to R2 and a JSON seed to a raw Durable
   Object. The room owns mutable ACLs/invitations; D1 owns immutable metadata.
   iOS is archived; iCloud document locations and legacy persistence formats are rejected.

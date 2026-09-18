@@ -124,14 +124,22 @@ test("distributed CLI resolves its sibling loader without source files", async (
   const output = await mkdtemp(join(cliRoot, ".loader-dist-test-"));
   temporary.push(output);
   const build = await Bun.build({
-    entrypoints: [join(cliRoot, "src/cli.ts"), join(cliRoot, "src/module-loader.ts")],
+    entrypoints: [
+      join(cliRoot, "src/cli.ts"),
+      join(cliRoot, "src/module-loader.ts"),
+      join(cliRoot, "src/preview-authority.ts"),
+    ],
     target: "bun",
     format: "esm",
     packages: "external",
     outdir: output,
   });
   expect(build.success).toBe(true);
-  expect((await readdir(output)).sort()).toEqual(["cli.js", "module-loader.js"]);
+  expect((await readdir(output)).sort()).toEqual([
+    "cli.js",
+    "module-loader.js",
+    "preview-authority.js",
+  ]);
   const { root } = await fixture("");
   await writeFile(
     join(root, "schema.ts"),

@@ -5,7 +5,6 @@ import { stat } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
 import { validate, SlopCategorySchema, type SlopCategory } from "@hitslop/schema";
 import { buildSlop, scaffold, validateAuthoringProject } from "./project.ts";
-import { runDev } from "./dev.ts";
 import { publishSlop } from "./publish.ts";
 import { installTemplate } from "./install.ts";
 import { exportIdentity, getIdentity, importIdentity } from "./identity.ts";
@@ -220,10 +219,6 @@ app = app.command("init", (command) =>
     .meta({ description: "Create a Svelte hitSlop project and manifest." })
     .args([{ name: "directory", type: "path", default: "my-slop" }] as const)
     .flags({
-      template: {
-        type: "string",
-        description: "Svelte authoring template (svelte or svelte-counter).",
-      },
       title: { type: "string", description: "Manifest title." },
       description: { type: "string", description: "Manifest description." },
       "author-name": { type: "string", description: "Required manifest author name." },
@@ -246,7 +241,7 @@ app = app.command("init", (command) =>
           `Could not install coding-agent skills: ${error instanceof Error ? error.message : error}\nRun slop skills sync.`,
         );
       }
-      await scaffold(args.directory, { template: flags.template ?? "svelte-counter", ...metadata });
+      await scaffold(args.directory, metadata);
       emitResult({ path: args.directory }, `Created ${args.directory}`);
     }),
 );
@@ -268,7 +263,10 @@ app = app.command("dev", (command) =>
   command
     .meta({ description: "Preview the UI in a browser with disposable fake stores." })
     .args([{ name: "path", type: "path", default: "." }] as const)
-    .run(({ args }) => runDev(args.path)),
+    .run(async ({ args }) => {
+      const { runDev } = await import("./dev.ts");
+      return runDev(args.path);
+    }),
 );
 app = app.command("build", (command) =>
   command.args([{ name: "path", type: "path", default: "." }] as const).run(async ({ args }) => {

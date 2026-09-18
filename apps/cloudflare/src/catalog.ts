@@ -9,7 +9,7 @@ export const catalogHeaders = {
 };
 
 export const artifactKey =
-  /^(?:artifacts\/sha256\/[a-f0-9]{64}\.slop\.zip|(?:previews|icons)\/sha256\/[a-f0-9]{64}\.png|media\/sha256\/[a-f0-9]{64}|documents\/[a-zA-Z0-9-]{1,80}\/package\.slop\.zip)$/;
+  /^(?:artifacts\/sha256\/[a-f0-9]{64}\.slop\.zip|(?:previews|icons)\/sha256\/[a-f0-9]{64}\.png|documents\/[a-zA-Z0-9-]{1,80}\/package\.slop\.zip)$/;
 
 export function publicOrigin(request: Request): string {
   return new URL(request.url).origin;

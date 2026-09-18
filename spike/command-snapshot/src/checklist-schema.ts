@@ -1,8 +1,8 @@
 import * as S from "./schema.ts";
 import { paths } from "./paths.ts";
 
-const task = S.Object({ id: S.String(), text: S.Text(), done: S.Boolean(), archived: S.Boolean() });
-export const schema = S.Document({ title: S.Text(), tasks: S.List(task, "id") });
+const task = S.Object({ id: S.String(), text: S.String(), done: S.Boolean(), archived: S.Boolean() });
+export const schema = S.Document({ title: S.String(), tasks: S.List(task, "id") });
 export const fields = paths(schema);
 export type Checklist = S.Static<typeof schema>;
 export type Task = Checklist["tasks"][number];

@@ -1,0 +1,3 @@
+{"rows":1000,"samples":30,"bytes":43791,"scope":"TS authority, serialized full snapshot, controller reconciliation; no browser or disk","medianMs":4.255042000000003,"p95Ms":7.076624999999979}
+{"rows":5000,"samples":30,"bytes":227791,"scope":"TS authority, serialized full snapshot, controller reconciliation; no browser or disk","medianMs":25.486083000000008,"p95Ms":50.34608299999991}
+{"rows":10000,"samples":30,"bytes":457791,"scope":"TS authority, serialized full snapshot, controller reconciliation; no browser or disk","medianMs":65.91137500000013,"p95Ms":160.6369169999998}

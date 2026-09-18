@@ -108,7 +108,7 @@ async function document() {
   return { path, directory };
 }
 
-test("inspect distinguishes missing JSON, saved JSON, and Loro projections", async () => {
+test("inspect distinguishes missing JSON, saved JSON, and command projections", async () => {
   const { path } = await document();
   expect(await inspectDocument(path)).toMatchObject({
     dataExists: false,
@@ -118,7 +118,7 @@ test("inspect distinguishes missing JSON, saved JSON, and Loro projections", asy
   await mkdir(join(path, "stores"));
   await writeFile(
     join(path, "stores/data.json"),
-    '{"$slop":{"format":1,"baseRevision":"fixture"},"data":{"count":2,"custom":"keep"}}',
+    '{"$slop":{"format":2,"documentId":"doc","schemaHash":"hash","authority":"epoch","baseRevision":0},"data":{"count":2,"custom":"keep"}}',
   );
   expect(await inspectDocument(path)).toMatchObject({
     dataExists: true,
@@ -184,8 +184,13 @@ test("catalog master protection follows ancestor symlinks", async () => {
   }
 });
 
-test("CLI returns one JSON envelope for parse and runtime errors", async () => {
-  for (const args of [["create"], ["inspect", "/missing/document.slop"], ["unknown-command"]]) {
+test.each([
+  { args: ["create"] },
+  { args: ["inspect", "/missing/document.slop"] },
+  { args: ["unknown-command"] },
+])(
+  "CLI returns one JSON error envelope: $args",
+  async ({ args }) => {
     const child = Bun.spawn(
       [process.execPath, resolve(import.meta.dir, "../src/cli.ts"), ...args, "--json"],
       { stdout: "pipe", stderr: "pipe" },
@@ -199,8 +204,8 @@ test("CLI returns one JSON envelope for parse and runtime errors", async () => {
       ok: false,
       error: { message: expect.any(String), code: expect.any(String) },
     });
-  }
-});
+  },
+);
 
 test("inspect and open preserve malformed editable JSON while exposing diagnostics", async () => {
   const { path } = await document();
@@ -223,10 +228,25 @@ test("inspect separates version metadata from application data", async () => {
   await writeFile(join(path, "state/document.sqlite"), "fixture");
   await writeFile(
     join(path, "stores/data.json"),
-    JSON.stringify({ $slop: { format: 1, baseRevision: "opaque" }, data: { title: "Hello" } }),
+    JSON.stringify({
+      $slop: {
+        format: 2,
+        documentId: "doc",
+        schemaHash: "hash",
+        authority: "epoch",
+        baseRevision: 0,
+      },
+      data: { title: "Hello" },
+    }),
   );
   const inspected = await inspectDocument(path);
   expect(inspected.data).toEqual({ title: "Hello" });
-  expect(inspected.envelope).toEqual({ format: 1, baseRevision: "opaque" });
+  expect(inspected.envelope).toEqual({
+    format: 2,
+    documentId: "doc",
+    schemaHash: "hash",
+    authority: "epoch",
+    baseRevision: 0,
+  });
   expect(inspected.editing).toBe("versioned-json");
 });

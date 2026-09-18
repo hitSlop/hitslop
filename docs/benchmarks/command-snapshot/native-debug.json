@@ -1,0 +1,193 @@
+{
+  "configuration": "debug",
+  "platform": "arm64 Apple macOS",
+  "scope": "Isolated WKWebView commands to Swift interpreter and FULL synchronous SQLite, full JSON snapshot back. Minimal consumer and plain DOM rows; not Svelte or production bridge. 3 warmup and 5 measured samples. Original Loro debug authority-only 10000 rows: median 3349.83025ms, p95 3917.668833ms, 3 samples. Not a like-for-like latency ratio.",
+  "results": [
+    {
+      "rows": 1000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 240.22625,
+          "roundTripMs": 244.99999999999994,
+          "commandToLayoutMs": 245.99999999999994
+        },
+        {
+          "authorityMs": 97.849792,
+          "roundTripMs": 102.00000000000011,
+          "commandToLayoutMs": 103.00000000000011
+        },
+        {
+          "authorityMs": 98.451791,
+          "roundTripMs": 102.99999999999989,
+          "commandToLayoutMs": 102.99999999999989
+        },
+        {
+          "authorityMs": 95.314458,
+          "roundTripMs": 100,
+          "commandToLayoutMs": 100
+        },
+        {
+          "authorityMs": 103.695333,
+          "roundTripMs": 109.00000000000023,
+          "commandToLayoutMs": 109.00000000000023
+        }
+      ]
+    },
+    {
+      "rows": 1000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 90.264958,
+          "roundTripMs": 95,
+          "commandToLayoutMs": 96
+        },
+        {
+          "authorityMs": 87.3545,
+          "roundTripMs": 91.00000000000023,
+          "commandToLayoutMs": 91.00000000000023
+        },
+        {
+          "authorityMs": 90.37425,
+          "roundTripMs": 94.99999999999977,
+          "commandToLayoutMs": 95.99999999999977
+        },
+        {
+          "authorityMs": 88.522916,
+          "roundTripMs": 92,
+          "commandToLayoutMs": 93
+        },
+        {
+          "authorityMs": 82.985959,
+          "roundTripMs": 87,
+          "commandToLayoutMs": 87
+        }
+      ]
+    },
+    {
+      "rows": 5000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 526.214167,
+          "roundTripMs": 554,
+          "commandToLayoutMs": 555
+        },
+        {
+          "authorityMs": 847.184792,
+          "roundTripMs": 872,
+          "commandToLayoutMs": 873
+        },
+        {
+          "authorityMs": 574.687125,
+          "roundTripMs": 596.0000000000005,
+          "commandToLayoutMs": 597
+        },
+        {
+          "authorityMs": 448.77475,
+          "roundTripMs": 469,
+          "commandToLayoutMs": 470
+        },
+        {
+          "authorityMs": 450.361708,
+          "roundTripMs": 470,
+          "commandToLayoutMs": 471
+        }
+      ]
+    },
+    {
+      "rows": 5000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 445.675458,
+          "roundTripMs": 467,
+          "commandToLayoutMs": 468
+        },
+        {
+          "authorityMs": 445.612083,
+          "roundTripMs": 466,
+          "commandToLayoutMs": 468
+        },
+        {
+          "authorityMs": 479.560541,
+          "roundTripMs": 500,
+          "commandToLayoutMs": 502
+        },
+        {
+          "authorityMs": 447.429917,
+          "roundTripMs": 468,
+          "commandToLayoutMs": 470
+        },
+        {
+          "authorityMs": 507.930667,
+          "roundTripMs": 526,
+          "commandToLayoutMs": 528
+        }
+      ]
+    },
+    {
+      "rows": 10000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 1021.796542,
+          "roundTripMs": 1065,
+          "commandToLayoutMs": 1067
+        },
+        {
+          "authorityMs": 940.953667,
+          "roundTripMs": 981,
+          "commandToLayoutMs": 982
+        },
+        {
+          "authorityMs": 911.12875,
+          "roundTripMs": 951,
+          "commandToLayoutMs": 953
+        },
+        {
+          "authorityMs": 989.424625,
+          "roundTripMs": 1029,
+          "commandToLayoutMs": 1030
+        },
+        {
+          "authorityMs": 1173.0475000000001,
+          "roundTripMs": 1233,
+          "commandToLayoutMs": 1236
+        }
+      ]
+    },
+    {
+      "rows": 10000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 1054.935875,
+          "roundTripMs": 1094,
+          "commandToLayoutMs": 1096
+        },
+        {
+          "authorityMs": 836.098917,
+          "roundTripMs": 875,
+          "commandToLayoutMs": 878
+        },
+        {
+          "authorityMs": 797.105166,
+          "roundTripMs": 835,
+          "commandToLayoutMs": 838
+        },
+        {
+          "authorityMs": 838.477208,
+          "roundTripMs": 885,
+          "commandToLayoutMs": 889.0000000000018
+        },
+        {
+          "authorityMs": 841.866042,
+          "roundTripMs": 877.9999999999982,
+          "commandToLayoutMs": 880.9999999999982
+        }
+      ]
+    }
+  ]
+}

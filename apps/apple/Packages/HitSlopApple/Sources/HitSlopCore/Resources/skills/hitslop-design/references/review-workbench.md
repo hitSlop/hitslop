@@ -35,11 +35,11 @@ many nearly identical fixtures.
    capture, check image dimensions/legibility, and avoid viewport overrides.
    “Copy review packet” supplies source fingerprint, fixture, pane measurements,
    readiness timing, errors, and design-document links. Save the packet alongside
-   screenshots in `.impeccable/review/`; it does not take screenshots itself.
+   screenshots in `.hitslop/review/`; it does not take screenshots itself.
 4. Fix the batch of material findings. A source change makes existing evidence
    stale: reload the board before collecting the next packet. Build and validate
    after corrections, rerunning checks only when affected by a later change.
-5. Give the independent reviewer the approved direction, board screenshots, and
+5. Give a reviewer the approved direction, board screenshots, and
    packet. A visual correction requires new visual evidence. An accessible-name
    correction requires accessibility-tree evidence in the affected states; a
    behavior fix requires the relevant interaction/test evidence. Do not redo

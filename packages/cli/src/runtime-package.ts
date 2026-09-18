@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { applicationSchema, validateDocument } from "@hitslop/schema/document";
 import {
   checkPngDimensions,
@@ -171,12 +172,14 @@ async function validateMedia(directory: string): Promise<void> {
   const entries = await readdir(directory, { withFileTypes: true });
   for (const entry of entries) {
     if (!entry.isFile() || entry.isSymbolicLink())
-      throw new Error(`Named media must be regular files: stores/media/${entry.name}.`);
-    if (!/^(?:[a-z][a-z0-9-]{0,63}|[a-f0-9]{64})$/.test(entry.name))
-      throw new Error(`Invalid named media key: ${entry.name}.`);
+      throw new Error(`Document media must be regular files: stores/media/${entry.name}.`);
+    if (!/^[a-f0-9]{64}$/.test(entry.name))
+      throw new Error(`Invalid document media key: ${entry.name}.`);
     const bytes = await readFile(join(directory, entry.name));
+    if (createHash("sha256").update(bytes).digest("hex") !== entry.name)
+      throw new Error(`Media content does not match its digest: ${entry.name}.`);
     if (!isImage(bytes) && !isBoundedZip(bytes))
-      throw new Error(`Unsupported named media content: ${entry.name}.`);
+      throw new Error(`Unsupported document media content: ${entry.name}.`);
   }
 }
 
@@ -184,7 +187,7 @@ function isImage(bytes: Uint8Array): boolean {
   if (bytes.byteLength > 25 * MiB) return false;
   if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
     try {
-      checkPngDimensions(bytes, "Named media");
+      checkPngDimensions(bytes, "Document media");
       decodePng(bytes, { checkCrc: true });
       return true;
     } catch {

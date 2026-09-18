@@ -166,7 +166,7 @@ describe("immutable artifacts", () => {
     await mkdir(join(built.directory, "stores"));
     await writeFile(
       join(built.directory, "stores/data.json"),
-      '{"$slop":{"format":1,"baseRevision":"test"},"data":{"count":2}}\n',
+      '{"$slop":{"format":2,"documentId":"doc","schemaHash":"hash","authority":"epoch","baseRevision":0},"data":{"count":2}}\n',
     );
     await writeFile(
       join(built.directory, "stores/theme.css"),
@@ -177,12 +177,12 @@ describe("immutable artifacts", () => {
     });
     await writeFile(
       join(built.directory, "stores/data.json"),
-      '{"$slop":{"format":1,"baseRevision":"test"},"data":{"count":"two"}}\n',
+      '{"$slop":{"format":2,"documentId":"doc","schemaHash":"hash","authority":"epoch","baseRevision":0},"data":{"count":"two"}}\n',
     );
     await expect(validateRuntimePackage(built.directory)).rejects.toThrow("validation failed");
     await writeFile(
       join(built.directory, "stores/data.json"),
-      '{"$slop":{"format":1,"baseRevision":"test"},"data":{"count":2}}\n',
+      '{"$slop":{"format":2,"documentId":"doc","schemaHash":"hash","authority":"epoch","baseRevision":0},"data":{"count":2}}\n',
     );
     await writeFile(
       join(built.directory, "stores/theme.css"),
@@ -320,15 +320,17 @@ describe("authoring scaffold", () => {
     expect(agents).toContain("## This app");
     const app = await readFile(join(root, "src/App.svelte"), "utf8");
     expect(app).toContain('const title = "Tiny Tally"');
-    expect(app).toContain("documentStore({ schema: counterSchema, initial:");
+    expect(app).toContain("createDocument({ schema: counterSchema, initial");
     expect(await readFile(join(root, "schema.ts"), "utf8")).toContain("S.Document");
     const styles = await readFile(join(root, "src/styles.css.ts"), "utf8");
     expect(styles).toContain('from "../theme"');
     expect(styles).not.toContain("boxShadow");
     const theme = await readFile(join(root, "theme.ts"), "utf8");
     expect(theme).toContain("defineTheme");
-    expect(app).toContain("onDestroy");
-    expect(app).toContain("<ExportTarget>");
+    expect(app).not.toContain("onDestroy");
+    expect(app).toContain("state.increment(fields.count");
+    expect(app).toContain("<Slop document={state}>");
+    expect(app).toContain("{#snippet exportView()}");
     expect(packageJSON.scripts.check).toContain("svelte-check");
     expect(theme).not.toContain("--slop-backing");
     expect(await readFile(join(root, "vite.config.ts"), "utf8")).toContain("vanillaExtractPlugin");

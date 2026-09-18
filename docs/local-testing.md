@@ -37,11 +37,15 @@ disposable local copies of Quick Checklist. Verify:
   view; long content is complete and capture leaves the editor usable.
 
 The automated native tests cover persistence, interrupted projection/transaction
-recovery, 1,000 edits/checkpointing, forced process termination after an
-acknowledged commit, malformed inputs, limits, and concurrent native replicas.
-The real-room tests cover offline merging, replay, lost acknowledgements,
-Worker restart, invitation limits/rotation, revocation, and Quick Checklist
-text/list/completion merging followed by reopen.
+recovery, durable command receipts, forced process termination after an
+acknowledged commit, malformed inputs, limits, and multiple local owners.
+The real-room tests cover offline read-only behavior, lost-result recovery,
+Worker restart, invitation limits/rotation, revocation, and native snapshot
+adoption followed by reopen. Compiled Quick Checklist tests exercise text,
+list operations, undo, file edits, and capture through the real WebKit bridge.
+The native gate also builds a small `<Slop>` fixture outside the gallery to check
+typed context, host error reporting, close after rejection, and render recovery
+that keeps the existing store and text drafts.
 
 ## Separate release checks
 

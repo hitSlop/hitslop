@@ -1,4 +1,4 @@
-# hitSlop API and document relay
+# hitSlop API and document authority
 
 From this directory, copy `.env.example` to `.env` and set `TOKEN_KEY` to a random
 signing secret. Wrangler reads this file locally; it is ignored by Git. Do not
@@ -17,15 +17,16 @@ bucket for the target environment before deployment.
 - `bun test tests/room.integration.test.ts` (starts an isolated local Wrangler
   process, uses temporary SQLite storage, restarts it, and removes its files)
 - From the repository root: `swift test --package-path
-  apps/apple/Packages/HitSlopApple --filter SlopSyncTests`
+  apps/apple/Packages/HitSlopApple --no-parallel --filter CommandRoomTests`
 
 ## Sync contract
 
-One SQLite Durable Object per document stores an immutable seed at sequence 1
-and an append-only log of Loro batches. It relays opaque bytes; the native host
-validates the merged document against its schema before publishing or saving it.
-A room token must match the URL, stored identity, and message identity. Room
-initialization is atomic and retryable only with the original seed.
+One SQLite Durable Object per shared document owns its JSON snapshot, revision,
+retry leases, and command receipts. The room applies explicit operations and
+validates the candidate against the immutable app's schema before committing.
+Swift remains the WebView's gateway. A room token must match the URL, stored
+identity, and message identity. Initialization is atomic and retryable only with
+the original seed and immutable app hash.
 
 `packages/api` defines every public HTTP operation with oRPC and TypeBox.
 The Worker uses the OpenAPI Fetch handler; the CLI uses its typed OpenAPI client.
@@ -37,57 +38,53 @@ Worker-to-room initialization, seed reads, and membership changes use typed
 Durable Object RPC. Expected errors return a discriminated result so HTTP status
 survives the RPC boundary. Only WebSocket upgrades use `stub.fetch(request)`.
 The Worker validates upgrades before waking a room. SQLite transactions protect
-multi-statement changes; persisted socket attachments restore replay state after
+multi-statement changes; persisted socket attachments restore authenticated session state after
 hibernation. There are no external calls inside room transactions or per-message
 `blockConcurrencyWhile` locks. `enable_request_signal` enables request cancellation
 for the oRPC Fetch adapter.
 
 The WebSocket flow is:
 
-1. `welcome` → `hello` with the durable local cursor.
-2. `updates` windows → native import and SQLite commit → one `applied` for the
-   final sequence in the window.
-3. `ready` → send one outbox batch. A matching `ack` durably removes it, then the
-   next batch can be sent. An upload ACK never advances the replay cursor.
-4. Connection failure or a missing ACK renews credentials and reconnects with
-   backoff. Replay precedes uploads. Retries reuse exactly the same batch ID,
-   hash, and bytes. Protocol/schema errors pause sync and preserve local edits.
+1. Protocol 2 `welcome` → authenticated `hello`.
+2. `ready` supplies the current snapshot and an authority-issued retry lease.
+3. `execute` carries a command batch or conditional full replacement. The room
+   commits JSON, revision, and receipt together, broadcasts a `snapshot` once,
+   then returns the correlated `result`.
+4. Connection failure or a lost result renews credentials and reconnects with
+   backoff. An unknown attempt retries its exact original request and lease.
+   Seven-day leases bound receipt retention; expired attempts never execute again.
 
 Sockets use the hibernation API; `ping`/`pong` uses the runtime auto-response.
-No in-memory state is necessary to recover the room. Native documents retain a
-SQLite checkpoint, outbox, cursor, and the owner's immutable sharing seed.
-Invitation downloads install a verified seed with fresh local state. In-app
-Duplicate creates independent history and a new document identity.
+Room state survives eviction. Native documents persist their confirmed cache,
+shared mode, and any unresolved admitted request before sending it. Invitation
+copies start from a verified snapshot. In-app Duplicate creates an independent
+local authority with a new document identity.
 
 ## Current boundaries
 
 This implementation targets macOS. iOS and iCloud coordination are deferred.
 There are no compatibility adapters for older document or protocol formats.
-Offline changes merge using the schema's Loro containers. CRDT convergence does
-not guarantee schema validity: an invalid merge pauses that client for recovery.
-The relay cannot inspect opaque Loro changes, so an invalid admitted batch can
-block replay for other members; in-place room repair/quarantine is not implemented. Duplicate the last valid
-local data and share a new room to recover.
+Local documents work offline. Shared documents become read-only when disconnected;
+there is no offline edit queue or automatic merge of concurrent file edits.
+Commands reject invalid candidates before commit. Full snapshots remain capped at
+1 MiB; compression and subtree broadcasts are deferred pending measurement.
 
-Media has a separate content-addressed transfer path and is not part of the Loro
-log. Completed uploads are cached for the connection and downloaded bytes are
-hash-checked. Media GET URLs remain public by content hash; private media access
-control is not implemented. Room log compaction is also deferred (64 MiB/10,000
-entries per room).
+Media has a separate content-addressed transfer path. Completed uploads are cached
+for the connection and downloaded bytes are hash-checked. Media GET URLs remain
+public by content hash; private media access control is not implemented.
 
 ## Authoring and recovery
 
-`documentStore.current` is a frozen confirmed value. Use `store.change(draft =>
-{ ... })` for structural edits and `documentText` for text inputs; direct
-assignments and `bind:value` into `current` are invalid. Text drafts retain their
-base revision so native Loro can merge against concurrent changes.
+The document's `data` is a frozen confirmed snapshot. Use schema-derived `fields`
+and explicit store verbs; `change(tx => …)` groups commands atomically. The store's
+`text` action retains local input drafts, including IME composition. Committed
+strings use last-write-wins semantics. Store lifecycle owns readiness and cleanup.
 
-The close/export flush barrier rejects failed opens, edits, and commits. A remote
-publication or reload cannot silently clear a failed edit. The example apps show
-the error and offer explicit `discardFailedChanges()` recovery; failed text stays
-in its input until that recovery. `reload()` retries a failed open. Network loss
-alone does not block local editing or saving; the native durable outbox retries
-when the room reconnects.
+Close/export flushes drafts and forces the editable projection. Failed commands
+and retained text require explicit recovery through the native host. Unknown
+outcomes must resolve before new writes; they cannot be silently discarded.
+Stale or invalid external file proposals are preserved and reported rather than
+merged. See [the storage contract](../../docs/storage.md).
 
 ## Catalog and publishing
 
@@ -104,7 +101,7 @@ Existing hosted Firebase data is not migrated or deleted by this source change.
 ## Share bootstrap and access
 
 Share uploads an allowlisted immutable sender app (including unpublished apps),
-plus the initial Loro seed. R2 keys bind the exact app bytes; D1 stores only
+plus the initial JSON snapshot. R2 keys bind the exact app bytes; D1 stores only
 immutable metadata. The room owns membership, blocked users, and invitations.
 Bootstrap retries must match both the original seed and artifact hash. Join
 validates the bounded app and seed in staging before activating a destination.
@@ -119,8 +116,7 @@ From the repository root, run:
 HITSLOP_NATIVE_SYNC=1 bun test ./apps/cloudflare/tests/room.integration.test.ts
 ```
 
-This starts isolated local Wrangler/D1/R2 storage and runs two real Swift Loro
-replicas through generated HTTP clients and native WebSockets. It uploads an
-unpublished app, joins, merges offline edits, disconnects/reconnects, and reopens
+This starts isolated local Wrangler/D1/R2 storage and runs real Swift document sessions through generated HTTP clients and native WebSockets. It uploads an
+unpublished app, joins, verifies offline read-only behavior, disconnects/reconnects, and reopens
 the resulting SQLite document. Swift/Xcode and Node must be on PATH. The Swift
 test only accepts a loopback origin. No hosted data is created.

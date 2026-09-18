@@ -67,7 +67,7 @@ tarball includes only `dist`, permitted templates/generated schema,
 `package.json`, `README.md`, and `LICENSE`; confirm repository metadata,
 MIT license, and intended `0.3.x` version.
 
-The initial v1 format uses one Loro/SQLite document contract, room protocol 1,
+The initial v1 format uses command/snapshot sync, SQLite/bridge/room version 3 and projection envelope version 2,
 and `hitslop-publish/1`. There is no pre-release data migration. Rebuild authored
 templates for the matching host; preserve unsupported old documents separately.
 

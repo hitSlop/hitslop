@@ -1,15 +1,7 @@
 // Framework-agnostic helpers shared by the media store adapters
 // (such as @hitslop/svelte). No reactivity in here: adapters own state.
 
-export const safeMediaName = (name: string, label = "Media"): string => {
-  if (!/^(?:[a-z][a-z0-9-]{0,63}|[a-f0-9]{64})$/.test(name))
-    throw new Error(
-      `${label} store names must use lowercase letters, numbers, and hyphens, or a SHA-256 hex digest`,
-    );
-  return name;
-};
-
-/** Reads a File into the base64 payload expected by `slop.media.write`. */
+/** Reads a File into the base64 payload expected by `slop.media.add`. */
 export const fileToBase64 = async (file: File, label = "file"): Promise<string> => {
   if (file.size > 25 * 1024 * 1024) throw new Error("Choose a file no larger than 25 MiB");
   let bytes: Uint8Array;
@@ -45,7 +37,3 @@ export const chooseLocalFile = (accept: string, onFile: (file: File) => void): v
   document.body.append(input);
   input.click();
 };
-
-/** URL for a named media entry, cache-busted by its revision. */
-export const mediaSourceURL = (name: string, revision: string | null): string =>
-  `/media/${name}?revision=${encodeURIComponent(revision ?? "current")}`;

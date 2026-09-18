@@ -31,13 +31,14 @@ test("OpenAPI keeps nullable fields, named messages, binary and multipart routes
     6,
   );
   expect(Object.keys(spec.components.schemas.RoomClientMessage.discriminator.mapping)).toHaveLength(
-    3,
+    2,
   );
   expect(
     spec.paths["/api/documents"].post.requestBody.content["multipart/form-data"],
   ).toBeDefined();
   expect(spec.paths["/api/media"].put.requestBody.content["*/*"]).toBeDefined();
-  expect(spec.paths["/rooms/{documentId}"].post.operationId).toBe("initializeRoom");
+  expect(spec.paths["/rooms/{documentId}"]).toBeUndefined();
+  expect(spec.paths["/rooms/{documentId}/seed"].get).toBeDefined();
   expect(spec.paths["/rooms/{documentId}/socket"]).toBeUndefined();
   expect(JSON.stringify(await generateOpenAPI())).toBe(JSON.stringify(spec));
 });

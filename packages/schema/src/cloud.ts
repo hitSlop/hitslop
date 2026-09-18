@@ -1,5 +1,5 @@
 import * as Type from "typebox";
-import { DocumentIdSchema, RoomSeedInputSchema } from "./room.js";
+import { DocumentIdSchema } from "./room.js";
 import { Sha256Schema } from "./publish.js";
 
 export const SharedDocumentFieldsSchema = Type.Object(
@@ -14,8 +14,7 @@ export const SharedDocumentFieldsSchema = Type.Object(
 export const SharedDocumentCreateSchema = Type.Object(
   {
     ...SharedDocumentFieldsSchema.properties,
-    checkpoint: RoomSeedInputSchema.properties.checkpoint,
-    version: RoomSeedInputSchema.properties.version,
+    seed: Type.String({ minLength: 1, maxLength: 2 * 1024 * 1024 }),
   },
   { additionalProperties: false },
 );

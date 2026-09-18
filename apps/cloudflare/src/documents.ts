@@ -1,22 +1,19 @@
+import type { SchemaNode as TSchema } from "@hitslop/schema/document";
+import { SnapshotSchema } from "@hitslop/schema/document-protocol";
+import { validate } from "@hitslop/schema/validation";
 import type { APIInputs } from "@hitslop/api";
 import { parseManifest, roomProtocol } from "@hitslop/schema";
-import { applicationSchema, isSyncSchema } from "@hitslop/schema/document";
+import { applicationSchema, isDocumentSchema } from "@hitslop/schema/document";
 import { unzipSync } from "fflate";
 import { hex } from "./crypto.ts";
 import { fail, HttpError } from "./errors.ts";
 import type { Identity } from "./auth.ts";
 import type { Registry, SharedDocument } from "./store.ts";
-import type { RoomAccess, RoomResult, SlopRoom } from "./room.ts";
+import type { RoomAccess } from "./room.ts";
 import { inspectZip, validateSkin } from "./publish-validation.ts";
 import { validatePackageMetadata } from "./publish-package.ts";
 
-type Rooms = DurableObjectNamespace<SlopRoom> | undefined;
-const room = (rooms: Rooms, id: string) =>
-  rooms?.getByName(id) ?? fail("Rooms are unavailable", 503);
-function unwrap<T>(result: RoomResult<T>): T {
-  if (!result.ok) return fail(result.message, result.status);
-  return result.value;
-}
+import { room, unwrap, type Rooms } from "./room-rpc.ts";
 export function documentInfo(document: SharedDocument, access: RoomAccess) {
   return {
     documentId: document.id,
@@ -42,6 +39,7 @@ export async function handleCreateDocument(
   if (!file.size || file.size > 25 * 1024 * 1024) fail("Shared package exceeds 25 MiB", 413);
   const bytes = new Uint8Array(await file.arrayBuffer());
   let schemaBytes: Uint8Array = new Uint8Array();
+  let application: TSchema;
   try {
     inspectZip(bytes);
     const files = unzipSync(bytes);
@@ -69,10 +67,10 @@ export async function handleCreateDocument(
     if (manifest.slug !== slug) fail("Shared app slug mismatch");
     validateSkin(files, manifest);
     schemaBytes = files["data.schema.json"]!;
-    const schema = applicationSchema(
+    const schema = (application = applicationSchema(
       JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(files["data.schema.json"])),
-    );
-    if (!isSyncSchema(schema)) fail("Shared app requires a document schema");
+    ));
+    if (!isDocumentSchema(schema)) fail("Shared app requires a document schema");
   } catch (error) {
     return fail(error instanceof Error ? error.message : "Invalid shared app");
   }
@@ -104,11 +102,19 @@ export async function handleCreateDocument(
       {
         protocol: roomProtocol,
         documentId,
-        schema: schemaHash,
-        checkpoint: input.checkpoint,
-        version: input.version,
+        snapshot: (() => {
+          try {
+            const snapshot = validate(SnapshotSchema, JSON.parse(input.seed));
+            if (snapshot.documentId !== documentId || snapshot.schemaHash !== schemaHash)
+              fail("Seed identity mismatch");
+            return snapshot;
+          } catch {
+            return fail("Invalid document seed");
+          }
+        })(),
       },
       sha256,
+      application!,
     ),
   );
   let document: SharedDocument = existing ?? {
@@ -191,7 +197,7 @@ export async function handleInvite(
   id: string,
   rooms: Rooms,
 ) {
-  const document = await loadMemberDocument(registry, identity, id, rooms);
+  const document = (await registry.getDocument(id)) ?? fail("Document not found", 404);
   return documentInfo(
     document,
     unwrap(await room(rooms, id).updateInvitation(identity.uid, body.enabled)),
@@ -203,7 +209,7 @@ export async function handleRemoveMember(
   identity: Identity,
   rooms: Rooms,
 ) {
-  const document = await loadMemberDocument(registry, identity, body.documentId, rooms);
+  const document = (await registry.getDocument(body.documentId)) ?? fail("Document not found", 404);
   return documentInfo(
     document,
     unwrap(await room(rooms, body.documentId).removeMember(identity.uid, body.memberId)),

@@ -208,3 +208,17 @@ Inspect in one batch, fix material findings, then verify the affected behavior.
 Use fresh screenshots for visual changes and accessibility-tree evidence for
 accessible-name changes. Build and validate after corrections; avoid unrelated
 recaptures or checks. Render readiness is not a substitute for design judgment.
+
+## Review against the real task
+
+Choose the primary action and the reading order before adding decoration. Preserve
+an app's existing identity when refining it. Typography should establish clear
+roles and readable line lengths; reserve accent color for emphasis and state.
+Prefer a few deliberate spacing values and useful grouping over a card around
+every element. Motion should explain a change and respect reduced-motion settings.
+
+Review with real content: long titles, empty and full lists, errors, pending saves,
+keyboard focus, IME input, and the narrowest supported window. Make failures
+recoverable and keep user input visible. Check the editor and its export/icon
+views separately. Fix observed issues in a bounded pass, then verify the same
+states again; do not redesign working surfaces just to make them different.

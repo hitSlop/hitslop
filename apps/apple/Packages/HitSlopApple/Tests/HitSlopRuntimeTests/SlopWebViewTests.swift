@@ -31,10 +31,10 @@ import WebKit
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let worker = SlopStorageWorker(package: try SlopPackage(rootURL: root))
     defer { worker.close() }
-    for request in ["[]", #"{"method":"json.open"}"#, #"{"method":"json.write"}"#, #"{"method":"legacy.query","sql":"SELECT 1"}"#, #"{"method":"media.open","name":4}"#, #"{"method":"media.write","name":"hero"}"#, #"{"method":"media.remove"}"#] {
+    for request in ["[]", #"{"method":"document.execute"}"#, #"{"method":"media.open","sha256":4}"#, #"{"method":"media.add","kind":"image"}"#] {
         await #expect(throws: SlopBridgeFailure.self) { _ = try await worker.perform(Data(request.utf8)) }
     }
-    // There is no second writer beside the Loro owner, even for a valid JSON value.
+    // There is no second writer beside the command owner, even for a valid JSON value.
     await #expect(throws: SlopBridgeFailure.self) {
         _ = try await worker.perform(Data(#"{"method":"json.open","value":null}"#.utf8))
     }
@@ -92,18 +92,18 @@ import WebKit
     #expect(throws: SlopPackageError.self) { try session.performWindowDrag(on: window) }
 }
 
-@Test @MainActor func runtimeCanFetchNamedMediaThroughItsCustomScheme() async throws {
+@Test @MainActor func runtimeCanFetchDocumentMediaThroughItsCustomScheme() async throws {
     let root = try webViewPackage(skinned: false)
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let media = root.appendingPathComponent("stores/media", isDirectory: true)
     try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
     let zip = Data(base64Encoded: "UEsDBBQAAAAIAG1VIV3uQOUFCQAAAAcAAAAIAAAATUFJTi5CTVBLy6woKS1KBQBQSwECFAAUAAAACABtVSFd7kDlBQkAAAAHAAAACAAAAAAAAAAAAAAAAAAAAAAATUFJTi5CTVBQSwUGAAAAAAEAAQA2AAAALwAAAAAA")!
-    try zip.write(to: media.appendingPathComponent("skin"))
+    let reference = try SlopMediaStore(directoryURL: media, rootURL: root).add(zip)
     let html = #"""
     <script>
     (async () => {
       try {
-        const response = await fetch('/media/skin');
+        const response = await fetch('/media/HASH');
         const bytes = new Uint8Array(await response.arrayBuffer());
         window.fetchResult = { ok: response.ok, type: response.headers.get('content-type'), size: bytes.length, magic: Array.from(bytes.slice(0, 4)).join(',') };
       } catch (error) {
@@ -113,7 +113,7 @@ import WebKit
     })();
     </script>
     """#
-    try Data(html.utf8).write(to: root.appendingPathComponent("app.html"))
+    try Data(html.replacingOccurrences(of: "HASH", with: reference.sha256).utf8).write(to: root.appendingPathComponent("app.html"))
     let session = try SlopRuntimeSession(packageURL: root)
     defer { session.close() }
 
@@ -241,7 +241,7 @@ import WebKit
       window.securityResults = await Promise.all([
         post({method:'host.info', extra:'x'.repeat(65536)}),
         post({method:'host.info', extra:deep}),
-        post({method:'document.apply', after:'x'.repeat(1048576)}),
+        post({method:'document.execute', request:'x'.repeat(1048576)}),
       ]);
       location.hash = 'section';
       window.resourceResults = await Promise.all(['/manifest.json','/state/document.sqlite','/stores/data.json','slop://other/'].map(async url => {
@@ -390,5 +390,29 @@ private func writeRGBA(to url: URL, width: Int, height: Int) throws {
     }
     CGImageDestinationAddImage(destination, image, nil)
     guard CGImageDestinationFinalize(destination) else { throw CocoaError(.fileWriteUnknown) }
+}
+#endif
+
+#if os(macOS)
+@MainActor private final class RuntimeIssueDelegate: SlopRuntimeSessionDelegate {
+    var issues: [SlopRuntimeIssue] = []
+    func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue) { issues.append(issue) }
+}
+
+@Test @MainActor func guestErrorsReachHostWithoutBreakingReadiness() async throws {
+    let root = try webViewPackage(skinned: false)
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    try Data("<script>slop.ready()</script>".utf8).write(to: root.appendingPathComponent("app.html"))
+    let session = try SlopRuntimeSession(packageURL: root)
+    let delegate = RuntimeIssueDelegate()
+    session.delegate = delegate
+    defer { session.close() }
+    session.load(); try await session.waitUntilReady()
+    _ = try await session.webView.callAsyncJavaScript("await slop.reportError({source:'document',code:'validation',message:'Please shorten the title'}); return true", arguments: [:], in: nil, contentWorld: .page)
+    #expect(delegate.issues.count == 1)
+    #expect(delegate.issues.first?.source == .document)
+    #expect(delegate.issues.first?.code == "validation")
+    #expect(delegate.issues.first?.message == "Please shorten the title")
+    #expect(session.isReady)
 }
 #endif

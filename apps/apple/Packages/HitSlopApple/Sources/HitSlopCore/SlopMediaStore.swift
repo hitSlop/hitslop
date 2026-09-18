@@ -1,3 +1,4 @@
+import Darwin
 import CryptoKit
 import Foundation
 import ImageIO
@@ -16,39 +17,52 @@ public final class SlopMediaStore: @unchecked Sendable {
         self.rootURL = rootURL ?? directoryURL.deletingLastPathComponent()
     }
 
-    public static func isValidName(_ name: String) -> Bool {
-        if name.count == 64, name.allSatisfy({ ("0"..."9").contains($0) || ("a"..."f").contains($0) }) { return true }
-        guard (1...64).contains(name.count), let first = name.first, first.isASCII, first.isLowercase, first.isLetter else { return false }
-        return name.allSatisfy { character in
-            character.isASCII && (character.isLowercase && character.isLetter || character.isNumber || character == "-")
-        }
+    public struct Reference: Sendable {
+        public let sha256: String
+        public let bytes: Int
+        public let mime: String
     }
-
-    public func url(for name: String) throws -> URL {
-        guard Self.isValidName(name) else { throw SlopPackageError.invalid("invalid media name") }
-        return directoryURL.appendingPathComponent(name, isDirectory: false)
+    public static func isValidHash(_ hash: String) -> Bool {
+        hash.count == 64 && hash.allSatisfy { ("0"..."9").contains($0) || ("a"..."f").contains($0) }
     }
-
-    public func open(_ name: String) throws -> (exists: Bool, revision: String?) {
-        let url = try url(for: name)
-        guard FileManager.default.fileExists(atPath: url.path) else { return (false, nil) }
-        let data = try SlopFile.read(url, within: rootURL)
-        _ = try Self.mediaMIMEType(data)
-        return (true, Self.revision(data))
+    public func url(for hash: String) throws -> URL {
+        guard Self.isValidHash(hash) else { throw SlopPackageError.invalid("invalid media digest") }
+        return directoryURL.appendingPathComponent(hash, isDirectory: false)
     }
-
-    @discardableResult public func write(_ name: String, base64: String) throws -> String {
+    public func read(_ hash: String) throws -> Data {
+        let bytes = try SlopFile.read(url(for: hash), within: rootURL)
+        guard Self.revision(bytes) == hash else { throw SlopPackageError.invalid("media digest mismatch") }
+        _ = try Self.mediaMIMEType(bytes)
+        return bytes
+    }
+    public func open(_ hash: String) throws -> Bool {
+        guard FileManager.default.fileExists(atPath: try url(for: hash).path) else { return false }
+        _ = try read(hash)
+        return true
+    }
+    public func add(base64: String, imageOnly: Bool) throws -> Reference {
         guard let data = Data(base64Encoded: base64) else { throw SlopPackageError.invalid("media data is not valid base64") }
-        _ = try Self.mediaMIMEType(data)
-        let destination = try url(for: name)
-        try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
-        try data.write(to: destination, options: .atomic)
-        return Self.revision(data)
+        return try add(data, imageOnly: imageOnly)
     }
-
-    public func remove(_ name: String) throws {
-        let url = try url(for: name)
-        if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
+    @discardableResult public func add(_ data: Data, imageOnly: Bool = false) throws -> Reference {
+        let mime = try Self.mediaMIMEType(data)
+        if imageOnly { _ = try Self.imageMIMEType(data) }
+        let hash = Self.revision(data), destination = try url(for: hash)
+        if FileManager.default.fileExists(atPath: destination.path) {
+            _ = try read(hash)
+        } else {
+            try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+            let info = try directoryURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+            guard info.isDirectory == true, info.isSymbolicLink != true else { throw SlopPackageError.invalid("unsafe media directory") }
+            try data.write(to: destination, options: .atomic)
+            let handle = try FileHandle(forWritingTo: destination)
+            try handle.synchronize(); try handle.close()
+            let descriptor = Darwin.open(directoryURL.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW)
+            guard descriptor >= 0 else { throw POSIXError(.EIO) }
+            defer { Darwin.close(descriptor) }
+            guard fsync(descriptor) == 0 else { throw POSIXError(.EIO) }
+        }
+        return Reference(sha256: hash, bytes: data.count, mime: mime)
     }
 
     public func directoryRevision() throws -> String? {
@@ -59,7 +73,7 @@ public final class SlopMediaStore: @unchecked Sendable {
         var fingerprint = ""
         for url in urls {
             let values = try url.resourceValues(forKeys: keys)
-            guard values.isRegularFile == true, values.isSymbolicLink != true, Self.isValidName(url.lastPathComponent) else { throw SlopPackageError.invalid("invalid media store entry") }
+            guard values.isRegularFile == true, values.isSymbolicLink != true, Self.isValidHash(url.lastPathComponent) else { throw SlopPackageError.invalid("invalid media store entry") }
             fingerprint += "\(url.lastPathComponent)|\(values.fileSize ?? -1)|\(values.contentModificationDate?.timeIntervalSinceReferenceDate ?? 0)\n"
         }
         cacheLock.lock()

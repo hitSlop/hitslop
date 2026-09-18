@@ -3,7 +3,7 @@ import Darwin
 import Foundation
 
 public enum SlopAgentSkills {
-    public static let managedNames = ["hitslop-authoring", "hitslop-design", "hitslop-document"]
+    public static let managedNames = ["hitslop", "hitslop-authoring", "hitslop-design", "hitslop-document"]
     private static let versionKey = "agentSkillsAppVersion"
 
     public static func bundledSkillsURL() -> URL? {

@@ -117,9 +117,3 @@ func dynamicDialect(_ asserting: Bool) -> JSONSchemaDraft2020.Dialect {
     }
     return .init(vocabulary: .init(formatValid: asserting, formatValidators: formats))
 }
-
-// Structural comparison ignores object ordering/whitespace, but retains all fields.
-func canonical(_ data: Data) throws -> Data {
-    let value = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
-    return try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys, .fragmentsAllowed])
-}

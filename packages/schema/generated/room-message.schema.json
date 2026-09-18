@@ -6,24 +6,16 @@
       "required": [
         "type",
         "protocol",
-        "bootId",
         "peers"
       ],
       "properties": {
         "type": {
           "type": "string",
-          "enum": [
-            "welcome"
-          ]
+          "const": "welcome"
         },
         "protocol": {
-          "type": "integer",
-          "enum": [
-            1
-          ]
-        },
-        "bootId": {
-          "type": "string"
+          "type": "number",
+          "const": 3
         },
         "peers": {
           "type": "array",
@@ -59,9 +51,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": [
-            "presence"
-          ]
+          "const": "presence"
         },
         "peers": {
           "type": "array",
@@ -92,97 +82,89 @@
       "type": "object",
       "required": [
         "type",
-        "documentId",
-        "schema",
-        "updates"
-      ],
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "updates"
-          ]
-        },
-        "documentId": {
-          "type": "string",
-          "pattern": "^[a-zA-Z0-9-]{1,80}$"
-        },
-        "schema": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
-        },
-        "updates": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "sequence",
-              "batch"
-            ],
-            "properties": {
-              "sequence": {
-                "type": "integer",
-                "minimum": 2,
-                "maximum": 10000
-              },
-              "batch": {
-                "type": "object",
-                "required": [
-                  "id",
-                  "hash",
-                  "bytes"
-                ],
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "pattern": "^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
-                  },
-                  "hash": {
-                    "type": "string",
-                    "pattern": "^[a-f0-9]{64}$"
-                  },
-                  "bytes": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 699052
-                  }
-                },
-                "title": "RoomBatch",
-                "additionalProperties": false
-              }
-            },
-            "title": "RoomUpdate",
-            "additionalProperties": false
-          },
-          "minItems": 1,
-          "maxItems": 32
-        }
-      },
-      "title": "RoomUpdates",
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "type",
-        "head",
-        "bootId",
+        "open",
         "peers"
       ],
       "properties": {
         "type": {
           "type": "string",
-          "enum": [
-            "ready"
-          ]
+          "const": "ready"
         },
-        "head": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10000
-        },
-        "bootId": {
-          "type": "string"
+        "open": {
+          "type": "object",
+          "required": [
+            "snapshot",
+            "lease"
+          ],
+          "properties": {
+            "snapshot": {
+              "type": "object",
+              "required": [
+                "documentId",
+                "schemaHash",
+                "authority",
+                "revision",
+                "data"
+              ],
+              "properties": {
+                "documentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schemaHash": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "data": {}
+              },
+              "additionalProperties": false
+            },
+            "lease": {
+              "type": "object",
+              "required": [
+                "id",
+                "expiresAt"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "expiresAt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "additionalProperties": false
+            },
+            "status": {
+              "type": "object",
+              "required": [
+                "connected",
+                "writable"
+              ],
+              "properties": {
+                "connected": {
+                  "type": "boolean"
+                },
+                "writable": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
         },
         "peers": {
           "type": "array",
@@ -213,32 +195,146 @@
       "type": "object",
       "required": [
         "type",
-        "id",
-        "hash",
-        "sequence"
+        "snapshot"
       ],
       "properties": {
         "type": {
           "type": "string",
-          "enum": [
-            "ack"
-          ]
+          "const": "snapshot"
         },
-        "id": {
-          "type": "string",
-          "pattern": "^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
-        },
-        "hash": {
-          "type": "string",
-          "pattern": "^[a-f0-9]{64}$"
-        },
-        "sequence": {
-          "type": "integer",
-          "minimum": 2,
-          "maximum": 10000
+        "snapshot": {
+          "type": "object",
+          "required": [
+            "documentId",
+            "schemaHash",
+            "authority",
+            "revision",
+            "data"
+          ],
+          "properties": {
+            "documentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "schemaHash": {
+              "type": "string",
+              "minLength": 1
+            },
+            "authority": {
+              "type": "string",
+              "minLength": 1
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "data": {}
+          },
+          "additionalProperties": false
         }
       },
-      "title": "RoomAck",
+      "title": "RoomSnapshotMessage",
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "requestId",
+        "leaseId",
+        "authority",
+        "result"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "result"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "leaseId": {
+          "type": "string"
+        },
+        "authority": {
+          "type": "string"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "revision"
+              ],
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "error"
+              ],
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "error": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_request",
+                        "invalid_path",
+                        "invalid_operation",
+                        "missing_target",
+                        "missing_anchor",
+                        "duplicate_id",
+                        "identity_change",
+                        "validation",
+                        "stale_revision",
+                        "request_reused",
+                        "offline",
+                        "rejected",
+                        "unknown_outcome",
+                        "batch_usage",
+                        "closed",
+                        "not_ready",
+                        "authority_changed",
+                        "lease_expired",
+                        "storage_unavailable"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "title": "RoomResultMessage",
       "additionalProperties": false
     },
     {
@@ -251,9 +347,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": [
-            "error"
-          ]
+          "const": "error"
         },
         "status": {
           "type": "integer",

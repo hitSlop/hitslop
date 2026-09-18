@@ -6,8 +6,6 @@ import {
   DocumentIdSchema,
   MediaReceiptSchema,
   RegistryPublishResultSchema,
-  RoomInitializedSchema,
-  RoomSeedInputSchema,
   RoomSeedSchema,
   RoomSessionSchema,
   Sha256Schema,
@@ -39,7 +37,7 @@ const room = base.meta(
   openapi({ spec: (current) => ({ ...current, security: [{ roomToken: [] }] }) }),
 );
 
-/** Public HTTP only. Live Loro messages are schema components, not RPC procedures. */
+/** Public HTTP only. Live command/snapshot messages are schema components, not RPC procedures. */
 export const api = {
   catalog: {
     list: base
@@ -187,10 +185,6 @@ export const api = {
       .output(standard(RoomSessionSchema)),
   },
   rooms: {
-    initialize: room
-      .meta(openapi({ method: "POST", path: "/rooms/{documentId}", operationId: "initializeRoom" }))
-      .input(standard(RoomSeedInputSchema))
-      .output(standard(RoomInitializedSchema)),
     seed: room
       .meta(
         openapi({ method: "GET", path: "/rooms/{documentId}/seed", operationId: "getRoomSeed" }),

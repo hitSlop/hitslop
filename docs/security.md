@@ -12,7 +12,7 @@ page and same-document fragments can navigate inside the WebView. HTTP(S) link
 actions, including new-tab links, open in the system browser. Custom schemes,
 additional WebViews, frames, forms, and automatic downloads are rejected.
 
-The resource handler exposes app HTML, immutable assets, validated named media,
+The resource handler exposes app HTML, immutable assets, validated document media,
 and validated theme CSS. It does not expose manifests, raw stores, or `state/`.
 Resource reads open directory components without following symlinks, verify a
 regular file and its size, and read through the same descriptor. FIFOs and other
@@ -52,23 +52,24 @@ Amp “GET SKINS” click opens the system browser during the signed-app manual 
 ## Admission and persistence
 
 Bridge requests are limited to 64 KiB for control calls, 1 MiB for document edits,
-and 36 MiB for media writes (including base64). JSON nesting is limited to 64
+and 36 MiB for media writes (including base64). Bridge JSON nesting is limited to 64
 levels. There are at most eight outstanding asynchronous requests and one media
 write per bridge. These checks precede schema validation and task creation;
 WebKit itself necessarily deserializes the incoming script message first.
 
 Document data is limited to 1 MiB of serialized JSON and 64 nesting levels.
-Initial data, external edits, and candidate Loro projections are checked before
-commit. External files that fail validation remain untouched. One native owner
-tracks at most 16 edit sessions and 128 active drafts; records are released on
-draft completion or page teardown. Limit rejection never silently drops an edit.
-A rejected admission does not consume its sequence; the guest retains a failed
-edit until explicit recovery.
-Once admitted, a failed edit consumes its sequence and caches the failure for
-identical retries; edit fingerprints use sorted JSON keys. Size/depth failures
-at that stage retain a safe explanation under `validation_failed`; they must
-not become `limit_exceeded`, which tells
-the guest that admission did not consume its sequence.
+Native JSON codecs allow up to 68 nested containers for bounded storage and room
+framing. Extracted document data still has the 64-container and exact 1 MiB limits,
+including received shared snapshots. Preliminary object walks use conservative
+byte estimates; encoded UTF-8 bytes determine acceptance. Snapshot bytes are
+checked before SQLite commit so envelope overhead cannot create unreadable state.
+
+Initial data, external edits, and command candidates are checked before commit.
+Invalid or stale external files are preserved and reported. Request IDs are
+scoped to an authority and a seven-day retry lease. Expired leases cannot execute;
+transport errors are never deterministic receipts. Shared documents stay
+read-only without their room authority. Native recovery exposes retained drafts
+without making the guest a disk or network authority.
 
 Reload/close revoke queued guest requests. Normal close retains the existing
 flush barrier. Full-state notifications retain only the newest pending frame;

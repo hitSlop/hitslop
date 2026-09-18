@@ -7,13 +7,6 @@ export async function generateSkills(
   sourceRoot: string,
   generated: string,
 ) {
-  const swiftDocumentSkill = resolve(
-    repositoryRoot,
-    "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/hitslop-document.SKILL.md",
-  );
-  await mkdir(resolve(swiftDocumentSkill, ".."), { recursive: true });
-  await writeFile(swiftDocumentSkill, documentSkillContent);
-
   const packagedSkillRoots = [
     resolve(repositoryRoot, "packages/cli/skills"),
     resolve(
@@ -21,7 +14,7 @@ export async function generateSkills(
       "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/skills",
     ),
   ];
-  for (const name of ["hitslop-authoring", "hitslop-design"] as const) {
+  for (const name of ["hitslop", "hitslop-authoring", "hitslop-design"] as const) {
     const source = resolve(sourceRoot, ".agents/skills", name);
     for (const root of packagedSkillRoots) {
       const destination = join(root, name);

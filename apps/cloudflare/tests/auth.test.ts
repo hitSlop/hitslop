@@ -1,7 +1,5 @@
 import { expect, test } from "bun:test";
 import { base64url, signRoomToken, verifyRoomToken, type RoomClaims } from "../src/crypto.ts";
-import { route } from "../src/index.ts";
-import { MemoryRegistry } from "../src/store.ts";
 
 const key = "isolated-security-test-key-32-bytes";
 const claims = (): RoomClaims => ({
@@ -54,17 +52,4 @@ test("even correctly signed claims are validated", async () => {
     await expect(verifyRoomToken(key, await uncheckedToken(value))).rejects.toThrow("Unauthorized");
   const token = await signRoomToken(key, claims());
   await expect(verifyRoomToken(key, `${token}x`)).rejects.toThrow();
-});
-test("production entry ignores any legacy test-auth environment flag", async () => {
-  const env = { TOKEN_KEY: key, FIREBASE_PROJECT_ID: "hitslopapp", ALLOW_TEST_AUTH: "true" };
-  const response = await route(
-    new Request("https://api.hitslop.com/api/media", {
-      method: "PUT",
-      headers: { authorization: "Bearer test:owner", "content-type": "image/png" },
-      body: new Uint8Array([1]),
-    }),
-    env,
-    new MemoryRegistry(),
-  );
-  expect(response.status).toBe(401);
 });

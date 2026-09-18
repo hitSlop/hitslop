@@ -8,7 +8,7 @@ runtime contract is framework-neutral; UI adapters are intentionally thin.
 The `slop` executable owns project lifecycle:
 
 - `init` scaffolds the supported Svelte project and installs missing machine-level agent skills.
-- `skills sync` writes `hitslop-authoring`, `hitslop-design`, and `hitslop-document` into `~/.hitslop/skills` and links them for coding agents.
+- `skills sync` writes `hitslop`, `hitslop-authoring`, `hitslop-design`, and `hitslop-document` into `~/.hitslop/skills` and links them for coding agents.
 - `validate` parses the authoritative manifest.
 - `dev` runs Vite with a disposable in-memory host fake for UI work.
 - `build` emits a source/store-free runtime directory and optional schema metadata.
@@ -23,7 +23,7 @@ files.
 ## @hitslop/runtime
 
 Application-facing exports are `slop`, `ready`, `capture`, `flush`, and `hostInfo`.
-They cover JSON, named media, window resize/drag, host readiness,
+They cover JSON, document media, window resize/drag, host readiness,
 capture lifecycle, and host capability discovery.
 
 `@hitslop/runtime/adapter` exposes lower-level persistence/media primitives
@@ -35,12 +35,12 @@ the main application API.
 
 Svelte 5 rune-aware classes/functions:
 
-- `documentStore` / `DocumentStore` and `documentText`
-- `imageStore` / `ImageStore`
-- `fileStore` / `FileStore`
+- `createDocument` / `SlopDocument` with typed verbs, store-owned fields, and text attachments; `<Slop>` supplies host reporting and capture snippets
+- `imageStore(document, fields.photo, { fallback })` / `ImageStore`
+- `fileStore(document, fields.attachment)` / `FileStore`
 
 These expose reactive value/loading/error/persistence state while delegating all
-durability to the runtime host. `documentStore` accepts the schema directly
+durability to the runtime host. `createDocument` accepts the schema directly
 from root TypeBox `schema.ts`, alongside its initial value, and
 validates data at the persistence boundary. Quick Checklist
 and the CLI counter starter share this workflow; archived examples remain deferred.

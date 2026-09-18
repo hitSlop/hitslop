@@ -20,13 +20,20 @@ export async function sharedFixture(extra: Record<string, Uint8Array> = {}) {
     "assets/initial.json": strToU8('{"count":0}'),
     ...extra,
   });
+  const documentId = crypto.randomUUID(),
+    schema = await digest(schemaBytes);
   return {
-    documentId: crypto.randomUUID(),
+    documentId,
     title: "Friends",
     slug: "checklist",
-    schema: await digest(schemaBytes),
-    checkpoint: "AQ==",
-    version: "seed",
+    schema,
+    seed: JSON.stringify({
+      documentId,
+      schemaHash: schema,
+      authority: crypto.randomUUID(),
+      revision: 0,
+      data: { count: 0 },
+    }),
     package: new File([bytes], "checklist.slop.zip", { type: "application/zip" }),
   };
 }

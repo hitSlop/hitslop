@@ -1,6 +1,5 @@
 export * from "./manifest.js";
 export * from "./catalog.js";
-export * from "./registry.js";
 export * from "./publish.js";
 export * from "./document-skill.js";
 export * from "./data.js";

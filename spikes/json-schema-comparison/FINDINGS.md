@@ -1,4 +1,176 @@
-# Findings: DynamicJSON vs swift-json-schema
+# Findings: JSON compatibility
+
+## Implemented follow-up: boundaries and records
+
+The first three fixes from the baseline review below are now implemented while
+retaining DynamicJSON. Documents keep their 64-container, 1 MiB limits; native
+codecs allow 68 containers for bounded framing, and assembled snapshot bytes are
+checked before persistence. Exact encoded-byte checks cover local preparation
+and incoming shared data. Both preliminary byte walkers avoid counting a trailing
+separator.
+
+`S.Record` now emits `^[\\s\\S]*$`, and its mappings, paths, command interpreters,
+and native attachment discovery use that representation. Old annotated `^.*$`
+record schemas require a rebuild. Active examples and the starter are verified;
+archives remain deferred. The wider workspace also contains concurrent undo and
+protocol changes; these are not part of the JSON boundary fix.
+
+Permanent regressions cover SQLite commit/reopen/retry, exact byte limits,
+rejected shared data, room ready/snapshot messages, record edits, and attachment
+discovery. The spike adds the ready envelope and uses the current generated
+bridge contract. Follow-up artifacts: [first run](results/boundaries-fixed-first.json),
+[second run](results/boundaries-fixed-second.json), and
+[stability comparison](results/boundaries-fixed-stability.json).
+
+Each follow-up run executes 1,437 case validations and 99 boundary checks. Boundary
+failures fall from **6 to 0**; all record cases agree with their intended contract.
+Case differences fall from **48 to 38**, with **0 unstable sequences**. The remaining
+14 schema-export differences are confined to the candidate library. Full spike
+runs still intentionally exit 1 for the deferred compatibility differences.
+
+Both reports have identical fixture hashes and semantic outcomes. The strict
+provenance comparison remains nonzero: the Apple `Package.resolved` changed during
+concurrent dependency work. These reports demonstrate repeated outcomes, not an
+identical-source reproducibility gate; the comparison preserves that distinction.
+
+Validation also passed the permanent native boundary/room/media regressions,
+TypeScript schema/runtime checks, and Cloudflare tests. Quick Checklist and a
+fresh counter starter both built and passed native save/reopen tests. Generated
+resources passed their check. Initial WebKit, CLI, and example startup timeouts
+under concurrent load passed on scoped reruns (sequential Swift tests and a longer
+Bun test timeout); no timeout-related production changes were made.
+
+Unicode key preservation, string equality/length, lone surrogates, and large
+integer compatibility remain deferred. The candidate's schema-export metadata
+loss remains a separate migration concern. These changes make no speed claim.
+
+## Baseline review, before the follow-up
+
+The review and earlier reports below are preserved as the before-change evidence.
+Items 1–3 in its proposed production work are completed by the follow-up above.
+
+## Baseline recommendation
+
+Keep the current dependency while fixing the shared document contract and native
+representation. Neither Swift library is compatible with the expanded corpus
+without adaptation. The candidate improves scalar equality but still merges
+canonically equivalent object keys, counts graphemes for string length, and
+accepts an overflowing number outside the guest's finite-number domain.
+A dependency swap alone would leave data-loss and persistence failures in place.
+
+This implementation adds a reproducible spike and an opt-in production test
+adapter. It does **not** fix production behavior or change dependencies.
+
+## Baseline results
+
+The current corpus produces **479 adapter/case rows, 1,437 executions, 126 schema
+checks, and 88 boundary checks** per run. There are **48 differing case rows,
+14 schema-export differences, and 6 boundary failures**, with no unstable repeated
+sequences. Counts span adapters, so they are not counts of distinct production
+bugs. Both full runs intentionally exit 1 when these differences are recorded.
+
+Artifacts: [first compatibility run](results/compatibility-first.json),
+[second compatibility run](results/compatibility-second.json), and
+[repeatability check](results/compatibility-stability.json). The repeatability
+check compares source and fixture hashes as well as semantic results; serialization
+order and diagnostic wording are excluded. The measured versions are TypeBox
+1.3.32, DynamicJSON 1.0.2, and swift-json-schema 0.14.1.
+
+| Observation | TypeBox compiled/interpreted | Production native / cached DynamicJSON | Candidate |
+| --- | --- | --- | --- |
+| Distinct combining Unicode keys survive | Yes | No | No |
+| Exact scalar `const` / `enum` equality | Yes | No | Yes |
+| Two-scalar combining/flag strings satisfy length 2 | Yes | No | No |
+| Distinct Unicode strings/nested values remain unique | Yes | No | Yes |
+| Distinct Unicode object keys remain unique | Yes | No | No |
+| Decomposed spelling cannot satisfy a different required key | Yes | No | No |
+| Record values under newline/CR keys are validated | No | No | No |
+| Unpaired surrogate input accepted by the guest can round-trip | Yes | No | No |
+| Finite `1e20` satisfies `integer` | Yes | No | Yes |
+| Overflowing `1e400` is rejected | Yes | Yes | No |
+
+The record failures are **schema-authoring defects**: `S.Record` emits `^.*$`,
+which misses keys containing line terminators. All adapters follow that schema
+and accept a string where the author requested numeric record values. These are
+not evidence of different JSON Schema semantics between libraries.
+
+Unpaired surrogates are a **portability policy gap**: JavaScript accepts escaped
+lone UTF-16 surrogates while the Swift parsers reject them. This corpus establishes
+the parser/validator mismatch; it does not exercise a remote room authority.
+Choose and enforce a shared representable domain before accepting such data.
+
+The 14 schema differences are the candidate's export of authored document
+schemas: root `x-hitslop` annotations disappear from `Schema.jsonValue`. Schema
+acceptance itself agrees. Retaining the original schema source, as the native
+adapter already does, avoids that export loss. It does not fix document key loss.
+
+Current protocol-2 bridge cases, recursive document references, configured email
+formats, unknown fields, missing defaults, coercion rejection, and mixed repeated
+valid/invalid sequences pass. Rejected values remain unchanged where parsing can
+represent them. Neither adapter sequence exhibits stale validation state.
+
+## Native persistence and size findings
+
+The native adapter calls the actual `SlopDocumentSchema.prepare` and
+`SlopCommandStorage.apply` APIs against fresh temporary SQLite databases.
+
+- **Depth 64 commits but cannot reopen.** The prepared data passes its own depth
+  check. Storage adds a snapshot envelope around the prepared bytes without
+  checking combined depth. A new connection's load and the retry path then fail.
+  The disk projection and room snapshot envelope also exceed the allowed depth.
+- **Depth 63 fails the room snapshot envelope.** The stored snapshot can reopen,
+  but adding the outer room message crosses the same depth limit. Depths 60–62
+  pass every tested stage; depth 65 rejects and leaves the snapshot unchanged.
+- **Exactly 1 MiB is inconsistently accepted.** A plain `{"text":"..."}` value
+  of 1,048,576 encoded bytes is rejected, while an escaped value of the same size
+  passes. `SlopDocumentJSON.validateBounds` adds `key.utf8.count + 4` for each
+  property, counting a separator for the final property. For this plain one-field
+  object it overestimates by one byte and rejects before the exact encoded-byte
+  check. Escaped strings are underestimated by that preliminary count and reach
+  the exact check. Values one byte over the limit correctly reject.
+
+Full replacement requests near 1 MiB exceed the separate bridge request budget
+because of command overhead. Those transport rejections are expected and are
+reported separately from document acceptance. The spike uses a small deep edit
+to reach depth limits and directly invokes authority validation for size cases.
+It checks real envelope shapes through encoding/decoding, not live WebKit or
+network delivery. See [README](README.md) for the scope and oracle semantics.
+
+## Proposed production work, in order
+
+1. **Make committed documents readable at every required boundary.** Separate
+   document depth from bounded envelope overhead, or consistently reduce the
+   public data limit. Validate the chosen invariant before commit. Promote the
+   depth 63/64 reopen, retry, projection, and room cases into regression tests.
+2. **Remove false rejection by the approximate byte counter.** A preliminary
+   bound must be conservative before the authoritative encoded-byte check.
+   Keep both plain and escaped exact-limit tests and verify rejected edits do
+   not advance revision or receipts incorrectly.
+3. **Fix record schema generation.** Emit an all-key pattern or equivalent schema
+   that constrains values for every JSON property name. Regenerate native
+   resources and verify newline, CR, empty, and prototype-like keys across runtimes.
+4. **Preserve exact JSON keys in native data and schema handling.** Swift String
+   dictionary equality cannot distinguish canonical equivalents. Changing only
+   validator libraries is insufficient; parsing, key storage, lookup, operation
+   paths, schema properties, and serialization must agree on exact key identity.
+5. **Close remaining validator and portability gaps.** Use code-point string
+   lengths and exact deep equality, support finite integral guest numbers beyond
+   Int64, and define a consistent policy for lone surrogates and overflowing
+   literals. Apply any rejection rule at both guest and authority boundaries.
+6. **Reevaluate the dependency with the same corpus.** Preserve original schema
+   metadata, require whole-value validation, and only compare fresh performance
+   once the required correctness cases pass. The candidate's scalar-equality
+   improvement is useful evidence, but not enough to justify a migration yet.
+
+## Historical benchmark — prior corpus
+
+The remainder preserves the original microbenchmark findings. Its older bridge
+fixtures and Foundation-based oracle did not expose the Unicode and persistence
+issues above. Statements that all validity checks match apply only to that older
+corpus. Validator reuse has since been implemented in production, so the old
+recommendation to add caching is no longer outstanding work. The original result
+files are retained unchanged. These timings are not protocol-2 end-to-end results.
+
 
 ## Recommendation
 

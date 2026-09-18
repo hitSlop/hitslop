@@ -32,7 +32,7 @@ import Testing
         session.webView.setFrameSize(NSSize(width: 480, height: 620))
     }
     let info = try #require(await session.webView.callAsyncJavaScript("return await slop.info()", arguments: [:], in: nil, contentWorld: .page) as? [String: Any])
-    #expect(info["protocolVersion"] as? Int == 1)
+    #expect(info["protocolVersion"] as? Int == slopProtocolVersion)
     _ = try await session.webView.evaluateJavaScript(#"""
     const input = document.querySelector('input[aria-label="New task"]');
     input.value = 'Persist this task'; input.dispatchEvent(new Event('input', {bubbles:true}));
@@ -90,13 +90,13 @@ import Testing
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("checklist-large-\(UUID()).slop")
     try FileManager.default.copyItem(at: source, to: root)
     defer { try? FileManager.default.removeItem(at: root) }
-    let document = try #require(try SlopLoroDocument.open(package: SlopPackage(rootURL: root)))
+    let document = try #require(try SlopCommandDocument.open(package: SlopPackage(rootURL: root)))
     let frame = try await document.frame()
     var data = frame.data
     data["tasks"] = .array((0..<500).map { index in
         .object(["id": .string("row-\(index)"), "text": .string("Task \(index)"), "done": .bool(false), "archived": .bool(false)])
     })
-    _ = try await document.apply(.init(session: "seed", sequence: 1, base: frame.revision, after: data))
+    _ = try await document.apply(testRequest(document.openGuest(), ops: [testSet("tasks", data["tasks"])]))
     try await document.close()
     let session = try SlopRuntimeSession(packageURL: root)
     defer { session.close() }
@@ -129,13 +129,14 @@ import Testing
     let session = try SlopRuntimeSession(packageURL: root)
     defer { session.close() }
     session.load(); try await session.waitUntilReady()
+    #expect(try await session.webView.evaluateJavaScript("document.querySelector('[role=tab][aria-selected=true]').getAttribute('aria-controls') === document.querySelector('[role=tabpanel]').id") as? Bool == true)
     _ = try await session.webView.evaluateJavaScript(#"""
       const title = document.querySelector('[aria-label="Checklist title"]');
       title.focus(); title.dispatchEvent(new CompositionEvent('compositionstart', {bubbles:true}));
       title.value = '今日のこと'; title.dispatchEvent(new Event('input', {bubbles:true}));
     """#)
     try await session.flush()
-    #expect(try await session.collaborativeDocument?.frame().data["title"] == .string("今日のこと"))
+    #expect(try await session.document?.frame().data["title"] == .string("今日のこと"))
     func action(_ label: String) async throws {
         _ = try await session.webView.callAsyncJavaScript(#"""
           document.querySelector('[aria-label="Actions for Take a walk without my phone"]')
@@ -149,19 +150,25 @@ import Testing
         try await session.flush()
     }
     try await action("Move up")
-    #expect(try await session.collaborativeDocument?.frame().data["tasks"].array.first?["id"] == .string("walk"))
+    #expect(try await session.document?.frame().data["tasks"].array.first?["id"] == .string("walk"))
     try await action("Remove task")
-    #expect(try await session.collaborativeDocument?.frame().data["tasks"].array.count == 2)
+    #expect(try await session.document?.frame().data["tasks"].array.count == 2)
     _ = try await session.webView.callAsyncJavaScript("[...document.querySelectorAll('button')].find(e => e.textContent.trim() === 'Undo').click(); await new Promise(r => setTimeout(r, 0)); return true", arguments: [:], in: nil, contentWorld: .page)
     try await session.flush()
-    #expect(try await session.collaborativeDocument?.frame().data["tasks"].array.first?["id"] == .string("walk"))
+    #expect(try await session.document?.frame().data["tasks"].array.first?["id"] == .string("walk"))
+    try await action("Remove task")
     _ = try await session.webView.callAsyncJavaScript(#"""
-      const current = await slop.document.open(); current.data.tasks = [];
-      await slop.document.apply({session:'empty-test', sequence:1, base:current.revision, after:current.data});
+      const s = await slop.document.open();
+      await slop.document.send({documentId:s.snapshot.documentId,schemaHash:s.snapshot.schemaHash,authority:s.snapshot.authority,leaseId:s.lease.id,requestId:'empty-test',ops:[{op:'set',path:[{key:'tasks'}],value:[]}]});
       await new Promise(r => setTimeout(r, 50)); return true;
     """#, arguments: [:], in: nil, contentWorld: .page)
     #expect(try await session.webView.evaluateJavaScript("document.body.innerText.includes('A little breathing room.')") as? Bool == true)
     #expect(try await session.webView.evaluateJavaScript("document.querySelector('[aria-label=\"Add task\"]').disabled") as? Bool == true)
+    // Any later commit expires action undo, including another participant's edit.
+    #expect(try await session.webView.evaluateJavaScript("[...document.querySelectorAll('button')].find(e => e.textContent.trim() === 'Undo').disabled") as? Bool == true)
+    #expect(try await session.webView.evaluateJavaScript("document.body.innerText.includes('Undo unavailable after another change.')") as? Bool == true)
     try await session.flush()
+    #expect(try await session.document?.frame().data["tasks"].array.isEmpty == true)
+
 }
 #endif

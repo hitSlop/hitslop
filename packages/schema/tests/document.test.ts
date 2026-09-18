@@ -1,12 +1,12 @@
 import * as Type from "typebox";
 import { expect, test } from "bun:test";
 import * as S from "../src/document.ts";
-import { compileDataSchema, dataSchemaFromJSON, hitslopSyncKeyword } from "../src/data.ts";
+import { compileDataSchema, dataSchemaFromJSON, hitslopDocumentKeyword } from "../src/data.ts";
 import { validate } from "../src/validation.ts";
 
 const task = S.Object({
   id: S.String(),
-  text: S.Text(),
+  text: S.String(),
   done: S.Boolean(),
   archived: S.Boolean(),
 });
@@ -17,18 +17,18 @@ const checklist = S.Document({
 });
 
 test("S.* mapping distinguishes text, lists, and atomic strings", () => {
-  expect(S.syncMapping(checklist)).toEqual({
+  expect(S.documentMapping(checklist)).toEqual({
     container: "map",
     fields: {
       title: { container: "atomic" },
       tasks: {
-        container: "movable-list",
+        container: "list",
         key: "id",
         item: {
           container: "map",
           fields: {
             id: { container: "atomic" },
-            text: { container: "text" },
+            text: { container: "atomic" },
             done: { container: "atomic" },
             archived: { container: "atomic" },
           },
@@ -40,9 +40,9 @@ test("S.* mapping distinguishes text, lists, and atomic strings", () => {
 
 test("packaged JSON Schema keeps x-hitslop and still validates like TypeBox", () => {
   const packaged = dataSchemaFromJSON(checklist);
-  expect(packaged[hitslopSyncKeyword]).toEqual({ version: 1, container: "map" });
+  expect(packaged[hitslopDocumentKeyword]).toEqual({ version: 1, container: "map" });
   const tasks = (packaged.properties as Record<string, Record<string, unknown>> | undefined)?.tasks;
-  expect(tasks?.[hitslopSyncKeyword]).toEqual({ container: "movable-list", key: "id" });
+  expect(tasks?.[hitslopDocumentKeyword]).toEqual({ container: "list", key: "id" });
   const value = {
     title: "Trip",
     tasks: [{ id: "task-a", text: "Book hotel", done: false, archived: false, extra: true }],
@@ -66,7 +66,8 @@ test("duplicate list ids fail after JSON Schema succeeds", () => {
 });
 
 test("S.Array stays atomic and S.List requires the key on the item", () => {
-  expect(S.syncMapping(S.Array(S.String()))).toEqual({ container: "atomic" });
+  expect(S.documentMapping(S.Array(S.String()))).toEqual({ container: "atomic" });
+  // @ts-expect-error a missing identity field fails both types and runtime
   expect(() => S.List(S.Object({ text: S.String() }), "id")).toThrow("must be a property");
 });
 
@@ -77,7 +78,7 @@ test("unknown extra JSON fields are preserved", () => {
 
 test("S.Media is an atomic content-addressed descriptor", () => {
   const schema = S.Document({ photo: S.Optional(S.Media()) });
-  expect(S.syncMapping(schema)).toEqual({
+  expect(S.documentMapping(schema)).toEqual({
     container: "map",
     fields: { photo: { container: "atomic" } },
   });
@@ -92,17 +93,20 @@ test("S.Media is an atomic content-addressed descriptor", () => {
 
 test("record mapping retains nested containers and rejects unsupported patterns", () => {
   expect(
-    S.syncMapping(S.Record(S.Object({ text: S.Text(), tasks: S.List(task, "id") }))),
+    S.documentMapping(S.Record(S.Object({ text: S.String(), tasks: S.List(task, "id") }))),
   ).toMatchObject({
     container: "record",
     values: {
       container: "map",
-      fields: { text: { container: "text" }, tasks: { container: "movable-list" } },
+      fields: { text: { container: "atomic" }, tasks: { container: "list" } },
     },
   });
   expect(() =>
-    S.syncMapping({ "x-hitslop": { container: "record" }, patternProperties: { "^x": S.Text() } }),
-  ).toThrow("unrestricted");
+    S.documentMapping({
+      "x-hitslop": { container: "record" },
+      patternProperties: { "^x": S.String() },
+    }),
+  ).toThrow("rebuilding");
 });
 
 test("disk envelopes validate separately from application data without coercion", () => {
@@ -110,20 +114,34 @@ test("disk envelopes validate separately from application data without coercion"
   const app = { title: "Hello", unknown: { preserve: true } };
   expect(S.validateDocument(schema, app)).toEqual(app);
   expect(
-    validate(S.envelopeSchema(schema), { $slop: { format: 1, baseRevision: "opaque" }, data: app })
-      .data,
+    validate(S.envelopeSchema(schema), {
+      $slop: {
+        format: 2,
+        baseRevision: 0,
+        documentId: "doc",
+        schemaHash: "schema",
+        authority: "local",
+      },
+      data: app,
+    }).data,
   ).toEqual(app);
   expect(() => validate(S.envelopeSchema(schema), app)).toThrow();
   expect(() =>
     validate(S.envelopeSchema(schema), {
-      $slop: { format: 1, baseRevision: "opaque" },
+      $slop: {
+        format: 2,
+        baseRevision: 0,
+        documentId: "doc",
+        schemaHash: "schema",
+        authority: "local",
+      },
       data: { title: 1 },
     }),
   ).toThrow();
 });
 
-test("package boundaries require one v1 envelope and reject raw or future schemas", () => {
-  const schema = S.Document({ title: S.Text() });
+test("package boundaries require one v2 envelope and reject raw or future schemas", () => {
+  const schema = S.Document({ title: S.String() });
   expect(S.applicationSchema(S.envelopeSchema(schema))).toEqual(schema);
   for (const input of [
     schema,
@@ -131,7 +149,7 @@ test("package boundaries require one v1 envelope and reject raw or future schema
     { ...S.envelopeSchema(schema), additionalProperties: true },
     S.envelopeSchema({ ...schema, "x-hitslop": { version: 2, container: "map" } }),
   ]) {
-    expect(() => S.applicationSchema(input)).toThrow("v1 document envelope");
+    expect(() => S.applicationSchema(input)).toThrow("v2 document envelope");
   }
 });
 
@@ -143,4 +161,12 @@ test("document limits reject non-JSON, excess depth, and oversized initial data"
   for (let depth = 0; depth < 65; depth++) nested = { nested };
   expect(() => S.validateDocument(schema, { value: nested })).toThrow("nesting");
   expect(() => S.validateDocument(schema, { value: "x".repeat(1024 * 1024) })).toThrow("1 MiB");
+});
+
+test("unknown document annotations are rejected instead of falling back to atomic", () => {
+  for (const marker of ["invalid", {}, { container: "unknown" }]) {
+    expect(() => S.documentMapping({ type: "object", "x-hitslop": marker })).toThrow(
+      "Unsupported x-hitslop container",
+    );
+  }
 });

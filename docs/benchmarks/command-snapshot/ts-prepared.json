@@ -1,0 +1,75 @@
+{
+  "measuredAt": "2026-09-17T16:57:28.626Z",
+  "environment": {
+    "runtime": "Bun 1.3.13",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M1"
+  },
+  "scope": "In-memory authority only. Timings include clone, full validation and snapshot serialization. No disk durability, Swift, WebKit, network, or browser render. Not comparable to old native measurements.",
+  "results": [
+    {
+      "rows": 1000,
+      "bytes": 74822,
+      "samples": 30,
+      "applyIncludingClone": {
+        "medianMs": 0.734250000000003,
+        "p95Ms": 0.8779590000000042
+      },
+      "wholeDocumentValidation": {
+        "medianMs": 0.49391699999998195,
+        "p95Ms": 0.8869589999999903
+      },
+      "snapshotSerialization": {
+        "medianMs": 0.08279200000001197,
+        "p95Ms": 0.21870800000002077
+      },
+      "authorityTotal": {
+        "medianMs": 1.7547910000000115,
+        "p95Ms": 2.46879100000001
+      }
+    },
+    {
+      "rows": 5000,
+      "bytes": 382822,
+      "samples": 30,
+      "applyIncludingClone": {
+        "medianMs": 3.4371250000000373,
+        "p95Ms": 3.953374999999994
+      },
+      "wholeDocumentValidation": {
+        "medianMs": 1.9010419999999613,
+        "p95Ms": 3.2677090000000817
+      },
+      "snapshotSerialization": {
+        "medianMs": 0.3595420000000331,
+        "p95Ms": 0.451582999999971
+      },
+      "authorityTotal": {
+        "medianMs": 8.525374999999997,
+        "p95Ms": 11.257292000000007
+      }
+    },
+    {
+      "rows": 10000,
+      "bytes": 767822,
+      "samples": 30,
+      "applyIncludingClone": {
+        "medianMs": 6.849249999999984,
+        "p95Ms": 7.62783300000001
+      },
+      "wholeDocumentValidation": {
+        "medianMs": 3.4071250000001783,
+        "p95Ms": 5.269334000000072
+      },
+      "snapshotSerialization": {
+        "medianMs": 0.6778339999999616,
+        "p95Ms": 1.3707080000001497
+      },
+      "authorityTotal": {
+        "medianMs": 16.891665999999987,
+        "p95Ms": 18.76191700000004
+      }
+    }
+  ]
+}

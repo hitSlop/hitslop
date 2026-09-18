@@ -1,88 +1,118 @@
-# Swift JSON Schema comparison
+# JSON compatibility spike
 
-An isolated experiment comparing hitSlop's DynamicJSON 1.0.2 with
-swift-json-schema 0.14.1. See [FINDINGS.md](FINDINGS.md) for measured results.
-No production dependency, schema, or persistence changes are made by this runner.
+Compares the current TypeBox contract with cached DynamicJSON 1.0.2,
+swift-json-schema 0.14.1, and hitSlop's actual native document adapter.
+See [FINDINGS.md](FINDINGS.md) for results and proposed follow-up work.
+The runner changes no production behavior or dependency versions. The boundary and
+record fixes measured by the follow-up reports are implemented in production code.
 
 ## Run
 
-From the repository root, with the repository's Bun dependencies installed and
-Swift 6.2 or newer on macOS 14 or newer (measured with Swift 6.4):
+Use macOS 14+, Swift 6.2+, and the repository's installed Bun dependencies.
+The pinned Swift Collections dependency requires Swift 6.2 even though the
+candidate library declares Swift 6.1. From the repository root, run sequentially:
 
 ```sh
-bun spikes/json-schema-comparison/run.ts first
-bun spikes/json-schema-comparison/run.ts second
+bun test ./spikes/json-schema-comparison/oracle.test.ts ./spikes/json-schema-comparison/fixtures.test.ts
+bun spikes/json-schema-comparison/run.ts boundaries-fixed-first
+bun spikes/json-schema-comparison/run.ts boundaries-fixed-second
+bun spikes/json-schema-comparison/compare-runs.ts boundaries-fixed-first boundaries-fixed-second boundaries-fixed-stability
 ```
 
-The optional argument names the results file; it defaults to `latest`.
-The runner resolves the pinned Swift packages, prepares fixtures under `.build/`,
-runs a release executable, and writes `results/<label>.json`. The package lockfile
-also pins transitive dependencies. Only the `JSONSchema` product is linked from
-the candidate package; SwiftPM still resolves its package-level SwiftSyntax dependency.
-The pinned Swift Collections 1.6.0 dependency requires Swift 6.2 even though the
-candidate package itself declares Swift 6.1.
+Run both comparisons even when the first exits **1**: that means a completed
+report contains compatibility differences. Exit **0** means every expectation
+matched; **2** means the driver encountered an infrastructure failure.
+The stability command separately returns 0 when both runs agree. Its optional third
+argument names the stability output so earlier reports remain intact. It does not
+claim the adapters are compatible.
 
-Exit codes: **0** means all comparison checks matched; **1** means differences
-were recorded; **2** means the Swift runner failed before completing its report.
-Build or fixture preparation failures also return nonzero. A library incompatibility
-is a useful result, not a reason to weaken expectations. Reports are produced after
-all cases and workloads have been attempted; timings with incorrect outcomes are omitted.
+The optional label defaults to `compatibility-latest`. Historical labels `first`
+and `second` are protected. The runner writes fixtures and raw Swift observations
+under ignored `.build/`, then writes `results/<label>.json`. It builds the standalone
+Swift comparison in release mode and invokes an opt-in test in the Apple package
+in debug mode. This is a correctness comparison, not a performance comparison.
 
-## Inputs and checks
+`JSONCompatibilitySpikeTests.swift` lives in the existing runtime test target so
+it can exercise internal production APIs without exposing new public APIs or
+copying implementation into the spike. It is skipped unless
+`HITSLOP_JSON_SPIKE_INPUT` is set; the driver also sets
+`HITSLOP_JSON_SPIKE_OUTPUT`. Its assertions check successful report generation;
+the TypeScript driver applies the compatibility gate to the observations.
 
-`run.ts` reads the existing shared document conformance cases, generated native
-manifest/bridge schemas, and actual Quick Checklist manifest. It imports the
-checklist's TypeBox schema and initial data and exports the application schema
-without building a `.slop` or changing generated production files. Source hashes
-and the combined fixture hash are recorded in results.
+## Corpus and adapters
 
-Additional cases cover invalid manifests and bridge requests, malformed JSON and
-schemas, missing/wrongly typed fields, unknown nested fields, and the bridge's
-annotation-only format policy. All document/manifest format checks use each
-library's built-ins with the same custom URI/URI-reference rules as hitSlop.
-The candidate requires explicitly registering its built-in format validators.
+The driver reads shared data conformance fixtures and the current generated bridge
+schema. It imports Quick Checklist's authored schema and initial data directly.
+Current bridge cases use `document.execute` and content-addressed `media.open`.
+Additional authored document schemas cover Unicode values and keys, recursive
+references, formats, malformed JSON, nonmutation, numeric representation, and
+record keys containing control characters.
 
-Each prepared validator sees the full case sequence three times. The runner
-checks expected validity, complete evaluation, JSON value preservation, and schema
-round-trip preservation, including `x-hitslop`. Native diagnostics are collected
-outside timed loops and capped at 8,000 characters per failing case.
-JSON comparisons ignore whitespace and object key order using Foundation
-canonicalization; this is not a test of exact numeric literal or byte preservation.
+Each prepared validator sees the entire mixed valid/invalid sequence three times:
 
-Schema checks use DynamicJSON's validating decoder and the candidate's explicit
-`validateAgainstMetaSchema()`. Candidate `Schema.jsonValue` is deliberately tested
-as its schema-export API; preserving the original source separately is a possible
-migration adaptation, not silently substituted in this experiment.
+| Adapter | Path exercised |
+| --- | --- |
+| `typebox-compiled` | Installed workspace TypeBox `Compile` |
+| `typebox-interpreted` | Installed workspace TypeBox `Check` |
+| `dynamic-reused` | Standalone DynamicJSON with retained validator |
+| `jsonschema-reused` | Standalone candidate with explicit metaschema and format setup |
+| `native-document` | Production `SlopDocumentJSON` → `SlopDocumentSchema.prepare` |
 
-The experiment does not exercise Loro, SQLite, native UI, concurrent validation,
-remote schema fetching, or hitSlop's additional list-ID/container rules. It is a
-focused compatibility corpus, not a complete JSON Schema conformance certification.
+The native adapter runs authored document groups; generic shared schemas remain
+unwrapped so their reference scopes do not change. Native bridge dispatch is not
+executed. Document formats are asserted. The current bridge schema contains no
+format keywords, so this corpus does not test its annotation-only format policy.
+The candidate uses its built-in format validators plus the host's URI rules.
+Invalid schemas are explicitly checked during preparation.
 
-## Timing methodology
+Raw JSON strings are kept until each adapter parses them. The JavaScript oracle
+compares exact strings and property names, ignores object order and whitespace,
+and preserves array order. It intentionally uses guest IEEE-754 number semantics:
+`-0` equals `0`, and large literals are compared after JavaScript parsing, not for
+exact decimal spelling. Foundation canonicalization is not used as an oracle.
+Tests demonstrate that combining Unicode keys and unpaired surrogates cannot
+silently disappear or normalize in the comparison.
 
-Three adapters run against identical input bytes:
+`application-schema` cases assert the intended authored contract: every record
+value must match its value schema. A validator can correctly follow a defective
+emitted schema and still fail that expectation. `portability` cases expose a
+cross-runtime policy mismatch, rather than asserting universal JSON validity.
+The overflow literal `1e400` must be rejected for hitSlop's finite-number contract;
+it is exempt from preservation because it has no finite guest value to preserve.
 
-| Adapter | Preparation | Per-validation work |
-| --- | --- | --- |
-| `dynamic-current` | Decode `JSONSchema` | Current convenience API, including fresh dialect/resource/registry/validator setup |
-| `dynamic-reused` | Decode schema, retain registry/resource/validator | Reuse prepared validator |
-| `jsonschema-reused` | Parse schema, register formats, validate against metaschema | Reuse prepared `Schema` |
+Before/after serialized values detect loss on accepted and rejected inputs. The
+report distinguishes schema export, parsing, validation, and serialization phases.
+`parse-or-initial-serialization` deliberately does not claim which of those two
+steps lost data; source inspection can narrow it further. Diagnostics are capped
+at 1,500 characters per observation. Final reports retain input/output hashes
+instead of full serialized payloads.
 
-`schema-prepare` measures the respective adapter's preparation, including schema
-validation and destruction. It is not a claim that all three constructors do equal
-work; DynamicJSON's current path defers work to validation. Dependency initialization
-and disk-cold loading are excluded by warm-up.
+## Native boundaries
 
-`validate-parsed` reuses a library-native JSON value. `parse-and-validate` parses
-identical in-memory UTF-8 bytes on every operation. Both include native validation
-result construction and correctness checks, but exclude diagnostic rendering,
-input/output file access, and setup. Host JSON encoding, Loro work, and bridge IPC
-are outside these timings.
+Depths 60–65 and encoded byte sizes immediately below, at, and above 1 MiB run
+through production document preparation and SQLite command storage. Plain and
+escaped strings have identical intended encoded sizes. Checks include bridge
+request limits, validation, reopening through a fresh storage connection, retry
+receipts, disk projection envelopes, room snapshot and ready frames, and rollback on rejection.
 
-Workloads are valid/invalid manifest and bridge requests plus deterministic
-10/100/1,000-task checklists, with the invalid field on the final task. Every
-measurement uses 20 warm-ups, then five batches of 50 iterations. Reports contain
-each batch's mean microseconds per operation, their median and range, and a consumed
-checksum. These are batch statistics, not per-request percentiles. Engine order
-rotates across workloads. Run sequentially without other heavy work and compare
-the two recorded runs before drawing conclusions.
+Twenty map levels followed by an atomic subtree allow a small command to create
+a deep candidate. This reaches document limits without first exceeding command
+nesting limits. Near-1-MiB full replacement requests exceed the separate 1-MiB
+bridge budget because of request overhead; authority validation is exercised
+separately. Disk and room checks encode/decode the production envelope shapes;
+they do not run WebKit, network transport, a Durable Object, or the full projection
+coordinator. SQLite persistence and receipt handling use production code.
+
+## Repeatability and historical measurements
+
+Reports record fixture hashes, relevant source and lockfile hashes, installed
+TypeBox version, toolchain, OS, and Git commit. Source hashes matter because a
+working tree may differ from its commit. `compare-runs.ts` checks identical inputs,
+sources, semantic outcomes, and stable repeated sequences. It ignores diagnostic
+wording and raw serialization hashes, since object order is immaterial.
+
+Fresh timings are deferred while correctness differences remain. The original
+[first report](results/first.json) and [second report](results/second.json) are
+preserved as historical microbenchmarks. They used the older protocol/corpus and
+Foundation-based comparison, and do not establish current end-to-end behavior.
+Their methodology and conclusions remain in the historical section of FINDINGS.

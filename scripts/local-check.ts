@@ -110,17 +110,15 @@ try {
   await run(
     "packages-and-local-sharing",
     ["bun", "run", "release:npm:check"],
-    [
-      "nativeReplicasMergeOfflineThroughRealCloudflareRoom",
-      "nativeChecklistMergesThroughRealCloudflareRoom",
-      "compiledCounterStarterPersistsAndReopens",
-    ],
+    ["nativeCommandsRecoverThroughRealCloudflareRoom", "compiledCounterStarterPersistsAndReopens"],
   );
   await run("examples", ["bun", "run", "examples:check"]);
   await run(
     "native-and-checklist",
     ["bun", "scripts/native-runtime-check.ts"],
     [
+      "slopWrapperReportsFailuresAndResetsWithoutReopeningStore",
+      "guestErrorsReachHostWithoutBreakingReadiness",
       "quickChecklistCompiledSveltePersistsAndReopens",
       "quickChecklistKeyboardCompositionReorderRemoveUndoAndEmptyState",
       "compiledChecklistExportsSelectedViewLongContentAndDynamicIcon",

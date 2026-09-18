@@ -5,6 +5,7 @@ import { $ } from "bun";
 
 const root = resolve(import.meta.dir, "../../..");
 const generatedFiles = [
+  "apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/document-ops.json",
   "apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/room-wire.json",
   "packages/schema/generated/room-message.schema.json",
   "packages/schema/generated/room-client-message.schema.json",
@@ -13,7 +14,6 @@ const generatedFiles = [
   "packages/schema/generated/manifest.schema.json",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Generated/SlopManifest.generated.swift",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/manifest.schema.json",
-  "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/hitslop-document.SKILL.md",
   "apps/cloudflare/public/schemas/v1/manifest.schema.json",
   "packages/schema/generated/bridge-request.schema.json",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopRuntime/Resources/bridge-request.schema.json",

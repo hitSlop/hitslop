@@ -16,6 +16,7 @@ import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const managedSkillNames = [
+  "hitslop",
   "hitslop-authoring",
   "hitslop-design",
   "hitslop-document",

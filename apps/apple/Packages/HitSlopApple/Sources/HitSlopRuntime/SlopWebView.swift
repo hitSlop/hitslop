@@ -29,15 +29,15 @@ private func hostBridgeSource() throws -> String {
 
 @MainActor public protocol SlopRuntimeSessionDelegate: AnyObject {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
-    func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind)
     func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize
     func runtimeSessionDidRequestWindowDrag(_ session: SlopRuntimeSession) throws
+    func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue)
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
+    func runtimeSession(_ session: SlopRuntimeSession, documentNeedsAttention frame: SlopCommandFrame)
 }
 
 public extension SlopRuntimeSessionDelegate {
     func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {}
-    func runtimeSession(_ session: SlopRuntimeSession, didCommit kind: SlopStoreKind) {}
     func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize {
         throw SlopPackageError.invalid("the host does not support dynamic window sizing")
     }
@@ -45,34 +45,37 @@ public extension SlopRuntimeSessionDelegate {
         throw SlopPackageError.invalid("the host does not support window dragging")
     }
     func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
+    func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue) {}
+    func runtimeSession(_ session: SlopRuntimeSession, documentNeedsAttention frame: SlopCommandFrame) {}
 }
 
 @MainActor final class SlopBridge: NSObject, WKScriptMessageHandlerWithReply {
     weak var session: SlopRuntimeSession?
     private let package: SlopPackage
     private let storage: SlopStorageWorker
-    private let document: SlopLoroDocument?
+    fileprivate let document: SlopCommandDocument?
     private let documentError: Error?
-    private let requestSchema: JSONSchema
+    private let requestValidator: any JSONSchemaValidator
     private var lease = SlopRequestLease()
     private var inFlight = 0
-    private var mediaWriteInFlight = false
+    private var mediaImportInFlight = false
 
     init(package: SlopPackage) throws {
         self.package = package
         storage = SlopStorageWorker(package: package)
-        do { document = try SlopLoroDocument.open(package: package); documentError = nil }
+        do { document = try SlopCommandDocument.open(package: package); documentError = nil }
         catch { document = nil; documentError = error }
-        requestSchema = try JSONSchema(data: Data(contentsOf: Bundle.module.url(forResource: "bridge-request.schema", withExtension: "json")!))
+        let schema = try JSONSchema(data: Data(contentsOf: Bundle.module.url(forResource: "bridge-request.schema", withExtension: "json")!))
+        let resource = try JSONSchemaResource(root: schema)
+        requestValidator = try JSONSchemaRegistry().register(resource: resource).validator(for: resource)
     }
-    fileprivate var collaborativeDocument: SlopLoroDocument? { document }
+    fileprivate var openingError: Error? { documentError }
     func finish() async throws { if let document { try await document.close() }; storage.close() }
     func invalidate() {
         lease.invalidate()
     }
     func reset() async {
         lease.invalidate()
-        if let document { await document.resetGuestSessions() }
         lease = SlopRequestLease()
     }
     func close() {
@@ -95,8 +98,8 @@ public extension SlopRuntimeSessionDelegate {
             try SlopJSONLimits.checkObject(body, maximumBytes: limit)
             let data = try JSONSerialization.data(withJSONObject: body)
             try SlopJSONLimits.check(data, maximumBytes: limit)
-            guard inFlight < 8, method != .mediaWrite || !mediaWriteInFlight else { throw SlopBridgeFailure(.limitExceeded, "Too many outstanding host requests; wait for the previous operation") }
-            let validation = try JSON(data: data).validate(with: requestSchema)
+            guard inFlight < 8, method != .mediaAdd || !mediaImportInFlight else { throw SlopBridgeFailure(.limitExceeded, "Too many outstanding host requests; wait for the previous operation") }
+            let validation = try requestValidator.validate(JSON(data: data))
             guard validation.isValid else { throw SlopBridgeFailure(.invalidRequest, "Malformed host request") }
             let value: Any
             switch method {
@@ -108,6 +111,11 @@ public extension SlopRuntimeSessionDelegate {
                 if package.isSkinned { capabilities.removeAll { $0 == "window.resize" } }
                 value = ["protocolVersion": slopProtocolVersion, "capabilities": capabilities]
             case .log: print("[slop guest] \(body["message"] as? String ?? "")"); value = NSNull()
+            case .runtimeReportError:
+                guard let issue = body["issue"] else { throw SlopBridgeFailure(.invalidRequest, "Missing runtime error") }
+                let report = try JSONDecoder().decode(SlopRuntimeIssue.self, from: JSONSerialization.data(withJSONObject: issue))
+                session.delegate?.runtimeSession(session, didReport: report)
+                value = NSNull()
             case .ready: session.bridgeDidBecomeReady(); value = NSNull()
             case .windowResize:
                 guard !package.isSkinned else { throw SlopBridgeFailure(.unsupported, "PNG-skinned documents have a fixed window size") }
@@ -122,27 +130,33 @@ public extension SlopRuntimeSessionDelegate {
                 value = NSNull()
             default:
                 inFlight += 1
-                if method == .mediaWrite { mediaWriteInFlight = true }
+                if method == .mediaAdd { mediaImportInFlight = true }
                 let requestLease = lease
                 Task {
-                    defer { inFlight -= 1; if method == .mediaWrite { mediaWriteInFlight = false } }
+                    defer { inFlight -= 1; if method == .mediaAdd { mediaImportInFlight = false } }
                     do {
                         try requestLease.check()
                         let result: Any
                         switch method {
-                        case .documentOpen, .documentApply, .documentFlush, .documentReleaseDraft:
+                        case .documentOpen, .documentExecute, .documentFlush:
                             guard let document else { throw documentError ?? SlopBridgeFailure(.unsupported, "This slop does not use document data") }
                             result = try await document.guestRequest(method, body: data, lease: requestLease).jsonValue()
                             try requestLease.check()
-                            if method == .documentApply { session.bridgeDidCommit(kind: .document, revision: nil) }
                         default:
+                            if method == .mediaAdd {
+                                guard let document, try await document.frame().writable else { throw SlopBridgeFailure(.unsupported, "Open a writable document before importing media") }
+                            }
+                            if method == .mediaOpen, let hash = body["sha256"] as? String { try await document?.loadMedia(hash) }
                             let stored = try await storage.perform(data, lease: requestLease)
                             try requestLease.check()
                             result = stored.value
-                            if let kind = stored.kind { session.bridgeDidCommit(kind: kind, revision: stored.revision, name: stored.name) }
+                            if let hash = stored.sha256 { session.emitMedia(revision: stored.revision, source: "app", sha256: hash) }
                         }
                         replyHandler(["ok": true, "value": result], nil)
-                    } catch { failure(error) }
+                    } catch {
+                        if method == .documentOpen || method == .documentFlush { session.delegate?.runtimeSession(session, didFail: error) }
+                        failure(error)
+                    }
                 }
                 return
             }
@@ -177,9 +191,9 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         }
         if url.path.hasPrefix("/media/") {
             let name = String(url.path.dropFirst("/media/".count)).removingPercentEncoding ?? ""
-            let resource = try package.mediaURL(name: name)
+            let resource = try package.mediaURL(sha256: name)
             guard FileManager.default.fileExists(atPath: resource.path) else { throw SlopPackageError.missing(url.path) }
-            let data = try SlopFile.read(resource, within: package.rootURL)
+            let data = try SlopMediaStore(directoryURL: package.mediaStoresURL, rootURL: package.rootURL).read(name)
             return (data, try SlopMediaStore.mediaMIMEType(data))
         }
         let resource = try package.assetURL(path: url.path)
@@ -202,8 +216,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     #endif
     let usesTransparentBackground: Bool
     public weak var delegate: (any SlopRuntimeSessionDelegate)?
-    public var onStoreCommit: (() -> Void)?
-    public var collaborativeDocument: SlopLoroDocument? { bridge.collaborativeDocument }
+    public var document: SlopCommandDocument? { bridge.document }
     public private(set) var isReady = false
     private let bridge: SlopBridge
     private let schemeHandler: SlopSchemeHandler
@@ -257,12 +270,13 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
 
     public func load() {
         isReady = false
-        if documentEvents == nil, let document = bridge.collaborativeDocument {
+        if documentEvents == nil, let document = bridge.document {
             documentEvents = Task { [weak self] in
                 do {
                     try await document.start()
                     for await frame in try await document.events() {
                         guard let self, !self.closed else { return }
+                        self.delegate?.runtimeSession(self, documentNeedsAttention: frame)
                         let value = try frame.jsonValue()
                         _ = try? await self.webView.callAsyncJavaScript(
                             "window.__hitslopDocumentPublish?.(frame)",
@@ -308,7 +322,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     public func flush() async throws {
         guard !closed else { throw SlopBridgeFailure(.closed, "Document is closed") }
         _ = try await webView.callAsyncJavaScript("await window.__hitslopFlush?.(); await window.slop?.flush?.(); return true", arguments: [:], in: nil, contentWorld: .page)
-        if let document = bridge.collaborativeDocument { try await document.flush() }
+        if let document = bridge.document { try await document.flush() }
     }
     public func finish() async throws { try await flush(); try await bridge.finish() }
     public func close() {
@@ -340,10 +354,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
             throw SlopPackageError.invalid(closed ? "runtime closed" : "timed out waiting for slop.ready(); guest state: \(String(describing: state)); navigation error: \(lastError?.localizedDescription ?? "none")")
         }
     }
-    fileprivate func bridgeDidBecomeReady() { guard !isReady else { return }; isReady = true; retryCount = 0; delegate?.runtimeSessionDidBecomeReady(self) }
-    fileprivate func bridgeDidCommit(kind: SlopStoreKind, revision: String?, name: String? = nil) {
-        emit(kind: kind, revision: revision, source: "app", name: name); onStoreCommit?(); delegate?.runtimeSession(self, didCommit: kind)
-    }
+    fileprivate func bridgeDidBecomeReady() { guard !isReady else { return }; isReady = true; retryCount = 0; delegate?.runtimeSessionDidBecomeReady(self); if let error = bridge.openingError { delegate?.runtimeSession(self, didFail: error) } }
     fileprivate func bridgeDidRequestResize(_ size: CGSize) throws -> CGSize {
         guard let delegate else { throw SlopPackageError.invalid("the host does not support dynamic window sizing") }
         return try delegate.runtimeSession(self, resizeContentTo: size)
@@ -374,20 +385,20 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
         let revisions = await bridge.revisions()
         guard !closed else { return }
         guard requestedAtSequence == sequence else { scheduleExternalRefresh(); return }
-        if let document = bridge.collaborativeDocument {
+        if let document = bridge.document {
             do { try await document.refreshExternal() } catch { delegate?.runtimeSession(self, didFail: error) }
         }
-        if revisions.media != mediaRevision { mediaRevision = revisions.media; emit(kind: .media, revision: revisions.media, source: "external") }
-        if revisions.theme != themeRevision { themeRevision = revisions.theme; reloadTheme(); onStoreCommit?() }
+        if revisions.media != mediaRevision { mediaRevision = revisions.media; emitMedia( revision: revisions.media, source: "external") }
+        if revisions.theme != themeRevision { themeRevision = revisions.theme; reloadTheme() }
     }
     private func reloadTheme() {
         let value = themeRevision ?? "default-\(Date().timeIntervalSince1970)"
         webView.callAsyncJavaScript("window.__hitslopReloadTheme?.(revision)", arguments: ["revision": value], in: nil, in: .page) { _ in }
     }
-    private func emit(kind: SlopStoreKind, revision: String?, source: String, name: String? = nil) {
+    fileprivate func emitMedia( revision: String?, source: String, sha256: String? = nil) {
         sequence += 1
-        var event: [String: Any] = ["kind": kind.rawValue, "source": source, "sequence": sequence, "revision": revision ?? NSNull()]
-        if let name { event["name"] = name }
+        var event: [String: Any] = ["kind": "media", "source": source, "sequence": sequence, "revision": revision ?? NSNull()]
+        if let sha256 { event["sha256"] = sha256 }
         // callAsyncJavaScript serializes arguments on the WebKit side, so the
         // event payload never round-trips through string interpolation.
         webView.callAsyncJavaScript("window.__hitslopEmit?.(event)", arguments: ["event": event], in: nil, in: .page) { _ in }
@@ -436,7 +447,7 @@ extension SlopRuntimeSession: WKUIDelegate {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = parameters.allowsMultipleSelection
-        // Named media accepts images and bounded ZIP archives. WebKit does not
+        // Document media accepts images and bounded ZIP archives. WebKit does not
         // expose an input's `accept` list here, so keep the native picker in
         // sync with the host store and include Winamp's ZIP-based extension.
         panel.allowedContentTypes = [.image, .zip, UTType(filenameExtension: "wsz")].compactMap { $0 }

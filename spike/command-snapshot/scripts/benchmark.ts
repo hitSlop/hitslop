@@ -25,5 +25,5 @@ for (const rows of [1000, 5000, 10000]) {
 }
 const report = { measuredAt: new Date().toISOString(), environment: { runtime: `Bun ${Bun.version}`, platform: platform(), arch: arch(), cpu: cpus()[0]?.model },
   scope: "In-memory authority only. Timings include clone, full validation and snapshot serialization. No disk durability, Swift, WebKit, network, or browser render. Not comparable to old native measurements.", results };
-await Bun.write(new URL("../results/engine.json", import.meta.url), JSON.stringify(report, null, 2) + "\n");
+await Bun.write(process.env.HITSLOP_BENCHMARK_OUTPUT ?? new URL("../results/engine.json", import.meta.url), JSON.stringify(report, null, 2) + "\n");
 console.log(JSON.stringify(report, null, 2));

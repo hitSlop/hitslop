@@ -1,6 +1,6 @@
+import { roomProtocol } from "@hitslop/schema";
+import { workerHarness } from "./harness.ts";
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { createAPIClient } from "@hitslop/api/client";
 import { sharedFixture } from "./shared-fixture.ts";
@@ -9,87 +9,15 @@ import { digest, signRoomToken } from "../src/crypto.ts";
 // Exercise the actual Worker/SQLite/WebSocket runtime, including restart from disk.
 const key = "isolated-room-integration-test-key";
 const schema = "a".repeat(64);
-let directory: string, origin: string, process: ReturnType<typeof Bun.spawn>;
-let port: number;
-async function start() {
-  process = Bun.spawn(
-    [
-      "node",
-      resolve(import.meta.dir, "../node_modules/wrangler/bin/wrangler.js"),
-      "dev",
-      "tests/worker.ts",
-      "--local",
-      "--port",
-      String(port),
-      "--persist-to",
-      directory,
-      "--var",
-      `TOKEN_KEY:${key}`,
-    ],
-    {
-      cwd: resolve(import.meta.dir, ".."),
-      stdout: "ignore",
-      stderr: "inherit",
-      env: {
-        ...Bun.env,
-        CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
-        WRANGLER_SEND_METRICS: "false",
-      },
-    },
-  );
-  for (let i = 0; i < 400; i++) {
-    if (process.exitCode !== null) throw new Error(`Wrangler exited ${process.exitCode}`);
-    try {
-      await fetch(origin);
-      return;
-    } catch {
-      await Bun.sleep(50);
-    }
-  }
-  throw new Error("Wrangler startup timed out");
-}
-async function stop() {
-  process?.kill();
-  if (process) await process.exited;
-}
+const harness = workerHarness(key);
+let origin: string;
+const start = () => harness.start(),
+  stop = () => harness.stop();
 beforeAll(async () => {
-  directory = await mkdtemp(resolve(tmpdir(), "hitslop-room-test-"));
-  const reserve = Bun.serve({ port: 0, fetch: () => new Response() });
-  port = reserve.port!;
-  reserve.stop(true);
-  origin = `http://127.0.0.1:${port}`;
-  const migration = Bun.spawn(
-    [
-      "node",
-      resolve(import.meta.dir, "../node_modules/wrangler/bin/wrangler.js"),
-      "d1",
-      "execute",
-      "DB",
-      "--local",
-      "--persist-to",
-      directory,
-      "--file",
-      resolve(import.meta.dir, "../migrations/0001_init.sql"),
-      "--yes",
-    ],
-    {
-      cwd: resolve(import.meta.dir, ".."),
-      stdout: "ignore",
-      stderr: "inherit",
-      env: {
-        ...Bun.env,
-        CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
-        WRANGLER_SEND_METRICS: "false",
-      },
-    },
-  );
-  if ((await migration.exited) !== 0) throw new Error("Local test migration failed");
-  await start();
+  await harness.initialize();
+  origin = harness.origin;
 }, 30000);
-afterAll(async () => {
-  await stop();
-  if (directory) await rm(directory, { recursive: true, force: true });
-});
+afterAll(() => harness.dispose());
 async function token(room: string) {
   return signRoomToken(key, {
     room,
@@ -98,13 +26,6 @@ async function token(room: string) {
     email: "",
     owner: true,
     exp: Math.floor(Date.now() / 1000) + 600,
-  });
-}
-async function seed(room: string, auth: string, checkpoint = "AQ==") {
-  return fetch(`${origin}/rooms/${room}`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${auth}`, "content-type": "application/json" },
-    body: JSON.stringify({ protocol: 1, documentId: room, schema, checkpoint, version: "seed" }),
   });
 }
 async function connection(room: string, auth: string, fingerprint = schema) {
@@ -126,69 +47,84 @@ async function connection(room: string, auth: string, fingerprint = schema) {
   };
   await next("welcome");
   const send = (value: unknown) => ws.send(JSON.stringify(value));
-  const hello = (after: number) =>
-    send({
-      type: "hello",
-      protocol: 1,
-      documentId: room,
-      schema: fingerprint,
-      after,
-      batchSize: 8,
-    });
+  const hello = () =>
+    send({ type: "hello", protocol: roomProtocol, documentId: room, schema: fingerprint });
   return { ws, next, send, hello, frames };
 }
 
-test("room identity, immutable seed, durable retry, replay windows, and restart", async () => {
-  const room = crypto.randomUUID(),
-    auth = await token(room);
-  const wrong = await fetch(`${origin}/rooms/${crypto.randomUUID()}`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${auth}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      protocol: 1,
-      documentId: room,
-      schema,
-      checkpoint: "AQ==",
-      version: "seed",
-    }),
-  });
-  expect(wrong.status).toBe(403);
-  expect((await seed(room, auth)).status).toBe(200);
-  expect((await seed(room, auth)).status).toBe(200);
-  expect((await seed(room, auth, "Ag==")).status).toBe(409);
-  const a = await connection(room, auth);
-  a.hello(1);
-  await a.next("ready");
-  const bytes = new Uint8Array([2, 3, 4]);
-  const batch = {
-    id: crypto.randomUUID(),
-    hash: await digest(bytes),
-    bytes: Buffer.from(bytes).toString("base64"),
+test("commands, durable success and failure receipts, immutable seed, and restart", async () => {
+  const owner = createAPIClient(origin, { authorization: () => "test:owner" });
+  const input = await sharedFixture();
+  const room = input.documentId;
+  await owner.documents.create(input);
+  const session = await owner.documents.session({ documentId: room });
+  const a = await connection(room, session.token, input.schema);
+  a.hello();
+  const { open } = await a.next("ready");
+  const request = {
+    documentId: room,
+    schemaHash: input.schema,
+    authority: open.snapshot.authority,
+    leaseId: open.lease.id,
+    requestId: crypto.randomUUID(),
+    ops: [{ op: "increment", path: [{ key: "count" }], amount: 1 }],
   };
-  const append = { type: "append", protocol: 1, documentId: room, schema, batch };
-  a.send(append);
-  const ack = await a.next("ack");
-  expect(ack.sequence).toBe(2);
-  const delivered = await a.next("updates");
-  expect(delivered.updates[0].batch).toEqual(batch);
-  a.send(append); // Lost ACK: exact same immutable batch is safe to retry.
-  expect(await a.next("ack")).toEqual(ack);
-  a.send({ type: "applied", sequence: 2 });
-  await a.next("ready");
-  const b2 = { id: crypto.randomUUID(), hash: await digest(new Uint8Array([5])), bytes: "BQ==" };
-  a.send({ ...append, batch: b2 });
-  expect((await a.next("ack")).sequence).toBe(3);
+  const execute = { type: "execute", protocol: roomProtocol, request };
+  a.send(execute);
+  const receipt = await a.next("result");
+  expect(receipt.result).toEqual({ ok: true, revision: 1 });
+  expect((await a.next("snapshot")).snapshot.data.count).toBe(1);
+  a.send(execute);
+  expect(await a.next("result")).toEqual(receipt);
+  const rejected = {
+    ...execute,
+    request: {
+      ...request,
+      requestId: crypto.randomUUID(),
+      ops: [{ op: "toggle", path: [{ key: "count" }] }],
+    },
+  };
+  a.send(rejected);
+  const rejection = await a.next("result");
+  expect(rejection.result.ok).toBe(false);
   a.ws.close();
   await stop();
   await start();
-  const b = await connection(room, auth);
-  b.hello(1);
-  const replay = await b.next("updates");
-  expect(replay.updates.map((entry: any) => entry.sequence)).toEqual([2, 3]);
-  b.send({ type: "applied", sequence: 3 });
-  expect((await b.next("ready")).head).toBe(3);
-  b.send(append);
-  expect(await b.next("ack")).toEqual(ack);
+  const b = await connection(room, session.token, input.schema);
+  b.hello();
+  const reopened = (await b.next("ready")).open;
+  expect(reopened.snapshot.data.count).toBe(1);
+  b.send(execute);
+  expect(await b.next("result")).toEqual(receipt);
+  b.send(rejected);
+  expect(await b.next("result")).toEqual(rejection);
+  b.send({
+    ...execute,
+    request: { ...request, ops: [{ op: "increment", path: [{ key: "count" }], amount: 100 }] },
+  });
+  expect((await b.next("result")).result.error.code).toBe("request_reused");
+  const { ops: _ops, ...identity } = request;
+  const undo = {
+    ...execute,
+    request: {
+      ...identity,
+      requestId: "undo-once",
+      undo: { requestId: request.requestId, revision: 1 },
+    },
+  };
+  b.send({
+    ...undo,
+    request: { ...undo.request, leaseId: reopened.lease.id, requestId: "wrong-lease" },
+  });
+  expect((await b.next("result")).result.error.code).toBe("rejected");
+  b.send(undo);
+  const undone = await b.next("result");
+  expect(undone.result).toEqual({ ok: true, revision: 2 });
+  expect((await b.next("snapshot")).snapshot.data.count).toBe(0);
+  b.send(undo);
+  expect(await b.next("result")).toEqual(undone);
+  b.send({ ...undo, request: { ...undo.request, requestId: "undo-twice" } });
+  expect((await b.next("result")).result.error.code).toBe("stale_revision");
   b.ws.close();
 }, 30000);
 
@@ -199,17 +135,22 @@ test("real Worker RPC attaches an invited member before issuing room credentials
     documentId = input.documentId;
   const document = await owner.documents.create(input);
   expect(await owner.documents.create(input)).toEqual(document);
-  await expect(owner.documents.create({ ...input, checkpoint: "Ag==" })).rejects.toMatchObject({
+  await expect(
+    owner.documents.create({
+      ...input,
+      seed: JSON.stringify({ ...JSON.parse(input.seed), data: { count: 2 } }),
+    }),
+  ).rejects.toMatchObject({
     code: "CONFLICT",
   });
   await guest.documents.join({ documentId, invite: document.invite! });
   const ownerSession = await owner.documents.session({ documentId });
   const session = await guest.documents.session({ documentId });
   const guestRoom = createAPIClient(origin, { authorization: () => session.token });
-  expect((await guestRoom.rooms.seed({ documentId })).snapshot.checkpoint).toBe("AQ==");
+  expect((await guestRoom.rooms.seed({ documentId })).snapshot.data).toEqual({ count: 0 });
   const socket = await connection(documentId, session.token, document.schema);
-  socket.hello(1);
-  expect((await socket.next("ready")).head).toBe(1);
+  socket.hello();
+  expect((await socket.next("ready")).open.snapshot.revision).toBe(0);
   const replacement = await owner.documents.invite({ documentId, enabled: true });
   await expect(
     guest.documents.join({ documentId, invite: document.invite! }),
@@ -268,7 +209,7 @@ test("sharing excludes document state and requires the exact packaged schema", a
 });
 
 test.skipIf(!Bun.env.HITSLOP_NATIVE_SYNC)(
-  "Swift replicas merge offline edits through real HTTP and WebSockets",
+  "Swift commands recover through real HTTP and WebSockets",
   async () => {
     const native = Bun.spawn(
       [

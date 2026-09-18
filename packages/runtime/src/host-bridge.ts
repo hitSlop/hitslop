@@ -1,3 +1,4 @@
+import type { Open, Snapshot } from "@hitslop/schema/document-protocol";
 import "./capture.js";
 import {
   DocumentFrameSchema,
@@ -6,7 +7,7 @@ import {
   type BridgeParams,
   type BridgeResult,
 } from "@hitslop/schema/bridge";
-import { assertJSON, validate } from "@hitslop/schema/validation";
+import { validate } from "@hitslop/schema/validation";
 import { createThemeReload } from "./theme-reload.js";
 import { dispatchChange } from "./change-events.js";
 import { createBridgeCall } from "./bridge-call.js";
@@ -26,7 +27,6 @@ const invoke = createBridgeCall((request) => native.postMessage(request));
 const pending = new Set<Promise<unknown>>();
 const listeners = {
   media: new Set<(event: SlopChange) => void>(),
-  document: new Set<(event: SlopChange) => void>(),
 };
 let guestReady = false;
 let readySent = false;
@@ -64,8 +64,9 @@ function scheduleReady(): void {
     void call("ready", {}).catch((error) => console.error("hitSlop ready failed", error));
     window.dispatchEvent(new Event("slop:ready"));
   };
-  requestAnimationFrame(() => requestAnimationFrame(finish));
-  setTimeout(finish, 100);
+  // Offscreen WebViews can suspend both animation frames and timers. Readiness
+  // follows the guest's completed load attempt; capture settles layout itself.
+  queueMicrotask(finish);
 }
 const watch = (kind: keyof typeof listeners, callback: (event: SlopChange) => void) => {
   listeners[kind].add(callback);
@@ -73,16 +74,37 @@ const watch = (kind: keyof typeof listeners, callback: (event: SlopChange) => vo
     listeners[kind].delete(callback);
   };
 };
+let connected = false,
+  writable = false;
+let previousAuthority = "",
+  previousLease = "";
+const connections = new Set<() => void>();
+const handoffs = new Set<(open: Open, previous: string) => void>();
 const frames = new Set<(frame: DocumentFrame) => void>();
 window.__hitslopDocumentPublish = (value) => {
   let frame: DocumentFrame;
   try {
     frame = validate(DocumentFrameSchema, value);
-    assertJSON(frame.data, new Set(), 64);
   } catch (error) {
     console.error(error);
     return;
   }
+  const changed = connected !== frame.connected || writable !== frame.writable;
+  connected = frame.connected;
+  writable = frame.writable;
+  if (changed) for (const listener of connections) listener();
+  if (
+    frame.lease &&
+    (frame.lease.id !== previousLease || frame.snapshot.authority !== previousAuthority)
+  ) {
+    for (const listener of handoffs)
+      listener(
+        { snapshot: frame.snapshot as Snapshot, lease: frame.lease },
+        frame.handoffFrom ?? previousAuthority,
+      );
+    previousLease = frame.lease.id;
+  }
+  previousAuthority = frame.snapshot.authority;
   for (const callback of [...frames]) {
     try {
       callback(frame);
@@ -98,30 +120,50 @@ const bridge: WindowSlop = {
   info: () => call("host.info", {}),
   flush: drain,
   document: {
-    open: () => call("document.open", {}),
-    apply: (value) => {
-      return call("document.apply", {
-        session: value.session,
-        sequence: value.sequence,
-        base: value.base,
-        after: value.after,
-        ...(value.draft === undefined ? {} : { draft: value.draft }),
-        ...(value.parent === undefined ? {} : { parent: value.parent }),
-      });
+    get connected() {
+      return connected;
     },
-    flush: () => call("document.flush", {}),
-    releaseDraft: (value) => call("document.releaseDraft", value),
-    onChange: (callback) => {
-      frames.add(callback);
+    get writable() {
+      return writable;
+    },
+    open: async () => {
+      const open = (await call("document.open", {})) as Open;
+      if (open.status) {
+        connected = open.status.connected;
+        writable = open.status.writable;
+        for (const listener of connections) listener();
+      }
+      previousAuthority = open.snapshot.authority;
+      previousLease = open.lease.id;
+      return open;
+    },
+    send: (request) => call("document.execute", { request }),
+    flush: async () => {
+      await call("document.flush", {});
+    },
+    subscribe: (callback) => {
+      const listener = (frame: DocumentFrame) => callback(frame.snapshot as Snapshot);
+      frames.add(listener);
       return () => {
-        frames.delete(callback);
+        frames.delete(listener);
+      };
+    },
+    onConnection: (listener) => {
+      connections.add(listener);
+      return () => {
+        connections.delete(listener);
+      };
+    },
+    onHandoff: (listener) => {
+      handoffs.add(listener);
+      return () => {
+        handoffs.delete(listener);
       };
     },
   },
   media: {
-    open: (name) => call("media.open", { name }),
-    write: (name, data, mimeType) => call("media.write", { name, data, mimeType }),
-    remove: (name) => call("media.remove", { name }),
+    open: (sha256) => call("media.open", { sha256 }),
+    add: (data, kind) => call("media.add", { data, kind }),
     onChange: (callback) => watch("media", callback),
   },
   window: {
@@ -129,6 +171,9 @@ const bridge: WindowSlop = {
     drag: async () => {
       await call("window.drag", {});
     },
+  },
+  reportError: async (issue) => {
+    await call("runtime.reportError", { issue });
   },
   ready: () => {
     guestReady = true;
@@ -138,8 +183,12 @@ const bridge: WindowSlop = {
 };
 window.slop = Object.freeze(bridge);
 window.addEventListener("error", (event) => {
-  void call("log", { message: event.message }).catch(() => undefined);
+  void bridge
+    .reportError({ source: "unhandled", message: (event.message || "App error").slice(0, 4096) })
+    .catch(() => undefined);
 });
 window.addEventListener("unhandledrejection", (event) => {
-  void call("log", { message: String(event.reason) }).catch(() => undefined);
+  void bridge
+    .reportError({ source: "unhandled", message: String(event.reason).slice(0, 4096) })
+    .catch(() => undefined);
 });

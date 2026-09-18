@@ -19,7 +19,6 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.12.1"),
         .package(url: "https://github.com/apple/swift-openapi-urlsession", from: "1.3.1"),
         .package(url: "https://github.com/apple/swift-http-types", from: "1.8.0"),
-        .package(url: "https://github.com/loro-dev/loro-swift.git", exact: "1.16.0"),
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture", exact: "1.26.2"),
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20"),
         .package(url: "https://github.com/firebase/firebase-ios-sdk.git", exact: "12.18.0"),
@@ -43,7 +42,7 @@ let package = Package(
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
                 .product(name: "DynamicJSON", package: "swift-dynamicjson"),
             ],
-            resources: [.copy("Resources/manifest.schema.json"), .copy("Resources/hitslop-document.SKILL.md"), .copy("Resources/skills")],
+            resources: [.copy("Resources/manifest.schema.json"), .copy("Resources/skills")],
             linkerSettings: [.linkedFramework("ImageIO")]
         ),
         .target(
@@ -61,7 +60,6 @@ let package = Package(
             dependencies: [
                 "HitSlopCore", "HitSlopAPI",
                 .product(name: "DynamicJSON", package: "swift-dynamicjson"),
-                .product(name: "Loro", package: "loro-swift"),
             ],
             resources: [.copy("Resources/host-bridge.js"), .copy("Resources/bridge-request.schema.json")],
             linkerSettings: [.linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS]))]

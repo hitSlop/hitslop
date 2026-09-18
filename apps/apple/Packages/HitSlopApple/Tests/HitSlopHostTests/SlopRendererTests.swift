@@ -371,17 +371,18 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     session.load(); try await session.waitUntilReady()
     let fixtureResult = try await session.webView.callAsyncJavaScript(#"""
       try { await slop.document.open(); } catch (e) { return "open: " + e.message; }
-      try { await slop.media.write('photo','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','image/png'); } catch (e) { return 'media: ' + e.message; }
+      try { return (await slop.media.add('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','image')).sha256; } catch (e) { return 'media: ' + e.message; }
       return true;
     """#, arguments: [:], in: nil, contentWorld: .page)
-    #expect(fixtureResult as? Bool == true, "\(fixtureResult)")
+    let photoHash = try #require(fixtureResult as? String)
+    #expect(SlopMediaStore.isValidHash(photoHash))
     try await session.flush(); session.close()
     try Data(":root{--slop-ink:#123456}".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
-    let paths = ["state/document.sqlite", "stores/data.json", "stores/media/photo", "stores/theme.css"]
+    let paths = ["state/document.sqlite", "stores/data.json", "stores/media/\(photoHash)", "stores/theme.css"]
     let originals = try paths.map { try Data(contentsOf: root.appendingPathComponent($0)) }
     let app = root.appendingPathComponent("app.html")
     let html = try String(contentsOf: app, encoding: .utf8).replacingOccurrences(of: "window.slop.ready()", with: #"""
-      (async()=>{const s=await slop.document.open();await slop.document.apply({session:"capture",sequence:1,base:s.revision,after:{count:99}});await slop.media.remove('photo');slop.ready()})()
+      (async()=>{const s=await slop.document.open();await slop.document.send({documentId:s.snapshot.documentId,schemaHash:s.snapshot.schemaHash,authority:s.snapshot.authority,leaseId:s.lease.id,requestId:"capture",ops:[{op:"set",path:[{key:"count"}],value:99}]});await slop.media.add('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','image');slop.ready()})()
     """#)
     try Data(html.utf8).write(to: app)
     let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
@@ -430,10 +431,14 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     let stores = snapshot.url.appendingPathComponent("stores")
     try FileManager.default.createDirectory(at: stores, withIntermediateDirectories: true)
     let tasks: [[String: Any]] = (0..<120).map { ["id":"task-\($0)","text":"Task \($0) with a second line\nand extra detail", "done":$0 == 0,"archived":false] } + [["id":"filed","text":"Only filed item","done":true,"archived":true]]
-    let owner = try #require(try SlopLoroDocument.open(package: SlopPackage(rootURL: snapshot.url)))
-    let frame = try await owner.frame()
+    let owner = try #require(try SlopCommandDocument.open(package: SlopPackage(rootURL: snapshot.url)))
+    let open = try await owner.openGuest()
     let data = try SlopDocumentJSON(data: JSONSerialization.data(withJSONObject: ["title":"A long checklist", "tasks":tasks]))
-    _ = try await owner.apply(SlopDocumentEdit(session: "test", sequence: 1, base: frame.revision, after: data))
+    var request = open["snapshot"].object
+    request.removeValue(forKey: "data"); request.removeValue(forKey: "revision")
+    request["leaseId"] = open["lease"]["id"]; request["requestId"] = .string("seed")
+    request["replace"] = .object(["baseRevision": open["snapshot"]["revision"], "data": data])
+    _ = try await owner.apply(.object(request))
     try await owner.close()
     let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true)
     defer { session.close() }
@@ -453,7 +458,7 @@ private func rgba(_ image: CGImage, x: Int, y: Int) throws -> (red: UInt8, green
     let image = try #require(CGImageSourceCreateWithData(png as CFData, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
     #expect(image.width == 960)
     let firstIcon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
-    _ = try await session.webView.callAsyncJavaScript("const s=await slop.document.open(); s.data.tasks.forEach(t=>t.done=true); await slop.document.apply({session:'test-icon',sequence:1,base:s.revision,after:s.data}); await new Promise(r=>setTimeout(r,100)); return true", arguments: [:], in: nil, contentWorld: .page)
+    _ = try await session.webView.callAsyncJavaScript("const s=await slop.document.open(); await slop.document.send({documentId:s.snapshot.documentId,schemaHash:s.snapshot.schemaHash,authority:s.snapshot.authority,leaseId:s.lease.id,requestId:'test-icon',ops:s.snapshot.data.tasks.map(t=>({op:'set',path:[{key:'tasks'},{item:t.id},{key:'done'}],value:true}))}); await new Promise(r=>setTimeout(r,100)); return true", arguments: [:], in: nil, contentWorld: .page)
     let completedIcon = try #require(try await SlopRenderer.targetPNGData(session: session, target: .icon))
     #expect(firstIcon != completedIcon)
     if let output = ProcessInfo.processInfo.environment["HITSLOP_PILOT_OUTPUT"] {
@@ -477,6 +482,6 @@ private func v1Envelope(_ schema: String) throws -> Data {
     let application = try JSONSerialization.jsonObject(with: Data(schema.utf8))
     return try JSONSerialization.data(withJSONObject: ["type": "object", "additionalProperties": false,
         "required": ["$slop", "data"], "properties": ["data": application,
-        "$slop": ["type": "object", "additionalProperties": false, "required": ["format", "baseRevision"],
-        "properties": ["format": ["const": 1], "baseRevision": ["type": "string", "minLength": 1]]]]])
+        "$slop": ["type": "object", "additionalProperties": false, "required": ["format", "documentId", "schemaHash", "authority", "baseRevision"],
+        "properties": ["format": ["const": 2], "documentId": ["type": "string", "minLength": 1], "schemaHash": ["type": "string", "minLength": 1], "authority": ["type": "string", "minLength": 1], "baseRevision": ["type": "integer", "minimum": 0, "maximum": 9007199254740991]]]]])
 }

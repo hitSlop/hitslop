@@ -1,10 +1,20 @@
+import { fileURLToPath } from "node:url";
 import { protocolVersion } from "@hitslop/schema/bridge";
 // Browser-only half of `slop dev`. This disposable window.slop fake exists to
 // keep authored UI renderable; it deliberately does not model durable storage.
 
 export const hostStyle = `<style data-hitslop-host>*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}</style>`;
 
-export const devHostJavaScript = `(() => {
+const previewBundle = await Bun.build({
+  entrypoints: [fileURLToPath(import.meta.resolve("./preview-authority.js"))],
+  target: "browser",
+  format: "iife",
+  minify: true,
+});
+if (!previewBundle.success) throw new Error(previewBundle.logs.join("\n"));
+const previewAuthorityJavaScript = await previewBundle.outputs[0]!.text();
+
+export const devHostJavaScript = `${previewAuthorityJavaScript}\n(() => {
   const captureMode = new URL(window.location?.href ?? 'http://localhost/').searchParams.get('capture');
   if (captureMode === 'icon') document.documentElement.dataset.slopRenderer = 'true';
   if (captureMode === 'icon' || captureMode === 'export') {
@@ -18,10 +28,9 @@ export const devHostJavaScript = `(() => {
     }, {once:true});
   }
   const listeners = { document: new Set(), media: new Set() };
-  let jsonValue;
-  let jsonRevision = 0;
-  let jsonOpened = false;
-  let mediaRevision = 0;
+  let authority;
+  const media = new Map();
+  window.addEventListener("pagehide", () => { for (const value of media.values()) URL.revokeObjectURL(value.src); media.clear(); }, {once:true});
 
   const clone = (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   const emit = (kind, event) => listeners[kind].forEach((callback) => callback({ kind, ...event }));
@@ -29,43 +38,66 @@ export const devHostJavaScript = `(() => {
     listeners[kind].add(callback);
     return () => listeners[kind].delete(callback);
   };
-  const revision = () => 'dev:' + jsonRevision;
-  const frame = () => ({ publication: jsonRevision, revision: revision(), data: clone(jsonValue), dirty: false, error: null, projectionError: null });
-
   const resize = async (size) => size;
   const drag = async () => undefined;
 
+  let errorPanel;
+  const reportError = async issue => {
+    console.error('[hitSlop ' + issue.source + ']', issue.message);
+    if (!errorPanel) {
+      errorPanel = document.createElement('aside');
+      errorPanel.setAttribute('role', 'alert');
+      errorPanel.setAttribute('data-slop-export', 'hide');
+      errorPanel.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;z-index:2147483647;padding:12px;background:#fff;color:#222;border:1px solid #aaa;font:14px system-ui';
+      document.body.append(errorPanel);
+    }
+    errorPanel.replaceChildren();
+    const message = document.createElement('p'); message.textContent = issue.message;
+    const dismiss = document.createElement('button'); dismiss.textContent = 'Dismiss';
+    dismiss.onclick = () => { errorPanel.remove(); errorPanel = undefined; };
+    errorPanel.append(message, dismiss);
+    if (issue.source === 'render') {
+      const retry = document.createElement('button'); retry.textContent = 'Try again';
+      retry.onclick = async () => {
+        const result = await window.__hitslopDocumentRecovery?.('render');
+        if (result?.ok && dismiss.isConnected) dismiss.click();
+      };
+      errorPanel.append(retry);
+    }
+  };
+  window.addEventListener('error', event => { void reportError({source:'unhandled',message:event.message || 'App error'}); });
+  window.addEventListener('unhandledrejection', event => { void reportError({source:'unhandled',message:String(event.reason)}); });
   window.slop = Object.freeze({
-    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['host.info', 'document.open', 'document.apply', 'document.flush', 'window.resize', 'window.drag'] }),
+    reportError,
+    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['host.info', 'document.open', 'document.execute', 'document.flush', 'window.resize', 'window.drag'] }),
     flush: async () => undefined,
     document: Object.freeze({
-      open: async (value) => {
-        if (!jsonOpened) {
-          jsonValue = clone(window.__hitslopReviewConfig && Object.hasOwn(window.__hitslopReviewConfig, 'data') ? window.__hitslopReviewConfig.data : value);
-          if (jsonValue === undefined) throw new Error('Preview requires initial document data');
-          jsonOpened = true;
+      connected: true, writable: true,
+      open: async (options) => {
+        if (!authority) {
+          const data = clone(window.__hitslopReviewConfig && Object.hasOwn(window.__hitslopReviewConfig, 'data') ? window.__hitslopReviewConfig.data : options?.initial);
+          if (data === undefined || !options?.schema) throw new Error('Preview requires schema and initial data');
+          authority = window.__hitslopCreatePreviewAuthority(options.schema, data);
+          authority.subscribe(snapshot => listeners.document.forEach(callback => callback(clone(snapshot))));
         }
-        return frame();
+        return clone(authority.open());
       },
-      apply: async (edit) => {
-        jsonValue = clone(edit.after); jsonRevision++;
-        const next = frame(); listeners.document.forEach(callback => callback(next)); return next;
-      },
-      flush: async () => frame(),
-      releaseDraft: async () => frame(),
-      onChange: (callback) => watch('document', callback)
+      send: async request => { if (!authority) throw new Error('Open the document first'); return clone(await authority.execute(clone(request))); },
+      flush: async () => undefined,
+      subscribe: callback => watch('document', callback),
+      onConnection: () => () => {},
     }),
     media: Object.freeze({
-      open: async () => ({ exists: false, revision: null }),
-      write: async () => {
-        mediaRevision += 1;
-        const result = { revision: 'dev-media:' + mediaRevision };
-        emit('media', { source: 'app', revision: result.revision });
-        return result;
-      },
-      remove: async () => {
-        emit('media', { source: 'app', revision: null });
-        return { revision: null };
+      open: async sha256 => ({src:media.get(sha256)?.src ?? null}),
+      add: async (data, kind) => {
+        const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+        if (!bytes.length || bytes.length > 25 * 1024 * 1024) throw new Error('Media exceeds its size limit');
+        const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2,'0')).join('');
+        const mime = bytes[0] === 137 && bytes[1] === 80 ? 'image/png' : bytes[0] === 255 && bytes[1] === 216 ? 'image/jpeg' : bytes[0] === 71 && bytes[1] === 73 ? 'image/gif' : bytes[8] === 87 && bytes[9] === 69 ? 'image/webp' : bytes[0] === 80 && bytes[1] === 75 ? 'application/zip' : undefined;
+        if (!mime || (kind === 'image' && !mime.startsWith('image/'))) throw new Error('Unsupported media');
+        if (!media.has(sha256)) media.set(sha256,{src:URL.createObjectURL(new Blob([bytes],{type:mime}))});
+        emit('media',{source:'dev',sha256});
+        return {sha256,mime,bytes:bytes.length};
       },
       onChange: (callback) => watch('media', callback)
     }),

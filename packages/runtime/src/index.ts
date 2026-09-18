@@ -1,16 +1,17 @@
 import type { SlopHost, SlopWindowSize, WindowSlop } from "./types.ts";
 export type {
-  DocumentApply,
   DocumentFrame,
   SlopChange,
   SlopHost,
   SlopMediaSnapshot,
-  SlopStoreKind,
+  MediaReference,
   SlopWindowSize,
   WindowSlop,
 } from "./types.ts";
 export { flush } from "./lifecycle.js";
 export { SlopError } from "./errors.js";
+export { newId } from "./id.js";
+export type { InsertResult, MutationResult } from "./document-controller.js";
 export async function hostInfo() {
   if (typeof window === "undefined" || !window.slop?.info)
     throw new Error("Host information is unavailable");
@@ -20,10 +21,10 @@ export async function hostInfo() {
 let configuredHost: SlopHost | undefined;
 
 const fromBridge = (bridge: WindowSlop): SlopHost => ({
+  reportError: (issue) => bridge.reportError(issue),
   document: bridge.document,
-  mediaOpen: (name) => bridge.media.open(name),
-  mediaWrite: (name, data, mimeType) => bridge.media.write(name, data, mimeType),
-  mediaRemove: (name) => bridge.media.remove(name),
+  mediaOpen: (sha256) => bridge.media.open(sha256),
+  mediaAdd: (data, kind) => bridge.media.add(data, kind),
   resizeWindow: (size) =>
     bridge.window?.resize
       ? bridge.window.resize(size)
@@ -55,10 +56,8 @@ export const slop = {
     return getHost().document;
   },
   media: {
-    open: (name: string) => getHost().mediaOpen(name),
-    write: (name: string, data: string, mimeType: string) =>
-      getHost().mediaWrite(name, data, mimeType),
-    remove: (name: string) => getHost().mediaRemove(name),
+    open: (sha256: string) => getHost().mediaOpen(sha256),
+    add: (data: string, kind: "image" | "file") => getHost().mediaAdd(data, kind),
     onChange: (callback: Parameters<SlopHost["watch"]>[1]) => getHost().watch("media", callback),
   },
   window: {
@@ -72,3 +71,6 @@ export function ready(): void {
 }
 
 export { capture, type CaptureMode } from "./capture.js";
+
+export { reportRuntimeError } from "./runtime-errors.js";
+export type { RuntimeIssue } from "./types.js";

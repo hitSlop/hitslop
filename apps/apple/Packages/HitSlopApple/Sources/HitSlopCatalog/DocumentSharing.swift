@@ -41,7 +41,13 @@ import SwiftUI
         media?.cancel(); media = nil
         session?.stop(); session = nil
         peers = []
-        status = "Only on this Mac"
+        let attempt = generation
+        Task { [weak self] in
+            guard let self, let document = controller?.session.document else { return }
+            let mode = await document.mode
+            guard attempt == generation else { return }
+            status = mode == .local ? "Only on this Mac" : "Disconnected — read only"
+        }
     }
 
     func reconnect() {
@@ -58,7 +64,7 @@ import SwiftUI
     }
 
     var supportsCollaboration: Bool {
-        controller?.session.collaborativeDocument != nil
+        controller?.session.document != nil
     }
 
     init(controller: SlopDocumentWindowController, account: StoreOf<AccountFeature>, api: SlopCloudAPI) {
@@ -99,7 +105,7 @@ import SwiftUI
     }
 
     func startSharing() async {
-        guard !busy, let controller, let document = controller.session.collaborativeDocument else { return }
+        guard !busy, let controller, let document = controller.session.document else { return }
         guard account.user != nil else { error = "Sign in to share this document."; return }
         disconnect()
         let attempt = generation
@@ -107,14 +113,14 @@ import SwiftUI
         defer { busy = false }
         do {
             try await controller.session.flush()
-            let seed = try await document.convertToIncremental()
+            let seed = try await document.prepareSharing()
             let mediaSchema = try SlopDocumentJSON(data: SlopFile.read(controller.session.package.dataSchemaURL, within: controller.session.package.rootURL))
             let needed = SlopMediaSync.hashes(in: try await document.frame().data, schema: mediaSchema)
             try await SlopMediaSync.uploadMissing(package: controller.session.package, api: api, needed: needed)
             let packed = try await document.sharingBundle(SlopArchive.packSharedApp(controller.session.package.rootURL))
             let shared = try await api.createDocument(
-                id: seed.documentId, title: controller.session.package.manifest.title,
-                slug: controller.session.package.manifest.slug, schema: seed.schema, package: packed, seed: seed
+                id: seed["documentId"].string!, title: controller.session.package.manifest.title,
+                slug: controller.session.package.manifest.slug, schema: seed["schemaHash"].string!, package: packed, seed: seed
             )
             guard attempt == generation, !Task.isCancelled else { return }
             room = shared
@@ -142,19 +148,21 @@ import SwiftUI
         status = "Invite link copied"
     }
 
-    private func attach(shared: SlopSharedDocument, document: SlopLoroDocument) {
+    private func attach(shared: SlopSharedDocument, document: SlopCommandDocument) {
         session?.stop(); media?.cancel()
+        guard let package = controller?.session.package else { return }
         let api = api
+        let transfer = SlopMediaTransfer(package: package, api: api)
         let next = SlopRoomSession(origin: api.origin, documentId: shared.documentId, schema: shared.schema, document: document,
-                                   credentials: { try await api.session(documentId: shared.documentId) })
+                                   credentials: { try await api.session(documentId: shared.documentId) }, media: transfer.transport)
         next.onPeers = { [weak self] peers in self?.peers = peers }
         next.onError = { [weak self] message in self?.error = message }
         next.onStatus = { [weak self] status in
             switch status {
             case .live: self?.status = "Live on Cloudflare"; self?.error = nil
             case .connecting, .catchingUp: self?.status = "Connecting…"
-            case .offline: self?.status = "Offline — changes saved on this Mac"
-            case .paused: self?.status = "Sync paused — changes saved on this Mac"
+            case .offline: self?.status = "Offline — reconnect to edit"
+            case .paused: self?.status = "Sharing paused — read only"
             case .stopped: break
             }
         }
@@ -163,14 +171,13 @@ import SwiftUI
             guard let self, let package = self.controller?.session.package else { return }
             do {
                 let schema = try SlopDocumentJSON(data: SlopFile.read(package.dataSchemaURL, within: package.rootURL))
-                var uploaded = Set<String>(), previous: Set<String>?
+                var previous: Set<String>?
                 for await frame in try await document.events() {
                     try Task.checkCancellation()
                     let needed = SlopMediaSync.hashes(in: frame.data, schema: schema)
                     guard needed != previous else { continue }
                     do {
-                        uploaded.formUnion(try await SlopMediaSync.uploadMissing(package: package, api: api, needed: needed, excluding: uploaded))
-                        try await SlopMediaSync.downloadMissing(package: package, needed: needed, api: api)
+                        for hash in needed { try await transfer.load(hash) }
                         previous = needed
                     } catch {
                         if Task.isCancelled { return }
@@ -183,12 +190,18 @@ import SwiftUI
         }
     }
 
-    /// Discovery retries network failures. A 404 is an ordinary local document.
+    /// Persisted mode determines authority even while discovery is unavailable.
     private func connectIfShared(attempt: UUID) async -> Bool {
-        guard let document = controller?.session.collaborativeDocument else { return true }
+        guard let document = controller?.session.document else { return true }
+        guard await document.mode != .local else { status = "Only on this Mac"; return true }
         let identity = await document.identity()
         do {
-            let shared = try await api.document(identity.documentId)
+            let shared: SlopSharedDocument
+            if await document.mode == .promoting, let controller, let seed = await document.sharingSeed() {
+                let packed = try await document.sharingBundle(SlopArchive.packSharedApp(controller.session.package.rootURL))
+                shared = try await api.createDocument(id: identity.documentId, title: controller.session.package.manifest.title,
+                    slug: controller.session.package.manifest.slug, schema: identity.schema, package: packed, seed: seed)
+            } else { shared = try await api.document(identity.documentId) }
             guard attempt == generation, !Task.isCancelled else { return true }
             room = shared
             attach(shared: shared, document: document)
@@ -196,12 +209,12 @@ import SwiftUI
         } catch {
             guard attempt == generation, !Task.isCancelled else { return true }
             if let error = error as? SlopCloudError, [401, 403, 404, 429].contains(error.status) {
-                self.error = error.status == 404 ? nil : error.localizedDescription
-                status = error.status == 404 ? "Only on this Mac" : "Sync paused — changes saved on this Mac"
+                self.error = error.localizedDescription
+                status = "Sharing unavailable — read only"
                 return true
             }
             self.error = error.localizedDescription
-            status = "Waiting to connect — changes saved on this Mac"
+            status = "Waiting to connect — read only"
             return false
         }
     }

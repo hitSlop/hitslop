@@ -12,7 +12,7 @@ my-app/
 ├── manifest.json
 ├── package.json
 ├── AGENTS.md                    portable coding-agent notes; platform skills live in ~/.hitslop/skills
-├── schema.ts                    required when using documentStore
+├── schema.ts                    required when using createDocument
 ├── initial.ts                   explicit document defaults, emitted as assets/initial.json
 ├── theme.ts                     optional single-source theme definition
 ├── document-guide.md            optional app-specific agent guidance
@@ -56,10 +56,10 @@ native compatibility test before being advertised as supported.
 A writable document may lazily add canonical data:
 
 ```text
-state/document.sqlite         native Loro history, outbox, receipts
+state/document.sqlite         authoritative JSON, revision, retry receipts
 state/share-bootstrap.zip     frozen immutable app for share retries
 stores/data.json               $slop revision envelope plus data
-stores/media/<safe-name>
+stores/media/<sha256>
 stores/theme.css               optional owner theme overrides
 Icon\r                         Finder-managed local metadata on macOS
 ```

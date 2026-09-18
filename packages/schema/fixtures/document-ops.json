@@ -1,0 +1,5454 @@
+{
+  "version": 1,
+  "description": "Explicit authority outcomes shared unchanged by TypeScript and Swift. Fresh authority per scenario.",
+  "schema": {
+    "type": "object",
+    "required": [
+      "title",
+      "count",
+      "active",
+      "tags",
+      "attributes",
+      "tasks"
+    ],
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "count": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "active": {
+        "type": "boolean"
+      },
+      "note": {
+        "type": "string"
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "x-hitslop": {
+          "container": "atomic"
+        }
+      },
+      "attributes": {
+        "type": "object",
+        "patternProperties": {
+          "^[\\s\\S]*$": {
+            "type": "string"
+          }
+        },
+        "x-hitslop": {
+          "container": "record"
+        }
+      },
+      "tasks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "id",
+            "text",
+            "done",
+            "archived",
+            "children"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "done": {
+              "type": "boolean"
+            },
+            "archived": {
+              "type": "boolean"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "value"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": true,
+                "x-hitslop": {
+                  "container": "map"
+                }
+              },
+              "x-hitslop": {
+                "container": "list",
+                "key": "key"
+              }
+            }
+          },
+          "additionalProperties": true,
+          "x-hitslop": {
+            "container": "map"
+          }
+        },
+        "x-hitslop": {
+          "container": "list",
+          "key": "id"
+        }
+      }
+    },
+    "additionalProperties": true,
+    "x-hitslop": {
+      "version": 1,
+      "container": "map"
+    }
+  },
+  "initial": {
+    "title": "Original",
+    "count": 0,
+    "active": false,
+    "tags": [
+      "one"
+    ],
+    "attributes": {
+      "a.b": "kept"
+    },
+    "unknown": {
+      "extension": "preserved"
+    },
+    "tasks": [
+      {
+        "id": "a",
+        "text": "Alpha",
+        "done": false,
+        "archived": false,
+        "children": [
+          {
+            "key": "child",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "text": "Beta",
+        "done": false,
+        "archived": false,
+        "children": []
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "name": "scalar-set",
+      "events": [
+        {
+          "request": {
+            "requestId": "scalar-set",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "title"
+                  }
+                ],
+                "value": "Changed"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "record-replacement",
+      "events": [
+        {
+          "request": {
+            "requestId": "record-replacement",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "attributes"
+                  }
+                ],
+                "value": {
+                  "fresh": "value"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "fresh": "value"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "row-replacement",
+      "events": [
+        {
+          "request": {
+            "requestId": "row-replacement",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  }
+                ],
+                "value": {
+                  "id": "a",
+                  "text": "Replaced",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Replaced",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "row-replacement-identity-change",
+      "events": [
+        {
+          "request": {
+            "requestId": "row-replacement-identity-change",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  }
+                ],
+                "value": {
+                  "id": "c",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "identity_change"
+          }
+        }
+      ]
+    },
+    {
+      "name": "toggle",
+      "events": [
+        {
+          "request": {
+            "requestId": "toggle",
+            "ops": [
+              {
+                "op": "toggle",
+                "path": [
+                  {
+                    "key": "active"
+                  }
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": true,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "increment",
+      "events": [
+        {
+          "request": {
+            "requestId": "increment",
+            "ops": [
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "count"
+                  }
+                ],
+                "amount": 2
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 2,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "optional-set-unset",
+      "events": [
+        {
+          "request": {
+            "requestId": "optional-set-unset",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "note"
+                  }
+                ],
+                "value": "draft"
+              },
+              {
+                "op": "unset",
+                "path": [
+                  {
+                    "key": "note"
+                  }
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "record-dot-and-prototype-keys",
+      "events": [
+        {
+          "request": {
+            "requestId": "record-dot-and-prototype-keys",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "attributes"
+                  },
+                  {
+                    "key": "a.b"
+                  }
+                ],
+                "value": "literal key"
+              },
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "attributes"
+                  },
+                  {
+                    "key": "__proto__"
+                  }
+                ],
+                "value": "safe"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "literal key",
+                "__proto__": "safe"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "record-unset",
+      "events": [
+        {
+          "request": {
+            "requestId": "record-unset",
+            "ops": [
+              {
+                "op": "unset",
+                "path": [
+                  {
+                    "key": "attributes"
+                  },
+                  {
+                    "key": "a.b"
+                  }
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {},
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "atomic-array",
+      "events": [
+        {
+          "request": {
+            "requestId": "atomic-array",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tags"
+                  }
+                ],
+                "value": [
+                  "two",
+                  "three"
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "two",
+                "three"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "nested-list",
+      "events": [
+        {
+          "request": {
+            "requestId": "nested-list",
+            "ops": [
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  },
+                  {
+                    "key": "children"
+                  },
+                  {
+                    "item": "child"
+                  },
+                  {
+                    "key": "value"
+                  }
+                ],
+                "amount": 4
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 5
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "insert-before",
+      "events": [
+        {
+          "request": {
+            "requestId": "insert-before",
+            "ops": [
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "c",
+                  "text": "Gamma",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                "position": {
+                  "before": "b"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "c",
+                  "text": "Gamma",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "insert-after",
+      "events": [
+        {
+          "request": {
+            "requestId": "insert-after",
+            "ops": [
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "c",
+                  "text": "Gamma",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                "position": {
+                  "after": "b"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "c",
+                  "text": "Gamma",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "remove",
+      "events": [
+        {
+          "request": {
+            "requestId": "remove",
+            "ops": [
+              {
+                "op": "remove",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "a"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "move-after",
+      "events": [
+        {
+          "request": {
+            "requestId": "move-after",
+            "ops": [
+              {
+                "op": "move",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "a",
+                "position": {
+                  "after": "b"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "move-before",
+      "events": [
+        {
+          "request": {
+            "requestId": "move-before",
+            "ops": [
+              {
+                "op": "move",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "b",
+                "position": {
+                  "before": "a"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "patch-as-batch",
+      "events": [
+        {
+          "request": {
+            "requestId": "patch-as-batch",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  },
+                  {
+                    "key": "done"
+                  }
+                ],
+                "value": true
+              },
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  },
+                  {
+                    "key": "archived"
+                  }
+                ],
+                "value": true
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": true,
+                  "archived": true,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "rollback",
+      "events": [
+        {
+          "request": {
+            "requestId": "rollback",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "title"
+                  }
+                ],
+                "value": "Must not persist"
+              },
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "count"
+                  }
+                ],
+                "amount": -1
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "validation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplicate-id",
+      "events": [
+        {
+          "request": {
+            "requestId": "duplicate-id",
+            "ops": [
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "duplicate_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "identity-change",
+      "events": [
+        {
+          "request": {
+            "requestId": "identity-change",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  },
+                  {
+                    "key": "id"
+                  }
+                ],
+                "value": "new"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "identity_change"
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-target",
+      "events": [
+        {
+          "request": {
+            "requestId": "missing-target",
+            "ops": [
+              {
+                "op": "remove",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "gone"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "missing_target"
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-anchor",
+      "events": [
+        {
+          "request": {
+            "requestId": "missing-anchor",
+            "ops": [
+              {
+                "op": "move",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "a",
+                "position": {
+                  "before": "gone"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "missing_anchor"
+          }
+        }
+      ]
+    },
+    {
+      "name": "required-unset",
+      "events": [
+        {
+          "request": {
+            "requestId": "required-unset",
+            "ops": [
+              {
+                "op": "unset",
+                "path": [
+                  {
+                    "key": "title"
+                  }
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "invalid_operation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-field",
+      "events": [
+        {
+          "request": {
+            "requestId": "unknown-field",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "typo"
+                  }
+                ],
+                "value": true
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "invalid_path"
+          }
+        }
+      ]
+    },
+    {
+      "name": "numeric-index",
+      "events": [
+        {
+          "request": {
+            "requestId": "numeric-index",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  0,
+                  {
+                    "key": "done"
+                  }
+                ],
+                "value": true
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "invalid_request"
+          }
+        }
+      ]
+    },
+    {
+      "name": "atomic-item",
+      "events": [
+        {
+          "request": {
+            "requestId": "atomic-item",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tags"
+                  },
+                  {
+                    "item": "one"
+                  }
+                ],
+                "value": "two"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "invalid_path"
+          }
+        }
+      ]
+    },
+    {
+      "name": "self-move",
+      "events": [
+        {
+          "request": {
+            "requestId": "self-move",
+            "ops": [
+              {
+                "op": "move",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "a",
+                "position": {
+                  "before": "a"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 0,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "invalid_operation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "retry-and-id-reuse",
+      "events": [
+        {
+          "request": {
+            "requestId": "repeat",
+            "ops": [
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "count"
+                  }
+                ],
+                "amount": 1
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 1,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "requestId": "repeat",
+            "ops": [
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "count"
+                  }
+                ],
+                "amount": 1
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 1,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "requestId": "repeat",
+            "ops": [
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "count"
+                  }
+                ],
+                "amount": 9
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 1,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "request_reused"
+          }
+        }
+      ]
+    },
+    {
+      "name": "conditional-replacement",
+      "events": [
+        {
+          "request": {
+            "requestId": "replace",
+            "replace": {
+              "baseRevision": 0,
+              "data": {
+                "title": "External",
+                "count": 0,
+                "active": false,
+                "tags": [
+                  "one"
+                ],
+                "attributes": {
+                  "a.b": "kept"
+                },
+                "unknown": {
+                  "extension": "preserved"
+                },
+                "tasks": [
+                  {
+                    "id": "a",
+                    "text": "Alpha",
+                    "done": false,
+                    "archived": false,
+                    "children": [
+                      {
+                        "key": "child",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "id": "b",
+                    "text": "Beta",
+                    "done": false,
+                    "archived": false,
+                    "children": []
+                  }
+                ]
+              }
+            },
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "External",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "requestId": "stale",
+            "replace": {
+              "baseRevision": 0,
+              "data": {
+                "title": "Original",
+                "count": 0,
+                "active": false,
+                "tags": [
+                  "one"
+                ],
+                "attributes": {
+                  "a.b": "kept"
+                },
+                "unknown": {
+                  "extension": "preserved"
+                },
+                "tasks": [
+                  {
+                    "id": "a",
+                    "text": "Alpha",
+                    "done": false,
+                    "archived": false,
+                    "children": [
+                      {
+                        "key": "child",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "id": "b",
+                    "text": "Beta",
+                    "done": false,
+                    "archived": false,
+                    "children": []
+                  }
+                ]
+              }
+            },
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "External",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "error": "stale_revision"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unicode-identities-are-exact",
+      "events": [
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "unicode-identities",
+            "ops": [
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "é",
+                  "text": "é",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              },
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "é",
+                  "text": "é",
+                  "done": true,
+                  "archived": false,
+                  "children": []
+                }
+              },
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "é"
+                  },
+                  {
+                    "key": "done"
+                  }
+                ],
+                "value": true
+              }
+            ]
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "é",
+                  "text": "é",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "é",
+                  "text": "é",
+                  "done": true,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-scalar-set",
+      "events": [
+        {
+          "request": {
+            "requestId": "scalar-set",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "title"
+                  }
+                ],
+                "value": "Changed"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "scalar-set",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-record-replacement",
+      "events": [
+        {
+          "request": {
+            "requestId": "record-replacement",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "attributes"
+                  }
+                ],
+                "value": {
+                  "fresh": "value"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "fresh": "value"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "record-replacement",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-row-replacement",
+      "events": [
+        {
+          "request": {
+            "requestId": "row-replacement",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  }
+                ],
+                "value": {
+                  "id": "a",
+                  "text": "Replaced",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Replaced",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "row-replacement",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-toggle",
+      "events": [
+        {
+          "request": {
+            "requestId": "toggle",
+            "ops": [
+              {
+                "op": "toggle",
+                "path": [
+                  {
+                    "key": "active"
+                  }
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": true,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "toggle",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-increment",
+      "events": [
+        {
+          "request": {
+            "requestId": "increment",
+            "ops": [
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "count"
+                  }
+                ],
+                "amount": 2
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 2,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "increment",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-optional-set-unset",
+      "events": [
+        {
+          "request": {
+            "requestId": "optional-set-unset",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "note"
+                  }
+                ],
+                "value": "draft"
+              },
+              {
+                "op": "unset",
+                "path": [
+                  {
+                    "key": "note"
+                  }
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "optional-set-unset",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-record-dot-and-prototype-keys",
+      "events": [
+        {
+          "request": {
+            "requestId": "record-dot-and-prototype-keys",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "attributes"
+                  },
+                  {
+                    "key": "a.b"
+                  }
+                ],
+                "value": "literal key"
+              },
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "attributes"
+                  },
+                  {
+                    "key": "__proto__"
+                  }
+                ],
+                "value": "safe"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "literal key",
+                "__proto__": "safe"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "record-dot-and-prototype-keys",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-record-unset",
+      "events": [
+        {
+          "request": {
+            "requestId": "record-unset",
+            "ops": [
+              {
+                "op": "unset",
+                "path": [
+                  {
+                    "key": "attributes"
+                  },
+                  {
+                    "key": "a.b"
+                  }
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {},
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "record-unset",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-atomic-array",
+      "events": [
+        {
+          "request": {
+            "requestId": "atomic-array",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tags"
+                  }
+                ],
+                "value": [
+                  "two",
+                  "three"
+                ]
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "two",
+                "three"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "atomic-array",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-nested-list",
+      "events": [
+        {
+          "request": {
+            "requestId": "nested-list",
+            "ops": [
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  },
+                  {
+                    "key": "children"
+                  },
+                  {
+                    "item": "child"
+                  },
+                  {
+                    "key": "value"
+                  }
+                ],
+                "amount": 4
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 5
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "nested-list",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-insert-before",
+      "events": [
+        {
+          "request": {
+            "requestId": "insert-before",
+            "ops": [
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "c",
+                  "text": "Gamma",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                "position": {
+                  "before": "b"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "c",
+                  "text": "Gamma",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "insert-before",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-insert-after",
+      "events": [
+        {
+          "request": {
+            "requestId": "insert-after",
+            "ops": [
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "c",
+                  "text": "Gamma",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                "position": {
+                  "after": "b"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "c",
+                  "text": "Gamma",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "insert-after",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-remove",
+      "events": [
+        {
+          "request": {
+            "requestId": "remove",
+            "ops": [
+              {
+                "op": "remove",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "a"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "remove",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-move-after",
+      "events": [
+        {
+          "request": {
+            "requestId": "move-after",
+            "ops": [
+              {
+                "op": "move",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "a",
+                "position": {
+                  "after": "b"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "move-after",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-move-before",
+      "events": [
+        {
+          "request": {
+            "requestId": "move-before",
+            "ops": [
+              {
+                "op": "move",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "id": "b",
+                "position": {
+                  "before": "a"
+                }
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "move-before",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-patch-as-batch",
+      "events": [
+        {
+          "request": {
+            "requestId": "patch-as-batch",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  },
+                  {
+                    "key": "done"
+                  }
+                ],
+                "value": true
+              },
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "a"
+                  },
+                  {
+                    "key": "archived"
+                  }
+                ],
+                "value": true
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": true,
+                  "archived": true,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "patch-as-batch",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-unicode-identities-are-exact",
+      "events": [
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "unicode-identities",
+            "ops": [
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "é",
+                  "text": "é",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              },
+              {
+                "op": "insert",
+                "path": [
+                  {
+                    "key": "tasks"
+                  }
+                ],
+                "value": {
+                  "id": "é",
+                  "text": "é",
+                  "done": true,
+                  "archived": false,
+                  "children": []
+                }
+              },
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "tasks"
+                  },
+                  {
+                    "item": "é"
+                  },
+                  {
+                    "key": "done"
+                  }
+                ],
+                "value": true
+              }
+            ]
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "é",
+                  "text": "é",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                },
+                {
+                  "id": "é",
+                  "text": "é",
+                  "done": true,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "unicode-identities",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-rejection-replay-and-consumption",
+      "events": [
+        {
+          "request": {
+            "requestId": "scalar-set",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "title"
+                  }
+                ],
+                "value": "Changed"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "invalid",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "count"
+                  }
+                ],
+                "value": -1
+              }
+            ]
+          },
+          "expected": {
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 1,
+            "error": "validation"
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "scalar-set",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "scalar-set",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo-again",
+            "undo": {
+              "requestId": "scalar-set",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2,
+            "error": "stale_revision"
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-expires-after-unrelated-edit",
+      "events": [
+        {
+          "request": {
+            "requestId": "scalar-set",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "title"
+                  }
+                ],
+                "value": "Changed"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "later",
+            "ops": [
+              {
+                "op": "increment",
+                "path": [
+                  {
+                    "key": "count"
+                  }
+                ],
+                "amount": 1
+              }
+            ]
+          },
+          "expected": {
+            "data": {
+              "title": "Changed",
+              "count": 1,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "scalar-set",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Changed",
+              "count": 1,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2,
+            "error": "stale_revision"
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo-later",
+            "undo": {
+              "requestId": "later",
+              "revision": 2
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 3
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-wrong-request",
+      "events": [
+        {
+          "request": {
+            "requestId": "scalar-set",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "title"
+                  }
+                ],
+                "value": "Changed"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "wrong",
+            "undo": {
+              "requestId": "not-original",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 1,
+            "error": "rejected"
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo",
+            "undo": {
+              "requestId": "scalar-set",
+              "revision": 1
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "undo-replacement-clears-slot",
+      "events": [
+        {
+          "request": {
+            "requestId": "scalar-set",
+            "ops": [
+              {
+                "op": "set",
+                "path": [
+                  {
+                    "key": "title"
+                  }
+                ],
+                "value": "Changed"
+              }
+            ],
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease"
+          },
+          "expected": {
+            "revision": 1,
+            "data": {
+              "title": "Changed",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "replace",
+            "replace": {
+              "baseRevision": 1,
+              "data": {
+                "title": "Original",
+                "count": 0,
+                "active": false,
+                "tags": [
+                  "one"
+                ],
+                "attributes": {
+                  "a.b": "kept"
+                },
+                "unknown": {
+                  "extension": "preserved"
+                },
+                "tasks": [
+                  {
+                    "id": "a",
+                    "text": "Alpha",
+                    "done": false,
+                    "archived": false,
+                    "children": [
+                      {
+                        "key": "child",
+                        "value": 1
+                      }
+                    ]
+                  },
+                  {
+                    "id": "b",
+                    "text": "Beta",
+                    "done": false,
+                    "archived": false,
+                    "children": []
+                  }
+                ]
+              }
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2
+          }
+        },
+        {
+          "request": {
+            "documentId": "fixture-document",
+            "schemaHash": "fixture-schema",
+            "authority": "fixture-authority",
+            "leaseId": "fixture-lease",
+            "requestId": "undo-replace",
+            "undo": {
+              "requestId": "replace",
+              "revision": 2
+            }
+          },
+          "expected": {
+            "data": {
+              "title": "Original",
+              "count": 0,
+              "active": false,
+              "tags": [
+                "one"
+              ],
+              "attributes": {
+                "a.b": "kept"
+              },
+              "unknown": {
+                "extension": "preserved"
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "text": "Alpha",
+                  "done": false,
+                  "archived": false,
+                  "children": [
+                    {
+                      "key": "child",
+                      "value": 1
+                    }
+                  ]
+                },
+                {
+                  "id": "b",
+                  "text": "Beta",
+                  "done": false,
+                  "archived": false,
+                  "children": []
+                }
+              ]
+            },
+            "revision": 2,
+            "error": "stale_revision"
+          }
+        }
+      ]
+    }
+  ],
+  "identity": {
+    "documentId": "fixture-document",
+    "schemaHash": "fixture-schema",
+    "authority": "fixture-authority"
+  },
+  "lease": {
+    "id": "fixture-lease",
+    "expiresAt": 604800000
+  },
+  "retryWindowMs": 604800000
+}

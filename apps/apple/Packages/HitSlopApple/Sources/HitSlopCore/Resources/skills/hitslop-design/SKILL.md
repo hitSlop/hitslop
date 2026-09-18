@@ -77,6 +77,23 @@ packet. Read [references/review-workbench.md](references/review-workbench.md).
 Batch inspection and corrections; verify later changes with the evidence they
 need rather than repeating every visual capture for an invisible code change.
 
+## Check the real task
+
+Preserve the established identity during refinement; a redesign requires an explicit
+change of direction. Use realistic content to judge hierarchy before adding decoration.
+Give typography distinct roles and load only the fonts and weights those roles need.
+Use familiar controls, clear labels, visible focus, and meaningful loading/error feedback.
+Do not invent facts or marketing claims while polishing copy.
+
+Exercise empty, typical, long-content, failed, and busy states. Check text wrapping,
+keyboard operation, narrow windows, zoom, emoji/IME input, and reduced motion. Keep
+critical actions reachable. Overlays must escape scrolling/clipping containers.
+
+Review editor, narrow, export, and icon views together, fix material findings in one
+batch, then verify the affected behavior. Source changes invalidate old captures;
+nonvisual changes do not justify another full visual review. Keep PRODUCT.md and each
+app's DESIGN.md concise and grounded in what is actually shipped.
+
 ## Motion
 
 Use motion to explain an interaction or reinforce the object's character: a

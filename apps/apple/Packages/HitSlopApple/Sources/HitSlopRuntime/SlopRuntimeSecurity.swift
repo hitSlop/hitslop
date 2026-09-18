@@ -23,8 +23,8 @@ enum SlopRuntimeSecurity {
     }
     static func requestLimit(_ method: SlopBridgeMethod) -> Int {
         switch method {
-        case .mediaWrite: 36 * 1024 * 1024
-        case .documentApply: 1024 * 1024
+        case .mediaAdd: 36 * 1024 * 1024
+        case .documentExecute: 1024 * 1024
         default: 64 * 1024
         }
     }

@@ -2,7 +2,7 @@
 
 ## Commands
 
-Quick Checklist imports root `schema.ts` directly into `documentStore`.
+Quick Checklist imports root `schema.ts` directly into `createDocument`.
 Editor types and checks work without preparation or a dev server. Builds emit
 `data.schema.json` for the host; keep schema definitions deterministic.
 The CLI counter starter follows the same workflow; run `bun run check` for editor/type diagnostics.
@@ -33,8 +33,8 @@ skill's single reference after validating its encoding and size.
 
 ## Capture
 
-Call `ready()` after initial data is usable. Prefer optional `IconTarget` and
-`ExportTarget` from `@hitslop/svelte`, wrapping ordinary `Icon.svelte` and
+`createDocument` owns readiness, including a failed initial open. Apps without a
+document store call `ready()` after initialization. Prefer optional `icon` and `exportView` snippets on `<Slop document={store}>`, wrapping ordinary `Icon.svelte` and
 `Export.svelte` presentation components. Pass the same data and selected view;
 never open a second store. Helpers own mounting, geometry, and capture state.
 Export content belongs in normal flow. Without an export target, use the existing

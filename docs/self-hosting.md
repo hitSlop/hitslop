@@ -2,7 +2,7 @@
 
 The API runs in `apps/cloudflare`: a Worker serves the oRPC/OpenAPI contract,
 D1 stores the catalog and immutable shared-document metadata, R2 stores artifacts and media,
-and a SQLite Durable Object per shared document relays Loro updates.
+and a SQLite Durable Object per shared document validates commands and broadcasts snapshots.
 
 Provision a D1 database and R2 bucket, put their bindings in `wrangler.jsonc`,
 and apply the D1 migrations. Configure `FIREBASE_PROJECT_ID` for the Firebase
@@ -40,3 +40,9 @@ emulator settings do not reroute catalog or artifact traffic.
 Existing Firebase catalog data is not copied automatically. Publish templates
 to the new service before switching users to it. Monitor Worker failures and
 storage limits and retain appropriate backups of D1, R2, and room data.
+
+## Firebase client services
+
+Firebase supplies authentication, Analytics, Crashlytics, and App Check. Catalog,
+artifacts, media, and document sharing use Cloudflare. No Firebase Functions app
+is needed. Google Sign-In supplies credentials to Firebase Auth.

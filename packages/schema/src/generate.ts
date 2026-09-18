@@ -32,3 +32,8 @@ await cp(
   resolve(sourceRoot, "packages/schema/tests/fixtures/room-wire.json"),
   resolve(fixtures, "room-wire.json"),
 );
+
+await cp(
+  resolve(sourceRoot, "packages/schema/fixtures/document-ops.json"),
+  resolve(fixtures, "document-ops.json"),
+);

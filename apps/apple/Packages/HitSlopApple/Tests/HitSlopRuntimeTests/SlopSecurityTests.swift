@@ -22,23 +22,23 @@ private func alterDatabase(_ root: URL, _ sql: String) throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try alterDatabase(root, sql)
         let url = root.appendingPathComponent("state/document.sqlite"), before = try Data(contentsOf: url)
-        #expect(throws: SlopDocumentError.self) { _ = try SlopSyncStorage(root: root) }
+        #expect(throws: SlopDocumentError.self) { _ = try SlopCommandStorage(root: root) }
         #expect(try Data(contentsOf: url) == before)
     }
     let root = try securityRoot()
     defer { try? FileManager.default.removeItem(at: root) }
-    do { _ = try SlopSyncStorage(root: root) }
-    try alterDatabase(root, "CREATE TRIGGER malicious AFTER INSERT ON updates BEGIN DELETE FROM document; END")
+    do { _ = try SlopCommandStorage(root: root) }
+    try alterDatabase(root, "CREATE TRIGGER malicious AFTER INSERT ON receipts BEGIN DELETE FROM document; END")
     let url = root.appendingPathComponent("state/document.sqlite"), before = try Data(contentsOf: url)
-    #expect(throws: SlopDocumentError.self) { _ = try SlopSyncStorage(root: root) }
+    #expect(throws: SlopDocumentError.self) { _ = try SlopCommandStorage(root: root) }
     #expect(try Data(contentsOf: url) == before)
 }
 @Test func databaseReadsRejectWrongColumnTypes() throws {
     let root = try securityRoot()
     defer { try? FileManager.default.removeItem(at: root) }
-    let storage = try SlopSyncStorage(root: root)
-    try storage.execute("INSERT INTO outbox(id,hash,bytes) VALUES('test','hash','not a blob')")
-    #expect(throws: SlopDocumentError.self) { _ = try storage.nextBatch() }
+    let storage = try SlopCommandStorage(root: root)
+    try storage.execute("INSERT INTO document(id,snapshot,metadata) VALUES(1,'not a blob','not a blob')")
+    #expect(throws: SlopDocumentError.self) { _ = try storage.load() }
 }
 @Test func exactGuestOriginAndDocumentNavigation() throws {
     for path in ["slop://app/", "slop://app/#section", "slop://app/index.html#section"] {
@@ -87,7 +87,7 @@ private func alterDatabase(_ root: URL, _ sql: String) throws {
         let root = try securityRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let schema = try SlopDocumentJSON(data: Data(#"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{}}"#.utf8))
-        let document = try SlopLoroDocument(root: root, schema: schema, initial: .object([:]))
+        let document = try SlopCommandDocument(root: root, schema: schema, initial: .object([:]))
         let url = root.appendingPathComponent("state/share-bootstrap.zip")
         switch kind {
         case "symlink":
@@ -109,58 +109,29 @@ private func alterDatabase(_ root: URL, _ sql: String) throws {
     }
 }
 
-@Test func admittedLimitFailureIsCachedAndNextSequenceCanRecover() async throws {
-    let root = try securityRoot()
-    defer { try? FileManager.default.removeItem(at: root) }
+@Test func rejectedCommandIsDurablyCachedAndNewRequestCanRecover() async throws {
+    let root = try securityRoot(); defer { try? FileManager.default.removeItem(at: root) }
     let schema = try SlopDocumentJSON(data: Data(#"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"left":{"type":"string"},"right":{"type":"string"}},"required":["left","right"]}"#.utf8))
-    let initial = SlopDocumentJSON.object(["left": .string(""), "right": .string("")])
-    let document = try SlopLoroDocument(root: root, schema: schema, initial: initial)
-    let base = try await document.frame()
-    var left = initial, right = initial
-    left["left"] = .string(String(repeating: "x", count: 600_000))
-    right["right"] = .string(String(repeating: "y", count: 600_000))
-    let committed = try await document.apply(.init(session: "edits", sequence: 1, base: base.revision, after: left))
-    let request = SlopDocumentEdit(session: "edits", sequence: 2, base: base.revision, after: right)
-    var messages: [String] = []
-    for _ in 0..<2 {
-        do { _ = try await document.apply(request); Issue.record("Oversized merge was admitted") }
-        catch {
-            let failure = SlopRuntimeSecurity.publicFailure(error)
-            #expect(failure.code == .validationFailed)
-            #expect(failure.message.contains("1 MiB"))
-            messages.append(failure.message)
-        }
-        #expect(try await document.frame().revision == committed.revision)
-        #expect(try await document.frame().data == left)
-    }
-    #expect(messages.count == 2 && messages[0] == messages[1])
-    await #expect(throws: SlopDocumentError.self) {
-        _ = try await document.apply(.init(session: "edits", sequence: 2, base: committed.revision, after: initial))
-    }
-    let recovered = try await document.apply(.init(session: "edits", sequence: 3, base: committed.revision, after: initial))
-    #expect(recovered.data == initial)
+    let document = try SlopCommandDocument(root: root, schema: schema, initial: .object(["left": .string(""), "right": .string("")]))
+    let open = try await document.openGuest()
+    #expect(try await document.apply(testRequest(open, ops: [testSet("left", .string(String(repeating: "x", count: 600_000)))]))["ok"] == .bool(true))
+    let request = testRequest(open, ops: [testSet("right", .string(String(repeating: "y", count: 600_000)))])
+    let rejection = try await document.apply(request)
+    #expect(rejection["ok"] == .bool(false))
+    #expect(try await document.apply(testRequest(open, ops: [testSet("left", .string(""))]))["ok"] == .bool(true))
+    #expect(try await document.apply(request) == rejection)
+    #expect(try await document.apply(testRequest(open, ops: [testSet("right", .string("recovered"))]))["ok"] == .bool(true))
     try await document.close()
 }
 
-@Test func actorRejectsRevokedRequestsAndBoundsActiveSessions() async throws {
-    let root = try securityRoot()
-    defer { try? FileManager.default.removeItem(at: root) }
+@Test func actorRejectsRevokedBridgeRequestBeforeExecuting() async throws {
+    let root = try securityRoot(); defer { try? FileManager.default.removeItem(at: root) }
     let schema = try SlopDocumentJSON(data: Data(#"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"value":{"type":"integer"}},"required":["value"]}"#.utf8))
-    let document = try SlopLoroDocument(root: root, schema: schema, initial: .object(["value": .number(0)]))
-    let lease = SlopRequestLease()
-    let frame = try await document.frame()
-    let request = SlopDocumentEdit(session: "revoked", sequence: 1, base: frame.revision, after: .object(["value": .number(99)]))
-    lease.invalidate()
-    await #expect(throws: SlopBridgeFailure.self) { _ = try await document.guestRequest(.documentApply, body: JSONEncoder().encode(request), lease: lease) }
+    let document = try SlopCommandDocument(root: root, schema: schema, initial: .object(["value": .number(0)]))
+    let request = testRequest(try await document.openGuest(), ops: [testSet("value", .number(99))])
+    let lease = SlopRequestLease(); lease.invalidate()
+    await #expect(throws: SlopBridgeFailure.self) { _ = try await document.guestRequest(.documentExecute, body: SlopDocumentJSON.object(["request": request]).encoded(), lease: lease) }
     #expect(try await document.frame().data["value"] == .number(0))
-    for index in 0..<16 {
-        let frame = try await document.frame()
-        _ = try await document.apply(.init(session: "s\(index)", sequence: 1, base: frame.revision, after: frame.data))
-    }
-    let latest = try await document.frame()
-    await #expect(throws: SlopLimitError.self) { _ = try await document.apply(.init(session: "excess", sequence: 1, base: latest.revision, after: latest.data)) }
-    await document.resetGuestSessions()
-    _ = try await document.apply(.init(session: "new-page", sequence: 1, base: latest.revision, after: latest.data))
     try await document.close()
 }
 
@@ -169,7 +140,7 @@ private func alterDatabase(_ root: URL, _ sql: String) throws {
     defer { try? FileManager.default.removeItem(at: root) }
     let schema = try SlopDocumentJSON(data: Data(#"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"text":{"type":"string"}},"required":["text"]}"#.utf8))
     let initial = SlopDocumentJSON.object(["text": .string("original")])
-    let document = try SlopLoroDocument(root: root, schema: schema, initial: initial)
+    let document = try SlopCommandDocument(root: root, schema: schema, initial: initial)
     try await document.flush()
     let url = root.appendingPathComponent("stores/data.json")
     let original = try Data(contentsOf: url)
@@ -183,38 +154,4 @@ private func alterDatabase(_ root: URL, _ sql: String) throws {
     #expect(try Data(contentsOf: url) == hostile)
     try original.write(to: url, options: .atomic)
     try await document.close()
-}
-
-@Test func draftAdmissionRecoversAfterReleaseWithoutConsumingASequence() async throws {
-    let root = try securityRoot()
-    defer { try? FileManager.default.removeItem(at: root) }
-    let schema = try SlopDocumentJSON(data: Data(#"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"value":{"type":"integer"}},"required":["value"]}"#.utf8))
-    let document = try SlopLoroDocument(root: root, schema: schema, initial: .object(["value": .number(0)]))
-    let frame = try await document.frame()
-    for index in 1...128 {
-        _ = try await document.apply(.init(session: "drafts", sequence: index, base: frame.revision, after: frame.data, draft: "draft-\(index)"))
-    }
-    let excess = SlopDocumentEdit(session: "drafts", sequence: 129, base: frame.revision, after: frame.data, draft: "excess")
-    await #expect(throws: SlopLimitError.self) { _ = try await document.apply(excess) }
-    await document.releaseDraft(session: "drafts", draft: "draft-1")
-    _ = try await document.apply(excess)
-    try await document.close()
-}
-
-@Test func oversizedMergedProjectionNeverEntersLiveReplica() throws {
-    let value = try SlopDocumentJSON(data: Data(#"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"left":{"type":"string"},"right":{"type":"string"}},"required":["left","right"]}"#.utf8))
-    let schema = try SlopDocumentSchema(value)
-    let initial = SlopDocumentJSON.object(["left": .string(""), "right": .string("")])
-    let a = try SlopDocumentReplica(schema: schema, initial: initial)
-    let b = try SlopDocumentReplica(schema: schema, initial: initial, snapshot: a.snapshot())
-    let version = b.versionVector()
-    var left = initial, right = initial
-    left["left"] = .string(String(repeating: "x", count: 600_000))
-    right["right"] = .string(String(repeating: "y", count: 600_000))
-    _ = try a.apply(base: a.revision(), after: left)
-    _ = try b.apply(base: b.revision(), after: right)
-    let before = a.revision()
-    #expect(throws: SlopLimitError.self) { try a.receive(b.updates(since: version)) }
-    #expect(a.revision() == before)
-    #expect(try a.current() == left)
 }

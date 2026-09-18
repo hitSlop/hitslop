@@ -9,21 +9,24 @@ store or persistence model:
 
 ```svelte
 <script lang="ts">
-  import { IconTarget, ExportTarget } from "@hitslop/svelte";
+  import { Slop } from "@hitslop/svelte";
   import Icon from "./Icon.svelte";
   import Export from "./Export.svelte";
 </script>
 
-<IconTarget><Icon completed={finished} total={tasks.length} /></IconTarget>
-<ExportTarget><Export checklist={checklist.current} view={activeView} /></ExportTarget>
+<Slop document={checklist}>
+  <main><!-- editor --></main>
+  {#snippet icon()}<Icon completed={finished} total={tasks.length} />{/snippet}
+  {#snippet exportView()}<Export checklist={checklist.data} view={activeView} />{/snippet}
+</Slop>
 ```
 
-`IconTarget` mounts its children only in icon capture. It supplies a transparent
+The `icon` snippet uses `IconTarget`, which mounts its children only in icon capture. It supplies a transparent
 512×512 surface; supplying it opts into Finder icon refresh when a document
 closes. The signed `QuickLook/Icon.png` is immutable; only Finder metadata changes.
 Without an icon target, the existing static icon remains.
 
-`ExportTarget` mounts its children for previews and PNG/PDF exports. Pass the
+The `exportView` snippet uses `ExportTarget`, which mounts its children for previews and PNG/PDF exports. Pass the
 current selected view explicitly. Keep content in normal flow, with no fixed
 viewport heights, nested scrolling, editing controls, or transient notices.
 Share presentation components and theme variables to avoid visual drift.
@@ -47,8 +50,8 @@ Motion is disabled during capture. Canvas, charts, CSS background images, or
 virtualized lists can register extra work with
 `capture.onPrepare(async (mode, signal) => { ... })`; await required assets or
 rendering and respect the abort signal. The returned function unregisters the
-hook. Hooks should not modify durable data. Do not call `ready()` until initial
-data is usable.
+hook. Hooks should not modify durable data. `createDocument` signals readiness
+after its first open attempt, including a failed attempt that needs recovery.
 
 Use `?capture=icon` or `?capture=export` in `slop dev` or the shared gallery to
 inspect disposable capture views. Reload to return to normal editing. Native

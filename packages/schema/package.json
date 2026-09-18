@@ -32,7 +32,10 @@
     "./document": "./dist/document.js",
     "./validation": "./dist/validation.js",
     "./json": "./dist/json.js",
-    "./manifest.schema.json": "./generated/manifest.schema.json"
+    "./manifest.schema.json": "./generated/manifest.schema.json",
+    "./document-ops": "./dist/document-ops.js",
+    "./document-protocol": "./dist/document-protocol.js",
+    "./document-authority": "./dist/document-authority.js"
   },
   "scripts": {
     "generate": "bun run build && bun src/generate.ts",

@@ -24,21 +24,20 @@ platform skills into the source tree.
 
 New projects start with Svelte 5, Bits UI, a TypeBox-backed JSON store,
 and Vanilla Extract for structural styles.
-Both `--template svelte` and `--template svelte-counter` create the same
-JSON counter starter. Edit `manifest.json` before the interface: it fixes the
+`slop init` creates the JSON counter starter. Edit `manifest.json` before the interface: it fixes the
 job, author attribution, title, categories, and initial viewport. Interactive
 init prompts for the required author name and optional public URL. In CI, pass
 `--yes --author-name "Your Name"` and optionally `--author-url https://example.com`.
 
 Development uses a disposable in-memory host fake. State lasts until the page
-reloads; named media uses a forgiving UI-only stub. Register a local
+reloads; media blobs also live only in memory. Register a local
 master and open a writable document to test persistence, external edits, or native window behavior.
 
 ## Choose data deliberately
 
 - Start with no persistence for a pure utility.
 - Use one JSON object for settings or a compact document model.
-- Use named media for a known image/file role.
+- Use optional `S.Media()` fields with `imageStore(document, fields.photo, { fallback: "" })` or `fileStore(document, fields.attachment)` for attachments.
 
 Storage is implicit; do not add declarations to the manifest. See
 [Storage](storage.md) for concurrency and copy semantics.
@@ -46,17 +45,39 @@ Storage is implicit; do not add declarations to the manifest. See
 Quick Checklist's current JSON-store contract uses a root `schema.ts` that
 default-exports an `S.Document` schema (`import * as S from "@hitslop/schema/document"`).
 Use `S.Document({ ... })` for the root and root `initial.ts` for explicit defaults.
-The builder emits a v1 envelope schema and immutable `assets/initial.json`.
+The builder emits a v2 envelope schema and immutable `assets/initial.json`.
 Import that schema directly where the store is created:
 
 ```ts
-import { documentStore } from "@hitslop/svelte";
+import { Slop, createDocument } from "@hitslop/svelte";
 import dataSchema from "../schema";
 import initial from "../initial";
 
-const document = documentStore({ schema: dataSchema, initial });
-await document.change(data => { data.count++; });
+const document = createDocument({ schema: dataSchema, initial });
+const { fields } = document;
+await document.increment(fields.count);
 ```
+
+Wrap markup in `<Slop document={document}>`; keep helpers and derived values in the
+same component. The wrapper unifies host errors and capture snippets. Use
+`{@attach document.text(fields.title)}` for text, explicit verbs for writes, and
+`transaction(tx => ...)` for atomic changes.
+
+List inserts fill the declared identity when omitted, for example
+`document.insert(fields.tasks, { text, done: false })`. Success returns
+`{ ok: true, revision, id }`. Supplied identities are preserved for imports and undo.
+`tx.insert()` returns the reserved ID immediately; the enclosing transaction still
+determines whether it commits. Custom identity constraints remain validated, so
+supply a suitable identity when UUIDs do not match your schema. Use `newId` from
+`@hitslop/runtime` if an ID is needed before insertion. Keep randomness out of schema definitions.
+
+Successful nonempty mutations expose `result.undo()` and `result.canUndo` after
+checking `result.ok`. Undo restores the authority's previous data only while this
+command is the latest revision; any later commit expires it, including typing or
+another window's edit. Local drafts and pending writers flush before undo, so they
+may expire it too. Use `canUndo` to disable a toast action; the authority checks
+again when executing. Empty transactions have no undo. Undo returns the usual
+`{ ok, revision }` / failure result and does not offer redo or a history stack.
 
 ## Build
 

@@ -1,16 +1,20 @@
 // Copied into a fresh starter by the release gate; never shipped in app output.
-import { documentStore } from "@hitslop/svelte";
+import { createDocument } from "@hitslop/svelte";
 import schema from "../schema";
 
 if (false) {
-  const store = documentStore({ schema, initial: { count: 0 } });
-  const count: number = store.current.count;
+  const store = createDocument({ schema, initial: { count: 0 } });
+  const count: number = store.data.count;
   void count;
+  // @ts-expect-error Confirmed data is read-only.
+  store.data.count = 1;
+  const { fields } = store;
+  store.increment(fields.count);
   // @ts-expect-error Schema infers a number, not a string.
-  store.current.count = "one";
+  store.set(fields.count, "one");
   // @ts-expect-error Initial values must agree with the schema.
-  documentStore({ schema, initial: { count: "one" } });
+  createDocument({ schema, initial: { count: "one" } });
   // @ts-expect-error Count is required.
-  documentStore({ schema, initial: {} });
+  createDocument({ schema, initial: {} });
   store.destroy();
 }

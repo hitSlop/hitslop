@@ -58,7 +58,7 @@ struct SharingInvitation: Equatable {
                 let transfer = try seed.validatedTransfer(documentId: shared.documentId, schema: shared.schema)
                 let package = try SlopPackage(rootURL: staging)
                 guard package.manifest.slug == shared.slug else { throw SlopDocumentError("Shared app identity mismatch") }
-                guard let document = try SlopLoroDocument.open(package: package, seed: transfer) else {
+                guard let document = try SlopCommandDocument.open(package: package, seed: transfer) else {
                     throw SlopDocumentError("This package does not support collaboration")
                 }
                 try await document.close()

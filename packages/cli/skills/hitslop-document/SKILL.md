@@ -1,6 +1,6 @@
 ---
 name: hitslop-document
-description: Safely inspect, edit, validate, and export a built hitSlop .slop document. Use when changing its JSON data, named media, or theme overrides.
+description: Safely inspect, edit, validate, and export a built hitSlop .slop document. Use when changing its JSON data, document attachments, or theme overrides.
 metadata:
   hitslop-skill-version: "1"
 ---
@@ -29,9 +29,12 @@ app-specific data and styling guidance.
   then atomically replace `stores/data.json`. Do not invent a revision or edit
   `state/document.sqlite`. Re-read the file after the host accepts the change
   before starting another edit. Invalid external bytes remain for review.
-- Named attachments belong in `stores/media/`. Names start with a lowercase
-  ASCII letter and contain only lowercase letters, digits, and hyphens. Replace
-  a media file atomically; use only supported image or bounded ZIP content.
+- Attachments are immutable supported image or bounded ZIP files in
+  `stores/media/<sha256>`. Compute the SHA-256 of the exact bytes, atomically
+  add the digest-named file, and conditionally update its `S.Media()` field in
+  JSON with `{ sha256, mime, bytes, filename? }`. Do not overwrite a digest file.
+  Removing the JSON reference does not delete stored bytes. Shared media is public
+  to anyone holding the hash.
 
 ## Edit the theme
 

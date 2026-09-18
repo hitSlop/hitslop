@@ -3,7 +3,7 @@ import Foundation
 import Testing
 @testable import HitSlopCore
 
-private let envelope = #"{"type":"object","additionalProperties":false,"required":["$slop","data"],"properties":{"$slop":{"type":"object","additionalProperties":false,"required":["format","baseRevision"],"properties":{"format":{"const":1},"baseRevision":{"type":"string","minLength":1}}},"data":{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"title":{"type":"string"}},"additionalProperties":true,"x-custom":{"null":null,"enabled":true,"values":[1,2.5,"text"],"largeInteger":9007199254740993}}}}"#
+private let envelope = #"{"type":"object","additionalProperties":false,"required":["$slop","data"],"properties":{"$slop":{"type":"object","additionalProperties":false,"required":["format","documentId","schemaHash","authority","baseRevision"],"properties":{"format":{"const":2},"documentId":{"type":"string","minLength":1},"schemaHash":{"type":"string","minLength":1},"authority":{"type":"string","minLength":1},"baseRevision":{"type":"integer","minimum":0,"maximum":9007199254740991}}},"data":{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"title":{"type":"string"}},"additionalProperties":true,"x-custom":{"null":null,"enabled":true,"values":[1,2.5,"text"],"largeInteger":9007199254740993}}}}"#
 
 @Test func documentFormatPreservesApplicationKeywordsAndDeterministicOutput() throws {
     let bytes = Data(envelope.utf8)
@@ -16,17 +16,17 @@ private let envelope = #"{"type":"object","additionalProperties":false,"required
 }
 
 @Test(arguments: [
-    (#""const":1"#, #""const":true"#, "properties.$slop.properties.format.const"),
-    (#""const":1"#, #""const":2"#, "properties.$slop.properties.format.const"),
-    (#""minLength":1"#, #""minLength":2"#, "properties.$slop.properties.baseRevision.minLength"),
+    (#""const":2"#, #""const":true"#, "properties.$slop.properties.format.const"),
+    (#""const":2"#, #""const":1"#, "properties.$slop.properties.format.const"),
+    (#""minimum":0"#, #""minimum":1"#, "properties.$slop.properties.baseRevision.minimum"),
     (#""version":1"#, #""version":"1""#, "properties.data.x-hitslop.version"),
     (#""container":"map""#, #""container":"atomic""#, "properties.data.x-hitslop.container"),
     (#""additionalProperties":false"#, #""additionalProperties":0"#, "additionalProperties"),
     (#"["$slop","data"]"#, #"["$slop","data","data"]"#, "required"),
-    (#"["format","baseRevision"]"#, #"["format","format"]"#, "properties.$slop.required"),
-    (#""format":{"const":1}"#, #""extra":{},"format":{"const":1}"#, "properties.$slop.properties.extra"),
+    (#"["format","documentId","schemaHash","authority","baseRevision"]"#, #"["format","format"]"#, "properties.$slop.required"),
+    (#""format":{"const":2}"#, #""extra":{},"format":{"const":2}"#, "properties.$slop.properties.extra"),
     (#""properties":{"$slop""#, #""properties":{"extra":{},"$slop""#, "properties.extra"),
-    (#""minLength":1"#, #""description":"missing minimum""#, "properties.$slop.properties.baseRevision.minLength"),
+    (#""minimum":0"#, #""description":"missing minimum""#, "properties.$slop.properties.baseRevision.minimum"),
 ])
 func documentFormatRejectsInvalidEnvelopeWithFieldDiagnostics(before: String, after: String, path: String) throws {
     let bytes = Data(envelope.replacingOccurrences(of: before, with: after).utf8)

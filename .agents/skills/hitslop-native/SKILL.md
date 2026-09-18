@@ -15,7 +15,8 @@ description: Work on hitSlop Apple hosting, local storage, iCloud coordination, 
 - `DocumentFactory` verifies SHA-256, caches hosted artifacts at
   `cache/<publisher>/<slug>/<release>.slop`, and copies locally. Never silently
   update an existing document.
-- Native Loro owns all JSON-backed documents. Commit validated forks to
+- The command actor owns local JSON; Swift forwards shared commands to the room.
+  Commit validated candidates and request receipts to
   `state/document.sqlite` before publication; `stores/data.json` is a revision
   envelope projection. Storage remains implicit in the manifest.
 - Generated Swift manifest models and the bundled validation schema come from

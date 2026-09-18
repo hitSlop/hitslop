@@ -49,7 +49,7 @@ export const paper = style({
   height: "calc(100vh - 80px)",
   minHeight: 0,
   display: "grid",
-  gridTemplateRows: "auto auto auto minmax(0, 1fr) auto",
+  gridTemplateRows: "auto auto minmax(0, 1fr) auto",
   border: `3px solid ${t.ink}`,
   borderRadius: "19px 19px 47px 19px",
   background: t.paper,
@@ -97,6 +97,8 @@ globalStyle(`${track} > div`, {
   height: "100%",
   width: "100%",
   transformOrigin: "left center",
+  transition: "transform 280ms ease-out",
+  "@media": { "(prefers-reduced-motion: reduce)": { transition: "none" } },
   background: t.success,
 });
 export const composer = style({
@@ -271,6 +273,8 @@ globalStyle(`${paperFoot} button`, {
   fontWeight: 800,
 });
 export const filedList = style({
+  listStyle: "none",
+  margin: 0,
   padding: "0 20px",
   "@container": { "(max-width: 350px)": { paddingInline: 14 } },
 });
@@ -281,7 +285,12 @@ export const filedRow = style({
   padding: "15px 0",
   borderBottom: `1px solid color-mix(in srgb, ${t.ink} 15%, transparent)`,
 });
-globalStyle(`${filedRow} > span`, { flex: 1, overflowWrap: "anywhere", minWidth: 0 });
+globalStyle(`${filedRow} > span`, {
+  flex: 1,
+  overflowWrap: "anywhere",
+  minWidth: 0,
+  whiteSpace: "pre-wrap",
+});
 globalStyle(`${filedRow} button`, {
   display: "flex",
   gap: 5,
@@ -302,6 +311,7 @@ export const notice = style({
   alignItems: "center",
   gap: 12,
   minWidth: 180,
+  maxWidth: "calc(100% - 56px)",
   padding: "10px 12px",
   border: `2px solid ${t.ink}`,
   borderRadius: 8,
@@ -395,4 +405,10 @@ globalStyle("*, *::before, *::after", {
       scrollBehavior: "auto",
     },
   },
+});
+
+export const views = style({
+  display: "grid",
+  gridTemplateRows: "auto minmax(0, 1fr)",
+  minHeight: 0,
 });

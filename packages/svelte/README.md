@@ -1,106 +1,95 @@
 # @hitslop/svelte
 
-Svelte 5 adapters for host-owned documents and media.
+Svelte 5.57+ authoring for host-owned documents and media.
 
 ```svelte
 <script lang="ts">
-  import { documentStore, documentText } from "@hitslop/svelte";
-  import { ready } from "@hitslop/runtime";
+  import { Slop, createDocument } from "@hitslop/svelte";
   import schema from "../schema";
   import initial from "../initial";
-  const document = documentStore({ schema, initial });
-  $effect(() => { if (document.isReady) ready(); });
+  const document = createDocument({ schema, initial });
+  const { fields } = document;
 </script>
 
-<button disabled={!document.isReady}
-  onclick={() => document.change(data => { data.count++; }).catch(() => {})}>
-  {document.current.count}
-</button>
-{#if document.error}<p role="alert">{document.error}</p>{/if}
+<Slop document={document}>
+  <button disabled={!document.canWrite} onclick={() => document.increment(fields.count)}>
+    {document.data.count}
+  </button>
+  <input readonly={!document.canWrite} {@attach document.text(fields.title)} />
+</Slop>
 ```
 
-`current` is frozen confirmed data. Use `change` for structural edits; never
-assign to `current` or bind an input to it. Use `documentText` for text inputs:
+Create the document during component initialization. It owns readiness after the first
+open attempt, typing drafts, the native flush barrier, and teardown. `<Slop>` uses
+that document to provide loading semantics, typed context, capture views, and host
+error reporting. Keep application helpers and derived values in the same component;
+an extra Board component is unnecessary. One mounted wrapper has one stable document.
 
-```svelte
-<input use:documentText={{ store: document,
-  read: data => data.title,
-  write: (data, value) => { data.title = value; } }} />
-```
+Read frozen `data` through ordinary Svelte expressions and `$derived`. Writes use
+explicit verbs and `document.fields`; fields never contain live writers.
+`transaction(tx => ...)` records synchronous commands that validate and commit
+atomically, publishing one revision for an accepted nonempty transaction. Use only
+`tx` methods inside it. It does not expose an evolving draft for reads. Writes
+resolve to `{ ok: true, revision }` or `{ ok: false, error }`; success notices,
+composer clearing, and undo setup belong after `result.ok`.
 
-Text drafts preserve their base revision, selection, and composition until
-submitted. The runtime controller serializes edits and validates incoming and
-outgoing values without coercion or defaults. Mutators run synchronously so DOM
-event values can be captured; mutate only their argument and keep UI side effects
-outside the callback.
+`insert(fields.tasks, { text, done: false })` fills the list's declared identity
+when omitted. Its successful result also includes `id`. Explicit identities are
+preserved; other required properties and identity constraints still validate.
+Inside a transaction, `const id = tx.insert(...)` reserves the identity for later
+commands in that batch. Only the transaction's successful result confirms the insert.
+The SDK generates the identity before queuing and preserves it across retries.
 
-`flush()` captures visible drafts and waits for durable confirmation. `destroy()`
-is asynchronous and drains before unregistering. Await it before navigation;
-on failure the owner remains usable. Failed edits block flush until explicit
-`discardFailedChanges()`. `reload()` retries an open; it does not discard failed
-edits. Display `error` and offer recovery. Offline network status does not prevent
-local saves.
+Successful nonempty mutations expose `result.undo()` and `result.canUndo` after
+checking `result.ok`. Undo restores the authority's previous data only while this
+command is the latest revision; any later commit expires it, including typing or
+another window's edit. Local drafts and pending writers flush before undo, so they
+may expire it too. Use `canUndo` to disable a toast action; the authority checks
+again when executing. Empty transactions have no undo. Undo returns the usual
+`{ ok, revision }` / failure result and does not offer redo or a history stack.
 
-Schemas and explicit `initial.ts` defaults are shared between app and builder.
-See [Storage](../../docs/storage.md) for Loro annotations and external JSON edits.
+Text attachments keep local drafts during focus, IME, and debounce. They preserve
+selection across ordinary acknowledgements and retain failed or deleted-row edits
+for host recovery. `isPending(path)` reports commands queued or in flight for that
+field/item, including overlapping ancestor writes, without disabling sibling rows.
+`canWrite` remains false while disconnected, loading, or resolving an unknown outcome.
+
+`<Slop>` reports rendering errors and document/media failures to the host. Expected
+command rejection does not destroy the editor or block close. Native recovery can
+retry retained edits, copy text, explicitly discard drafts, or reset a failed render
+without recreating the document. The preview host displays diagnostics locally.
+Nested components can call `useSlop(schema)` to retrieve the matching document; a
+foreign schema is rejected. Render boundaries do not catch async event-handler
+errors, so the host also listens for unhandled errors and rejections.
+
+Lists have `.item(id)` or `.item(row)`; records have `.at(key)`; atomic arrays have
+no item address. `set`, `unset`, `toggle`, `increment`, `insert`, `remove`, `move`,
+and shallow `patch` retain mutation intent. `S.paths(schema)` remains available
+for standalone tooling. There is no writable document proxy.
+
+Use optional `S.Media()` fields with `imageStore(document, fields.photo, { fallback: "" })`
+or `fileStore(document, fields.attachment)`. Render the adapter's `src`; `choose()`,
+`replace(file)`, `clear()`, and `reload()` handle host-owned bytes. Failures reach the
+same host reporting path. Imports finish before document teardown. References sync;
+immutable bytes live under their SHA-256 digest. Clearing removes the reference,
+not the blob. Downloads are public to anyone holding the hash.
 
 ## Capture views
 
-Svelte is the supported authoring integration. Keep the interactive editor in
-`App.svelte`; optionally provide `Icon.svelte` and `Export.svelte` as ordinary
-presentation components. They share data and styles with the editor, not another
-store or persistence model:
-
 ```svelte
-<script lang="ts">
-  import { IconTarget, ExportTarget } from "@hitslop/svelte";
-  import Icon from "./Icon.svelte";
-  import Export from "./Export.svelte";
-</script>
-
-<IconTarget><Icon completed={finished} total={tasks.length} /></IconTarget>
-<ExportTarget><Export checklist={checklist.current} view={activeView} /></ExportTarget>
+<Slop document={checklist}>
+  <main><!-- editor --></main>
+  {#snippet icon()}<Icon completed={finished} total={visible.length} />{/snippet}
+  {#snippet exportView()}<Export checklist={checklist.data} view={activeView} />{/snippet}
+</Slop>
 ```
 
-`IconTarget` mounts its children only in icon capture. It supplies a transparent
-512×512 surface; supplying it opts into Finder icon refresh when a document
-closes. The signed `QuickLook/Icon.png` is immutable; only Finder metadata changes.
-Without an icon target, the existing static icon remains.
+Capture snippets share the same snapshot and ordinary presentation components.
+`icon` supplies a transparent 512×512 target; `exportView` supplies the preview and
+PNG/PDF target. They mount only for capture. Keep exports in normal document flow,
+with settled values and no editing controls or nested scrollers. Without an export
+snippet, capture uses the editor with `data-slop-export="hide"` controls omitted.
+`IconTarget` and `ExportTarget` remain available as standalone capture primitives.
 
-`ExportTarget` mounts its children for previews and PNG/PDF exports. Pass the
-current selected view explicitly. Keep content in normal flow, with no fixed
-viewport heights, nested scrolling, editing controls, or transient notices.
-Share presentation components and theme variables to avoid visual drift.
-`Export.svelte` is optional: without a target, the existing app is captured with
-`data-slop-capture="static"` and `data-slop-export="hide"` controls omitted.
-
-A dedicated `ExportTarget` is the catalog/Quick Look preview: native capture
-snapshots that object’s rectangle at 2×, not the empty editor window. Without
-an export target, preview stays at the manifest viewport. Export uses the
-current window width and full content height. Dedicated exports have their own
-rectangular content surface rather than a stretched window mask. PNG is 2×, limited to 16,384 pixels
-per side and 24 megapixels; use PDF for longer documents. PDF is one page sized
-to the content, with selectable text. Very long PDFs combine WebKit's pages and
-scale uniformly to a maximum 14,400-point page dimension, preserving all content
-and vector sharpness within common PDF reader limits. Their physical page width
-is scaled too; no content is clipped or converted to a bitmap.
-
-The runtime waits for target mounting, used fonts, visible image decoding, and
-stable geometry, with a ten-second timeout for each preparation/settling stage.
-Motion is disabled during capture. Canvas, charts, CSS background images, or
-virtualized lists can register extra work with
-`capture.onPrepare(async (mode, signal) => { ... })`; await required assets or
-rendering and respect the abort signal. The returned function unregisters the
-hook. Hooks should not modify durable data. Do not call `ready()` until initial
-data is usable.
-
-Use `?capture=icon` or `?capture=export` in `slop dev` or the shared gallery to
-inspect disposable capture views. Reload to return to normal editing. Native
-capture remains the authority for image/PDF fidelity.
-
-Background captures operate on temporary snapshots and cannot initialize or
-modify the source stores. User exports use the current
-session to preserve view state; captures are serialized and restore the editor
-on success or failure. Preview and icon failures are independent. Close-time
-refreshes keep the last successful images on failure; quit gives pending jobs
-up to five seconds after data has been saved.
+See [Capture](../../docs/capture.md), [Storage](../../docs/storage.md), and
+[Authoring](../../docs/authoring.md) for the complete host contracts.

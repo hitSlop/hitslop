@@ -1,8 +1,9 @@
+import { room as roomStub, unwrap } from "./room-rpc.ts";
 import { api } from "@hitslop/api";
 import { implement, ORPCError } from "@orpc/server";
 import type { Authenticate } from "./auth.ts";
 import { catalogHeaders, handleArtifact, handleCatalog, handleRecordCreation } from "./catalog.ts";
-import { signRoomToken, verifyRoomToken } from "./crypto.ts";
+import { signRoomToken, roomClaims } from "./crypto.ts";
 import {
   handleCreateDocument,
   handleDocumentPackage,
@@ -56,26 +57,9 @@ const base = impl.use(async ({ next }) => {
 const authenticated = base.use(async ({ context, next }) =>
   next({ context: { identity: await context.authenticate(context.request, context.env) } }),
 );
-const room = base.use(async ({ context, next }) => {
-  let claims;
-  try {
-    claims = await verifyRoomToken(
-      context.env.TOKEN_KEY,
-      context.request.headers.get("authorization")?.replace(/^Bearer /, "") ?? "",
-    );
-  } catch {
-    return fail("Unauthorized", 401);
-  }
-  return next({ context: { claims } });
-});
-function stub(env: Env, id: string) {
-  if (!env.ROOMS) return fail("Rooms are unavailable", 503);
-  return env.ROOMS.getByName(id);
-}
-function unwrap<T>(result: RoomResult<T>): T {
-  if (!result.ok) return fail(result.message, result.status);
-  return result.value;
-}
+const room = base.use(async ({ context, next }) =>
+  next({ context: { claims: await roomClaims(context.request, context.env) } }),
+);
 const immutable = (headers: Headers) =>
   headers.set("cache-control", "public, max-age=31536000, immutable");
 export const router = impl.router({
@@ -139,13 +123,9 @@ export const router = impl.router({
     }),
   },
   rooms: {
-    initialize: room.rooms.initialize.handler(async ({ input, context: c }) => {
-      if (c.claims.room !== input.documentId) fail("Wrong room route", 403);
-      return unwrap(await stub(c.env, input.documentId).initialize(c.claims, input));
-    }),
     seed: room.rooms.seed.handler(async ({ input, context: c }) => {
       if (c.claims.room !== input.documentId) fail("Wrong room route", 403);
-      return unwrap(await stub(c.env, input.documentId).readSeed(c.claims));
+      return unwrap(await roomStub(c.env.ROOMS, input.documentId).readSeed(c.claims));
     }),
   },
 });

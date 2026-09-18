@@ -11,7 +11,6 @@ public enum SlopPackageError: LocalizedError {
     }
 }
 
-public enum SlopStoreKind: String, Sendable { case media, document }
 
 public struct SlopPackage: Sendable {
     public let rootURL: URL
@@ -145,7 +144,7 @@ public struct SlopPackage: Sendable {
     }
 
     public static func canonicalDocumentSkillData() throws -> Data {
-        guard let url = Bundle.module.url(forResource: "hitslop-document.SKILL", withExtension: "md") else {
+        guard let url = Bundle.module.url(forResource: "SKILL", withExtension: "md", subdirectory: "skills/hitslop-document") else {
             throw SlopPackageError.invalid("bundled document skill is missing")
         }
         return try Data(contentsOf: url)
@@ -157,7 +156,7 @@ public struct SlopPackage: Sendable {
         return try Self.containedURL(root: rootURL, relativePath: relative)
     }
 
-    public func mediaURL(name: String) throws -> URL { try SlopMediaStore(directoryURL: mediaStoresURL).url(for: name) }
+    public func mediaURL(sha256: String) throws -> URL { try SlopMediaStore(directoryURL: mediaStoresURL).url(for: sha256) }
 
     private static func validateManifest(_ data: Data) throws {
         guard String(data: data, encoding: .utf8) != nil else { throw SlopPackageError.invalid("manifest.json must be UTF-8") }
@@ -178,7 +177,7 @@ public struct SlopPackage: Sendable {
                 guard values.isDirectory == true, values.isSymbolicLink != true else { throw SlopPackageError.invalid("media store must be a directory") }
                 for entry in try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]) {
                     let entryValues = try entry.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-                    guard SlopMediaStore.isValidName(entry.lastPathComponent), entryValues.isRegularFile == true, entryValues.isSymbolicLink != true else {
+                    guard SlopMediaStore.isValidHash(entry.lastPathComponent), entryValues.isRegularFile == true, entryValues.isSymbolicLink != true else {
                         throw SlopPackageError.invalid("invalid media store entry")
                     }
                 }

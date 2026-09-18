@@ -1,15 +1,23 @@
-import { expect, test } from "bun:test";
+import { afterAll, beforeAll, beforeEach, expect, test } from "bun:test";
 import { encode } from "fast-png";
 import { zipSync } from "fflate";
 import { documentSkillContent, documentSkillPath, manifestSchemaURL } from "@hitslop/schema";
-import type { Env } from "../src/index.ts";
-import { route } from "./test-auth.ts";
-import { MemoryRegistry } from "../src/store.ts";
+import { workerHarness } from "./harness.ts";
 import { signRoomToken, verifyRoomToken } from "../src/crypto.ts";
 
-const env: Env = {
-  TOKEN_KEY: "isolated-api-test-token-key-32-bytes",
-  FIREBASE_PROJECT_ID: "hitslopapp",
+const harness = workerHarness("isolated-api-test-token-key-32-bytes");
+const env = { TOKEN_KEY: harness.key };
+beforeAll(() => harness.initialize(), 30000);
+afterAll(() => harness.dispose());
+beforeEach(() => harness.fixture("reset"));
+const registry = {
+  finalizePublish: (input: unknown): Promise<any> => harness.fixture("publish", input),
+  putObject: (key: string, bytes: Uint8Array, mime: string) =>
+    harness.fixture("object", { key, bytes: Array.from(bytes), mime }),
+};
+const route = (request: Request) => {
+  const url = new URL(request.url);
+  return harness.call(url.pathname + url.search, request);
 };
 const auth = { authorization: "Bearer test:owner" };
 const png = () =>
@@ -22,16 +30,9 @@ const png = () =>
 const icon = () =>
   encode({ width: 512, height: 512, channels: 4, data: new Uint8Array(512 * 512 * 4).fill(127) });
 
-async function call(path: string, init?: RequestInit, registry?: MemoryRegistry) {
-  return route(
-    new Request(`https://api.hitslop.com${path}`, init),
-    env,
-    registry ?? new MemoryRegistry(),
-  );
-}
+const call = (path: string, init?: RequestInit) => harness.call(path, init);
 
 test("catalog is public, cacheable, and paginated", async () => {
-  const registry = new MemoryRegistry();
   for (let index = 0; index < 3; index += 1) {
     await registry.finalizePublish({
       requestId: crypto.randomUUID(),
@@ -57,11 +58,7 @@ test("catalog is public, cacheable, and paginated", async () => {
       },
     });
   }
-  const first = await route(
-    new Request("https://api.hitslop.com/api/catalog?limit=2"),
-    env,
-    registry,
-  );
+  const first = await route(new Request("https://api.hitslop.com/api/catalog?limit=2"));
   expect(first.status).toBe(200);
   expect(first.headers.get("access-control-allow-origin")).toBe("*");
   const body = (await first.json()) as {
@@ -77,8 +74,6 @@ test("catalog is public, cacheable, and paginated", async () => {
     new Request(
       `https://api.hitslop.com/api/catalog?limit=2&cursor=${encodeURIComponent(body.nextCursor!)}`,
     ),
-    env,
-    registry,
   );
   const more = (await second.json()) as { templates: unknown[]; nextCursor?: string };
   expect(more.templates).toHaveLength(1);
@@ -86,13 +81,10 @@ test("catalog is public, cacheable, and paginated", async () => {
 });
 
 test("artifact GET streams stored bytes and rejects unsafe keys", async () => {
-  const registry = new MemoryRegistry();
   const key = `artifacts/sha256/${"a".repeat(64)}.slop.zip`;
   await registry.putObject(key, new Uint8Array([1, 2, 3]), "application/zip");
   const found = await route(
     new Request(`https://api.hitslop.com/api/artifact?key=${encodeURIComponent(key)}`),
-    env,
-    registry,
   );
   expect(found.status).toBe(200);
   expect(await found.arrayBuffer().then((value) => new Uint8Array(value))).toEqual(
@@ -102,7 +94,6 @@ test("artifact GET streams stored bytes and rejects unsafe keys", async () => {
 });
 
 test("media PUT hashes bytes and GET returns them", async () => {
-  const registry = new MemoryRegistry();
   const bytes = new Uint8Array([137, 80, 78, 71]);
   const put = await route(
     new Request("https://api.hitslop.com/api/media", {
@@ -110,38 +101,25 @@ test("media PUT hashes bytes and GET returns them", async () => {
       headers: { ...auth, "content-type": "image/png" },
       body: bytes,
     }),
-    env,
-    registry,
   );
   expect(put.status).toBe(201);
   const body = (await put.json()) as { sha256: string; bytes: number };
   expect(body.bytes).toBe(4);
   expect(body.sha256).toHaveLength(64);
-  const get = await route(
-    new Request(`https://api.hitslop.com/api/media/${body.sha256}`),
-    env,
-    registry,
-  );
+  const get = await route(new Request(`https://api.hitslop.com/api/media/${body.sha256}`));
   expect(get.status).toBe(200);
   expect(new Uint8Array(await get.arrayBuffer())).toEqual(bytes);
   expect(
-    (
-      await route(
-        new Request("https://api.hitslop.com/api/media", { method: "PUT", body: bytes }),
-        env,
-        registry,
-      )
-    ).status,
+    (await route(new Request("https://api.hitslop.com/api/media", { method: "PUT", body: bytes })))
+      .status,
   ).toBe(401);
 });
 
 test("shared package ingress rejects malformed archives before storage", async () => {
-  const registry = new MemoryRegistry();
   const { createAPIClient } = await import("@hitslop/api/client");
   const client = createAPIClient("https://api.hitslop.com", {
     authorization: () => "test:owner",
-    fetch: ((url: string, init: RequestInit) =>
-      route(new Request(url, init), env, registry)) as typeof fetch,
+    fetch: ((url: string, init: RequestInit) => route(new Request(url, init))) as typeof fetch,
   });
   await expect(
     client.documents.create({
@@ -149,8 +127,7 @@ test("shared package ingress rejects malformed archives before storage", async (
       title: "Test",
       slug: "test",
       schema: "a".repeat(64),
-      checkpoint: "AQ==",
-      version: "seed",
+      seed: JSON.stringify({ count: 0 }),
       package: new File(["not a zip"], "x.zip"),
     }),
   ).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -179,7 +156,6 @@ test("room tokens expire and bind a user to one document", async () => {
 });
 
 test("recordCreation increments a public template", async () => {
-  const registry = new MemoryRegistry();
   const published = await registry.finalizePublish({
     requestId: crypto.randomUUID(),
     publisherKeyId: "publisherkeyid1234",
@@ -211,21 +187,16 @@ test("recordCreation increments a public template", async () => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ templateId: published.templateId }),
         }),
-        env,
-        registry,
       )
     ).status,
   ).toBe(200);
-  const catalog = (await route(
-    new Request("https://api.hitslop.com/api/catalog"),
-    env,
-    registry,
-  ).then((response) => response.json())) as { templates: { creationCount: number }[] };
+  const catalog = (await route(new Request("https://api.hitslop.com/api/catalog")).then(
+    (response) => response.json(),
+  )) as { templates: { creationCount: number }[] };
   expect(catalog.templates[0]?.creationCount).toBe(1);
 });
 
 test("publish stores content-addressed package bytes", async () => {
-  const registry = new MemoryRegistry();
   const files = {
     "manifest.json": new TextEncoder().encode(
       JSON.stringify({
@@ -271,9 +242,6 @@ test("publish stores content-addressed package bytes", async () => {
     artifactBytes: zipped.byteLength,
     timestamp: Date.now(),
   };
-  const canonical = new TextEncoder().encode(
-    JSON.stringify(envelope, Object.keys(envelope).sort()),
-  );
   // Use the same canonicalization as the schema helper by posting the envelope the publisher signs in production tests via schema.
   const { canonicalPublishEnvelope } = await import("@hitslop/schema");
   const signature = new Uint8Array(
@@ -291,38 +259,26 @@ test("publish stores content-addressed package bytes", async () => {
   form.set("artifact", new File([zipped], "counter.slop.zip", { type: "application/zip" }));
   const response = await route(
     new Request("https://api.hitslop.com/api/publish", { method: "POST", body: form }),
-    env,
-    registry,
   );
   expect(response.status).toBe(201);
-  const catalog = (await route(
-    new Request("https://api.hitslop.com/api/catalog"),
-    env,
-    registry,
-  ).then((r) => r.json())) as { templates: { slug: string }[] };
+  const catalog = (await route(new Request("https://api.hitslop.com/api/catalog")).then((r) =>
+    r.json(),
+  )) as { templates: { slug: string }[] };
   expect(catalog.templates[0]?.slug).toBe("counter");
 });
 
 test("typed OpenAPI client preserves binary media and structured validation errors", async () => {
   const { createAPIClient } = await import("@hitslop/api/client");
-  const registry = new MemoryRegistry();
   const client = createAPIClient("https://api.hitslop.com", {
     authorization: () => "test:owner",
-    fetch: ((url: string, init: RequestInit) =>
-      route(new Request(url, init), env, registry)) as typeof fetch,
+    fetch: ((url: string, init: RequestInit) => route(new Request(url, init))) as typeof fetch,
   });
   const receipt = await client.media.put(new Blob(["image"], { type: "image/png" }));
   expect(await (await client.media.get({ sha256: receipt.sha256 })).text()).toBe("image");
 });
 
 test("room RPC failures retain HTTP status and cannot mint guest credentials", async () => {
-  const registry = new MemoryRegistry();
   const { createAPIClient } = await import("@hitslop/api/client");
-  const rooms = {
-    getByName: () => ({
-      readSeed: async () => ({ ok: false, status: 404, message: "Room not found" }),
-    }),
-  } as unknown as NonNullable<Env["ROOMS"]>;
   const token = await signRoomToken(env.TOKEN_KEY, {
     room: "missing",
     user: "owner",
@@ -333,8 +289,7 @@ test("room RPC failures retain HTTP status and cannot mint guest credentials", a
   });
   const client = createAPIClient("https://api.hitslop.com", {
     authorization: () => token,
-    fetch: ((url: string, init: RequestInit) =>
-      route(new Request(url, init), { ...env, ROOMS: rooms }, registry)) as typeof fetch,
+    fetch: ((url: string, init: RequestInit) => route(new Request(url, init))) as typeof fetch,
   });
   await expect(client.rooms.seed({ documentId: "missing" })).rejects.toMatchObject({
     code: "NOT_FOUND",
@@ -345,15 +300,12 @@ test("room RPC failures retain HTTP status and cannot mint guest credentials", a
 });
 
 test("invalid publish metadata is a client error and request bodies are bounded", async () => {
-  const registry = new MemoryRegistry();
   const form = new FormData();
   form.set("envelope", "{}");
   form.set("signature", "invalid");
   form.set("artifact", new File(["zip"], "invalid.zip"));
   const invalid = await route(
     new Request("https://api.hitslop.com/api/publish", { method: "POST", body: form }),
-    env,
-    registry,
   );
   expect(invalid.status).toBe(400);
   const tooLarge = await route(
@@ -362,8 +314,6 @@ test("invalid publish metadata is a client error and request bodies are bounded"
       headers: auth,
       body: new Uint8Array(26 * 1024 * 1024 + 1),
     }),
-    env,
-    registry,
   );
   expect(tooLarge.status).toBe(413);
 });
@@ -371,8 +321,6 @@ test("invalid publish metadata is a client error and request bodies are bounded"
 test("canonical manifest schema is served by the Worker", async () => {
   const response = await route(
     new Request("https://api.hitslop.com/schemas/v1/manifest.schema.json"),
-    env,
-    new MemoryRegistry(),
   );
   expect(response.status).toBe(200);
   expect(response.headers.get("content-type")).toBe("application/schema+json");
@@ -384,6 +332,18 @@ test("canonical manifest schema is served by the Worker", async () => {
 });
 
 test("missing D1 or R2 bindings never fall back to a disposable catalog", async () => {
-  const response = await route(new Request("https://api.hitslop.com/api/catalog"), env);
+  const response = await call("/__test/no-bindings");
   expect(response.status).toBe(503);
+});
+
+test("production entry rejects test credentials even with an environment flag", async () => {
+  const response = await call("/__production/api/media", {
+    method: "PUT",
+    headers: { ...auth, "content-type": "image/png" },
+    body: png(),
+  });
+  expect(response.status).toBe(401);
+});
+test("catalog artifact cannot serve media", async () => {
+  expect((await call(`/api/artifact?key=media/sha256/${"a".repeat(64)}`)).status).toBe(400);
 });

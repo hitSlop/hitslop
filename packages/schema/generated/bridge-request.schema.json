@@ -1,35 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$defs": {
-    "json": {
-      "anyOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/json"
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/json"
-          }
-        }
-      ]
-    }
-  },
   "anyOf": [
     {
       "type": "object",
@@ -42,37 +12,48 @@
           "const": "host.info"
         }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "method",
+        "issue"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "runtime.reportError"
+        },
+        "issue": {
+          "type": "object",
+          "required": [
+            "source",
+            "message"
+          ],
+          "properties": {
+            "source": {
+              "enum": [
+                "document",
+                "media",
+                "render",
+                "unhandled"
+              ]
             },
-            {
-              "type": "boolean"
+            "code": {
+              "type": "string",
+              "maxLength": 128
             },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
             }
-          ]
+          },
+          "additionalProperties": false
         }
-      }
+      },
+      "additionalProperties": false
     },
     {
       "type": "object",
@@ -89,37 +70,7 @@
           "type": "string"
         }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
+      "additionalProperties": false
     },
     {
       "type": "object",
@@ -132,37 +83,7 @@
           "const": "ready"
         }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
+      "additionalProperties": false
     },
     {
       "type": "object",
@@ -175,105 +96,579 @@
           "const": "document.open"
         }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
+      "additionalProperties": false
     },
     {
       "type": "object",
       "required": [
         "method",
-        "session",
-        "sequence",
-        "base",
-        "after"
+        "request"
       ],
       "properties": {
         "method": {
           "type": "string",
-          "const": "document.apply"
+          "const": "document.execute"
         },
-        "session": {
-          "type": "string",
-          "minLength": 1
-        },
-        "sequence": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "base": {
-          "type": "string",
-          "minLength": 1
-        },
-        "after": {},
-        "draft": {
-          "type": "string",
-          "minLength": 1
-        },
-        "parent": {
-          "type": "integer",
-          "minimum": 1
-        }
-      },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
+        "request": {
           "anyOf": [
             {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
+              "type": "object",
+              "required": [
+                "documentId",
+                "schemaHash",
+                "authority",
+                "leaseId",
+                "requestId",
+                "ops"
+              ],
+              "properties": {
+                "documentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schemaHash": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "leaseId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "ops": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "op",
+                          "path",
+                          "value"
+                        ],
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "const": "set"
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "key"
+                                  ],
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "item"
+                                  ],
+                                  "properties": {
+                                    "item": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "maxItems": 64
+                          },
+                          "value": {}
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "op",
+                          "path"
+                        ],
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "const": "unset"
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "key"
+                                  ],
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "item"
+                                  ],
+                                  "properties": {
+                                    "item": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "maxItems": 64
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "op",
+                          "path"
+                        ],
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "const": "toggle"
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "key"
+                                  ],
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "item"
+                                  ],
+                                  "properties": {
+                                    "item": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "maxItems": 64
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "op",
+                          "path",
+                          "amount"
+                        ],
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "const": "increment"
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "key"
+                                  ],
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "item"
+                                  ],
+                                  "properties": {
+                                    "item": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "maxItems": 64
+                          },
+                          "amount": {
+                            "type": "number"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "op",
+                          "path",
+                          "value"
+                        ],
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "const": "insert"
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "key"
+                                  ],
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "item"
+                                  ],
+                                  "properties": {
+                                    "item": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "maxItems": 64
+                          },
+                          "value": {},
+                          "position": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "before"
+                                ],
+                                "properties": {
+                                  "before": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "after"
+                                ],
+                                "properties": {
+                                  "after": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "op",
+                          "path",
+                          "id"
+                        ],
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "const": "remove"
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "key"
+                                  ],
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "item"
+                                  ],
+                                  "properties": {
+                                    "item": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "maxItems": 64
+                          },
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "op",
+                          "path",
+                          "id",
+                          "position"
+                        ],
+                        "properties": {
+                          "op": {
+                            "type": "string",
+                            "const": "move"
+                          },
+                          "path": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "key"
+                                  ],
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "item"
+                                  ],
+                                  "properties": {
+                                    "item": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            "maxItems": 64
+                          },
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "position": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "before"
+                                ],
+                                "properties": {
+                                  "before": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "required": [
+                                  "after"
+                                ],
+                                "properties": {
+                                  "after": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 20000
+                }
+              },
+              "additionalProperties": false
             },
             {
               "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
+              "required": [
+                "documentId",
+                "schemaHash",
+                "authority",
+                "leaseId",
+                "requestId",
+                "undo"
+              ],
+              "properties": {
+                "documentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schemaHash": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "leaseId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "undo": {
+                  "type": "object",
+                  "required": [
+                    "requestId",
+                    "revision"
+                  ],
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "documentId",
+                "schemaHash",
+                "authority",
+                "leaseId",
+                "requestId",
+                "replace"
+              ],
+              "properties": {
+                "documentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schemaHash": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "authority": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "leaseId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "requestId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "replace": {
+                  "type": "object",
+                  "required": [
+                    "baseRevision",
+                    "data"
+                  ],
+                  "properties": {
+                    "baseRevision": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "data": {}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     {
       "type": "object",
@@ -286,240 +681,49 @@
           "const": "document.flush"
         }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
+      "additionalProperties": false
     },
     {
       "type": "object",
       "required": [
         "method",
-        "session",
-        "draft"
-      ],
-      "properties": {
-        "method": {
-          "type": "string",
-          "const": "document.releaseDraft"
-        },
-        "session": {
-          "type": "string"
-        },
-        "draft": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
-        "method",
-        "name"
+        "sha256"
       ],
       "properties": {
         "method": {
           "type": "string",
           "const": "media.open"
         },
-        "name": {
+        "sha256": {
           "type": "string",
-          "pattern": "^(?:[a-z][a-z0-9-]{0,63}|[a-f0-9]{64})$"
+          "pattern": "^[a-f0-9]{64}$"
         }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
+      "additionalProperties": false
     },
     {
       "type": "object",
       "required": [
         "method",
-        "name",
         "data",
-        "mimeType"
+        "kind"
       ],
       "properties": {
         "method": {
           "type": "string",
-          "const": "media.write"
-        },
-        "name": {
-          "type": "string",
-          "pattern": "^(?:[a-z][a-z0-9-]{0,63}|[a-f0-9]{64})$"
+          "const": "media.add"
         },
         "data": {
           "type": "string"
         },
-        "mimeType": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
+        "kind": {
+          "enum": [
+            "image",
+            "file"
           ]
         }
-      }
-    },
-    {
-      "type": "object",
-      "required": [
-        "method",
-        "name"
-      ],
-      "properties": {
-        "method": {
-          "type": "string",
-          "const": "media.remove"
-        },
-        "name": {
-          "type": "string",
-          "pattern": "^(?:[a-z][a-z0-9-]{0,63}|[a-f0-9]{64})$"
-        }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
+      "additionalProperties": false
     },
     {
       "type": "object",
@@ -544,37 +748,7 @@
           "maximum": 4096
         }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
+      "additionalProperties": false
     },
     {
       "type": "object",
@@ -587,37 +761,7 @@
           "const": "window.drag"
         }
       },
-      "additionalProperties": false,
-      "$defs": {
-        "json": {
-          "anyOf": [
-            {
-              "type": "null"
-            },
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/json"
-              }
-            },
-            {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/$defs/json"
-              }
-            }
-          ]
-        }
-      }
+      "additionalProperties": false
     }
   ]
 }

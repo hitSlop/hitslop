@@ -2,9 +2,9 @@ import * as S from "../src/schema.ts";
 import type { ErrorCode, JSONValue, Request } from "../src/protocol.ts";
 
 export const fixtureSchema = S.Document({
-  title: S.Text(), count: S.Integer({ minimum: 0 }), active: S.Boolean(), note: S.Optional(S.String()),
+  title: S.String(), count: S.Integer({ minimum: 0 }), active: S.Boolean(), note: S.Optional(S.String()),
   tags: S.Array(S.String()), attributes: S.Record(S.String()),
-  tasks: S.List(S.Object({ id: S.String(), text: S.Text(), done: S.Boolean(), archived: S.Boolean(),
+  tasks: S.List(S.Object({ id: S.String(), text: S.String(), done: S.Boolean(), archived: S.Boolean(),
     children: S.List(S.Object({ key: S.String(), value: S.Number() }), "key"),
   }), "id"),
 });

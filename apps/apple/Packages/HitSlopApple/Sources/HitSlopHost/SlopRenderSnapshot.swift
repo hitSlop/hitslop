@@ -16,7 +16,7 @@ final class SlopRenderSnapshot {
                 let target = url.appendingPathComponent("state/document.sqlite")
                 try FileManager.default.removeItem(at: target)
                 try? FileManager.default.removeItem(at: url.appendingPathComponent("state/document.sqlite-journal"))
-                try SlopSyncStorage(root: packageURL).backup(to: target)
+                try SlopCommandStorage(root: packageURL).backup(to: target)
                 // A file copy and a database backup may observe different commits.
                 // Regenerate the projection from the backed-up history on open.
                 let projection = url.appendingPathComponent("stores/data.json")

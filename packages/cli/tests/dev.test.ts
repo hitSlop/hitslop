@@ -1,4 +1,16 @@
-import type { DocumentFrame } from "@hitslop/schema/bridge";
+import type { Snapshot, Request, Result, Open } from "@hitslop/schema/document-protocol";
+import * as S from "@hitslop/schema/document";
+const schema = S.Document({ count: S.Number() });
+function edit(open: Open, count: number): Request {
+  return {
+    documentId: open.snapshot.documentId,
+    schemaHash: open.snapshot.schemaHash,
+    authority: open.snapshot.authority,
+    leaseId: open.lease.id,
+    requestId: crypto.randomUUID(),
+    ops: [{ op: "set", path: [{ key: "count" }], value: count }],
+  };
+}
 import { expect, test } from "bun:test";
 import { devHostJavaScript, injectHost } from "../src/dev-bridge.ts";
 import { mockHostPlugin } from "../src/dev.ts";
@@ -6,15 +18,17 @@ import { mockHostPlugin } from "../src/dev.ts";
 type Change = { kind: string; source: string; revision?: string | null };
 type PreviewSlop = {
   document: {
-    open: (initial?: unknown) => Promise<DocumentFrame>;
-    apply: (edit: { after: unknown }) => Promise<DocumentFrame>;
-    flush: () => Promise<DocumentFrame>;
-    onChange: (callback: (frame: DocumentFrame) => void) => () => void;
+    open: (initial?: unknown) => Promise<Open>;
+    send: (request: Request) => Promise<Result>;
+    flush: () => Promise<void>;
+    subscribe: (callback: (frame: Snapshot) => void) => () => void;
   };
   media: {
-    open: (name: string) => Promise<{ exists: boolean; revision: string | null }>;
-    write: (name: string, data: string, mimeType: string) => Promise<{ revision: string }>;
-    remove: (name: string) => Promise<{ revision: null }>;
+    open: (sha256: string) => Promise<{ src: string | null }>;
+    add: (
+      data: string,
+      kind: "image" | "file",
+    ) => Promise<{ sha256: string; mime: string; bytes: number }>;
   };
   window: {
     resize: (size: { width: number; height: number }) => Promise<{ width: number; height: number }>;
@@ -24,6 +38,7 @@ type PreviewSlop = {
 };
 type PreviewWindow = {
   slop?: PreviewSlop;
+  addEventListener: (...args: unknown[]) => void;
   dispatched: string[];
   dispatchEvent: (event: { type: string }) => void;
 };
@@ -33,6 +48,7 @@ function previewHost(data?: unknown): {
   document: { documentElement: { dataset: Record<string, string> } };
 } {
   const window: PreviewWindow = {
+    addEventListener() {},
     dispatched: [],
     dispatchEvent(event) {
       this.dispatched.push(event.type);
@@ -68,19 +84,17 @@ test("browser preview injects a disposable host and optional default theme", () 
 
 test("browser preview keeps document data in memory and publishes isolated frames", async () => {
   const slop = previewHost().window.slop!;
-  const frames: DocumentFrame[] = [];
-  const stop = slop.document.onChange((frame) => frames.push(frame));
-  const opened = await slop.document.open({ count: 1 });
-  expect(opened).toMatchObject({ data: { count: 1 }, revision: "dev:0" });
-  (opened.data as { count: number }).count = 99;
-  expect((await slop.document.flush()).data).toEqual({ count: 1 });
-  expect(await slop.document.apply({ after: { count: 2 } })).toMatchObject({
-    data: { count: 2 },
-    publication: 1,
-  });
+  const frames: Snapshot[] = [];
+  const stop = slop.document.subscribe((frame) => frames.push(frame));
+  const opened = await slop.document.open({ schema, initial: { count: 1 } });
+  expect(opened.snapshot).toMatchObject({ data: { count: 1 }, revision: 0 });
+  (opened.snapshot.data as { count: number }).count = 99;
+  expect((await slop.document.open()).snapshot.data).toEqual({ count: 1 });
+  expect(await slop.document.send(edit(opened, 2))).toEqual({ ok: true, revision: 1 });
   expect(frames).toHaveLength(1);
+  expect(frames[0]!.data).toEqual({ count: 2 });
   stop();
-  await slop.document.apply({ after: { count: 4 } });
+  await slop.document.send(edit(opened, 4));
   expect(frames).toHaveLength(1);
 });
 
@@ -88,12 +102,18 @@ test("browser preview supplies media, window, and readiness stubs", async () => 
   const host = previewHost();
   const slop = host.window.slop!;
   expect("db" in slop).toBe(false);
-  expect(await slop.media.open("hero")).toEqual({
-    exists: false,
-    revision: null,
-  });
-  expect((await slop.media.write("hero", "", "image/png")).revision).toBe("dev-media:1");
-  expect(await slop.media.remove("hero")).toEqual({ revision: null });
+  expect(await slop.media.open("a".repeat(64))).toEqual({ src: null });
+  const encoded =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+  const added = await slop.media.add(encoded, "image");
+  expect(added.sha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(added.mime).toBe("image/png");
+  const opened = await slop.media.open(added.sha256);
+  expect(opened.src).toStartWith("blob:");
+  expect(await (await fetch(opened.src!)).arrayBuffer()).toEqual(
+    Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0)).buffer,
+  );
+  expect(await slop.media.add(encoded, "image")).toEqual(added);
   expect(await slop.window.resize({ width: 500, height: 400 })).toEqual({
     width: 500,
     height: 400,
@@ -108,10 +128,13 @@ test("review fixtures initialize isolated stores without changing defaults", asy
   const fixture = { count: 7, extra: "keep" };
   const a = previewHost(fixture).window.slop!;
   const b = previewHost(fixture).window.slop!;
-  expect((await a.document.open({ count: 0 })).data).toEqual(fixture);
-  await a.document.apply({ after: { count: 99 } });
-  expect((await b.document.open({ count: 0 })).data).toEqual(fixture);
-  expect((await previewHost().window.slop!.document.open({ count: 0 })).data).toEqual({ count: 0 });
+  expect((await a.document.open({ schema, initial: { count: 0 } })).snapshot.data).toEqual(fixture);
+  await a.document.send(edit(await a.document.open(), 99));
+  expect((await b.document.open({ schema, initial: { count: 0 } })).snapshot.data).toEqual(fixture);
+  expect(
+    (await previewHost().window.slop!.document.open({ schema, initial: { count: 0 } })).snapshot
+      .data,
+  ).toEqual({ count: 0 });
 });
 
 test("review injection escapes script terminators and stays out of normal previews", () => {

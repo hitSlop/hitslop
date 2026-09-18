@@ -6,7 +6,7 @@ import { documentStore } from "../src/document-store.svelte.ts";
 
 // Compiled only; every @ts-expect-error must correspond to a real strict error.
 function typeChecks(host: Host, input: HTMLInputElement) {
-  const schema = S.Document({ count: S.Integer(), title: S.Text(), enabled: S.Boolean(), note: S.Optional(S.String()),
+  const schema = S.Document({ count: S.Integer(), title: S.String(), enabled: S.Boolean(), note: S.Optional(S.String()),
     list: S.List(S.Object({ id: S.String(), done: S.Boolean() }), "id"),
     array: S.Array(S.Object({ id: S.String() })), record: S.Record(S.Number()),
   });

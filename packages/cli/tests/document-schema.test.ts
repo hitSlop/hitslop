@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { build } from "vite";
 
-test("Checklist retains its UI and uses interpreted validation without compilers", async () => {
+test("Checklist retains its UI and uses prepared TypeBox validation with its CSP fallback", async () => {
   const root = fileURLToPath(new URL("../../../examples/slops/quick-checklist", import.meta.url));
   const environment = process.env.NODE_ENV;
   let result: Awaited<ReturnType<typeof build>>;
@@ -29,11 +29,10 @@ test("Checklist retains its UI and uses interpreted validation without compilers
   expect(modules.some((path) => path.includes("/bits-ui/"))).toBe(true);
   expect(modules.some((path) => path.includes("/typebox/"))).toBe(true);
   expect(modules.some((path) => /\/ajv\/dist\/(compile|core|2020)/.test(path))).toBe(false);
-  expect(modules.some((path) => path.includes("/typebox/") && /\/compile\//.test(path))).toBe(
-    false,
-  );
+  expect(modules.some((path) => path.includes("/typebox/") && /\/compile\//.test(path))).toBe(true);
   expect(modules.some((path) => path.includes("/.hitslop/generated/"))).toBe(false);
   expect(code).not.toContain("new Function(");
-  expect(Buffer.byteLength(code)).toBeLessThan(340_000);
-  expect(gzipSync(code).length).toBeLessThan(100_000);
+  // Prepared TypeBox validation adds ~21 KiB; keep a bounded 380 KiB raw budget.
+  expect(Buffer.byteLength(code)).toBeLessThan(380_000);
+  expect(gzipSync(code).length).toBeLessThan(115_000);
 }, 30_000);

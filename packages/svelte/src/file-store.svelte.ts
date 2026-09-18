@@ -1,15 +1,8 @@
-import { MediaStore } from "./media-store.svelte.js";
+import { MediaStore, type MediaDocument, type MediaPath } from "./media-store.svelte.js";
 export type FileStoreOptions = { accept?: string };
-export class FileStore extends MediaStore<null> {
-  constructor(
-    name: string,
-    readonly options: FileStoreOptions = {},
-  ) {
-    super(name, null, options.accept ?? "");
-  }
-  get hasCustomFile(): boolean {
-    return this.hasCustomMedia;
-  }
-}
-export const fileStore = (name: string, options: FileStoreOptions = {}): FileStore =>
-  new FileStore(name, options);
+export type FileStore = MediaStore<null>;
+export const fileStore = (
+  document: MediaDocument,
+  path: MediaPath,
+  options: FileStoreOptions = {},
+): FileStore => new MediaStore(document, path, null, "file", options.accept ?? "");

@@ -1,0 +1,283 @@
+{
+  "configuration": "release",
+  "toolchain": "Swift 6.4; macOS 26.6.2 arm64",
+  "scope": "Isolated WKWebView and SQLite after prepared document persistence and digest receipts; plain DOM, not Svelte or the production bridge. Three warmup samples, five measured. The harness separately encodes its reply snapshot. Local observations, not an SLA.",
+  "results": [
+    {
+      "rows": 1000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 20.503,
+          "loadMs": 4.166292,
+          "applyValidateMs": 15.410042,
+          "saveMs": 0.373041,
+          "roundTripMs": 23.999999999999773,
+          "commandToLayoutMs": 23.999999999999773
+        },
+        {
+          "authorityMs": 22.053375,
+          "loadMs": 4.298917,
+          "applyValidateMs": 16.311583,
+          "saveMs": 0.668042,
+          "roundTripMs": 26,
+          "commandToLayoutMs": 26
+        },
+        {
+          "authorityMs": 21.339083,
+          "loadMs": 4.359583,
+          "applyValidateMs": 15.680833,
+          "saveMs": 0.547542,
+          "roundTripMs": 25,
+          "commandToLayoutMs": 25
+        },
+        {
+          "authorityMs": 21.694917,
+          "loadMs": 4.677417,
+          "applyValidateMs": 15.828333,
+          "saveMs": 0.497958,
+          "roundTripMs": 26,
+          "commandToLayoutMs": 26
+        },
+        {
+          "authorityMs": 21.129625,
+          "loadMs": 4.424167,
+          "applyValidateMs": 15.788666,
+          "saveMs": 0.406292,
+          "roundTripMs": 24,
+          "commandToLayoutMs": 25
+        }
+      ]
+    },
+    {
+      "rows": 1000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 21.598083,
+          "loadMs": 4.317583,
+          "applyValidateMs": 16.162584,
+          "saveMs": 0.461625,
+          "roundTripMs": 24.999999999999545,
+          "commandToLayoutMs": 25.999999999999545
+        },
+        {
+          "authorityMs": 21.110792,
+          "loadMs": 4.249375,
+          "applyValidateMs": 15.825875,
+          "saveMs": 0.447583,
+          "roundTripMs": 24,
+          "commandToLayoutMs": 24
+        },
+        {
+          "authorityMs": 20.8485,
+          "loadMs": 4.194042,
+          "applyValidateMs": 15.739833,
+          "saveMs": 0.383375,
+          "roundTripMs": 25,
+          "commandToLayoutMs": 25
+        },
+        {
+          "authorityMs": 21.6225,
+          "loadMs": 4.215958,
+          "applyValidateMs": 16.509334,
+          "saveMs": 0.364208,
+          "roundTripMs": 25,
+          "commandToLayoutMs": 26
+        },
+        {
+          "authorityMs": 22.293917,
+          "loadMs": 4.521875,
+          "applyValidateMs": 16.884084,
+          "saveMs": 0.353667,
+          "roundTripMs": 27,
+          "commandToLayoutMs": 27
+        }
+      ]
+    },
+    {
+      "rows": 5000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 116.040459,
+          "loadMs": 24.029708,
+          "applyValidateMs": 89.974208,
+          "saveMs": 0.759708,
+          "roundTripMs": 133,
+          "commandToLayoutMs": 134
+        },
+        {
+          "authorityMs": 109.665583,
+          "loadMs": 24.086041,
+          "applyValidateMs": 83.988875,
+          "saveMs": 0.491334,
+          "roundTripMs": 126,
+          "commandToLayoutMs": 127
+        },
+        {
+          "authorityMs": 107.532292,
+          "loadMs": 22.375334,
+          "applyValidateMs": 83.575791,
+          "saveMs": 0.491834,
+          "roundTripMs": 123,
+          "commandToLayoutMs": 124
+        },
+        {
+          "authorityMs": 109.099083,
+          "loadMs": 22.6995,
+          "applyValidateMs": 83.965417,
+          "saveMs": 0.498708,
+          "roundTripMs": 125.00000000000011,
+          "commandToLayoutMs": 126
+        },
+        {
+          "authorityMs": 105.940708,
+          "loadMs": 22.502666,
+          "applyValidateMs": 81.255625,
+          "saveMs": 0.424584,
+          "roundTripMs": 121,
+          "commandToLayoutMs": 121
+        }
+      ]
+    },
+    {
+      "rows": 5000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 108.451792,
+          "loadMs": 22.442375,
+          "applyValidateMs": 83.856708,
+          "saveMs": 0.497,
+          "roundTripMs": 125,
+          "commandToLayoutMs": 126
+        },
+        {
+          "authorityMs": 107.756083,
+          "loadMs": 22.462334,
+          "applyValidateMs": 83.643208,
+          "saveMs": 0.498041,
+          "roundTripMs": 124,
+          "commandToLayoutMs": 125
+        },
+        {
+          "authorityMs": 108.15725,
+          "loadMs": 22.417416,
+          "applyValidateMs": 83.512459,
+          "saveMs": 0.502625,
+          "roundTripMs": 124,
+          "commandToLayoutMs": 126
+        },
+        {
+          "authorityMs": 106.9615,
+          "loadMs": 22.590792,
+          "applyValidateMs": 82.488417,
+          "saveMs": 0.519958,
+          "roundTripMs": 122,
+          "commandToLayoutMs": 124.00000000000023
+        },
+        {
+          "authorityMs": 108.262,
+          "loadMs": 22.263292,
+          "applyValidateMs": 84.551583,
+          "saveMs": 0.622292,
+          "roundTripMs": 123.99999999999977,
+          "commandToLayoutMs": 125.00000000000023
+        }
+      ]
+    },
+    {
+      "rows": 10000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 218.218459,
+          "loadMs": 48.32825,
+          "applyValidateMs": 167.818041,
+          "saveMs": 0.571958,
+          "roundTripMs": 249,
+          "commandToLayoutMs": 251
+        },
+        {
+          "authorityMs": 224.464292,
+          "loadMs": 44.939875,
+          "applyValidateMs": 177.235333,
+          "saveMs": 0.601,
+          "roundTripMs": 257,
+          "commandToLayoutMs": 259
+        },
+        {
+          "authorityMs": 215.702167,
+          "loadMs": 45.894333,
+          "applyValidateMs": 167.712667,
+          "saveMs": 0.586417,
+          "roundTripMs": 247,
+          "commandToLayoutMs": 249
+        },
+        {
+          "authorityMs": 226.217375,
+          "loadMs": 45.17975,
+          "applyValidateMs": 178.660417,
+          "saveMs": 0.861041,
+          "roundTripMs": 258,
+          "commandToLayoutMs": 260
+        },
+        {
+          "authorityMs": 219.138417,
+          "loadMs": 47.711417,
+          "applyValidateMs": 168.974834,
+          "saveMs": 0.894542,
+          "roundTripMs": 251,
+          "commandToLayoutMs": 252
+        }
+      ]
+    },
+    {
+      "rows": 10000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 224.329875,
+          "loadMs": 47.095167,
+          "applyValidateMs": 174.139458,
+          "saveMs": 0.920542,
+          "roundTripMs": 256,
+          "commandToLayoutMs": 259
+        },
+        {
+          "authorityMs": 216.529125,
+          "loadMs": 45.232667,
+          "applyValidateMs": 168.782917,
+          "saveMs": 0.815875,
+          "roundTripMs": 248,
+          "commandToLayoutMs": 251
+        },
+        {
+          "authorityMs": 215.49525,
+          "loadMs": 45.027875,
+          "applyValidateMs": 167.759458,
+          "saveMs": 1.01975,
+          "roundTripMs": 247,
+          "commandToLayoutMs": 250
+        },
+        {
+          "authorityMs": 224.60475,
+          "loadMs": 48.25175,
+          "applyValidateMs": 173.425375,
+          "saveMs": 0.802875,
+          "roundTripMs": 256,
+          "commandToLayoutMs": 259
+        },
+        {
+          "authorityMs": 217.054,
+          "loadMs": 45.371792,
+          "applyValidateMs": 169.363292,
+          "saveMs": 0.647667,
+          "roundTripMs": 248,
+          "commandToLayoutMs": 251
+        }
+      ]
+    }
+  ]
+}

@@ -1,1 +1,1 @@
-export const hitslopSyncKeyword = "x-hitslop";
+export const hitslopDocumentKeyword = "x-hitslop";

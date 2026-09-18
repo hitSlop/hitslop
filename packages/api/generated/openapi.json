@@ -639,85 +639,47 @@
         "title": "RoomSession",
         "additionalProperties": false
       },
-      "RoomInitialized": {
-        "type": "object",
-        "required": [
-          "roomId",
-          "protocol"
-        ],
-        "properties": {
-          "roomId": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9-]{1,80}$"
-          },
-          "protocol": {
-            "type": "integer",
-            "enum": [
-              1
-            ]
-          }
-        },
-        "title": "RoomInitialized",
-        "additionalProperties": false
-      },
-      "RoomSnapshot": {
-        "type": "object",
-        "required": [
-          "documentId",
-          "schema",
-          "checkpoint",
-          "version"
-        ],
-        "properties": {
-          "documentId": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9-]{1,80}$"
-          },
-          "schema": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
-          },
-          "checkpoint": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 699052
-          },
-          "version": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 65536
-          }
-        },
-        "title": "RoomSnapshot",
-        "additionalProperties": false
-      },
       "RoomSeed": {
         "type": "object",
         "required": [
           "protocol",
-          "sequence",
-          "hash",
           "snapshot"
         ],
         "properties": {
           "protocol": {
-            "type": "integer",
-            "enum": [
-              1
-            ]
-          },
-          "sequence": {
-            "type": "integer",
-            "enum": [
-              1
-            ]
-          },
-          "hash": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
+            "type": "number",
+            "const": 3
           },
           "snapshot": {
-            "$ref": "#/components/schemas/RoomSnapshot"
+            "type": "object",
+            "required": [
+              "documentId",
+              "schemaHash",
+              "authority",
+              "revision",
+              "data"
+            ],
+            "properties": {
+              "documentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "schemaHash": {
+                "type": "string",
+                "minLength": 1
+              },
+              "authority": {
+                "type": "string",
+                "minLength": 1
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "data": {}
+            },
+            "additionalProperties": false
           }
         },
         "title": "RoomSeed",
@@ -745,24 +707,16 @@
         "required": [
           "type",
           "protocol",
-          "bootId",
           "peers"
         ],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "welcome"
-            ]
+            "const": "welcome"
           },
           "protocol": {
-            "type": "integer",
-            "enum": [
-              1
-            ]
-          },
-          "bootId": {
-            "type": "string"
+            "type": "number",
+            "const": 3
           },
           "peers": {
             "type": "array",
@@ -784,9 +738,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "presence"
-            ]
+            "const": "presence"
           },
           "peers": {
             "type": "array",
@@ -799,107 +751,93 @@
         "title": "RoomPresence",
         "additionalProperties": false
       },
-      "RoomBatch": {
-        "type": "object",
-        "required": [
-          "id",
-          "hash",
-          "bytes"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
-          },
-          "hash": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
-          },
-          "bytes": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 699052
-          }
-        },
-        "title": "RoomBatch",
-        "additionalProperties": false
-      },
-      "RoomUpdate": {
-        "type": "object",
-        "required": [
-          "sequence",
-          "batch"
-        ],
-        "properties": {
-          "sequence": {
-            "type": "integer",
-            "minimum": 2,
-            "maximum": 10000
-          },
-          "batch": {
-            "$ref": "#/components/schemas/RoomBatch"
-          }
-        },
-        "title": "RoomUpdate",
-        "additionalProperties": false
-      },
-      "RoomUpdates": {
-        "type": "object",
-        "required": [
-          "type",
-          "documentId",
-          "schema",
-          "updates"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "updates"
-            ]
-          },
-          "documentId": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9-]{1,80}$"
-          },
-          "schema": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
-          },
-          "updates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RoomUpdate"
-            },
-            "minItems": 1,
-            "maxItems": 32
-          }
-        },
-        "title": "RoomUpdates",
-        "additionalProperties": false
-      },
       "RoomReady": {
         "type": "object",
         "required": [
           "type",
-          "head",
-          "bootId",
+          "open",
           "peers"
         ],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "ready"
-            ]
+            "const": "ready"
           },
-          "head": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10000
-          },
-          "bootId": {
-            "type": "string"
+          "open": {
+            "type": "object",
+            "required": [
+              "snapshot",
+              "lease"
+            ],
+            "properties": {
+              "snapshot": {
+                "type": "object",
+                "required": [
+                  "documentId",
+                  "schemaHash",
+                  "authority",
+                  "revision",
+                  "data"
+                ],
+                "properties": {
+                  "documentId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "schemaHash": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "authority": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "data": {}
+                },
+                "additionalProperties": false
+              },
+              "lease": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "expiresAt"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "expiresAt": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              },
+              "status": {
+                "type": "object",
+                "required": [
+                  "connected",
+                  "writable"
+                ],
+                "properties": {
+                  "connected": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
           },
           "peers": {
             "type": "array",
@@ -912,36 +850,151 @@
         "title": "RoomReady",
         "additionalProperties": false
       },
-      "RoomAck": {
+      "RoomSnapshotMessage": {
         "type": "object",
         "required": [
           "type",
-          "id",
-          "hash",
-          "sequence"
+          "snapshot"
         ],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "ack"
-            ]
+            "const": "snapshot"
           },
-          "id": {
-            "type": "string",
-            "pattern": "^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
-          },
-          "hash": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
-          },
-          "sequence": {
-            "type": "integer",
-            "minimum": 2,
-            "maximum": 10000
+          "snapshot": {
+            "type": "object",
+            "required": [
+              "documentId",
+              "schemaHash",
+              "authority",
+              "revision",
+              "data"
+            ],
+            "properties": {
+              "documentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "schemaHash": {
+                "type": "string",
+                "minLength": 1
+              },
+              "authority": {
+                "type": "string",
+                "minLength": 1
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "data": {}
+            },
+            "additionalProperties": false
           }
         },
-        "title": "RoomAck",
+        "title": "RoomSnapshotMessage",
+        "additionalProperties": false
+      },
+      "RoomResultMessage": {
+        "type": "object",
+        "required": [
+          "type",
+          "requestId",
+          "leaseId",
+          "authority",
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "result"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "leaseId": {
+            "type": "string"
+          },
+          "authority": {
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "revision"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "const": true
+                  },
+                  "revision": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "required": [
+                  "ok",
+                  "error"
+                ],
+                "properties": {
+                  "ok": {
+                    "type": "boolean",
+                    "const": false
+                  },
+                  "error": {
+                    "type": "object",
+                    "required": [
+                      "code",
+                      "message"
+                    ],
+                    "properties": {
+                      "code": {
+                        "enum": [
+                          "invalid_request",
+                          "invalid_path",
+                          "invalid_operation",
+                          "missing_target",
+                          "missing_anchor",
+                          "duplicate_id",
+                          "identity_change",
+                          "validation",
+                          "stale_revision",
+                          "request_reused",
+                          "offline",
+                          "rejected",
+                          "unknown_outcome",
+                          "batch_usage",
+                          "closed",
+                          "not_ready",
+                          "authority_changed",
+                          "lease_expired",
+                          "storage_unavailable"
+                        ],
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "title": "RoomResultMessage",
         "additionalProperties": false
       },
       "RoomError": {
@@ -954,9 +1007,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "error"
-            ]
+            "const": "error"
           },
           "status": {
             "type": "integer",
@@ -979,13 +1030,13 @@
             "$ref": "#/components/schemas/RoomPresence"
           },
           {
-            "$ref": "#/components/schemas/RoomUpdates"
-          },
-          {
             "$ref": "#/components/schemas/RoomReady"
           },
           {
-            "$ref": "#/components/schemas/RoomAck"
+            "$ref": "#/components/schemas/RoomSnapshotMessage"
+          },
+          {
+            "$ref": "#/components/schemas/RoomResultMessage"
           },
           {
             "$ref": "#/components/schemas/RoomError"
@@ -996,9 +1047,9 @@
           "mapping": {
             "welcome": "#/components/schemas/RoomWelcome",
             "presence": "#/components/schemas/RoomPresence",
-            "updates": "#/components/schemas/RoomUpdates",
             "ready": "#/components/schemas/RoomReady",
-            "ack": "#/components/schemas/RoomAck",
+            "snapshot": "#/components/schemas/RoomSnapshotMessage",
+            "result": "#/components/schemas/RoomResultMessage",
             "error": "#/components/schemas/RoomError"
           }
         }
@@ -1009,21 +1060,16 @@
           "type",
           "protocol",
           "documentId",
-          "schema",
-          "after"
+          "schema"
         ],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "hello"
-            ]
+            "const": "hello"
           },
           "protocol": {
-            "type": "integer",
-            "enum": [
-              1
-            ]
+            "type": "number",
+            "const": 3
           },
           "documentId": {
             "type": "string",
@@ -1032,78 +1078,587 @@
           "schema": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
-          },
-          "after": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10000
-          },
-          "batchSize": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 32
           }
         },
         "title": "RoomHello",
         "additionalProperties": false
       },
-      "RoomApplied": {
-        "type": "object",
-        "required": [
-          "type",
-          "sequence"
-        ],
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "applied"
-            ]
-          },
-          "sequence": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10000
-          }
-        },
-        "title": "RoomApplied",
-        "additionalProperties": false
-      },
-      "RoomAppend": {
+      "RoomExecute": {
         "type": "object",
         "required": [
           "type",
           "protocol",
-          "documentId",
-          "schema",
-          "batch"
+          "request"
         ],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "append"
-            ]
+            "const": "execute"
           },
           "protocol": {
-            "type": "integer",
-            "enum": [
-              1
+            "type": "number",
+            "const": 3
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "object",
+                "required": [
+                  "documentId",
+                  "schemaHash",
+                  "authority",
+                  "leaseId",
+                  "requestId",
+                  "ops"
+                ],
+                "properties": {
+                  "documentId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "schemaHash": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "authority": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "leaseId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "ops": {
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "op",
+                            "path",
+                            "value"
+                          ],
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "const": "set"
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "key"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "item"
+                                    ],
+                                    "properties": {
+                                      "item": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "maxItems": 64
+                            },
+                            "value": {}
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "op",
+                            "path"
+                          ],
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "const": "unset"
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "key"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "item"
+                                    ],
+                                    "properties": {
+                                      "item": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "maxItems": 64
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "op",
+                            "path"
+                          ],
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "const": "toggle"
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "key"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "item"
+                                    ],
+                                    "properties": {
+                                      "item": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "maxItems": 64
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "op",
+                            "path",
+                            "amount"
+                          ],
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "const": "increment"
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "key"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "item"
+                                    ],
+                                    "properties": {
+                                      "item": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "maxItems": 64
+                            },
+                            "amount": {
+                              "type": "number"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "op",
+                            "path",
+                            "value"
+                          ],
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "const": "insert"
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "key"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "item"
+                                    ],
+                                    "properties": {
+                                      "item": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "maxItems": 64
+                            },
+                            "value": {},
+                            "position": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "before"
+                                  ],
+                                  "properties": {
+                                    "before": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "after"
+                                  ],
+                                  "properties": {
+                                    "after": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "op",
+                            "path",
+                            "id"
+                          ],
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "const": "remove"
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "key"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "item"
+                                    ],
+                                    "properties": {
+                                      "item": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "maxItems": 64
+                            },
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "op",
+                            "path",
+                            "id",
+                            "position"
+                          ],
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "const": "move"
+                            },
+                            "path": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "key"
+                                    ],
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "required": [
+                                      "item"
+                                    ],
+                                    "properties": {
+                                      "item": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "maxItems": 64
+                            },
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "position": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "before"
+                                  ],
+                                  "properties": {
+                                    "before": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "required": [
+                                    "after"
+                                  ],
+                                  "properties": {
+                                    "after": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    }
+                                  },
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 20000
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "required": [
+                  "documentId",
+                  "schemaHash",
+                  "authority",
+                  "leaseId",
+                  "requestId",
+                  "undo"
+                ],
+                "properties": {
+                  "documentId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "schemaHash": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "authority": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "leaseId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "undo": {
+                    "type": "object",
+                    "required": [
+                      "requestId",
+                      "revision"
+                    ],
+                    "properties": {
+                      "requestId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "revision": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "required": [
+                  "documentId",
+                  "schemaHash",
+                  "authority",
+                  "leaseId",
+                  "requestId",
+                  "replace"
+                ],
+                "properties": {
+                  "documentId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "schemaHash": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "authority": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "leaseId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "replace": {
+                    "type": "object",
+                    "required": [
+                      "baseRevision",
+                      "data"
+                    ],
+                    "properties": {
+                      "baseRevision": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "data": {}
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
             ]
-          },
-          "documentId": {
-            "type": "string",
-            "pattern": "^[a-zA-Z0-9-]{1,80}$"
-          },
-          "schema": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$"
-          },
-          "batch": {
-            "$ref": "#/components/schemas/RoomBatch"
           }
         },
-        "title": "RoomAppend",
+        "title": "RoomExecute",
         "additionalProperties": false
       },
       "RoomClientMessage": {
@@ -1112,18 +1667,14 @@
             "$ref": "#/components/schemas/RoomHello"
           },
           {
-            "$ref": "#/components/schemas/RoomApplied"
-          },
-          {
-            "$ref": "#/components/schemas/RoomAppend"
+            "$ref": "#/components/schemas/RoomExecute"
           }
         ],
         "discriminator": {
           "propertyName": "type",
           "mapping": {
             "hello": "#/components/schemas/RoomHello",
-            "applied": "#/components/schemas/RoomApplied",
-            "append": "#/components/schemas/RoomAppend"
+            "execute": "#/components/schemas/RoomExecute"
           }
         }
       }
@@ -2292,8 +2843,7 @@
                   "title",
                   "slug",
                   "schema",
-                  "checkpoint",
-                  "version",
+                  "seed",
                   "package"
                 ],
                 "properties": {
@@ -2315,15 +2865,10 @@
                     "type": "string",
                     "pattern": "^[a-f0-9]{64}$"
                   },
-                  "checkpoint": {
+                  "seed": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 699052
-                  },
-                  "version": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 65536
+                    "maxLength": 2097152
                   },
                   "package": {
                     "type": "string",
@@ -3688,230 +4233,6 @@
         "security": [
           {
             "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/rooms/{documentId}": {
-      "post": {
-        "operationId": "initializeRoom",
-        "parameters": [
-          {
-            "in": "path",
-            "required": true,
-            "name": "documentId",
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-zA-Z0-9-]{1,80}$"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "protocol": {
-                    "type": "integer",
-                    "enum": [
-                      1
-                    ]
-                  },
-                  "schema": {
-                    "type": "string",
-                    "pattern": "^[a-f0-9]{64}$"
-                  },
-                  "checkpoint": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 699052
-                  },
-                  "version": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 65536
-                  }
-                },
-                "required": [
-                  "protocol",
-                  "schema",
-                  "checkpoint",
-                  "version"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RoomInitialized"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "400",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/BadRequest"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "401",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/Unauthorized"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "403",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/Forbidden"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "404",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/NotFound"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "409",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/Conflict"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "413",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/PayloadTooLarge"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "429",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/TooManyRequests"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "500",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/InternalServerError"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "503",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ServiceUnavailable"
-                    },
-                    {
-                      "$ref": "#/components/schemas/UndefinedError"
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "roomToken": []
           }
         ]
       }

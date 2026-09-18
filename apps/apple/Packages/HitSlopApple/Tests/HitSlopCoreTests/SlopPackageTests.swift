@@ -25,12 +25,12 @@ import ZIPFoundation
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     let media = root.appendingPathComponent("stores/media")
     try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
-    try Data("broken".utf8).write(to: media.appendingPathComponent("hero"))
+    try Data("broken".utf8).write(to: media.appendingPathComponent(String(repeating: "a", count: 64)))
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
-    #expect(throws: SlopPackageError.self) { _ = try SlopMediaStore(directoryURL: media).open("hero") }
+    #expect(throws: SlopPackageError.self) { _ = try SlopMediaStore(directoryURL: media).open(String(repeating: "a", count: 64)) }
     let store = SlopMediaStore(directoryURL: media)
     let before = try store.directoryRevision()
-    try Data("still broken, but changed".utf8).write(to: media.appendingPathComponent("hero"))
+    try Data("still broken, but changed".utf8).write(to: media.appendingPathComponent(String(repeating: "a", count: 64)))
     #expect(try store.directoryRevision() != before)
     try FileManager.default.createSymbolicLink(at: media.appendingPathComponent("linked"), withDestinationURL: root.appendingPathComponent("app.html"))
     #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
@@ -73,37 +73,44 @@ import ZIPFoundation
     try Data(#"{"count":3}"#.utf8).write(to: source.appendingPathComponent("stores/data.json"))
     let media = source.appendingPathComponent("stores/media", isDirectory: true)
     try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
-    try writeSkin(to: media.appendingPathComponent("hero"), width: 2, height: 2)
+    let input = temporary.appendingPathComponent("photo.png")
+    try writeSkin(to: input, width: 2, height: 2)
+    let hash = try SlopMediaStore(directoryURL: media).add(Data(contentsOf: input)).sha256
     let destination = temporary.appendingPathComponent("document-copy.slop")
     try SlopDuplicator.duplicate(from: source, to: destination)
     #expect(try Data(contentsOf: destination.appendingPathComponent("stores/data.json")) == Data(#"{"count":3}"#.utf8))
-    #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/media/hero").path))
+    #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/media/\(hash)").path))
 }
 
-@Test func namedMediaStoresValidateImagesAndReplaceAtomically() throws {
+@Test func documentMediaIsImmutableAndVerified() throws {
     let root = try fixture(), temporary = root.deletingLastPathComponent(); defer { try? FileManager.default.removeItem(at: temporary) }
     let input = temporary.appendingPathComponent("input.png")
     try writeSkin(to: input, width: 2, height: 2)
+    let bytes = try Data(contentsOf: input)
     let store = SlopMediaStore(directoryURL: root.appendingPathComponent("stores/media", isDirectory: true))
-    let first = try store.write("hero", base64: Data(contentsOf: input).base64EncodedString())
-    #expect(try store.open("hero").exists)
-    #expect(try store.open("hero").revision == first)
-    #expect(throws: SlopPackageError.self) { _ = try store.write("../hero", base64: Data(contentsOf: input).base64EncodedString()) }
-    #expect(throws: SlopPackageError.self) { _ = try store.write("bad", base64: Data("not an image".utf8).base64EncodedString()) }
+    let first = try store.add(bytes, imageOnly: true)
+    #expect(try store.open(first.sha256))
+    #expect(try store.read(first.sha256) == bytes)
+    #expect(try store.add(bytes).sha256 == first.sha256)
+    #expect(try FileManager.default.contentsOfDirectory(atPath: store.url(for: first.sha256).deletingLastPathComponent().path).count == 1)
+    #expect(throws: SlopPackageError.self) { _ = try store.open("../photo") }
+    #expect(throws: SlopPackageError.self) { _ = try store.add(Data("not an image".utf8)) }
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
-    try store.remove("hero")
-    #expect(try !store.open("hero").exists)
+    try Data("corrupt".utf8).write(to: store.url(for: first.sha256))
+    #expect(throws: SlopPackageError.self) { _ = try store.read(first.sha256) }
+    #expect(throws: SlopPackageError.self) { _ = try store.add(bytes) }
 }
 
-@Test func namedMediaStoresAcceptBoundedZIPArchives() throws {
+@Test func documentMediaAcceptsBoundedZIPArchivesOnlyForFiles() throws {
     let root = try fixture(), temporary = root.deletingLastPathComponent(); defer { try? FileManager.default.removeItem(at: temporary) }
     let encoded = "UEsDBBQAAAAIAG1VIV3uQOUFCQAAAAcAAAAIAAAATUFJTi5CTVBLy6woKS1KBQBQSwECFAAUAAAACABtVSFd7kDlBQkAAAAHAAAACAAAAAAAAAAAAAAAAAAAAAAATUFJTi5CTVBQSwUGAAAAAAEAAQA2AAAALwAAAAAA"
     let archive = try #require(Data(base64Encoded: encoded))
     let store = SlopMediaStore(directoryURL: root.appendingPathComponent("stores/media", isDirectory: true))
-    let revision = try store.write("skin", base64: encoded)
-    #expect(try store.open("skin").revision == revision)
-    #expect(try SlopMediaStore.mediaMIMEType(archive) == "application/zip")
-    #expect(throws: SlopPackageError.self) { _ = try store.write("bad", base64: Data("not media".utf8).base64EncodedString()) }
+    let reference = try store.add(base64: encoded, imageOnly: false)
+    #expect(try store.open(reference.sha256))
+    #expect(reference.mime == "application/zip")
+    #expect(throws: SlopPackageError.self) { _ = try store.add(archive, imageOnly: true) }
+    #expect(throws: SlopPackageError.self) { _ = try store.add(Data("not media".utf8)) }
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
 }
 
@@ -268,6 +275,6 @@ private func v1Envelope(_ schema: String) throws -> Data {
     let application = try JSONSerialization.jsonObject(with: Data(schema.utf8))
     return try JSONSerialization.data(withJSONObject: ["type": "object", "additionalProperties": false,
         "required": ["$slop", "data"], "properties": ["data": application,
-        "$slop": ["type": "object", "additionalProperties": false, "required": ["format", "baseRevision"],
-        "properties": ["format": ["const": 1], "baseRevision": ["type": "string", "minLength": 1]]]]])
+        "$slop": ["type": "object", "additionalProperties": false, "required": ["format", "documentId", "schemaHash", "authority", "baseRevision"],
+        "properties": ["format": ["const": 2], "documentId": ["type": "string", "minLength": 1], "schemaHash": ["type": "string", "minLength": 1], "authority": ["type": "string", "minLength": 1], "baseRevision": ["type": "integer", "minimum": 0, "maximum": 9007199254740991]]]]])
 }

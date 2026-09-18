@@ -11,7 +11,7 @@ runtime document.
 ## Workflow
 
 1. Fix the single job, categories, and initial window size in the manifest.
-2. Choose no storage, JSON, named media, or a deliberate combination.
+2. Choose no persistence or JSON with optional document attachments.
 3. Develop against the disposable browser fake and test live plus static capture states.
 4. Validate and build a source-free, store-free runtime package.
 5. Register a local master, create a writable copy, and test reopen/export.
@@ -31,7 +31,9 @@ adding persistence or changing the runtime boundary.
   `data.schema.json`, the canonical document Agent Skill, optional immutable `assets/`, optional host-owned
   `stores/` in writable documents, and optional `QuickLook/` images.
 - Author root `schema.ts` with `import * as S from "@hitslop/schema/document"`.
-  Import that schema directly into `documentStore({ schema, initial })`.
+  Import that schema directly into `createDocument({ schema, initial })`. Get `fields`
+  from the store and wrap markup in `<Slop document={store}>`; use text attachments
+  and explicit verbs, with `transaction(tx => ...)` for atomic changes.
   Type inference requires no generated files or running dev server. The store
   uses TypeBox runtime validation; builds emit `data.schema.json` for the host.
   Keep schema definitions deterministic: app and builder evaluate separately.

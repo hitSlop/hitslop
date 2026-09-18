@@ -7,13 +7,17 @@ test("bridge requests retain nested JSON without defaults", () => {
   const packaged = compileDataSchema(dataSchemaFromJSON(BridgeRequestSchema));
   for (const value of [
     {
-      method: "document.apply",
-      session: "test",
-      sequence: 1,
-      base: "revision",
-      after: { list: [null, true, 3, { future: "keep" }] },
+      method: "document.execute",
+      request: {
+        documentId: "doc",
+        schemaHash: "schema",
+        authority: "local",
+        leaseId: "lease",
+        requestId: "test",
+        ops: [{ op: "set", path: [{ key: "list" }], value: [null, true, 3, { future: "keep" }] }],
+      },
     },
-    { method: "media.open", name: "hero-image" },
+    { method: "media.open", sha256: "a".repeat(64) },
   ]) {
     const before = JSON.stringify(value);
     expect(Object.is(validate(BridgeRequestSchema, value), value)).toBe(true);

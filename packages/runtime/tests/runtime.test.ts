@@ -3,32 +3,31 @@ import { installHost, slop, type SlopHost } from "../src/index.ts";
 
 test("delegates storage calls to the installed host", async () => {
   let value = { count: 1 };
-  let revision = "one";
   let dragged = false;
   const host: SlopHost = {
+    reportError: async () => {},
     document: {
+      connected: true,
+      writable: true,
       open: async () => ({
-        data: value,
-        revision,
-        publication: 0,
-        dirty: false,
-        error: null,
-        projectionError: null,
+        snapshot: {
+          documentId: "doc",
+          schemaHash: "schema",
+          authority: "local",
+          revision: 0,
+          data: value,
+        },
+        lease: { id: "lease", expiresAt: 100 },
       }),
-      apply: async () => {
+      send: async () => {
         throw new Error("Unused");
       },
-      flush: async () => {
-        throw new Error("Unused");
-      },
-      releaseDraft: async () => {
-        throw new Error("Unused");
-      },
-      onChange: () => () => {},
+      flush: async () => {},
+      subscribe: () => () => {},
+      onConnection: () => () => {},
     },
-    mediaOpen: async () => ({ exists: false, revision: null }),
-    mediaWrite: async () => ({ revision: "media-one" }),
-    mediaRemove: async () => ({ revision: null }),
+    mediaOpen: async () => ({ src: null }),
+    mediaAdd: async () => ({ sha256: "a".repeat(64), bytes: 5, mime: "image/png" }),
     resizeWindow: async (size) => size,
     dragWindow: async () => {
       dragged = true;
@@ -36,10 +35,9 @@ test("delegates storage calls to the installed host", async () => {
     watch: () => () => {},
   };
   const uninstall = installHost(host);
-  expect((await slop.document.open()).data).toEqual({ count: 1 });
-  expect((await slop.media.open("hero")).exists).toBe(false);
-  expect((await slop.media.write("hero", "aW1hZ2U=", "image/png")).revision).toBe("media-one");
-  expect((await slop.media.remove("hero")).revision).toBeNull();
+  expect((await slop.document.open()).snapshot.data).toEqual({ count: 1 });
+  expect((await slop.media.open("a".repeat(64))).src).toBeNull();
+  expect((await slop.media.add("aW1hZ2U=", "image")).sha256).toBe("a".repeat(64));
   expect(await slop.window.resize({ width: 725, height: 438 })).toEqual({
     width: 725,
     height: 438,

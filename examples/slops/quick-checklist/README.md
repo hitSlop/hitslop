@@ -21,7 +21,7 @@ running dev or generating files first.
 Root `schema.ts` default-exports
 an `S.Document` TypeBox schema and its inferred `Checklist` type. Use namespace imports:
 `import * as S from "@hitslop/schema/document"`. The app imports that schema directly and calls
-`documentStore({ schema: checklistSchema, initial })`. The store uses TypeBox runtime
+`createDocument({ schema: checklistSchema, initial })`. The store uses TypeBox runtime
 validation; the builder emits `data.schema.json` for the host. Schema definitions
 must be deterministic: do not depend on time, randomness, or environment state.
 Validation does not coerce, add defaults, or strip

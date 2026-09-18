@@ -37,7 +37,7 @@ private actor RecordingTransport: ClientTransport {
     @Test func generatedMultipartAndBinaryRequestsPreserveCredentialsAndBytes() async throws {
         let transport = RecordingTransport()
         let api = SlopCloudAPI(origin: URL(string: "https://example.com")!, transport: transport, authorization: { "firebase-token" })
-        let document = try await api.createDocument(id: "test-room", title: "Test", slug: "test", schema: String(repeating: "a", count: 64), package: Data("zip".utf8), seed: SlopLoroTransfer(documentId: "test-room", schema: String(repeating: "a", count: 64), checkpoint: "AQ==", version: "seed"))
+        let document = try await api.createDocument(id: "test-room", title: "Test", slug: "test", schema: String(repeating: "a", count: 64), package: Data("zip".utf8), seed: SlopDocumentJSON.object(["documentId": .string("test-room"), "schemaHash": .string(String(repeating: "a", count: 64)), "authority": .string("epoch"), "revision": .number(0), "data": .object([:])]))
         #expect(document.invite == nil)
         #expect(document.members.first?.id == "owner")
         _ = try await api.putMedia(Data([1, 2, 3]), mime: "image/png")

@@ -4,9 +4,8 @@ import HitSlopCore
 
 struct SlopStorageResult: @unchecked Sendable {
     let value: Any
-    var kind: SlopStoreKind? = nil
     var revision: String? = nil
-    var name: String? = nil
+    var sha256: String? = nil
 }
 struct SlopRevisions: Sendable {
     let media: String?
@@ -59,16 +58,13 @@ final class SlopStorageWorker: @unchecked Sendable {
         }
         switch method {
         case .mediaOpen:
-            let snapshot = try media.open(field("name", in: body))
-            return .init(value: ["exists": snapshot.exists, "revision": snapshot.revision as Any? ?? NSNull()])
-        case .mediaWrite:
-            let name: String = try field("name", in: body)
-            let revision = try media.write(name, base64: field("data", in: body))
-            return .init(value: ["revision": revision], kind: .media, revision: revision, name: name)
-        case .mediaRemove:
-            let name: String = try field("name", in: body)
-            try media.remove(name)
-            return .init(value: ["revision": NSNull()], kind: .media, name: name)
+            let hash: String = try field("sha256", in: body)
+            let exists = try media.open(hash)
+            return .init(value: ["src": exists ? "/media/\(hash)" as Any : NSNull()])
+        case .mediaAdd:
+            let kind: String = try field("kind", in: body)
+            let reference = try media.add(base64: field("data", in: body), imageOnly: kind == "image")
+            return .init(value: ["sha256": reference.sha256, "bytes": reference.bytes, "mime": reference.mime], revision: reference.sha256, sha256: reference.sha256)
         default: throw SlopBridgeFailure(.unsupported, "Unsupported storage method")
         }
     }

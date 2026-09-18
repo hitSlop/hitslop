@@ -30,3 +30,16 @@ const canonicalize = (value: unknown): string => {
 
 export const canonicalPublishEnvelope = (envelope: PublishEnvelope): Uint8Array =>
   new TextEncoder().encode(canonicalize(parsePublishEnvelope(envelope)));
+
+const id = Type.String({ minLength: 1, maxLength: 160 });
+
+export const RegistryPublishResultSchema = Type.Object(
+  {
+    templateId: id,
+    releaseId: id,
+    releaseNumber: Type.Integer({ minimum: 1, maximum: Number.MAX_SAFE_INTEGER }),
+  },
+  { additionalProperties: false, title: "RegistryPublishResult" },
+);
+
+export type RegistryPublishResult = Type.Static<typeof RegistryPublishResultSchema>;

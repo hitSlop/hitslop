@@ -40,7 +40,7 @@ struct Inspect: AsyncParsableCommand {
     @Argument(transform: URL.init(fileURLWithPath:)) var package: URL
     @MainActor func run() async throws {
         let opened = try SlopPackage(rootURL: package)
-        guard let document = try SlopLoroDocument.open(package: opened) else {
+        guard let document = try SlopCommandDocument.open(package: opened) else {
             throw ValidationError("This slop does not use a collaborative document.")
         }
         try await document.start()
@@ -55,14 +55,20 @@ struct Apply: AsyncParsableCommand {
     @Option(name: .customLong("json")) var json: String
     @MainActor func run() async throws {
         let opened = try SlopPackage(rootURL: package)
-        guard let document = try SlopLoroDocument.open(package: opened) else {
+        guard let document = try SlopCommandDocument.open(package: opened) else {
             throw ValidationError("This slop does not use a collaborative document.")
         }
         guard let bytes = json.data(using: .utf8) else { throw ValidationError("--json must be UTF-8") }
         try await document.start()
         let frame = try await document.frame()
         let after = try SlopDocumentJSON(data: bytes)
-        _ = try await document.apply(SlopDocumentEdit(session: UUID().uuidString, sequence: 1, base: frame.revision, after: after))
+        let opening = try await document.openGuest()
+        var request = frame.snapshot.object
+        request.removeValue(forKey: "data"); request.removeValue(forKey: "revision")
+        request["requestId"] = .string(UUID().uuidString); request["leaseId"] = opening["lease"]["id"]
+        request["replace"] = .object(["baseRevision": frame.snapshot["revision"], "data": after])
+        let result = try await document.apply(.object(request))
+        guard result["ok"] == .bool(true) else { throw ValidationError(result["error"]["message"].string ?? "Document edit failed") }
         try await document.close()
         print(package.path)
     }

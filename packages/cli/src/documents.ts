@@ -136,16 +136,20 @@ export async function inspectDocument(path: string) {
       : null;
   const metadata = candidate?.$slop as Record<string, unknown> | undefined;
   const envelope =
-    metadata?.format === 1 &&
-    typeof metadata.baseRevision === "string" &&
-    metadata.baseRevision.length > 0 &&
+    metadata?.format === 2 &&
+    typeof metadata.baseRevision === "number" &&
+    Number.isSafeInteger(metadata.baseRevision) &&
+    metadata.baseRevision >= 0 &&
+    ["documentId", "schemaHash", "authority"].every(
+      (key) => typeof metadata[key] === "string" && metadata[key].length > 0,
+    ) &&
     candidate &&
     "data" in candidate
       ? candidate
       : null;
   if (data !== null && !dataError && !envelope)
     dataError =
-      "Unsupported document data: expected a v1 $slop envelope. Preserve the original and create a new document.";
+      "Unsupported document data: expected a v2 $slop envelope. Preserve the original and create a new document.";
   return {
     path: root,
     manifest,

@@ -74,7 +74,6 @@ async function validateSkin(root: string, manifest: SlopManifest): Promise<void>
 }
 
 export type ScaffoldOptions = {
-  template?: string;
   title?: string;
   description?: string;
   categories?: SlopCategory[];
@@ -82,9 +81,6 @@ export type ScaffoldOptions = {
 };
 
 export async function scaffold(destination: string, options: ScaffoldOptions): Promise<void> {
-  const template = options.template ?? "svelte-counter";
-  if (!new Set(["svelte", "svelte-counter"]).has(template))
-    throw new Error(`Unknown authoring template: ${template}`);
   if ((await exists(destination)) && (await readdir(destination)).length)
     throw new Error(`Destination is not empty: ${destination}`);
   const slug =

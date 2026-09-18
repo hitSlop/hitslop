@@ -1,0 +1,192 @@
+{
+  "configuration": "release",
+  "scope": "Isolated WKWebView and SQLite, before JSON parser optimization; plain DOM, not Svelte. Three warmup samples, five measured.",
+  "results": [
+    {
+      "rows": 1000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 64.18925,
+          "roundTripMs": 68,
+          "commandToLayoutMs": 68
+        },
+        {
+          "authorityMs": 60.948875,
+          "roundTripMs": 64,
+          "commandToLayoutMs": 65
+        },
+        {
+          "authorityMs": 62.173833,
+          "roundTripMs": 65,
+          "commandToLayoutMs": 65
+        },
+        {
+          "authorityMs": 61.270542,
+          "roundTripMs": 65,
+          "commandToLayoutMs": 65
+        },
+        {
+          "authorityMs": 64.218667,
+          "roundTripMs": 68,
+          "commandToLayoutMs": 68
+        }
+      ]
+    },
+    {
+      "rows": 1000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 64.373666,
+          "roundTripMs": 68,
+          "commandToLayoutMs": 69
+        },
+        {
+          "authorityMs": 64.240042,
+          "roundTripMs": 67,
+          "commandToLayoutMs": 68.00000000000023
+        },
+        {
+          "authorityMs": 60.54975,
+          "roundTripMs": 62.99999999999977,
+          "commandToLayoutMs": 63.99999999999977
+        },
+        {
+          "authorityMs": 61.384625,
+          "roundTripMs": 64,
+          "commandToLayoutMs": 65.00000000000023
+        },
+        {
+          "authorityMs": 60.320083,
+          "roundTripMs": 62.99999999999977,
+          "commandToLayoutMs": 63.99999999999977
+        }
+      ]
+    },
+    {
+      "rows": 5000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 345.919542,
+          "roundTripMs": 364,
+          "commandToLayoutMs": 365
+        },
+        {
+          "authorityMs": 344.805917,
+          "roundTripMs": 360,
+          "commandToLayoutMs": 361
+        },
+        {
+          "authorityMs": 320.583,
+          "roundTripMs": 336,
+          "commandToLayoutMs": 337
+        },
+        {
+          "authorityMs": 311.411875,
+          "roundTripMs": 326,
+          "commandToLayoutMs": 327
+        },
+        {
+          "authorityMs": 315.470916,
+          "roundTripMs": 332,
+          "commandToLayoutMs": 333
+        }
+      ]
+    },
+    {
+      "rows": 5000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 322.33825,
+          "roundTripMs": 339,
+          "commandToLayoutMs": 340
+        },
+        {
+          "authorityMs": 311.0455,
+          "roundTripMs": 326,
+          "commandToLayoutMs": 327
+        },
+        {
+          "authorityMs": 315.892458,
+          "roundTripMs": 332,
+          "commandToLayoutMs": 334
+        },
+        {
+          "authorityMs": 311.09475,
+          "roundTripMs": 326,
+          "commandToLayoutMs": 328
+        },
+        {
+          "authorityMs": 303.582041,
+          "roundTripMs": 319,
+          "commandToLayoutMs": 320
+        }
+      ]
+    },
+    {
+      "rows": 10000,
+      "renderRows": false,
+      "samples": [
+        {
+          "authorityMs": 630.041334,
+          "roundTripMs": 661,
+          "commandToLayoutMs": 663.0000000000005
+        },
+        {
+          "authorityMs": 609.441334,
+          "roundTripMs": 639.9999999999995,
+          "commandToLayoutMs": 641.9999999999995
+        },
+        {
+          "authorityMs": 631.378584,
+          "roundTripMs": 661,
+          "commandToLayoutMs": 663
+        },
+        {
+          "authorityMs": 618.340917,
+          "roundTripMs": 649,
+          "commandToLayoutMs": 650
+        },
+        {
+          "authorityMs": 611.136208,
+          "roundTripMs": 641,
+          "commandToLayoutMs": 643
+        }
+      ]
+    },
+    {
+      "rows": 10000,
+      "renderRows": true,
+      "samples": [
+        {
+          "authorityMs": 597.440958,
+          "roundTripMs": 627.0000000000009,
+          "commandToLayoutMs": 630.0000000000009
+        },
+        {
+          "authorityMs": 608.5745,
+          "roundTripMs": 638.9999999999991,
+          "commandToLayoutMs": 641.9999999999991
+        },
+        {
+          "authorityMs": 610.613625,
+          "roundTripMs": 642,
+          "commandToLayoutMs": 645
+        },
+        {
+          "authorityMs": 605.72475,
+          "roundTripMs": 635,
+          "commandToLayoutMs": 638
+        },
+        {
+          "authorityMs": 606.462417,
+          "roundTripMs": 643,
+          "commandToLayoutMs": 646
+        }
+      ]
+    }
+  ]
+}

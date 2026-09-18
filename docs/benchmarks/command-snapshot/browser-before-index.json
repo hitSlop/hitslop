@@ -1,0 +1,46 @@
+{
+  "measuredAt": "2026-09-17T17:50:58.903Z",
+  "browser": "153.0.8010.48",
+  "scope": "Quick Checklist development build, actual N rendered Svelte rows. In-memory authority with serialized full snapshots through guest reconciliation, then two animation frames. Excludes Swift, disk and network. Five measured samples after three warmups.",
+  "results": [
+    {
+      "rows": 1000,
+      "rendered": 1000,
+      "samples": [
+        66,
+        66.5,
+        66.80000019073486,
+        67.5,
+        69.39999985694885
+      ],
+      "medianMs": 66.80000019073486,
+      "p95Ms": 69.39999985694885
+    },
+    {
+      "rows": 5000,
+      "rendered": 5000,
+      "samples": [
+        1036.5,
+        1098.2999999523163,
+        1100.1000001430511,
+        1103.7999999523163,
+        1114.1999998092651
+      ],
+      "medianMs": 1100.1000001430511,
+      "p95Ms": 1114.1999998092651
+    },
+    {
+      "rows": 10000,
+      "rendered": 10000,
+      "samples": [
+        3778.5999999046326,
+        3817.2999999523163,
+        3994.100000143051,
+        4193.600000143051,
+        4320.199999809265
+      ],
+      "medianMs": 3994.100000143051,
+      "p95Ms": 4320.199999809265
+    }
+  ]
+}

@@ -32,11 +32,13 @@ extension SlopSharedDocument {
     public var inviteURL: URL? { invite.flatMap { URL(string: "hitslop://join/\(documentId)#\($0)") } }
 }
 extension SlopRoomSeed {
-    public func validatedTransfer(documentId: String, schema: String) throws -> SlopLoroTransfer {
-        guard _protocol == ._1, sequence == ._1, snapshot.documentId == documentId, snapshot.schema == schema,
-              let bytes = Data(base64Encoded: snapshot.checkpoint), !bytes.isEmpty,
-              SlopLoroBatch.digest(bytes) == hash else { throw SlopDocumentError("Invalid room seed") }
-        return SlopLoroTransfer(documentId: snapshot.documentId, schema: snapshot.schema, checkpoint: snapshot.checkpoint, version: snapshot.version)
+    public func validatedTransfer(documentId: String, schema: String) throws -> SlopDocumentJSON {
+        let value = try SlopDocumentJSON(data: JSONEncoder().encode(self))
+        let snapshot = value["snapshot"]
+        guard value["protocol"] == .number(Double(slopProtocolVersion)), snapshot["documentId"].string == documentId, snapshot["schemaHash"].string == schema,
+              snapshot["authority"].string?.isEmpty == false, let revision = snapshot["revision"].number,
+              revision >= 0, revision.rounded() == revision, revision <= 9_007_199_254_740_991 else { throw SlopDocumentError("Invalid room seed") }
+        return snapshot
     }
 }
 
@@ -88,15 +90,14 @@ public struct SlopCloudAPI: Sendable {
     public func media(_ sha256: String) async throws -> Data {
         try await call { try await Data(collecting: client().getMedia(path: .init(sha256: sha256)).ok.body.any, upTo: 25 * 1024 * 1024) }
     }
-    public func createDocument(id: String, title: String, slug: String, schema: String, package: Data, seed: SlopLoroTransfer) async throws -> SlopSharedDocument {
+    public func createDocument(id: String, title: String, slug: String, schema: String, package: Data, seed: SlopDocumentJSON) async throws -> SlopSharedDocument {
         try await call {
             try await client().createDocument(body: .multipartForm(.init([
                 .documentId(.init(payload: .init(body: HTTPBody(id)))),
                 .title(.init(payload: .init(body: HTTPBody(title)))),
                 .slug(.init(payload: .init(body: HTTPBody(slug)))),
                 .schema(.init(payload: .init(body: HTTPBody(schema)))),
-                .checkpoint(.init(payload: .init(body: HTTPBody(seed.checkpoint)))),
-                .version(.init(payload: .init(body: HTTPBody(seed.version)))),
+                .seed(.init(payload: .init(body: HTTPBody(try seed.encoded())))),
                 .package(.init(payload: .init(body: HTTPBody(package)), filename: "\(slug).slop.zip")),
             ]))).ok.body.json
         }
@@ -122,13 +123,6 @@ public struct SlopCloudAPI: Sendable {
     }
     public func seed(documentId: String, token: String) async throws -> SlopRoomSeed {
         try await call { try await client(token: token).getRoomSeed(path: .init(documentId: documentId)).ok.body.json }
-    }
-    public func createRoom(documentId: String, token: String, seed: SlopLoroTransfer) async throws {
-        guard seed.documentId == documentId else { throw SlopDocumentError("Wrong room seed") }
-        _ = try await call {
-            try await client(token: token).initializeRoom(path: .init(documentId: documentId),
-                body: .json(.init(_protocol: ._1, schema: seed.schema, checkpoint: seed.checkpoint, version: seed.version))).ok
-        }
     }
     public func socketURL(documentId: String) -> URL {
         var components = URLComponents(url: origin.appendingPathComponent("rooms/\(documentId)/socket"), resolvingAgainstBaseURL: false)!

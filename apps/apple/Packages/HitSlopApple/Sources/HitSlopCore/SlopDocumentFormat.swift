@@ -1,7 +1,7 @@
 import DynamicJSON
 import Foundation
 
-/// Decodes the fixed v1 projection envelope; the existing JSON Schema engine
+/// Decodes the fixed v2 projection envelope; the existing JSON Schema engine
 /// validates the arbitrary application schema and document instances.
 public enum SlopDocumentFormat {
     public static func applicationSchema(_ bytes: Data) throws -> Data {
@@ -25,17 +25,17 @@ public enum SlopDocumentFormat {
             }
             let path = (context.codingPath + (missingKey.map { [$0] } ?? []))
                 .map(\.stringValue).joined(separator: ".")
-            throw SlopPackageError.invalid("Invalid v1 document schema at \(path.isEmpty ? "$" : path): \(context.debugDescription)")
+            throw SlopPackageError.invalid("Invalid v2 document schema at \(path.isEmpty ? "$" : path): \(context.debugDescription)")
         }
     }
 }
 
 private enum SchemaKey: String, CodingKey {
     case type, additionalProperties, required, properties, data, format, baseRevision
-    case minLength, version, container
+    case minLength, version, container, minimum, maximum, documentId, schemaHash, authority
     case slop = "$slop"
     case constant = "const"
-    case sync = "x-hitslop"
+    case documentMetadata = "x-hitslop"
 }
 
 private protocol SchemaProperties: Decodable {
@@ -70,27 +70,37 @@ private struct EnvelopeProperties: SchemaProperties {
 }
 
 private struct MetadataProperties: SchemaProperties {
-    static let names: Set<String> = ["format", "baseRevision"]
+    static let names: Set<String> = ["format", "baseRevision", "documentId", "schemaHash", "authority"]
 
     init(from decoder: any Decoder) throws {
         try decoder.requireKeys(Self.names)
         let fields = try decoder.container(keyedBy: SchemaKey.self)
         _ = try fields.decode(FormatSchema.self, forKey: .format)
         _ = try fields.decode(RevisionSchema.self, forKey: .baseRevision)
+        for key in [SchemaKey.documentId, .schemaHash, .authority] { _ = try fields.decode(IdentitySchema.self, forKey: key) }
     }
 }
 
 private struct FormatSchema: Decodable {
     init(from decoder: any Decoder) throws {
-        try decoder.container(keyedBy: SchemaKey.self).expect(Int.self, .constant, 1)
+        try decoder.container(keyedBy: SchemaKey.self).expect(Int.self, .constant, 2)
+    }
+}
+
+private struct IdentitySchema: Decodable {
+    init(from decoder: any Decoder) throws {
+        let fields = try decoder.container(keyedBy: SchemaKey.self)
+        try fields.expect(String.self, .type, "string")
+        try fields.expect(Int.self, .minLength, 1)
     }
 }
 
 private struct RevisionSchema: Decodable {
     init(from decoder: any Decoder) throws {
         let fields = try decoder.container(keyedBy: SchemaKey.self)
-        try fields.expect(String.self, .type, "string")
-        try fields.expect(Int.self, .minLength, 1)
+        try fields.expect(String.self, .type, "integer")
+        try fields.expect(Int.self, .minimum, 0)
+        try fields.expect(Int.self, .maximum, 9_007_199_254_740_991)
     }
 }
 
@@ -100,13 +110,13 @@ private struct ApplicationSchema: Decodable {
     init(from decoder: any Decoder) throws {
         let fields = try decoder.container(keyedBy: SchemaKey.self)
         try fields.expect(String.self, .type, "object")
-        _ = try fields.decode(SyncMarker.self, forKey: .sync)
+        _ = try fields.decode(DocumentMarker.self, forKey: .documentMetadata)
         // Preserve all application keywords, annotations and nested schemas.
         value = try JSON(from: decoder)
     }
 }
 
-private struct SyncMarker: Decodable {
+private struct DocumentMarker: Decodable {
     init(from decoder: any Decoder) throws {
         let fields = try decoder.container(keyedBy: SchemaKey.self)
         try fields.expect(Int.self, .version, 1)

@@ -1,94 +1,65 @@
 import * as Type from "typebox";
 import { Sha256Schema } from "./publish.js";
+import { OpenSchema, SnapshotSchema, RequestSchema, ResultSchema } from "./document-protocol.js";
 
-/** The relay orders opaque Loro updates; cursors advance only after durable import. */
-export const roomProtocol = 1;
+export const roomProtocol = 3;
 export const DocumentIdSchema = Type.String({ pattern: "^[a-zA-Z0-9-]{1,80}$" });
-const sequence = Type.Integer({ minimum: 1, maximum: 10000 });
-const protocol = Type.Integer({ enum: [roomProtocol] });
-const tag = <T extends string>(value: T) => Type.Unsafe<T>({ type: "string", enum: [value] });
+const protocol = Type.Literal(roomProtocol);
 const object = <P extends Type.TProperties>(title: string, properties: P) =>
   Type.Object(properties, { title, additionalProperties: false });
-export const RoomBatchSchema = object("RoomBatch", {
-  id: Type.String({ pattern: "^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$" }),
-  hash: Sha256Schema,
-  bytes: Type.String({ minLength: 1, maxLength: 699052 }),
-});
 export const RoomPeerSchema = object("RoomPeer", { id: Type.String(), name: Type.String() });
-export const RoomUpdateSchema = object("RoomUpdate", {
-  sequence: Type.Integer({ minimum: 2, maximum: 10000 }),
-  batch: RoomBatchSchema,
-});
-const identity = { documentId: DocumentIdSchema, schema: Sha256Schema };
 const peers = Type.Array(RoomPeerSchema, { maxItems: 20 });
+const identity = { documentId: DocumentIdSchema, schema: Sha256Schema };
 export const roomServerVariants = {
-  welcome: object("RoomWelcome", { type: tag("welcome"), protocol, bootId: Type.String(), peers }),
-  presence: object("RoomPresence", { type: tag("presence"), peers }),
-  updates: object("RoomUpdates", {
-    type: tag("updates"),
-    ...identity,
-    updates: Type.Array(RoomUpdateSchema, { minItems: 1, maxItems: 32 }),
+  welcome: object("RoomWelcome", { type: Type.Literal("welcome"), protocol, peers }),
+  presence: object("RoomPresence", { type: Type.Literal("presence"), peers }),
+  ready: object("RoomReady", { type: Type.Literal("ready"), open: OpenSchema, peers }),
+  snapshot: object("RoomSnapshotMessage", {
+    type: Type.Literal("snapshot"),
+    snapshot: SnapshotSchema,
   }),
-  ready: object("RoomReady", { type: tag("ready"), head: sequence, bootId: Type.String(), peers }),
-  ack: object("RoomAck", {
-    type: tag("ack"),
-    id: RoomBatchSchema.properties.id,
-    hash: Sha256Schema,
-    sequence: Type.Integer({ minimum: 2, maximum: 10000 }),
+  result: object("RoomResultMessage", {
+    type: Type.Literal("result"),
+    requestId: Type.String(),
+    leaseId: Type.String(),
+    authority: Type.String(),
+    result: ResultSchema,
   }),
   error: object("RoomError", {
-    type: tag("error"),
+    type: Type.Literal("error"),
     status: Type.Integer({ minimum: 400, maximum: 599 }),
     message: Type.String(),
   }),
 };
 export const roomClientVariants = {
-  hello: object("RoomHello", {
-    type: tag("hello"),
+  hello: object("RoomHello", { type: Type.Literal("hello"), protocol, ...identity }),
+  execute: object("RoomExecute", {
+    type: Type.Literal("execute"),
     protocol,
-    ...identity,
-    after: sequence,
-    batchSize: Type.Optional(Type.Integer({ minimum: 1, maximum: 32 })),
-  }),
-  applied: object("RoomApplied", { type: tag("applied"), sequence }),
-  append: object("RoomAppend", {
-    type: tag("append"),
-    protocol,
-    ...identity,
-    batch: RoomBatchSchema,
+    request: RequestSchema,
   }),
 };
 export const RoomMessageSchema = Type.Union(
   [
     roomServerVariants.welcome,
     roomServerVariants.presence,
-    roomServerVariants.updates,
     roomServerVariants.ready,
-    roomServerVariants.ack,
+    roomServerVariants.snapshot,
+    roomServerVariants.result,
     roomServerVariants.error,
   ],
   { title: "RoomServerMessage" },
 );
 export const RoomClientMessageSchema = Type.Union(
-  [roomClientVariants.hello, roomClientVariants.applied, roomClientVariants.append],
+  [roomClientVariants.hello, roomClientVariants.execute],
   { title: "RoomClientMessage" },
 );
 export const RoomSeedInputSchema = object("RoomSeedInput", {
   protocol,
-  ...identity,
-  checkpoint: RoomBatchSchema.properties.bytes,
-  version: Type.String({ minLength: 1, maxLength: 65536 }),
+  documentId: DocumentIdSchema,
+  snapshot: SnapshotSchema,
 });
-export const RoomSeedSchema = object("RoomSeed", {
-  protocol,
-  sequence: Type.Integer({ enum: [1] }),
-  hash: Sha256Schema,
-  snapshot: object("RoomSnapshot", {
-    ...identity,
-    checkpoint: RoomBatchSchema.properties.bytes,
-    version: RoomSeedInputSchema.properties.version,
-  }),
-});
+export const RoomSeedSchema = object("RoomSeed", { protocol, snapshot: SnapshotSchema });
 export const RoomSessionSchema = object("RoomSession", { token: Type.String(), ...identity });
 export const RoomInitializedSchema = object("RoomInitialized", {
   roomId: DocumentIdSchema,

@@ -108,6 +108,7 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     private static var generations: [URL: UUID] = [:]
     private static var pending: [Job] = []
     private static var worker: Task<Void, Never>?
+    private static var rendering = false
 
     static func invalidate(_ url: URL) {
         let key = url.standardizedFileURL
@@ -124,9 +125,11 @@ private struct ToolbarDragHandle: NSViewRepresentable {
     private static func startWorkerIfNeeded() {
         guard worker == nil, !pending.isEmpty else { return }
         worker = Task { @MainActor in
-            defer { worker = nil; startWorkerIfNeeded() }
+            defer { rendering = false; worker = nil; startWorkerIfNeeded() }
             while !pending.isEmpty, !Task.isCancelled {
                 let job = pending.removeFirst()
+                rendering = true
+                defer { rendering = false }
                 do {
                     let assets = try await SlopRenderer.documentAssetsPNGData(snapshot: job.snapshot)
                     guard !Task.isCancelled, generations[job.destination] == job.generation else { continue }
@@ -140,6 +143,10 @@ private struct ToolbarDragHandle: NSViewRepresentable {
         }
     }
     static func finishForTermination(grace: Duration = .seconds(5)) async {
+        // Do not start another WebView while quitting. Its synchronous construction
+        // could consume the entire grace period before the timer gets to run.
+        pending.removeAll()
+        if !rendering { worker?.cancel(); generations.removeAll(); return }
         let deadline = ContinuousClock.now.advanced(by: grace)
         while worker != nil, ContinuousClock.now < deadline { try? await Task.sleep(for: .milliseconds(40)) }
         if worker != nil { worker?.cancel(); pending.removeAll(); generations.removeAll() }
@@ -165,6 +172,8 @@ public enum SlopDocumentCommand: Equatable, Sendable {
     private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?, hideWork: DispatchWorkItem?
     private var failedOverlay: NSHostingView<FailureOverlay>?
     private var presentedRuntimeError: String?
+    private var documentAttention: NSPanel?
+    private var attentionMessage: String?
     private var commandsEnabled = true
 
     public init(packageURL: URL) throws {
@@ -211,6 +220,62 @@ public enum SlopDocumentCommand: Equatable, Sendable {
     public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {
         if let onRuntimeFailure { onRuntimeFailure(error.localizedDescription) }
         else { updateRuntimeFailure(error.localizedDescription) }
+    }
+
+    public func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue) {
+        issueGeneration += 1
+        guestIssue = issue
+        showDocumentAttention()
+    }
+    public func runtimeSession(_ session: SlopRuntimeSession, documentNeedsAttention frame: SlopCommandFrame) {
+        attentionFrame = frame
+        showDocumentAttention()
+    }
+    private func showDocumentAttention() {
+        let frame = attentionFrame
+        let nativeMessage = frame?.projectionError ?? frame?.error
+        let issue = nativeMessage == nil ? guestIssue : nil
+        guard let message = nativeMessage ?? issue?.message else {
+            documentAttention?.close(); documentAttention = nil; attentionMessage = nil; return
+        }
+        let key = "\(issue?.source.rawValue ?? "native"):\(message)"
+        guard key != attentionMessage || documentAttention?.isVisible != true else { return }
+        attentionMessage = key
+        let panel = documentAttention ?? NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 260), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        panel.title = "Document changes"; panel.isReleasedWhenClosed = false
+        panel.contentView = NSHostingView(rootView: DocumentAttention(message: message, hasProposal: frame?.proposalPath != nil,
+            issue: issue,
+            retry: { [weak self] in self?.recoverDocument(issue?.source == .render ? "render" : "retry") },
+            copy: { [weak self] in self?.recoverDocument("copy") },
+            discard: { [weak self] in self?.recoverDocument("discard") },
+            reveal: { if let path = frame?.proposalPath { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) } },
+            useConfirmed: { [weak self] in self?.recoverDocument("confirmed") },
+            dismiss: { [weak self] in self?.guestIssue = nil; self?.documentAttention?.close(); self?.documentAttention = nil; self?.attentionMessage = nil }))
+        if let window, documentAttention == nil { window.addChildWindow(panel, ordered: .above); panel.setFrameOrigin(NSPoint(x: window.frame.midX - 190, y: window.frame.midY - 130)) }
+        documentAttention = panel; panel.orderFront(nil)
+    }
+    private var guestIssue: SlopRuntimeIssue?
+    private var issueGeneration = 0
+    private var attentionFrame: SlopCommandFrame?
+    private func recoverDocument(_ action: String) {
+        let generation = issueGeneration
+        Task {
+            do {
+                if action == "confirmed" { try await session.document?.discardExternalProposal(); return }
+                let result = try await session.webView.callAsyncJavaScript("return await window.__hitslopDocumentRecovery?.(action)", arguments: ["action": action == "copy" ? "status" : action], in: nil, contentWorld: .page)
+                if action == "copy", let result = result as? [String: Any], let drafts = result["drafts"] as? [[String: Any]] {
+                    let text = drafts.map { "\($0["path"] as? String ?? "Text")\n\($0["value"] as? String ?? "")" }.joined(separator: "\n\n")
+                    NSPasteboard.general.clearContents(); NSPasteboard.general.setString(text, forType: .string)
+                } else if let result = result as? [String: Any], let error = result["error"] as? [String: Any], let message = error["message"] as? String {
+                    throw SlopDocumentError(message)
+                } else {
+                    try await session.document?.flush()
+                    guard generation == issueGeneration else { return }
+                    guestIssue = nil
+                    documentAttention?.close(); documentAttention = nil; attentionMessage = nil
+                }
+            } catch { present("Changes still need attention", error) }
+        }
     }
 
     private func setupToolbar() {
@@ -277,7 +342,7 @@ public enum SlopDocumentCommand: Equatable, Sendable {
             try await session.flush()
             let destination = try SlopDuplicator.duplicate(from: session.package.rootURL, to: target)
             do {
-                if let document = session.collaborativeDocument {
+                if let document = session.document {
                     let copy = try await document.independentCopy(to: destination)
                     try await copy.close()
                 }
@@ -386,11 +451,35 @@ public enum SlopDocumentCommand: Equatable, Sendable {
     public func windowDidResize(_ notification: Notification) { if toolbar?.isVisible == true { showToolbar() } }
     public func windowWillMiniaturize(_ notification: Notification) { hideWork?.cancel(); toolbar?.orderOut(nil) }
     public func windowWillClose(_ notification: Notification) {
+        documentAttention?.close(); documentAttention = nil
         toolbar?.orderOut(nil); if let toolbar { window?.removeChildWindow(toolbar) }; toolbar?.close(); toolbar = nil
         opened.close()
         onClose?()
     }
     private func present(_ title: String, _ error: Error) { let alert = NSAlert(error: error); alert.messageText = title; alert.runModal() }
+}
+
+private struct DocumentAttention: View {
+    let message: String, hasProposal: Bool
+    let issue: SlopRuntimeIssue?
+    let retry: () -> Void, copy: () -> Void, discard: () -> Void, reveal: () -> Void, useConfirmed: () -> Void, dismiss: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(message).font(.callout).textSelection(.enabled)
+            if hasProposal {
+                Text("Your file edit is preserved. The app can keep working while you review it.").font(.caption).foregroundStyle(.secondary)
+                Button("Reveal preserved file", action: reveal)
+                Button("Write confirmed data to data.json", action: useConfirmed)
+            } else if issue?.source == .render {
+                Button("Try again", action: retry)
+            } else if issue == nil || issue?.source == .document {
+                Button("Retry retained edits", action: retry)
+                Button("Copy retained text", action: copy)
+                Button("Discard retained drafts", action: discard)
+            }
+            Button("Dismiss", action: dismiss)
+        }.padding(20).frame(width: 340, alignment: .leading)
+    }
 }
 
 private struct FailureOverlay: View {

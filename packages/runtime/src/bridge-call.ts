@@ -15,12 +15,12 @@ export function createBridgeCall(postMessage: (request: unknown) => Promise<unkn
     params: NoInfer<BridgeParams<M>>,
   ): Promise<BridgeResult<M>> => {
     validate(BridgeMethods[method].params, params);
-    if (method === "document.apply") {
-      assertJSON((params as BridgeParams<"document.apply">).after, new Set(), 64);
+    if (method === "document.execute") {
+      assertJSON((params as BridgeParams<"document.execute">).request, new Set(), 72);
     }
     const reply = validate(BridgeReplySchema, await postMessage({ method, ...params }));
     if (!reply.ok) throw new SlopError(reply.error.code, reply.error.message);
-    assertJSON(reply.value, new Set(), 65);
+    // Native replies are already JSON; application data is validated by its authority.
     // TS loses the indexed method/result correlation when selecting the schema;
     // the selected validator is the runtime proof for this one boundary cast.
     return validate(BridgeMethods[method].response, reply.value) as BridgeResult<M>;

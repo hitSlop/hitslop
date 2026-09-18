@@ -5,7 +5,7 @@
 hitSlop is a native home for small, personal, local-first web apps. Each
 `.slop` is a document you can open, move, duplicate, share, commit, and keep—not
 an account you have to maintain. The app owns its interface; the host owns
-durable JSON, named media, previews, export, and native window behavior.
+durable JSON, document media, previews, export, and native window behavior.
 
 <p align="center">
   <img src="apps/landing/public/assets/desktop-hero-current.png" width="80%" alt="hitSlop on macOS">
@@ -66,7 +66,7 @@ tiny-app.slop/
 ├── data.schema.json            optional, generated
 ├── assets/                    optional, immutable
 ├── .agents/skills/hitslop-document/
-├── state/document.sqlite        host-owned Loro journal
+├── state/document.sqlite        host-owned JSON state and receipts
 ├── stores/                    optional, host-owned document data
 │   ├── data.json
 │   ├── media/
@@ -78,8 +78,7 @@ tiny-app.slop/
 
 Authored templates and published artifacts never contain source, dependencies,
 build caches, seed stores, editable stylesheets, unsupported stores, or Finder's
-local `Icon\r` metadata. Storage is implicit: use JSON, named media, either,
-or neither. See [Package format](docs/package-format.md) and
+local `Icon\r` metadata. Storage is implicit: use JSON with optional document attachments, or no persistence. See [Package format](docs/package-format.md) and
 [Storage](docs/storage.md).
 
 ## The system at a glance
@@ -121,7 +120,7 @@ and [Contributing](CONTRIBUTING.md).
 
 The MVP authoring path is macOS + Svelte + JSON, demonstrated by Quick Checklist.
 The macOS app is at `1.0.5` and public npm packages are at `0.3.0`.
-SQLite/Loro backs every JSON document. iOS is archived; iCloud document
+SQLite stores authoritative JSON and command receipts for local documents. iOS is archived; iCloud document
 locations are unsupported. Live sharing uses Cloudflare rooms.
 
 ## License

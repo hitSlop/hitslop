@@ -1,11 +1,11 @@
 import * as S from "@hitslop/schema/document";
 
 const checklistSchema = S.Document({
-  title: S.Text(),
+  title: S.String(),
   tasks: S.List(
     S.Object({
       id: S.String(),
-      text: S.Text(),
+      text: S.String(),
       done: S.Boolean(),
       archived: S.Boolean(),
     }),

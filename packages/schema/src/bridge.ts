@@ -1,51 +1,42 @@
+import { MediaHashSchema, MediaReferenceSchema } from "./media.js";
+export type { MediaReference } from "./media.js";
+import {
+  SnapshotSchema,
+  OpenSchema,
+  ResultSchema,
+  RequestSchema,
+  LeaseSchema,
+} from "./document-protocol.js";
 import * as Type from "typebox";
 
-export const protocolVersion = 1;
+export const protocolVersion = 3;
 export const BridgeErrorCodeSchema = Type.Enum([
   "invalid_request",
   "unsupported",
-  "revision_conflict",
   "validation_failed",
   "storage_error",
   "limit_exceeded",
   "closed",
 ]);
-export type JSONValue =
-  null | boolean | number | string | JSONValue[] | { [key: string]: JSONValue };
-const jsonDefinitions = {
-  json: {
-    anyOf: [
-      { type: "null" },
-      { type: "boolean" },
-      { type: "number" },
-      { type: "string" },
-      { type: "array", items: { $ref: "#/$defs/json" } },
-      { type: "object", additionalProperties: { $ref: "#/$defs/json" } },
-    ],
-  },
-};
-export const JSONValueSchema = Type.Unsafe<JSONValue>({
-  $defs: jsonDefinitions,
-  $ref: "#/$defs/json",
-});
+import type { JSONValue } from "./json.js";
+export type { JSONValue } from "./json.js";
 // Envelopes validate shape; bridge boundaries check plain JSON once. Application
 // schemas validate document contents. Do not recursively recheck every envelope.
 const json = Type.Unsafe<JSONValue>({});
 const object = <P extends Type.TProperties>(properties: P) =>
-  Type.Object(properties, { additionalProperties: false, $defs: jsonDefinitions });
+  Type.Object(properties, { additionalProperties: false });
 const method = <P extends Type.TProperties, R extends Type.TSchema>(params: P, response: R) => ({
   params: object(params),
   response,
 });
-const mediaName = Type.String({ pattern: "^(?:[a-z][a-z0-9-]{0,63}|[a-f0-9]{64})$" });
-const revision = object({ revision: Type.String() });
 export const DocumentFrameSchema = object({
-  publication: Type.Integer({ minimum: 0 }),
-  revision: Type.String({ minLength: 1 }),
-  data: json,
-  dirty: Type.Boolean(),
-  error: Type.Union([Type.String(), Type.Null()]),
-  projectionError: Type.Union([Type.String(), Type.Null()]),
+  snapshot: SnapshotSchema,
+  connected: Type.Boolean(),
+  writable: Type.Boolean(),
+  error: Type.Optional(Type.String()),
+  projectionError: Type.Optional(Type.String()),
+  handoffFrom: Type.Optional(Type.String()),
+  lease: Type.Optional(LeaseSchema),
 });
 // Capabilities may contain methods introduced by a newer host.
 export const HostInfoSchema = object({
@@ -53,37 +44,30 @@ export const HostInfoSchema = object({
   capabilities: Type.Array(Type.String()),
 });
 
+export const RuntimeIssueSchema = object({
+  source: Type.Enum(["document", "media", "render", "unhandled"]),
+  code: Type.Optional(Type.String({ maxLength: 128 })),
+  message: Type.String({ minLength: 1, maxLength: 4096 }),
+});
+export type RuntimeIssue = Type.Static<typeof RuntimeIssueSchema>;
+
 /** Single source for method names, wire arguments, and successful reply values. */
 export const BridgeMethods = {
   "host.info": method({}, HostInfoSchema),
+  "runtime.reportError": method({ issue: RuntimeIssueSchema }, Type.Null()),
   log: method({ message: Type.String() }, Type.Null()),
   ready: method({}, Type.Null()),
-  "document.open": method({}, DocumentFrameSchema),
-  "document.apply": method(
-    {
-      session: Type.String({ minLength: 1 }),
-      sequence: Type.Integer({ minimum: 1 }),
-      base: Type.String({ minLength: 1 }),
-      after: json,
-      draft: Type.Optional(Type.String({ minLength: 1 })),
-      parent: Type.Optional(Type.Integer({ minimum: 1 })),
-    },
-    DocumentFrameSchema,
-  ),
-  "document.flush": method({}, DocumentFrameSchema),
-  "document.releaseDraft": method(
-    { session: Type.String(), draft: Type.String() },
-    DocumentFrameSchema,
-  ),
+  "document.open": method({}, OpenSchema),
+  "document.execute": method({ request: RequestSchema }, ResultSchema),
+  "document.flush": method({}, Type.Null()),
   "media.open": method(
-    { name: mediaName },
-    object({ exists: Type.Boolean(), revision: Type.Union([Type.String(), Type.Null()]) }),
+    { sha256: MediaHashSchema },
+    object({ src: Type.Union([Type.String(), Type.Null()]) }),
   ),
-  "media.write": method(
-    { name: mediaName, data: Type.String(), mimeType: Type.String() },
-    revision,
+  "media.add": method(
+    { data: Type.String(), kind: Type.Enum(["image", "file"]) },
+    MediaReferenceSchema,
   ),
-  "media.remove": method({ name: mediaName }, object({ revision: Type.Null() })),
   "window.resize": method(
     {
       width: Type.Integer({ minimum: 240, maximum: 4096 }),
@@ -111,27 +95,23 @@ export const BridgeMethodSchema = Type.Enum(bridgeMethodNames);
 // Object.entries loses key/value correlation. This annotation restores exactly
 // the mapped request type constructed from the same method registry.
 export const BridgeRequestSchema = Type.Unsafe<BridgeRequest>({
-  $defs: jsonDefinitions,
   anyOf: Object.entries(BridgeMethods).map(([name, contract]) =>
     object({ method: Type.Literal(name), ...contract.params.properties }),
   ),
 });
-export const BridgeReplySchema = Type.Union(
-  [
-    object({ ok: Type.Literal(true), value: json }),
-    object({
-      ok: Type.Literal(false),
-      error: object({ code: BridgeErrorCodeSchema, message: Type.String() }),
-    }),
-  ],
-  { $defs: jsonDefinitions },
-);
+export const BridgeReplySchema = Type.Union([
+  object({ ok: Type.Literal(true), value: json }),
+  object({
+    ok: Type.Literal(false),
+    error: object({ code: BridgeErrorCodeSchema, message: Type.String() }),
+  }),
+]);
 export const ChangeSchema = object({
-  kind: Type.Enum(["media", "document"]),
+  kind: Type.Literal("media"),
   source: Type.Enum(["app", "external", "dev"]),
   revision: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   sequence: Type.Optional(Type.Integer()),
-  name: Type.Optional(mediaName),
+  sha256: Type.Optional(MediaHashSchema),
 });
 export type BridgeReply = Type.Static<typeof BridgeReplySchema>;
 export type BridgeErrorCode = Type.Static<typeof BridgeErrorCodeSchema>;
@@ -139,4 +119,3 @@ export type HostInfo = Type.Static<typeof HostInfoSchema>;
 export type SlopChange = Type.Static<typeof ChangeSchema>;
 
 export type DocumentFrame = Type.Static<typeof DocumentFrameSchema>;
-export type DocumentApply = BridgeParams<"document.apply">;

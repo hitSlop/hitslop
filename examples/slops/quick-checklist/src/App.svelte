@@ -1,9 +1,7 @@
 <script lang="ts">
-  import { capture, ready } from "@hitslop/runtime";
-  import { documentStore, documentText, IconTarget, ExportTarget } from "@hitslop/svelte";
-  import { onDestroy, onMount, tick, untrack } from "svelte";
-  import { Tween, prefersReducedMotion } from "svelte/motion";
-  import { cubicOut } from "svelte/easing";
+  import { createDocument, Slop, type MutationResult } from "@hitslop/svelte";
+  import type { Attachment } from "svelte/attachments";
+  import { prefersReducedMotion } from "svelte/motion";
   import { flip } from "svelte/animate";
   import { Checkbox, DropdownMenu, Tabs } from "bits-ui";
   import Check from "@lucide/svelte/icons/check";
@@ -13,178 +11,165 @@
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import checklistSchema from "../schema";
   import initial from "../initial";
-  import type { Checklist } from "../schema";
   import Icon from "./Icon.svelte";
   import Export from "./Export.svelte";
   import Brand from "./Brand.svelte";
   import * as s from "./styles.css";
 
-  const checklist = documentStore({ schema: checklistSchema, initial });
+  const checklist = createDocument({ schema: checklistSchema, initial });
+  const { fields } = checklist;
   let activeView = $state<"tasks" | "filed">("tasks");
   let draft = $state("");
   let adding = $state(false);
   let composer = $state<HTMLInputElement>();
-  let notice = $state("");
-  let undo = $state<null | (() => void)>(null);
-  const visible = $derived(checklist.current.tasks.filter(task => !task.archived));
-  const filed = $derived(checklist.current.tasks.filter(task => task.archived));
+  type Notice = { text: string; result?: Extract<MutationResult, { ok: true }> };
+  let notice = $state.raw<Notice | null>(null);
+  let undoing = $state(false);
+  let tasksTab = $state<HTMLButtonElement | null>(null);
+  let filedTab = $state<HTMLButtonElement | null>(null);
+  const show = (text: string, result?: Notice["result"]) => { notice = { text, ...(result ? { result } : {}) }; };
+  async function undoNotice() {
+    const current = notice;
+    if (!current?.result?.undo || !current.result.canUndo || undoing) return;
+    undoing = true;
+    try {
+      if ((await current.result.undo()).ok && notice === current) show("Undone.");
+    } finally { undoing = false; }
+  }
+  const visible = $derived(checklist.data.tasks.filter(task => !task.archived));
+  const filed = $derived(checklist.data.tasks.filter(task => task.archived));
   const finished = $derived(visible.filter(task => task.done).length);
   const ratio = $derived(visible.length ? finished / visible.length * 100 : 0);
-  const fill = new Tween(untrack(() => ratio), { duration: 280, easing: cubicOut });
-  let initialized = false;
-  $effect(() => { if (checklist.isReady) ready(); });
   $effect(() => {
-    const instant = !initialized || !checklist.isReady || prefersReducedMotion.current;
-    void fill.set(ratio, { duration: instant ? 0 : 280, delay: 0 });
-    initialized = checklist.isReady;
-  });
-  onMount(() => capture.onPrepare(async () => {
-    await fill.set(ratio, { duration: 0, delay: 0 });
-    await tick();
-  }));
-  $effect(() => {
-    if (!notice) return;
-    const timer = window.setTimeout(() => { notice = ""; undo = null; }, 4000);
-    return () => window.clearTimeout(timer);
-  });
-  onDestroy(() => {
-    void fill.set(fill.target, { duration: 0, delay: 0 });
-    void checklist.destroy().catch(() => { });
+    const current = notice;
+    if (!current || current.result?.undo) return;
+    const timer = setTimeout(() => { if (notice === current) notice = null; }, 4000);
+    return () => clearTimeout(timer);
   });
   const flipMs = $derived(prefersReducedMotion.current ? 0 : 240);
 
-  function change(mutate: (data: Checklist) => void) {
-    return checklist.change(mutate).catch(() => undefined);
-  }
   async function addTask() {
     const text = draft.trim();
-    if (!text || adding || !checklist.isReady || checklist.hasFailedChanges) return;
+    if (!text || adding || !checklist.canWrite) return;
     adding = true;
     try {
-      await checklist.change(data => data.tasks.push({ id: crypto.randomUUID(), text, done: false, archived: false }));
-      if (draft.trim() === text) draft = "";
-      composer?.focus();
-    } catch { /* Keep the composer and the store's error visible. */ }
-    finally { adding = false; }
+      const result = await checklist.insert(fields.tasks, { text, done: false, archived: false });
+      if (result.ok) { if (draft.trim() === text) draft = ""; composer?.focus(); }
+    } finally { adding = false; }
   }
   function move(id: string, direction: -1 | 1) {
     const index = visible.findIndex(task => task.id === id);
     const neighbor = visible[index + direction];
-    if (!neighbor) return;
-    void change(data => {
-      const from = data.tasks.findIndex(task => task.id === id);
-      const to = data.tasks.findIndex(task => task.id === neighbor.id);
-      if (from >= 0 && to >= 0) [data.tasks[from], data.tasks[to]] = [data.tasks[to]!, data.tasks[from]!];
-    });
+    if (neighbor) void checklist.move(fields.tasks, id, direction < 0 ? { before: neighbor.id } : { after: neighbor.id });
   }
   async function remove(id: string) {
-    const index = checklist.current.tasks.findIndex(task => task.id === id);
-    const task = checklist.current.tasks[index];
-    if (!task) return;
-    const saved: Checklist["tasks"][number] = { ...task };
-    await change(data => { data.tasks = data.tasks.filter(task => task.id !== id); });
-    if (checklist.error) return;
-    notice = "Task removed.";
-    undo = () => { void change(data => { if (!data.tasks.some(task => task.id === id)) data.tasks.splice(Math.min(index, data.tasks.length), 0, saved); }); };
+    const result = await checklist.remove(fields.tasks, id);
+    if (!result.ok) return;
+    show("Task removed.", result);
     composer?.focus();
   }
   async function fileFinished() {
     const ids = visible.filter(task => task.done).map(task => task.id);
-    await change(data => data.tasks.forEach(task => { if (ids.includes(task.id)) task.archived = true; }));
-    if (checklist.error) return;
-    notice = `${ids.length} ${ids.length === 1 ? "task" : "tasks"} filed.`;
-    undo = () => { void change(data => data.tasks.forEach(task => { if (ids.includes(task.id)) task.archived = false; })); };
+    const result = await checklist.transaction(tx => { for (const id of ids) tx.set(fields.tasks.item(id).archived, true); });
+    if (!result.ok) return;
+    show(`${ids.length} ${ids.length === 1 ? "task" : "tasks"} filed.`, result);
+    tasksTab?.focus();
   }
   async function restore(id: string) {
-    await change(data => {
-      const task = data.tasks.find(task => task.id === id);
-      if (task) { task.archived = false; task.done = false; }
-    });
-    if (checklist.error) return;
-    notice = "Task moved back to your list.";
-    undo = null;
+    const result = await checklist.patch(fields.tasks.item(id), { archived: false, done: false });
+    if (!result.ok) return;
+    show("Task moved back to your list.");
+    filedTab?.focus();
   }
-  function sizeToText(node: HTMLTextAreaElement, _value: string) {
-    let timer: ReturnType<typeof setTimeout>;
-    let width = -1;
-    const resize = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        node.style.height = "auto";
-        node.style.height = `${node.scrollHeight}px`;
+  function sizeToText(value: () => string): Attachment<HTMLTextAreaElement> {
+    return node => {
+      let timer: ReturnType<typeof setTimeout>;
+      let width = -1;
+      const resize = () => {
+        clearTimeout(timer);
+        // Run after the text attachment paints its draft; works in offscreen WebKit too.
+        timer = setTimeout(() => {
+          if (!node.getClientRects().length) return;
+          node.style.height = "auto";
+          node.style.height = `${node.scrollHeight + node.offsetHeight - node.clientHeight}px`;
+        }, 0);
+      };
+      $effect(() => { value(); resize(); });
+      const observer = new ResizeObserver(entries => {
+        const next = entries[0]?.contentRect.width;
+        if (next !== undefined && next !== width) { width = next; resize(); }
       });
+      observer.observe(node);
+      node.addEventListener("input", resize);
+      return () => { clearTimeout(timer); observer.disconnect(); node.removeEventListener("input", resize); };
     };
-    const observer = new ResizeObserver(entries => {
-      const next = entries[0]?.contentRect.width;
-      if (next !== undefined && next !== width) { width = next; resize(); }
-    });
-    observer.observe(node);
-    node.addEventListener("input", resize);
-    resize();
-    return { update: resize, destroy() { clearTimeout(timer); observer.disconnect(); node.removeEventListener("input", resize); } };
   }
 </script>
 
-<main class={s.shell} data-slop-selection="none" aria-busy={checklist.isLoading}>
+<Slop document={checklist}>
+<main class={s.shell} data-slop-selection="none">
   <Brand />
-  <section class={s.paper} aria-label="Your checklist" inert={!checklist.isReady || checklist.isLoading}>
+  <section class={s.paper} aria-label="Your checklist">
     <div class={s.heading}>
       <p class={s.eyebrow}>A little less on your mind.</p>
-      <textarea class={s.title} aria-label="Checklist title" rows="1" use:sizeToText={checklist.current.title} use:documentText={{ store: checklist, read: data => data.title, write: (data, value) => { data.title = value; } }} placeholder="Name your list" data-slop-export="hide"></textarea>
+      <textarea class={s.title} aria-label="Checklist title" rows="1" {@attach sizeToText(() => checklist.data.title)} {@attach checklist.text(fields.title)} readonly={!checklist.canWrite} placeholder="Name your list" data-slop-export="hide"></textarea>
       <div class={s.progress}>
         <span aria-live="polite">{visible.length && finished === visible.length ? "All done. Nicely done." : `${visible.length - finished} left to do`}</span>
         <span>{finished} / {visible.length} done</span>
       </div>
-      <div class={s.track} aria-hidden="true"><div style:transform={`scaleX(${fill.current / 100})`}></div></div>
+      <div class={s.track} aria-hidden="true"><div style:transform={`scaleX(${ratio / 100})`}></div></div>
     </div>
-    <form class={s.composer} data-slop-export="hide" onsubmit={event => { event.preventDefault(); addTask(); }}>
-      <input bind:this={composer} bind:value={draft} aria-label="New task" placeholder="Add a little thing…" disabled={checklist.isLoading} />
-      <button type="submit" aria-label="Add task" disabled={adding || !draft.trim() || checklist.isLoading}><Plus size={20} /></button>
+    <form class={s.composer} data-slop-export="hide" onsubmit={event => { event.preventDefault(); void addTask(); }}>
+      <input bind:this={composer} bind:value={draft} aria-label="New task" placeholder="Add a little thing…" disabled={!checklist.canWrite} />
+      <button type="submit" aria-label="Add task" disabled={adding || !draft.trim() || !checklist.canWrite}><Plus size={20} /></button>
     </form>
-    <Tabs.Root value={activeView} onValueChange={value => { if (value === "tasks" || value === "filed") activeView = value; }}>
+    <Tabs.Root class={s.views} value={activeView} onValueChange={value => { if (value === "tasks" || value === "filed") activeView = value; }}>
       <Tabs.List class={s.tabs} aria-label="Checklist views" data-slop-export="hide">
-        <Tabs.Trigger value="tasks" class={s.tab}>To do <span>{visible.length}</span></Tabs.Trigger>
-        <Tabs.Trigger value="filed" class={s.tab}><Archive size={14} /> Filed <span>{filed.length}</span></Tabs.Trigger>
+        <Tabs.Trigger bind:ref={tasksTab} value="tasks" class={s.tab}>To do <span>{visible.length}</span></Tabs.Trigger>
+        <Tabs.Trigger bind:ref={filedTab} value="filed" class={s.tab}><Archive size={14} /> Filed <span>{filed.length}</span></Tabs.Trigger>
       </Tabs.List>
-    </Tabs.Root>
-    <div class={`${s.scroller} ${activeView === "filed" ? s.filedView : ""}`}>
-      {#if activeView === "tasks"}
+    <div class={[s.scroller, activeView === "filed" && s.filedView]}>
+      <Tabs.Content value="tasks">
         <ol class={s.list}>
           {#each visible as task, index (task.id)}
+            {const field = $derived(fields.tasks.item(task.id))}
             <li class={s.row} data-done={task.done} animate:flip={{ duration: flipMs }}>
-              <Checkbox.Root checked={task.done} onCheckedChange={checked => { void change(data => { const row = data.tasks.find(row => row.id === task.id); if (row) row.done = checked; }); }} aria-label={`Mark ${task.text || "untitled task"} ${task.done ? "incomplete" : "complete"}`}>
+              <Checkbox.Root checked={task.done} onCheckedChange={checked => { void checklist.set(field.done, checked === true); }} disabled={!checklist.canWrite || checklist.isPending(field.done)} aria-label={`Mark ${task.text || "untitled task"} ${task.done ? "incomplete" : "complete"}`}>
                 {#snippet children({ checked })}{#if checked}<Check size={17} strokeWidth={3} />{/if}{/snippet}
               </Checkbox.Root>
-              <textarea class={s.taskText} aria-label={`Task ${index + 1}`} rows="1" use:sizeToText={task.text} use:documentText={{ store: checklist, read: data => data.tasks.find(row => row.id === task.id)?.text ?? "", write: (data, value) => { const row = data.tasks.find(row => row.id === task.id); if (row) row.text = value; } }} placeholder="Untitled task" data-slop-export="hide" onkeydown={event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); composer?.focus(); } }}></textarea>
+              <textarea class={s.taskText} aria-label={`Task ${index + 1}`} rows="1" {@attach sizeToText(() => task.text)} {@attach checklist.text(field.text)} readonly={!checklist.canWrite} placeholder="Untitled task" data-slop-export="hide" onkeydown={event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); composer?.focus(); } }}></textarea>
               <DropdownMenu.Root>
-                <DropdownMenu.Trigger class={s.more} aria-label={`Actions for ${task.text || "untitled task"}`} data-slop-export="hide"><Ellipsis size={19} /></DropdownMenu.Trigger>
+                <DropdownMenu.Trigger disabled={!checklist.canWrite} class={s.more} aria-label={`Actions for ${task.text || "untitled task"}`} data-slop-export="hide"><Ellipsis size={19} /></DropdownMenu.Trigger>
                 <DropdownMenu.Portal><DropdownMenu.Content class={s.menu} sideOffset={5} align="end" data-slop-export="hide">
                   <DropdownMenu.Item disabled={index === 0} onSelect={() => move(task.id, -1)}>Move up</DropdownMenu.Item>
                   <DropdownMenu.Item disabled={index === visible.length - 1} onSelect={() => move(task.id, 1)}>Move down</DropdownMenu.Item>
-                  <DropdownMenu.Separator /><DropdownMenu.Item onSelect={() => remove(task.id)}>Remove task</DropdownMenu.Item>
+                  <DropdownMenu.Separator /><DropdownMenu.Item onSelect={() => { void remove(task.id); }}>Remove task</DropdownMenu.Item>
                 </DropdownMenu.Content></DropdownMenu.Portal>
               </DropdownMenu.Root>
             </li>
           {/each}
         </ol>
         {#if !visible.length}<div class={s.empty}><Check size={30} /><h2>A little breathing room.</h2><p>Catch your next small task above.</p></div>{/if}
-      {:else}
-        <div class={s.filedList}>
-          {#each filed as task (task.id)}<div class={s.filedRow}><span>{task.text || "Untitled task"}</span><button data-slop-export="hide" onclick={() => restore(task.id)} aria-label={`Restore ${task.text || "untitled task"}`}><RotateCcw size={16} /> Restore</button></div>
-          {:else}<div class={s.empty}><Archive size={30} /><h2>No filed tasks yet.</h2><p>Finish a task, then file it from your to-do list.</p></div>{/each}
-        </div>
-      {/if}
+      </Tabs.Content>
+      <Tabs.Content value="filed">
+        <ul class={s.filedList}>
+          {#each filed as task (task.id)}<li class={s.filedRow}><span>{task.text || "Untitled task"}</span><button data-slop-export="hide" disabled={!checklist.canWrite} onclick={() => { void restore(task.id); }} aria-label={`Restore ${task.text || "untitled task"}`}><RotateCcw size={16} /> Restore</button></li>
+          {:else}<li class={s.empty}><Archive size={30} /><h2>No filed tasks yet.</h2><p>Finish a task, then file it from your to-do list.</p></li>{/each}
+        </ul>
+      </Tabs.Content>
     </div>
-    <div class={s.paperFoot} data-slop-export="hide"><span>{activeView === "tasks" ? "Enter to add. Check to finish." : "Restore anything you need again."}</span>{#if activeView === "tasks"}<button onclick={fileFinished} disabled={!finished}><Archive size={15} /> File finished{finished ? ` (${finished})` : ""}</button>{/if}</div>
+    </Tabs.Root>
+    <div class={s.paperFoot} data-slop-export="hide"><span>{activeView === "tasks" ? "Enter to add. Check to finish." : "Restore anything you need again."}</span>{#if activeView === "tasks"}<button onclick={fileFinished} disabled={!finished || !checklist.canWrite}><Archive size={15} /> File finished{finished ? ` (${finished})` : ""}</button>{/if}</div>
   </section>
-  {#if notice}<div class={s.notice} role="status" data-slop-export="hide"><span>{notice}</span>{#if undo}<button onclick={() => { undo?.(); undo = null; notice = "Undone."; }}>Undo</button>{/if}</div>{/if}
-  {#if checklist.error}
-    <div class={s.error} role="alert">
-      <span>{checklist.isReady ? "Changes haven’t been saved." : "Your checklist couldn’t be loaded."} {checklist.error}</span>
-      {#if checklist.hasFailedChanges}<button data-slop-export="hide" onclick={() => { void checklist.discardFailedChanges().catch(() => undefined); }}>Discard failed edits</button>{:else}
-      <button data-slop-export="hide" onclick={() => { if (checklist.isReady) void checklist.flush().catch(() => undefined); else void checklist.reload(); }}>Try again</button>{/if}
-    </div>
-  {:else if checklist.isLoading}<p class={s.error} role="status">Loading your checklist…</p>{/if}
+  <div role="status" data-slop-export="hide">
+    {#if notice}<div class={s.notice}>
+      <span>{notice.result?.undo && notice.result.revision !== checklist.revision ? "Undo unavailable after another change." : notice.text}</span>
+      {#if notice.result?.undo}<button disabled={!notice.result.canUndo || undoing} onclick={() => { void undoNotice(); }}>Undo</button>{/if}
+      <button aria-label="Dismiss notice" onclick={() => { notice = null; }}>Dismiss</button>
+    </div>{/if}
+  </div>
+
 </main>
-<IconTarget><Icon completed={finished} total={visible.length} /></IconTarget>
-<ExportTarget><Export checklist={checklist.current} view={activeView} /></ExportTarget>
+{#snippet icon()}<Icon completed={finished} total={visible.length} />{/snippet}
+{#snippet exportView()}<Export checklist={checklist.data} view={activeView} />{/snippet}
+</Slop>

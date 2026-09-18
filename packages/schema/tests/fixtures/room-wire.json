@@ -2,8 +2,7 @@
   "server": [
     {
       "type": "welcome",
-      "protocol": 1,
-      "bootId": "fixture-boot",
+      "protocol": 3,
       "peers": []
     },
     {
@@ -16,31 +15,45 @@
       ]
     },
     {
-      "type": "updates",
-      "documentId": "fixture-room",
-      "schema": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "updates": [
-        {
-          "sequence": 2,
-          "batch": {
-            "id": "11111111-1111-4111-8111-111111111111",
-            "hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
-            "bytes": "AQ=="
-          }
-        }
-      ]
-    },
-    {
       "type": "ready",
-      "head": 2,
-      "bootId": "fixture-boot",
+      "open": {
+        "snapshot": {
+          "documentId": "fixture-room",
+          "schemaHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "authority": "fixture-epoch",
+          "revision": 1,
+          "data": {
+            "count": 1
+          }
+        },
+        "lease": {
+          "id": "fixture-lease",
+          "expiresAt": 2000000000000
+        }
+      },
       "peers": []
     },
     {
-      "type": "ack",
-      "id": "11111111-1111-4111-8111-111111111111",
-      "hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
-      "sequence": 2
+      "type": "snapshot",
+      "snapshot": {
+        "documentId": "fixture-room",
+        "schemaHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "authority": "fixture-epoch",
+        "revision": 1,
+        "data": {
+          "count": 1
+        }
+      }
+    },
+    {
+      "type": "result",
+      "authority": "fixture-epoch",
+      "leaseId": "fixture-lease",
+      "requestId": "fixture-request",
+      "result": {
+        "ok": true,
+        "revision": 1
+      }
     },
     {
       "type": "error",
@@ -51,35 +64,41 @@
   "client": [
     {
       "type": "hello",
-      "protocol": 1,
+      "protocol": 3,
       "documentId": "fixture-room",
-      "schema": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "after": 1,
-      "batchSize": 8
+      "schema": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
     {
-      "type": "applied",
-      "sequence": 2
-    },
-    {
-      "type": "append",
-      "protocol": 1,
-      "documentId": "fixture-room",
-      "schema": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "batch": {
-        "id": "11111111-1111-4111-8111-111111111111",
-        "hash": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
-        "bytes": "AQ=="
+      "type": "execute",
+      "protocol": 3,
+      "request": {
+        "documentId": "fixture-room",
+        "schemaHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "authority": "fixture-epoch",
+        "leaseId": "fixture-lease",
+        "requestId": "fixture-request",
+        "ops": [
+          {
+            "op": "increment",
+            "path": [
+              {
+                "key": "count"
+              }
+            ],
+            "amount": 1
+          }
+        ]
       }
     }
   ],
   "invalidServer": [
     {
       "type": "welcome",
-      "protocol": 1
+      "protocol": 1,
+      "peers": []
     },
     {
-      "type": "ack"
+      "type": "result"
     },
     {
       "type": "future"
@@ -96,7 +115,7 @@
       "protocol": 1
     },
     {
-      "type": "applied"
+      "type": "execute"
     },
     {
       "type": "append"

@@ -1,0 +1,11 @@
+{
+  "labels": [
+    "compatibility-first",
+    "compatibility-second"
+  ],
+  "fixturesIdentical": true,
+  "sourcesIdentical": true,
+  "outcomesIdentical": true,
+  "repeatedSequencesStable": true,
+  "comparison": "Ignores dates, diagnostics text and raw serialization hashes; compares acceptance, preservation, phases and all boundary outcomes."
+}
