@@ -137,7 +137,10 @@ private struct ToolbarDragHandle: NSViewRepresentable {
                         do { try SlopPreviewWriter.write(preview, to: job.destination) }
                         catch { print("[hitSlop assets] Preview write failed: \(error.localizedDescription)") }
                     }
-                    if let icon = assets.finderIconPNG { SlopPreviewWriter.installFinderIcon(icon, for: job.destination) }
+                    if let icon = assets.finderIconPNG {
+                        await SlopPreviewWriter.installFinderIconAsync(icon, for: job.destination,
+                            isCurrent: { generations[job.destination] == job.generation && !Task.isCancelled })
+                    }
                 } catch { print("[hitSlop assets] Refresh failed: \(error.localizedDescription)") }
             }
         }
@@ -176,8 +179,22 @@ public enum SlopDocumentCommand: Equatable, Sendable {
     private var attentionMessage: String?
     private var commandsEnabled = true
 
-    public init(packageURL: URL) throws {
-        let opened = try SlopOpenedDocument(presentedURL: packageURL)
+    public convenience init(packageURL: URL) throws {
+        try self.init(opened: SlopOpenedDocument(presentedURL: packageURL))
+    }
+
+    public static func open(packageURL: URL) async throws -> SlopDocumentWindowController {
+        let opened = try await SlopOpenedDocument.open(presentedURL: packageURL)
+        do {
+            try Task.checkCancellation()
+            return try SlopDocumentWindowController(opened: opened)
+        } catch {
+            try await opened.session.closeAndWait()
+            throw error
+        }
+    }
+
+    private init(opened: SlopOpenedDocument) throws {
         self.opened = opened
         self.packageURL = opened.presentedURL
         session = opened.session
@@ -197,7 +214,7 @@ public enum SlopDocumentCommand: Equatable, Sendable {
         window.delegate = self; session.delegate = self; container.changed = { [weak self] in $0 ? self?.showToolbar() : self?.scheduleHide() }
         setupToolbar()
         SlopDocumentAssetRefreshQueue.invalidate(self.packageURL)
-        SlopPreviewWriter.installExistingPreview(for: self.packageURL)
+        SlopPreviewWriter.installExistingPreview(for: session.package)
         session.load()
     }
     required init?(coder: NSCoder) { nil }
@@ -340,7 +357,8 @@ public enum SlopDocumentCommand: Equatable, Sendable {
             }
             guard response == .OK, let target = panel.url else { return nil }
             try await session.flush()
-            let destination = try SlopDuplicator.duplicate(from: session.package.rootURL, to: target)
+            let source = session.package.rootURL
+            let destination = try await SlopPreparation.run { try SlopDuplicator.duplicate(from: source, to: target) }
             do {
                 if let document = session.document {
                     let copy = try await document.independentCopy(to: destination)
@@ -383,7 +401,9 @@ public enum SlopDocumentCommand: Equatable, Sendable {
                 Task {
                     do {
                         try await self.session.flush()
-                        self.onOpenDocument?(try SlopDuplicator.duplicate(from: self.session.package.rootURL, to: target))
+                        let source = self.session.package.rootURL
+                        let copy = try await SlopPreparation.run { try SlopDuplicator.duplicate(from: source, to: target) }
+                        self.onOpenDocument?(copy)
                     } catch { self.present("Could not duplicate", error) }
                 }
         }
@@ -429,7 +449,7 @@ public enum SlopDocumentCommand: Equatable, Sendable {
         await onPrepareClose?()
         do { try await session.flush() } catch { onCloseCancelled?(); throw error }
         do {
-            let snapshot = try SlopRenderSnapshot(packageURL: session.package.rootURL)
+            let snapshot = try await SlopRenderSnapshot.prepare(packageURL: session.package.rootURL)
             SlopDocumentAssetRefreshQueue.schedule(snapshot: snapshot, presentedURL: packageURL)
         } catch { print("[hitSlop assets] Could not snapshot saved document: \(error.localizedDescription)") }
     }

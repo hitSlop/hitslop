@@ -1,10 +1,9 @@
 import { expect, test } from "bun:test";
 import { BridgeRequestSchema, BridgeReplySchema } from "../src/bridge.ts";
-import { dataSchemaFromJSON, compileDataSchema } from "../src/data.ts";
 import { validate } from "../src/validation.ts";
 
 test("bridge requests retain nested JSON without defaults", () => {
-  const packaged = compileDataSchema(dataSchemaFromJSON(BridgeRequestSchema));
+  const packaged = (value: unknown) => validate(BridgeRequestSchema, value);
   for (const value of [
     {
       method: "document.execute",

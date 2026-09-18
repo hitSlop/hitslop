@@ -3,7 +3,7 @@ import * as S from "../src/document.js";
 import { prepareValidation, validate } from "../src/validation.js";
 
 test("prepared validators are cached and never coerce or insert defaults", () => {
-  const schema = S.Document({ count: S.Integer({ default: 3 }) });
+  const schema = S.Document({ count: S.Integer() });
   expect(prepareValidation(schema)).toBe(prepareValidation(schema));
   const missing = {},
     wrong = { count: "3" };

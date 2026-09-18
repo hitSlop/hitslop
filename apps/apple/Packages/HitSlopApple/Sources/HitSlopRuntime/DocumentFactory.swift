@@ -35,23 +35,32 @@ import HitSlopCore
     @discardableResult public func create(from template: SlopRemoteTemplate, at destination: URL) async throws -> Bool {
         let cached = templatesRoot.appendingPathComponent("cache/\(template.publisherKeyID)/\(template.slug)/\(template.release).slop", isDirectory: true)
         var downloaded = false
-        if (try? SlopPackage(rootURL: cached)) == nil {
-            try FileManager.default.createDirectory(at: cached.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let needsDownload = try await SlopPreparation.run { (try? SlopPackage(rootURL: cached)) == nil }
+        if needsDownload {
             let data = try await SlopCloudAPI(origin: catalogURL).artifact(template.artifactKey)
-            let archive = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
-            try data.write(to: archive, options: .atomic)
-            defer { try? FileManager.default.removeItem(at: archive) }
+            try await SlopPreparation.run {
+                try FileManager.default.createDirectory(at: cached.deletingLastPathComponent(), withIntermediateDirectories: true)
+                let archive = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
+                try data.write(to: archive, options: .atomic)
+                defer { try? FileManager.default.removeItem(at: archive) }
+                try SlopArchive.extract(archive, to: cached, expectedSHA256: template.artifactSha256)
+            }
             downloaded = true
-            try SlopArchive.extract(archive, to: cached, expectedSHA256: template.artifactSha256)
         }
-        try SlopPackage(rootURL: cached).validateAsTemplate()
-        try SlopDuplicator.makeImmutable(cached)
-        try SlopDuplicator.duplicate(from: cached, to: destination)
+        try await SlopPreparation.run {
+            try SlopPackage(rootURL: cached).validateAsTemplate()
+            try SlopDuplicator.makeImmutable(cached)
+            try SlopDuplicator.duplicate(from: cached, to: destination)
+        }
         return downloaded
     }
 
-    public func create(fromLocalPackage packageURL: URL, at destination: URL) throws {
+    nonisolated public func create(fromLocalPackage packageURL: URL, at destination: URL) throws {
         try SlopPackage(rootURL: packageURL).validateAsTemplate()
         try SlopDuplicator.duplicate(from: packageURL, to: destination)
+    }
+
+    public func createLocal(from packageURL: URL, at destination: URL) async throws {
+        try await SlopPreparation.run { try self.create(fromLocalPackage: packageURL, at: destination) }
     }
 }

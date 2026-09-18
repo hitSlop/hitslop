@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { Compile } from "typebox/compile";
 import { Check } from "typebox/value";
-import * as S from "../src/document.ts";
+import * as S from "@hitslop/schema/document";
 import { applyOps } from "../src/document-ops.ts";
 
 const keys = ["", "a\nb", "a\rb", "a\u2028b", "a\u2029b", "a\0b", "__proto__", "constructor"];
@@ -32,14 +32,14 @@ for (const key of keys) {
 test("legacy annotated record schemas require rebuilding", () => {
   const schema = S.Document({ values: S.Record(S.Number()) });
   schema.properties.values.patternProperties = { "^.*$": S.Number() };
-  expect(() => S.validateDocument(schema, { values: {} })).toThrow("rebuilding");
+  expect(() => S.validateDocument(schema, { values: {} })).toThrow("unrestricted record");
   expect(() => S.paths(schema).values.at("x")).toThrow("rebuilding");
 });
 
 for (const arrays of [false, true])
   for (const leaf of [1, {}, []]) {
     test(`document depth counts containers: ${arrays}/${JSON.stringify(leaf)}`, () => {
-      const schema = S.Document({ value: S.Atomic({}) });
+      const schema = S.Document({});
       const nested = (count: number) => {
         let value: any = leaf;
         for (let i = 0; i < count; i++) value = arrays ? [value] : { n: value };

@@ -1,6 +1,6 @@
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { dataSchemaFromJSON } from "./data.ts";
+import { generatedSchema } from "./generation/schema.ts";
 import { RoomMessageSchema, RoomClientMessageSchema } from "./room.ts";
 import { generateSkills } from "./generation/skills.ts";
 import { generateBridge } from "./generation/bridge.ts";
@@ -19,7 +19,7 @@ for (const [name, schema] of [
 ] as const) {
   await writeFile(
     resolve(generated, `${name}.schema.json`),
-    JSON.stringify(dataSchemaFromJSON(schema), null, 2) + "\n",
+    JSON.stringify(generatedSchema(schema), null, 2) + "\n",
   );
 }
 

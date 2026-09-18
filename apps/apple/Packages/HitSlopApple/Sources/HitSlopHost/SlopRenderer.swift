@@ -96,25 +96,56 @@ struct SlopDocumentAssets: Sendable {
     public static func exportPDFData(session: SlopRuntimeSession) async throws -> Data { try await capture(session: session, output: .pdf) }
 
     static func documentAssetsPNGData(packageURL: URL) async throws -> SlopDocumentAssets {
-        let snapshot = try SlopRenderSnapshot(packageURL: packageURL)
+        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
         defer { snapshot.remove() }
         return try await documentAssetsPNGData(snapshot: snapshot)
     }
 
     static func documentAssetsPNGData(snapshot: SlopRenderSnapshot) async throws -> SlopDocumentAssets {
-        let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true, purpose: .backgroundRender)
-        defer { session.close() }
+        try await withCaptureSession(snapshot: snapshot, renderTargetsEnabled: true) { session in
+            var preview: Data?, icon: Data?
+            do { preview = try await capture(session: session, output: .previewPNG) }
+            catch { print("[hitSlop assets] Preview failed: \(error.localizedDescription)") }
+            try Task.checkCancellation()
+            do { icon = try await targetPNGData(session: session, target: .icon) }
+            catch { print("[hitSlop assets] Icon failed: \(error.localizedDescription)") }
+            try Task.checkCancellation()
+            return SlopDocumentAssets(previewPNG: preview, finderIconPNG: icon)
+        }
+    }
+
+    /// The snapshot remains leased until all native storage and engine resources
+    /// have closed, including when readiness/capture throws or is cancelled.
+    static func withCaptureSession<T>(
+        snapshot: SlopRenderSnapshot, renderTargetsEnabled: Bool = false,
+        readinessTimeout: Duration = .seconds(15),
+        _ capture: (SlopRuntimeSession) async throws -> T
+    ) async throws -> T {
+        try snapshot.beginUse()
+        let session: SlopRuntimeSession
+        do {
+            session = try await SlopRuntimeSession.open(
+                packageURL: snapshot.url, renderTargetsEnabled: renderTargetsEnabled, purpose: .backgroundRender)
+        } catch {
+            snapshot.endUse(teardownSucceeded: !(error is SlopRuntimeTeardownError))
+            throw error
+        }
         let window = hiddenWindow(session)
-        defer { window.contentView = nil }
-        session.load()
-        try await session.waitUntilReady()
-        var preview: Data?, icon: Data?
-        do { preview = try await capture(session: session, output: .previewPNG) }
-        catch { print("[hitSlop assets] Preview failed: \(error.localizedDescription)") }
-        try Task.checkCancellation()
-        do { icon = try await targetPNGData(session: session, target: .icon) }
-        catch { print("[hitSlop assets] Icon failed: \(error.localizedDescription)") }
-        return SlopDocumentAssets(previewPNG: preview, finderIconPNG: icon)
+        let result: Result<T, Error>
+        do {
+            session.load()
+            try await session.waitUntilReady(timeout: readinessTimeout)
+            try Task.checkCancellation()
+            result = .success(try await capture(session))
+        } catch { result = .failure(error) }
+        window.contentView = nil
+        do { try await session.closeAndWait() }
+        catch {
+            snapshot.endUse(teardownSucceeded: false)
+            throw error
+        }
+        snapshot.endUse(teardownSucceeded: true)
+        return try result.get()
     }
 
     private static func hiddenWindow(_ session: SlopRuntimeSession) -> NSWindow {
@@ -125,15 +156,11 @@ struct SlopDocumentAssets: Sendable {
     }
 
     public static func targetPNGData(packageURL: URL, target: SlopRenderTarget) async throws -> Data? {
-        let snapshot = try SlopRenderSnapshot(packageURL: packageURL)
+        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
         defer { snapshot.remove() }
-        let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true, purpose: .backgroundRender)
-        defer { session.close() }
-        let window = hiddenWindow(session)
-        defer { window.contentView = nil }
-        session.load()
-        try await session.waitUntilReady()
-        return try await targetPNGData(session: session, target: target)
+        return try await withCaptureSession(snapshot: snapshot, renderTargetsEnabled: true) { session in
+            try await targetPNGData(session: session, target: target)
+        }
     }
 
     public static func targetPNGData(session: SlopRuntimeSession, target: SlopRenderTarget) async throws -> Data? {
@@ -182,15 +209,11 @@ struct SlopDocumentAssets: Sendable {
     }
 
     private static func render(packageURL: URL, output: CaptureOutput) async throws -> Data {
-        let snapshot = try SlopRenderSnapshot(packageURL: packageURL)
+        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
         defer { snapshot.remove() }
-        let session = try SlopRuntimeSession(packageURL: snapshot.url, purpose: .backgroundRender)
-        defer { session.close() }
-        let window = hiddenWindow(session)
-        defer { window.contentView = nil }
-        session.load()
-        try await session.waitUntilReady()
-        return try await capture(session: session, output: output)
+        return try await withCaptureSession(snapshot: snapshot) { session in
+            try await capture(session: session, output: output)
+        }
     }
 
     private static func capture(session: SlopRuntimeSession, output: CaptureOutput) async throws -> Data {

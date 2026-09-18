@@ -15,8 +15,11 @@ actor CatalogScanner {
         for child in children where child.pathExtension.lowercased() == "slop" {
             try Task.checkCancellation()
             do {
-                let package = try SlopPackage(rootURL: child)
-                try package.validateAsTemplate()
+                let package = try await SlopPreparation.run {
+                    let package = try SlopPackage(rootURL: child)
+                    try package.validateAsTemplate()
+                    return package
+                }
                 guard child.deletingPathExtension().lastPathComponent == package.manifest.slug else {
                     throw SlopPackageError.invalid("installed filename must match manifest slug")
                 }
@@ -46,7 +49,7 @@ actor CatalogScanner {
             guard url.pathExtension.lowercased() == "slop", seen.insert(url).inserted,
                   FileManager.default.fileExists(atPath: url.path),
                   !DocumentFactory.isManagedTemplatePackage(url, templatesRoot: templatesRoot) else { continue }
-            let package = try? SlopPackage(rootURL: url)
+            let package = try? await SlopPreparation.run { try SlopPackage(rootURL: url) }
             var entry = CatalogEntry(
                 id: "recent:\(url.path)", source: .recent(url),
                 title: package?.manifest.title ?? url.deletingPathExtension().lastPathComponent

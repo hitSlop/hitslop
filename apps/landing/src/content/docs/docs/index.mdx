@@ -32,8 +32,9 @@ personal data and need no hosted backend.
   <LinkCard title="Style the object" href="/docs/guides/styling/" description="Define a typed theme, structural styles, and responsive behavior." />
   <LinkCard title="Design its output" href="/docs/guides/icons-and-exports/" description="Create live Finder icons, Quick Look previews, and clean PNG or PDF exports." />
   <LinkCard title="Use a custom silhouette" href="/docs/guides/png-window-skins/" description="Turn an exact-size RGBA PNG into a native backing and click-through mask." />
-  <LinkCard title="Model data and media" href="/docs/guides/data-and-schemas/" description="Use TypeBox JSON plus named images and files in the writable document." />
+  <LinkCard title="Model data and media" href="/docs/guides/data-and-schemas/" description="Use a schema-derived document store plus named images and files." />
   <LinkCard title="Edit an installed slop" href="/docs/guides/edit-installed-data/" description="Safely change a document with an editor or LLM." />
+  <LinkCard title="Share it live" href="/docs/guides/live-sharing/" description="Keep a slop local, then invite others to edit the same document in real time." />
 </CardGrid>
 
 ## The supported path today
@@ -45,7 +46,9 @@ components.
 
 Native testing and persistence require hitSlop on Apple silicon with macOS 14
 or newer. Browser preview is available anywhere Bun can run, but its data is
-disposable. SQLite storage, iOS, and iCloud sync are coming later.
+disposable. Documents already use command/snapshot storage on the host. Share
+from the Mac app when you want live collaboration; iOS, Windows, and iCloud
+sync are coming later.
 
 ## Source and document are different things
 

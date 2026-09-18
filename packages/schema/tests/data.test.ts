@@ -4,9 +4,9 @@ import { compileDataSchema, dataSchemaFromJSON } from "../src/data.ts";
 import { validate, assertJSON } from "../src/validation.ts";
 import fixtures from "../../../apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/data-conformance.json";
 
-test("independent schemas may reuse their document id", () => {
+test("application schemas reject identifiers", () => {
   for (let i = 0; i < 2; i++)
-    expect(() => compileDataSchema({ $id: "urn:hitslop:test", type: "object" })).not.toThrow();
+    expect(() => compileDataSchema({ $id: "urn:hitslop:test", type: "object" })).toThrow();
 });
 test("document schemas default to 2020-12 and reject incompatible explicit dialects", () => {
   const dialect = "https://json-schema.org/draft/2020-12/schema";
@@ -24,6 +24,10 @@ test("document schemas default to 2020-12 and reject incompatible explicit diale
 });
 test("TypeBox and packaged validation match shared native fixtures without mutation", () => {
   for (const fixture of fixtures) {
+    if (!fixture.supported) {
+      expect(() => compileDataSchema(fixture.schema)).toThrow();
+      continue;
+    }
     const check = compileDataSchema(fixture.schema);
     for (const item of fixture.cases) {
       const before = JSON.stringify(item.value);
@@ -41,7 +45,7 @@ test("TypeBox and packaged validation match shared native fixtures without mutat
 test("portable schema retains unknown fields and never fills defaults", () => {
   const source = Type.Object(
     {
-      count: Type.Integer({ default: 0 }),
+      count: Type.Integer(),
       items: Type.Array(Type.Object({ text: Type.String() }, { additionalProperties: true })),
     },
     { additionalProperties: true },
@@ -71,14 +75,15 @@ test("rejects unknown assertions, formats, and unresolved references", () => {
     expect(() => dataSchemaFromJSON(schema)).toThrow();
 });
 
-test("interpreted validation covers deep uniqueness and unevaluated properties", () => {
-  const unique = compileDataSchema({ type: "array", uniqueItems: true });
+test("deep uniqueness remains supported; general composition is rejected", () => {
+  const unique = compileDataSchema({
+    type: "array",
+    items: { type: "object", properties: { a: { type: "integer" } }, required: ["a"] },
+    uniqueItems: true,
+  });
   expect(() => unique([{ a: 1 }, { a: 2 }])).not.toThrow();
   expect(() => unique([{ a: 1 }, { a: 1 }])).toThrow();
-  const evaluated = compileDataSchema({
-    allOf: [{ properties: { title: { type: "string" } } }],
-    unevaluatedProperties: false,
-  });
-  expect(() => evaluated({ title: "ok" })).not.toThrow();
-  expect(() => evaluated({ other: true })).toThrow();
+  expect(() =>
+    compileDataSchema({ allOf: [{ type: "object" }], unevaluatedProperties: false }),
+  ).toThrow();
 });

@@ -1,0 +1,44 @@
+{
+  "name": "@hitslop/document-engine",
+  "version": "0.3.0",
+  "description": "Shared deterministic hitSlop document state engine.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hitslop/hitslop.git",
+    "directory": "packages/document-engine"
+  },
+  "homepage": "https://hitslop.com",
+  "bugs": {
+    "url": "https://github.com/hitslop/hitslop/issues"
+  },
+  "keywords": [
+    "hitslop",
+    "schema",
+    "typebox",
+    "json-schema"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./web": "./dist/web.js"
+  },
+  "scripts": {
+    "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",
+    "check": "tsc -p tsconfig.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@hitslop/schema": "^0.3.0",
+    "typebox": "^1.3.32"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

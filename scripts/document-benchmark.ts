@@ -1,6 +1,6 @@
 // bun scripts/document-benchmark.ts [samples]. No native disk or browser rendering in this measurement.
 import * as S from "../packages/schema/dist/document.js";
-import { MemoryAuthority } from "../packages/schema/dist/document-authority.js";
+import { MemoryAuthority } from "../packages/document-engine/dist/web.js";
 import {
   createDocumentController,
   type CommandHost,

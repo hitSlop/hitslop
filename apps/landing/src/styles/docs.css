@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Onest:wght@400..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap");
 
 :root,
 :root[data-theme="light"],
@@ -17,7 +17,7 @@
   --shadow-sm: 0 7px 18px oklch(20% .03 65 / .08);
   --shadow-md: 0 20px 48px oklch(20% .03 65 / .12);
 
-  --sl-font: "Onest", "Avenir Next", system-ui, sans-serif;
+  --sl-font: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --sl-font-mono: "SFMono-Regular", "Cascadia Code", ui-monospace, monospace;
   --sl-color-white: var(--ink);
   --sl-color-gray-1: oklch(29% .018 255);

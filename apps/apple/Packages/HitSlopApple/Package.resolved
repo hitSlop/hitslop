@@ -1,5 +1,5 @@
 {
-  "originHash" : "9bdcefa54d62b68ce920d9bb6655788a8e00f5ad4c0a0252ea5a7eb09157884f",
+  "originHash" : "3aa4fee1e40ab55a4228ad1002d838949fab8202290b7258edf54f89a05c550b",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -242,15 +242,6 @@
       "state" : {
         "revision" : "b476cc5761057d8d857de063fe7ac8daecf5c06b",
         "version" : "1.17.1"
-      }
-    },
-    {
-      "identity" : "swift-dynamicjson",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/objecthub/swift-dynamicjson.git",
-      "state" : {
-        "revision" : "9648f32126ade414b00b9551c27870d4ad9b168c",
-        "version" : "1.0.2"
       }
     },
     {

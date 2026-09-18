@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { quicktype, InputData, JSONSchemaInput, FetchingJSONSchemaStore } from "quicktype-core";
 import type { TSchema } from "typebox";
-import { dataSchemaFromJSON } from "../data.ts";
+import { generatedSchema } from "./schema.ts";
 import { SlopManifestSchema } from "../manifest.ts";
 
 export async function generateModels(
@@ -27,7 +27,7 @@ export async function generateModels(
     title: string;
     description: string;
   }): Promise<void> {
-    const schema = dataSchemaFromJSON(options.schema);
+    const schema = generatedSchema(options.schema);
     Object.assign(schema, {
       $id: options.id,
       title: options.title,
@@ -39,20 +39,14 @@ export async function generateModels(
       "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Generated",
       options.swiftName,
     );
-    const swiftSchema = resolve(
-      repositoryRoot,
-      "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/manifest.schema.json",
-    );
     const publicSchema = resolve(
       repositoryRoot,
       "apps/cloudflare/public/schemas/v1/manifest.schema.json",
     );
     await mkdir(resolve(swiftOutput, ".."), { recursive: true });
-    await mkdir(resolve(swiftSchema, ".."), { recursive: true });
     await mkdir(resolve(publicSchema, ".."), { recursive: true });
     const serialized = `${JSON.stringify(schema, null, 2)}\n`;
     await writeFile(schemaPath, serialized);
-    await writeFile(swiftSchema, serialized);
     await writeFile(publicSchema, serialized);
     const input = new JSONSchemaInput(new FetchingJSONSchemaStore());
     await input.addSource({ name: options.title, schema: serialized });

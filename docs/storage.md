@@ -11,6 +11,13 @@ the app and builder. `S.List(item, "id")` declares an ordered identity list;
 `S.Array` is replaced atomically. Strings have ordinary last-write-wins semantics.
 Validation never coerces, adds defaults, or strips unknown fields.
 
+The [document schema contract](../packages/schema/README.md) is closed and checked
+in the builder, preview, native host and Cloudflare. `S.Enum` and nullable unions
+are supported; schema defaults, references, arbitrary patterns/formats and
+conditional/intersection schemas are not. Direct TypeBox imports pass the same
+checker. Archived applications remain excluded; active fixtures represent their
+supported structural requirements.
+
 Document data is limited to 1 MiB of encoded UTF-8 JSON and 64 nested object/array
 containers. Snapshot, projection, and room envelopes have a separate bounded
 framing allowance of 68 containers; envelope overhead does not reduce the data
@@ -30,14 +37,29 @@ host error reporting, loading semantics, context, and capture views. Use `{@atta
 drafts, composition, and retained text after remote row deletion. There is no
 writable document proxy or document-wide optimistic replay.
 
-A Swift actor applies commands against the latest committed state under a SQLite
-write transaction, validates the candidate, then persists JSON and revision before publishing a snapshot. `state/document.sqlite` uses
-`user_version = 3`. SQLite serializes multiple windows and processes. Full
-snapshots preserve unchanged row identities in the guest. The TypeScript preview
-and room interpreter share permanent fixtures with Swift.
+A Swift actor loads the latest committed state under a SQLite write transaction,
+asks `@hitslop/document-engine` to evaluate it in the document’s JavaScriptCore VM, then
+persists JSON, revision and receipt before publishing a snapshot.
+`state/document.sqlite` uses `user_version = 4`. SQLite serializes multiple windows
+and processes. The same TypeScript evaluator runs in previews and Cloudflare.
+Path copying protects prior snapshots while sharing untouched branches. Full
+validation still runs before commit; prepared JSON is reused for persistence and
+publication. Full snapshots preserve unchanged row identities in the guest.
+
+Each document owns one VM on a dedicated thread. Only the trusted generated engine
+bundle runs there; authored UI code stays in WebKit. Swift passes JSON strings and
+decodes fixed protocol metadata, never arbitrary application values. The engine
+holds cached validators, not authoritative document state, and closes with its
+document. A separate stateless utility VM handles package/schema/seed validation;
+it never evaluates document edits. Async bridge calls enqueue a continuation on
+the document lane. Transactional evaluation stays synchronous, so SQLite never
+suspends between load and commit. SQLite remains authoritative for local durability. Old pre-release
+databases are rejected without migration.
 
 The authority retains one previous snapshot in a singleton undo slot, separate from
-small request receipts. A successful ops command captures it in the commit transaction
+small request receipts. Ordinary edits do not read or send the previous document
+to JavaScript; only undo requests load that slot. Request inspection still precedes
+receipt lookup and evaluation. A successful ops command captures it in the commit transaction
 by copying the stored snapshot bytes. Undo checks the originating lease, command,
 authority, and exact revision, restores its data at a new revision, and consumes the
 slot. Replacements and authority handoffs clear it. Rejected commands and retries do

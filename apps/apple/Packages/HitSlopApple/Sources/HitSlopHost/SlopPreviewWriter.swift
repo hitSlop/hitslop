@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import HitSlopCore
+import HitSlopRuntime
 
 public extension Notification.Name {
     static let hitSlopPreviewDidChange = Notification.Name("com.hitslop.preview-did-change")
@@ -15,13 +16,36 @@ public extension Notification.Name {
     }
 
     public static func installExistingPreview(for packageURL: URL) {
-        guard (try? SlopPackage(rootURL: packageURL)) != nil else { return }
-        installFinderIcon(for: packageURL)
-        announce(packageURL)
+        guard let package = try? SlopPackage(rootURL: packageURL) else { return }
+        installExistingPreview(for: package)
+    }
+
+    public static func installExistingPreview(for package: SlopPackage) {
+        installFinderIcon(for: package.rootURL)
+        announce(package.rootURL)
+    }
+
+    public static func installExistingPreviewAsync(for packageURL: URL) async {
+        guard let package = try? await SlopPreparation.run({ try SlopPackage(rootURL: packageURL) }),
+              !Task.isCancelled else { return }
+        installExistingPreview(for: package)
+    }
+
+    public static func installFinderIconAsync(
+        _ png: Data, for packageURL: URL, isCurrent: () -> Bool = { true }
+    ) async {
+        guard let package = try? await SlopPreparation.run({ try SlopPackage(rootURL: packageURL) }),
+              !Task.isCancelled, isCurrent() else { return }
+        installFinderIcon(png, for: package)
     }
 
     public static func installFinderIcon(_ png: Data, for packageURL: URL) {
-        guard (try? SlopPackage(rootURL: packageURL)) != nil else { return }
+        guard let package = try? SlopPackage(rootURL: packageURL) else { return }
+        installFinderIcon(png, for: package)
+    }
+
+    private static func installFinderIcon(_ png: Data, for package: SlopPackage) {
+        let packageURL = package.rootURL
         guard let image = NSImage(data: png) else {
             print("[hitSlop preview] Could not decode icon PNG for \(packageURL.lastPathComponent)")
             return

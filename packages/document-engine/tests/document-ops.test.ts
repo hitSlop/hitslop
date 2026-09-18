@@ -1,22 +1,15 @@
+import { MemoryAuthority, prepareCommand, issueLease } from "../src/web.js";
 import { expect, test, spyOn } from "bun:test";
-import corpus from "../fixtures/document-ops.json";
-import {
-  MemoryAuthority,
-  executeCommand,
-  prepareCommand,
-  prepareSnapshot,
-  issueLease,
-  type Receipt,
-  type UndoSlot,
-} from "../src/document-authority.js";
+import corpus from "../../schema/fixtures/document-ops.json";
+import { executeCommand, prepareSnapshot, type Receipt, type UndoSlot } from "../src/index.js";
 import {
   RETRY_WINDOW_MS,
   type Request,
   type ErrorCode,
   type JSONValue,
-} from "../src/document-protocol.js";
+} from "@hitslop/schema/document-protocol";
 import * as Type from "typebox";
-import * as S from "../src/document.js";
+import * as S from "@hitslop/schema/document";
 import { applyOps } from "../src/document-ops.js";
 
 function authority(

@@ -1,6 +1,6 @@
 # Local testing before release
 
-Use macOS, Xcode, and the exact Bun version in root `package.json` (1.4.0).
+Use macOS, Xcode, and the exact Bun version in root `package.json` (1.4.2).
 Install dependencies with `bun install --frozen-lockfile`, then run:
 
 ```sh

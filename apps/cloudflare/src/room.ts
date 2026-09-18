@@ -1,3 +1,4 @@
+import { issueLease, prepareCommand } from "@hitslop/document-engine/web";
 import {
   RoomClientMessageSchema,
   RoomSeedInputSchema,
@@ -10,12 +11,7 @@ import type { SchemaNode as TSchema } from "@hitslop/schema/document";
 import { checkDataSchema } from "@hitslop/schema";
 import { validateDocument } from "@hitslop/schema/document";
 import { validate } from "@hitslop/schema/validation";
-import {
-  executeCommand,
-  issueLease,
-  prepareCommand,
-  type AuthorityInput,
-} from "@hitslop/schema/document-authority";
+import { executeCommand, type AuthorityInput } from "@hitslop/document-engine";
 import {
   canonical,
   type Snapshot,

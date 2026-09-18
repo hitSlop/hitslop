@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import * as S from "@hitslop/schema/document";
-import { MemoryAuthority } from "@hitslop/schema/document-authority";
+import { MemoryAuthority } from "@hitslop/document-engine/web";
 import type { Open, Request, Result, Snapshot } from "@hitslop/schema/document-protocol";
 import { createDocumentController, type CommandHost } from "../src/document-controller.js";
 
@@ -145,10 +145,7 @@ test("transaction inserts reserve an identity for later commands and still commi
 test("automatic identities respect custom keys and authoritative identity constraints", async () => {
   const schema = S.Document({
     rows: S.List(S.Object({ key: S.String(), text: S.String() }), "key"),
-    restricted: S.List(
-      S.Object({ key: S.String({ pattern: "^custom-" }), text: S.String() }),
-      "key",
-    ),
+    restricted: S.List(S.Object({ key: S.String({ maxLength: 20 }), text: S.String() }), "key"),
   });
   const initial = { rows: [], restricted: [] },
     fields = S.paths(schema);
@@ -158,9 +155,9 @@ test("automatic identities respect custom keys and authoritative identity constr
   const generated = await controller.insert(fields.rows, { text: "Generated" });
   if (!generated.ok) throw new Error(generated.error.message);
   expect(controller.data.rows).toEqual([{ key: generated.id, text: "Generated" }]);
-  expect((await controller.insert(fields.restricted, { text: "UUID does not match" })).ok).toBe(
-    false,
-  );
+  expect(
+    (await controller.insert(fields.restricted, { text: "UUID exceeds the length limit" })).ok,
+  ).toBe(false);
   const result = await controller.insert(fields.restricted, {
     key: "custom-import",
     text: "Valid",

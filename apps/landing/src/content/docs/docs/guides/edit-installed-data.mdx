@@ -6,6 +6,8 @@ description: Safely change a writable slop document with an editor or LLM.
 A built `.slop` is a package directory. Its interface is immutable, while
 personal data lives under `stores/`. You can change that data through the app,
 with a text editor, or by giving the document to an LLM-enabled coding tool.
+The UI and the file stay in sync: app edits project back to JSON, and a valid
+external save shows up in the open document.
 
 :::caution
 Edit a writable document you created from a template. Anything under
@@ -22,21 +24,40 @@ Edit a writable document you created from a template. Anything under
 Treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`, `.agents/`,
 and `QuickLook/Icon.png` as immutable. User changes belong in `stores/`.
 
-## Edit the complete JSON value
+## Edit only the `data` object
 
-`stores/data.json` is one complete object graph. Preserve fields you do not
-recognize, keep every value valid against `data.schema.json`, write a temporary
+`stores/data.json` is a revision envelope plus the document value:
+
+```json
+{
+  "$slop": {
+    "format": 2,
+    "documentId": "…",
+    "schemaHash": "…",
+    "authority": "…",
+    "baseRevision": 0
+  },
+  "data": {}
+}
+```
+
+Preserve `$slop` exactly. Edit only `data`. Keep every value valid against
+`data.schema.json`, preserve fields you do not recognize, write a temporary
 sibling file, and atomically replace the original.
 
 An open slop watches for external changes and adopts a valid new revision when
-it has no unsaved local edits. If the app is actively editing the same data,
-finish that edit first to avoid a whole-document revision conflict.
+the envelope still matches. Stale or invalid bytes are kept for recovery rather
+than merged. If the app is actively editing, finish that edit first.
 
 Afterward, validate the document:
 
 ```sh
 slop validate path/to/my-document.slop
 ```
+
+Shared documents are not a second Git copy. Prefer the app while a room is live,
+and treat a disconnected shared file as read-only. See
+[Live sharing](/docs/guides/live-sharing/).
 
 ## A useful prompt for an LLM
 
@@ -45,9 +66,10 @@ Read manifest.json first, then follow
 .agents/skills/hitslop-document/SKILL.md and any app guide.
 Read data.schema.json before editing stores/data.json.
 
-Change [describe the data change]. Preserve every unrelated or unknown field,
-validate the complete JSON value, replace data.json atomically, and run
-slop validate on the document when finished. Do not modify immutable app files.
+Change [describe the data change]. Preserve the $slop envelope and every
+unrelated or unknown field inside data. Validate the complete JSON value,
+replace data.json atomically, and run slop validate on the document when
+finished. Do not modify immutable app files.
 ```
 
 The embedded skill travels with the document, so the instructions match the
@@ -55,7 +77,8 @@ package being edited rather than depending on this website being available.
 
 ## Other document stores
 
-- Put known user-selected files under `stores/media/` using lowercase names,
-  digits, and hyphens. Replace them atomically.
+- Media files are content-addressed under `stores/media/<sha256>`. Add a new
+  supported file by digest and point `data` at `{ sha256, mime, bytes, filename? }`.
+  Do not rewrite an existing digest file.
 - Put theme overrides in `stores/theme.css` as one `:root` rule containing only
   existing public `--slop-*` variables.

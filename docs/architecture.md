@@ -85,8 +85,9 @@ error codes, host information, and change events. One
 `BridgeMethods` registry pairs parameter and result schemas for each method.
 JavaScript calls infer their result from the method and validate the
 reply envelope and method-specific value before returning it. Generation emits
-the native request schema, Swift method/error enums, and the browser bridge
-bundle. The Apple host validates every request before dispatch. Storage runs
+Swift method/error enums, the browser bridge bundle, and the trusted
+JavaScriptCore state-engine bundle. Requests and replies cross WebKit as JSON
+strings so native value conversion cannot change application data. The Apple host validates every request before dispatch. Storage runs
 on a serial worker, while WebKit and window operations remain on the UI actor.
 `hostInfo()` reports protocol version and capabilities; errors expose a stable
 `code`. `flush()` waits for registered framework stores and bridge writes.
@@ -101,8 +102,8 @@ TypeBox under `packages/schema/src` is authoritative for the shared manifest and
 publish protocol:
 
 ```text
-TypeBox → JSON Schema draft 2020-12 → Swift Codable models
-                         └──────→ bundled Swift validation resource
+TypeBox → JSON Schema draft 2020-12 → fixed Swift Codable models
+       └──→ @hitslop/document-engine → trusted JavaScriptCore bundle
 ```
 
 Run `bun run schema:generate` after schema changes. Generated output is
@@ -154,8 +155,12 @@ See [Capture views](capture.md) for authoring, dimensions, and limits.
 
 ## Local and shared authorities
 
-Local JSON documents use a Swift command interpreter and `state/document.sqlite`.
-Shared documents use the same command semantics in the room, with Swift as gateway.
+Local JSON documents evaluate commands with `@hitslop/document-engine` in one independent
+JavaScriptCore VM per document and commit through Swift to `state/document.sqlite`.
+Shared rooms and disposable previews import that same TypeScript evaluator. Swift
+owns disk, networking and UI; it no longer implements document operations or
+recursive JSON validation. The engine accepts and returns JSON text, preserving
+Unicode keys, unknown fields and JSON number semantics across runtimes.
 There is no guest WASM sync engine and no second JSON persister. The runtime
 controller manages authored drafts; the host alone validates and commits them.
 One raw Durable Object per shared document owns invitations, membership, and

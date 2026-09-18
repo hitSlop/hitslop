@@ -80,7 +80,9 @@ import HitSlopRuntime
         case .hosted(let id):
             guard let value = hostedTemplates[id] else { throw SlopPackageError.invalid("The selected template is no longer available. Refresh the catalog and try again.") }
             template = value; slug = value.slug
-        case .local(let url): template = nil; slug = try SlopPackage(rootURL: url).manifest.slug
+        case .local(let url):
+            template = nil
+            slug = try await SlopPreparation.run { try SlopPackage(rootURL: url).manifest.slug }
         case .recent: return nil
         }
         let panel = NSSavePanel()
@@ -93,11 +95,11 @@ import HitSlopRuntime
         let factory = DocumentFactory(catalogURL: catalogURL, templatesRoot: templatesURL)
         if let template {
             _ = try await factory.create(from: template.remoteTemplate(), at: url)
-            SlopPreviewWriter.installExistingPreview(for: url)
+            await SlopPreviewWriter.installExistingPreviewAsync(for: url)
             try? await SlopCloudAPI(origin: catalogURL).recordCreation(templateId: template.id)
         } else if case .local(let source) = entry.source {
-            try factory.create(fromLocalPackage: source, at: url)
-            SlopPreviewWriter.installExistingPreview(for: url)
+            try await factory.createLocal(from: source, at: url)
+            await SlopPreviewWriter.installExistingPreviewAsync(for: url)
         }
         NSDocumentController.shared.noteNewRecentDocumentURL(url)
         return url.standardizedFileURL.resolvingSymlinksInPath()

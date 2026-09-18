@@ -42,6 +42,7 @@ export default defineConfig({
           label: "Work with a document",
           items: [
             { label: "Edit installed data", slug: "docs/guides/edit-installed-data" },
+            { label: "Live sharing", slug: "docs/guides/live-sharing" },
             { label: "How .slop files work", slug: "docs/concepts/how-slop-files-work" },
           ],
         },

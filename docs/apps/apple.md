@@ -7,6 +7,10 @@ iOS 17.
 
 ## Targets
 
+- **HitSlopDocumentEngine** owns the trusted bundled TypeScript evaluator, with one
+  JavaScriptCore VM per document on a dedicated thread. Its string ABI preserves
+  arbitrary JSON; Swift decodes only fixed metadata. Closing releases the VM.
+
 - **HitSlopCore** validates packages/manifests, copies documents safely,
   and manages document media. It is platform-neutral apart from system image facilities.
 - **HitSlopRuntime** hosts the WebKit scheme/bridge, JSON storage,
@@ -33,6 +37,18 @@ The host validates the package, derives a Finder icon from immutable
 serves only allowed immutable resources, and wires the bridge to canonical
 stores. Closing a macOS document uses a separate hidden renderer to refresh
 preview assets; it does not put the interactive window into capture mode.
+
+Use the async `open` factories on `SlopRuntimeSession`, `SlopOpenedDocument`, and
+`SlopDocumentWindowController` in UI flows. Package validation, database opening,
+and engine setup run on the bounded `SlopPreparation` queue; WebKit and AppKit
+construction stays on the main actor. Synchronous initializers remain available
+for compatibility. The engine thread runs at user-initiated QoS; evaluation
+inside a SQLite transaction remains synchronous to preserve atomic commits.
+
+`finish()` preserves the guest flush barrier for normal close. For disposal,
+await `closeAndWait()` before removing package files. The synchronous `close()`
+only starts that teardown. Background captures await disposal on success,
+failure, and cancellation; a failed teardown retains the temporary snapshot.
 
 ## Copies and caches
 

@@ -1,7 +1,8 @@
 # Command/snapshot implementation
 
-The replacement uses explicit commands and one authority per document. A local
-Swift actor owns SQLite; a shared room Durable Object owns JSON state, with Swift
+The implementation uses explicit commands and one authority per document.
+`@hitslop/document-engine` evaluates commands in every runtime. A local
+Swift actor owns SQLite and one document-scoped JavaScriptCore VM; a shared room Durable Object owns JSON state, with Swift
 as the WebView's gateway. The production bridge uses protocol 3 commands and
 snapshots. There is no commands-to-`after` shim.
 
@@ -56,7 +57,7 @@ into a writable local document. Attempts admitted while connected are persisted
 before sending and resolved after reconnection; this is not an offline edit queue.
 Promotion records its seed and freezes writes until its outcome is known.
 
-## Performance checkpoint
+## Historical performance checkpoint
 
 The isolated native test is `CommandPerformanceTests.webKitCheckpoint`, enabled
 with `HITSLOP_COMMAND_BENCHMARK=1`. It exercises WebKit → Swift → SQLite → full
@@ -78,8 +79,9 @@ on Bun 1.4.0. Both runs are retained with scope and toolchain details in the
 benchmark directory. These are observations rather than a controlled speedup claim.
 
 Prepared TypeBox validators are cached with a tested fallback when runtime code
-generation is prohibited. Native DynamicJSON validators are prepared once on the
-serial owner. JSON parsing and serialization are measured separately from schema
+generation is prohibited. The native host uses those same validators in its
+document-scoped JavaScriptCore engine; the earlier DynamicJSON implementation
+and dependency have been removed. JSON parsing and serialization are measured separately from schema
 validation. Confirmed guest snapshots use structural sharing keyed by list
 identity and do not repeat authoritative application-schema validation. Candidate
 JSON is encoded once and reused for persistence and snapshot framing; request
@@ -87,6 +89,10 @@ hashing, editable-file projection and WebKit transport are separate costs. Previ
 commits update only their new receipt instead of copying or freezing receipt history.
 CI checks validator reuse, candidate preparation, row identity and constant preview
 freezing work; machine-specific timing observations remain manual.
+
+Current engine measurements and their scope are in the
+[JavaScriptCore report](benchmarks/javascriptcore.md). Historical Swift numbers
+above describe the removed implementation.
 
 ## Production integration
 

@@ -4,6 +4,11 @@ import * as Type from "typebox";
 import type { Static, TSchema } from "typebox";
 import { hitslopDocumentKeyword } from "./keywords.js";
 import { assertJSON, validate } from "./validation.js";
+import { checkDocumentSchema } from "./document-schema.js";
+export { checkDocumentSchema } from "./document-schema.js";
+import { utf8Length } from "./json.js";
+import { traced, type DocumentTrace } from "./document-trace.js";
+export { traced, type DocumentTrace } from "./document-trace.js";
 
 export type { Static };
 export { paths, read, pathInfo } from "./document-paths.js";
@@ -48,13 +53,22 @@ const mark = <S extends TSchema>(schema: S, meta: DocumentMeta): S => {
 
 const objectOptions = { additionalProperties: true as const };
 
-export const String = (options?: Parameters<typeof Type.String>[0]) => Type.String(options);
-export const Boolean = (options?: Parameters<typeof Type.Boolean>[0]) => Type.Boolean(options);
-export const Number = (options?: Parameters<typeof Type.Number>[0]) => Type.Number(options);
-export const Integer = (options?: Parameters<typeof Type.Integer>[0]) => Type.Integer(options);
-export const Null = (options?: Parameters<typeof Type.Null>[0]) => Type.Null(options);
-export const Literal = Type.Literal.bind(Type) as typeof Type.Literal;
-export const Union = Type.Union.bind(Type) as typeof Type.Union;
+type Annotations = { title?: string; description?: string };
+type StringOptions = Annotations & { minLength?: number; maxLength?: number };
+type NumberOptions = Annotations & { minimum?: number; maximum?: number };
+type ArrayOptions = Annotations & { minItems?: number; maxItems?: number; uniqueItems?: boolean };
+export const String = (options?: StringOptions) => Type.String(options);
+export const Boolean = (options?: Annotations) => Type.Boolean(options);
+export const Number = (options?: NumberOptions) => Type.Number(options);
+export const Integer = (options?: NumberOptions) => Type.Integer(options);
+export const Null = (options?: Annotations) => Type.Null(options);
+export const Literal = <const V extends string | number | boolean>(
+  value: V,
+  options?: Annotations,
+) => Type.Literal(value, options);
+export const Enum = <const V extends readonly (string | number)[]>(values: V) => Type.Enum(values);
+export const Union = <const V extends TSchema[]>(values: [...V], options?: Annotations) =>
+  Type.Union(values, options);
 
 export const Atomic = <S extends TSchema>(schema: S): AtomicSchema<S> =>
   mark(schema, { container: "atomic" }) as AtomicSchema<S>;
@@ -72,8 +86,8 @@ export const Object = <P extends Type.TProperties>(properties: P) =>
 export const Document = <P extends Type.TProperties>(properties: P) =>
   mark(Type.Object(properties, objectOptions), { version: 1, container: "map" }) as MapSchema<P>;
 
-export const Array = <S extends TSchema>(items: S) =>
-  mark(Type.Array(items), { container: "atomic" });
+export const Array = <S extends TSchema>(items: S, options?: ArrayOptions) =>
+  mark(Type.Array(items, options), { container: "atomic" });
 
 /** Every JSON property name, including line terminators and the empty string. */
 export const recordKeyPattern = "^[\\s\\S]*$";
@@ -168,23 +182,28 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
 
 // Document schemas are deterministic, immutable contracts for the store lifetime.
 const documentMappings = new WeakMap<TSchema, DocumentMapping>();
-const encoder = new TextEncoder();
 /** Serialize once; authorities may reuse json for persistence and snapshot encoding. */
 export const prepareDocument = <S extends TSchema>(
   schema: S,
   value: unknown,
+  trace?: DocumentTrace,
 ): { data: Static<S>; json: string; bytes: number } => {
   if (!isDocumentSchema(schema) || documentMeta(schema)?.container !== "map")
     throw new Error("Document schema root must be S.Document v1");
   let mapping = documentMappings.get(schema);
   if (!mapping) {
+    checkDocumentSchema(schema);
     mapping = documentMapping(schema);
     documentMappings.set(schema, mapping);
   }
-  assertJSON(value, new Set(), 64, mapping);
-  const checked = validate(schema, value);
-  const json = JSON.stringify(checked),
-    bytes = encoder.encode(json).byteLength;
+  const checked = traced(trace, "validation", () => {
+    assertJSON(value, new Set(), 64, mapping);
+    return validate(schema, value);
+  });
+  const { json, bytes } = traced(trace, "serialization", () => {
+    const json = JSON.stringify(checked);
+    return { json, bytes: utf8Length(json) };
+  });
   if (bytes > 1024 * 1024) throw new Error("Document JSON exceeds 1 MiB");
   return { data: checked, json, bytes };
 };

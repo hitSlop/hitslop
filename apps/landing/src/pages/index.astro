@@ -1,6 +1,9 @@
 ---
+import Hero from "../components/Hero.astro";
+import { headerType } from "../components/Hero.css";
 import FocusTimer from "../components/FocusTimer.svelte";
 import BidirectionalSync from "../components/BidirectionalSync.svelte";
+import LiveTogether from "../components/LiveTogether.svelte";
 import Invoice from "../components/Invoice.svelte";
 import TerminalWalkthrough from "../components/TerminalWalkthrough.astro";
 import RandomPicker from "../components/RandomPicker.svelte";
@@ -13,38 +16,15 @@ import "../styles/global.css";
 const faqs = [
   { question: "What is a .slop?", answer: "A .slop is a tiny app or living document you can open, move, duplicate, share, commit, and keep. Its interface and local data travel together as one package." },
   { question: "Where does my data live?", answer: "In the writable document on your Mac. A slop can use JSON, named media, or no persistence at all. The public catalog never stores your local document." },
-  { question: "Can an AI edit it?", answer: "Yes. Slops are built to be created and edited with a coding agent. Your agent can build or change the app from its source project. For a slop with saved data, it can also follow the document’s included instructions to update tasks, notes, numbers, or other content directly. You can keep using the same document in hitSlop." },
+  { question: "Can an AI edit it?", answer: "Yes. A coding agent can create a slop from source, then follow the document’s included instructions to change tasks, notes, numbers, or other saved data. Edits in the app write back to that same file, and file edits show up in the UI." },
+  { question: "Can we edit together?", answer: "Yes. Keep the file local until you want company, then Share from the Mac app. Everyone with the invite sees the same document update live. If you disconnect, a shared copy becomes read-only rather than turning into a second original." },
   { question: "Can I change how a slop looks?", answer: "Theme-ready slops expose a validated set of colors and type choices as --slop-* variables. Your overrides live in stores/theme.css, apply without reloading the app, and stay with your document." },
   { question: "Do I need to host anything?", answer: "No. A published slop is a signed, source-free artifact people can download and run. You do not need to deploy a web app, provision a database, or build user accounts just to share a useful little tool." },
   { question: "Will my slops update automatically?", answer: "No. Your existing documents keep the app version they were created with. Publishing a new release makes it available for new copies; it does not change the documents you already use." },
   { question: "Can I share the result without sharing the app?", answer: "Yes. Export the current document as a high-resolution PNG or a PDF with selectable text and vector output—handy for invoices, recipes, plans, and anything meant to leave your desktop." },
 ];
 
-const heroExamples = [
-  { label: "invoices.", color: "oklch(55% .19 35)" },
-  { label: "weekly plans.", color: "oklch(49% .18 258)" },
-  { label: "habit streaks.", color: "oklch(47% .13 147)" },
-  { label: "meeting notes.", color: "oklch(50% .16 321)" },
-  { label: "recipes.", color: "oklch(52% .14 76)" },
-  { label: "field notes.", color: "oklch(47% .12 202)" },
-  { label: "trip plans.", color: "oklch(55% .19 35)" },
-  { label: "expense logs.", color: "oklch(49% .18 258)" },
-  { label: "mood journals.", color: "oklch(47% .13 147)" },
-  { label: "countdowns.", color: "oklch(50% .16 321)" },
-  { label: "notebooks.", color: "oklch(52% .14 76)" },
-  { label: "subscriptions.", color: "oklch(47% .12 202)" },
-];
-const heroReelEntries = [...heroExamples, ...heroExamples, ...heroExamples];
-const reelStepMs = 2200;
-const reelTransitionMs = 300;
-const reelDurationMs = heroExamples.length * reelStepMs;
-// Generate dwell and transition points at build time; the browser only animates CSS.
-const reelKeyframes = `@keyframes hero-reel { ${heroExamples.map((_, index) => {
-  const start = index * reelStepMs / reelDurationMs * 100;
-  const hold = ((index + 1) * reelStepMs - reelTransitionMs) / reelDurationMs * 100;
-  return `${start}%, ${hold}% { transform: translate3d(0, calc(var(--reel-start) - var(--reel-row) * ${index}), 0); }`;
-}).join(" ")} 100% { transform: translate3d(0, calc(var(--reel-start) - var(--reel-row) * ${heroExamples.length}), 0); } }`;
-const heroImage = "/assets/desktop-hero-current.png";
+const comingSoon = "iOS and Windows coming soon";
 ---
 
 <!doctype html>
@@ -53,15 +33,16 @@ const heroImage = "/assets/desktop-hero-current.png";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#fafbfd" />
-    <meta name="description" content="Tiny local-first apps and documents that live on your desktop." />
+    <meta name="description" content="Tiny local-first apps and documents that live on your desktop. Keep them local, or share and edit together in real time." />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="preload" href="/assets/hero/fonts/lilita-one-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/hero/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
     <title>hitSlop — Tiny apps &amp; docs for your desktop</title>
-    <style is:inline set:html={reelKeyframes} />
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
-    <header class="masthead">
+    <header class:list={["masthead", headerType]}>
       <a class="wordmark" href="/" aria-label="hitSlop home"><span class="brand-mark"><img src="/assets/appicon.png" alt="" /></span><span>hitSlop</span></a>
       <nav aria-label="Primary navigation">
         <a href="#why">Why hitSlop</a><a href="#make">Make one</a><a href="#templates">Browse</a>
@@ -72,52 +53,27 @@ const heroImage = "/assets/desktop-hero-current.png";
       <a class="nav-download" href={SITE_LINKS.download}><AppleIcon /> Download</a>
     </header>
 
+
     <main id="main-content">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <div class="hero-heading">
-          <p class="eyebrow hero-eyebrow">Local-first software for macOS</p>
-          <h1 id="hero-title">Tiny apps and docs that live on your desktop.</h1>
-          </div>
-        <div class="hero-examples">
-          <ul class="visually-hidden" aria-label="Example uses">
-            {heroExamples.map((example) => <li>{example.label}</li>)}
-          </ul>
-          <div class="hero-reel" aria-hidden="true" style={`--reel-count: ${heroExamples.length}; --reel-duration: ${reelDurationMs}ms`}>
-            <div class="hero-reel-track">
-              {heroReelEntries.map((example) => <span style={`--entry-color: ${example.color}`}>{example.label}</span>)}
-            </div>
-          </div>
-          <p class="hero-handwritten hero-note-possibilities" aria-hidden="true">Small files.<br />Big possibilities.
-            <svg viewBox="0 0 100 50" fill="none"><path d="M5 13C28 45 62 41 89 9M72 12L91 6L88 25" /></svg>
-          </p>
-        </div>
-          <div class="hero-support">
-            <p class="hero-lede">Each <code>.slop</code> lives on your desktop, with its app, data, and media tucked into one file. Open it, move it, duplicate it, or share it—no account required.</p>
-            <div class="hero-actions">
-              <a class="button button-primary" href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon</a>
-              <a class="button button-secondary" href="#objects">Try the slops <span aria-hidden="true">↘</span></a>
-            </div>
-            <p class="download-meta">Apple silicon · macOS 14+ · Signed &amp; notarized</p>
-            <ul class="hero-facts" aria-label="Key hitSlop features"><li>Everything in one file</li><li>Data editable by you or your AI</li><li>Duplicate, share &amp; keep</li></ul>
-          </div>
-        </div>
-        <figure class="desktop-still">
-          <img src={heroImage} alt="A colorful Mac desktop with a music player, habit tracker, recipe, notes, focus timer, invoice, and tiny pet app" width="1448" height="1086" fetchpriority="high" />
-          <figcaption class="hero-handwritten hero-note-ideas" aria-hidden="true">
-            <svg viewBox="0 0 100 50" fill="none"><path d="M92 40C53 49 35 21 12 9M13 25L8 6L28 9" /></svg>
-            Your ideas,<br />right here.
-          </figcaption>
-        </figure>
-      </section>
+      <Hero />
 
       <section class="objects" id="objects" aria-labelledby="objects-title">
-        <div class="section-intro"><p class="eyebrow">One format, many personalities</p><h2 id="objects-title">Little apps.<br />Real objects.</h2><p>A slop can read like paper, operate like an instrument, or take on a shape of its own. These are live, in-memory demos—give them a try.</p></div>
+        <div class="section-intro"><p class="eyebrow">One format, many personalities</p><h2 id="objects-title">Little apps.<br />Real objects.</h2><p>Useful little things, each with a personality of its own. Start a timer, send an invoice, or let fate make a decision. Go on, these actually work.</p></div>
         <div class="object-gallery">
           <article class="object object-focus"><div class="object-stage focus-stage"><FocusTimer client:visible /></div><div class="object-caption"><span><strong>Pomodoro</strong>Focus and rest, without a dashboard.</span><small>Instrument · Interactive</small></div></article>
           <article class="object object-invoice"><div class="object-stage invoice-stage"><Invoice client:visible /></div><div class="object-caption"><span><strong>Invoice</strong>Edit the document directly. Totals follow.</span><small>Paper · Interactive</small></div></article>
           <article class="object object-picker"><div class="object-stage picker-stage"><RandomPicker client:visible /></div><div class="object-caption"><span><strong>Random Picker</strong>A tiny decision-making capsule.</span><small>Instrument · Interactive</small></div></article>
         </div>
+      </section>
+
+      <section class="collab-section" id="together" aria-labelledby="together-title">
+        <div class="collab-copy">
+          <p class="eyebrow">Better together</p>
+          <h2 id="together-title">Keep it local. Share it live.</h2>
+          <p>A slop stays a file on your Mac until you share it. Then everyone with the invite sees the same document update as you type, check, or rearrange — no app backend to run. Disconnect, and a shared copy is read-only rather than becoming a second local original.</p>
+          <p>The same document store works on your Mac and in a shared room. Authors do not wire up a second API.</p>
+        </div>
+        <LiveTogether client:visible />
       </section>
 
       <section class="theme-section" aria-labelledby="theme-title">
@@ -130,7 +86,7 @@ const heroImage = "/assets/desktop-hero-current.png";
       </section>
 
       <section class="sync-section" aria-labelledby="sync-title">
-        <div class="sync-copy"><h2 id="sync-title">Create and edit<br />with AI.</h2><p>Build a slop with your coding agent, then let AI help with the everyday changes: add tasks, update an invoice, or organize a reading list. Slops carry instructions for editing their saved data. Work in the app or ask your AI—the changes show up in the same document.</p></div>
+        <div class="sync-copy"><p class="eyebrow">You or your LLM</p><h2 id="sync-title">Create and edit<br />with AI.</h2><p>Ask a coding agent to make the slop, then let it help with the everyday changes: add tasks, update an invoice, or tidy a list. Work in the UI or edit the saved JSON — each side writes through, so the document you open is the document the model just changed.</p></div>
         <BidirectionalSync client:visible />
       </section>
 
@@ -186,11 +142,11 @@ const heroImage = "/assets/desktop-hero-current.png";
         <TemplateBrowser client:visible />
       </section>
       <section class="faq-section" aria-labelledby="faq-title"><div><h2 id="faq-title">Got questions?</h2></div><div class="faq-list">{faqs.map((faq) => <details><summary>{faq.question}<span aria-hidden="true">+</span></summary><p>{faq.answer}</p></details>)}</div></section>
-      <section class="final-cta" aria-labelledby="cta-title"><div><p class="eyebrow">Small files. Big ideas.</p><h2 id="cta-title">Put your next tiny tool on your desktop.</h2></div><a class="button button-primary" href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon</a><p class="download-meta">Apple silicon · macOS 14+ · Signed &amp; notarized</p><div class="cta-art" aria-hidden="true"><span></span><span></span><img src="/assets/appicon.png" alt="" /></div></section>
+      <section class="final-cta" aria-labelledby="cta-title"><div><p class="eyebrow">Small files. Big ideas.</p><h2 id="cta-title">Put your next tiny tool on your desktop.</h2></div><a class="button button-primary" href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon</a><p class="download-meta">Apple silicon · macOS 14+ · Signed &amp; notarized</p><p class="download-soon">{comingSoon}</p><div class="cta-art" aria-hidden="true"><span></span><span></span><img src="/assets/appicon.png" alt="" /></div></section>
     </main>
 
     <footer class="site-footer" id="community">
-      <a class="wordmark" href="/" aria-label="hitSlop home"><span class="brand-mark"><img src="/assets/appicon.png" alt="" /></span><span>hitSlop</span></a><p>Local-first small software for macOS.</p>
+      <a class="wordmark" href="/" aria-label="hitSlop home"><span class="brand-mark"><img src="/assets/appicon.png" alt="" /></span><span>hitSlop</span></a><p>Local-first small software for macOS. {comingSoon}.</p>
       <nav aria-label="Footer navigation"><a href={SITE_LINKS.repository} target="_blank" rel="noreferrer">GitHub</a><a href={SITE_LINKS.docs}>Docs</a>{SITE_LINKS.discord && <a href={SITE_LINKS.discord} target="_blank" rel="noreferrer">Discord</a>}<span>MIT © 2026</span></nav>
     </footer>
   </body>

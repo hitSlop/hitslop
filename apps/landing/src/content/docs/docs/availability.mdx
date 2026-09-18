@@ -10,7 +10,8 @@ description: What hitSlop supports today and what is coming next.
 | macOS host | Apple silicon, macOS 14 or newer |
 | Supported authoring path | Bun, Svelte 5, and TypeBox-backed JSON |
 | Runtime package | Framework-neutral generated HTML and immutable assets |
-| Local stores | JSON, named media, and theme overrides |
+| Local stores | Command/snapshot JSON on SQLite, named media, and theme overrides |
+| Live sharing | Invite others from the Mac app; same document store, read-only while disconnected |
 | Native output | Finder previews and icons, full-height PNG, and vector PDF |
 | Distribution | Local templates and signed public catalog artifacts |
 
@@ -22,7 +23,6 @@ and one compact JSON document, adding named media only when the job needs it.
 - **iOS release** for opening and using slops away from the Mac.
 - **Windows and Linux hosts** for opening slops on other desktop platforms.
 - **iCloud sync** for coordinated documents shared between Apple devices.
-- **SQLite support** for apps that need relational queries and transactions.
 
 These items do not have public dates yet. The docs describe released behavior;
 future work will move into the main guides when it becomes supported.

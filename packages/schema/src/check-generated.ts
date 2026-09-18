@@ -5,6 +5,8 @@ import { $ } from "bun";
 
 const root = resolve(import.meta.dir, "../../..");
 const generatedFiles = [
+  "apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/native-engine.json",
+  "apps/apple/Packages/HitSlopApple/Sources/HitSlopDocumentEngine/Resources/document-engine.js",
   "apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/document-ops.json",
   "apps/apple/Packages/HitSlopApple/Tests/HitSlopRuntimeTests/Fixtures/room-wire.json",
   "packages/schema/generated/room-message.schema.json",
@@ -13,10 +15,8 @@ const generatedFiles = [
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopAPI/openapi.json",
   "packages/schema/generated/manifest.schema.json",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Generated/SlopManifest.generated.swift",
-  "apps/apple/Packages/HitSlopApple/Sources/HitSlopCore/Resources/manifest.schema.json",
   "apps/cloudflare/public/schemas/v1/manifest.schema.json",
   "packages/schema/generated/bridge-request.schema.json",
-  "apps/apple/Packages/HitSlopApple/Sources/HitSlopRuntime/Resources/bridge-request.schema.json",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopRuntime/Resources/host-bridge.js",
   "apps/apple/Packages/HitSlopApple/Sources/HitSlopRuntime/BridgeContract.generated.swift",
 ];

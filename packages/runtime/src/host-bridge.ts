@@ -23,7 +23,11 @@ declare global {
 }
 
 const native = window.webkit.messageHandlers.hitslop;
-const invoke = createBridgeCall((request) => native.postMessage(request));
+const invoke = createBridgeCall(async (request) => {
+  const reply = await native.postMessage(JSON.stringify(request));
+  if (typeof reply !== "string") throw new Error("Expected JSON text from host");
+  return JSON.parse(reply);
+});
 const pending = new Set<Promise<unknown>>();
 const listeners = {
   media: new Set<(event: SlopChange) => void>(),

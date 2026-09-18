@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve, relative } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
-const packageNames = ["schema", "api", "runtime", "svelte", "cli"] as const;
+const packageNames = ["schema", "document-engine", "api", "runtime", "svelte", "cli"] as const;
 
 async function command(
   argv: string[],
@@ -141,6 +141,7 @@ async function main(): Promise<void> {
           private: true,
           dependencies: {
             "@hitslop/schema": packageReferences.schema,
+            "@hitslop/document-engine": packageReferences["document-engine"],
             "@hitslop/api": packageReferences.api,
             "@hitslop/runtime": packageReferences.runtime,
             "@hitslop/svelte": packageReferences.svelte,
@@ -150,6 +151,7 @@ async function main(): Promise<void> {
           },
           overrides: {
             "@hitslop/schema": packageReferences.schema,
+            "@hitslop/document-engine": packageReferences["document-engine"],
             "@hitslop/api": packageReferences.api,
             "@hitslop/runtime": packageReferences.runtime,
           },

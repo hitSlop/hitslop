@@ -3,7 +3,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "packageManager": "bun@1.4.0",
+  "packageManager": "bun@1.4.2",
   "workspaces": [
     "apps/cloudflare",
     "apps/landing",
@@ -11,13 +11,13 @@
     "examples/slops"
   ],
   "scripts": {
-    "build": "bun run schema:generate && bun run --cwd packages/schema build && bun run --cwd packages/api build && bun run --cwd packages/runtime build && bun run --cwd packages/svelte build && bun run --cwd packages/cli build && bun run --cwd apps/landing build && bun run --cwd examples/slops build",
-    "check": "bun run schema:check && bun run --cwd packages/api build && bun run --filter '@hitslop/*' check",
-    "test": "bun run --cwd packages/schema test && bun run --cwd packages/api test && bun run --cwd packages/runtime test && bun run --cwd packages/svelte test && bun run --cwd packages/cli test && bun run --cwd apps/cloudflare test && bun run --cwd examples/slops test",
+    "build": "bun run schema:generate && bun run --cwd packages/schema build && bun run --cwd packages/document-engine build && bun run --cwd packages/api build && bun run --cwd packages/runtime build && bun run --cwd packages/svelte build && bun run --cwd packages/cli build && bun run --cwd apps/landing build && bun run --cwd examples/slops build",
+    "check": "bun run schema:check && bun run --cwd packages/schema build && bun run --cwd packages/document-engine build && bun run --cwd packages/api build && bun run --filter '@hitslop/*' check",
+    "test": "bun run --cwd packages/schema test && bun run --cwd packages/document-engine test && bun run --cwd packages/api test && bun run --cwd packages/runtime test && bun run --cwd packages/svelte test && bun run --cwd packages/cli test && bun run --cwd apps/cloudflare test && bun run --cwd examples/slops test",
     "release:check": "bun scripts/release-check.ts",
     "release:npm:check": "bun scripts/npm-release-check.ts",
     "examples:check": "bun run --cwd examples/slops check && bun run --cwd examples/slops test && bun run --cwd examples/slops build",
-    "schema:generate": "bun run --cwd packages/schema generate && bun run --cwd packages/api generate",
+    "schema:generate": "bun run --cwd packages/schema generate && bun run --cwd packages/api generate && bun scripts/generate-document-engine.ts",
     "schema:check": "bun run --cwd packages/schema check:generated",
     "slop": "bun packages/cli/src/cli.ts",
     "slops:dev": "bun run --cwd examples/slops dev",

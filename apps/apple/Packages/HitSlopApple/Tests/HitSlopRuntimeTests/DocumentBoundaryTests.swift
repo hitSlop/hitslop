@@ -10,33 +10,33 @@ struct DocumentBoundaryTests {
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
   }
-  private func nested(_ levels: Int, leaf: SlopDocumentJSON = .number(1), arrays: Bool = false)
-    -> SlopDocumentJSON
+  private func nested(_ levels: Int, leaf: FixtureJSON = .number(1), arrays: Bool = false)
+    -> FixtureJSON
   {
     var value = leaf
     for _ in 0..<levels { value = arrays ? .array([value]) : .object(["n": value]) }
     return value
   }
-  private func documentSchema(_ fields: SlopDocumentJSON) throws -> SlopDocumentSchema {
-    try SlopDocumentSchema(
+  private func documentSchema(_ fields: FixtureJSON) throws -> FixtureSchema {
+    try FixtureSchema(
       .object([
         "type": .string("object"), "properties": fields,
         "x-hitslop": .object(["version": .number(1), "container": .string("map")]),
       ]))
   }
   @Test func containerCountingAndFraming() throws {
-    let schema = try documentSchema(
-      .object(["value": .object(["x-hitslop": .object(["container": .string("atomic")])])]))
+    // Undeclared data is preserved, while JSON bounds still apply.
+    let schema = try documentSchema(.object([:]))
     for arrays in [false, true] {
-      for (leaf, extra) in [(SlopDocumentJSON.number(1), 0), (.object([:]), 1), (.array([]), 1)] {
-        let value = SlopDocumentJSON.object([
+      for (leaf, extra) in [(FixtureJSON.number(1), 0), (.object([:]), 1), (.array([]), 1)] {
+        let value = FixtureJSON.object([
           "value": nested(63 - extra, leaf: leaf, arrays: arrays)
         ])
         let bytes = try schema.prepare(value).bytes
         try SlopJSONLimits.checkObject(
           value.jsonValue(), maximumBytes: SlopJSONLimits.documentBytes)
-        #expect(try SlopDocumentJSON(data: bytes, maximumDepth: 64) == value)
-        let invalid = SlopDocumentJSON.object([
+        #expect(try FixtureJSON(data: bytes, maximumDepth: 64) == value)
+        let invalid = FixtureJSON.object([
           "value": nested(64 - extra, leaf: leaf, arrays: arrays)
         ])
         #expect(throws: (any Error).self) { try schema.prepare(invalid) }
@@ -50,18 +50,18 @@ struct DocumentBoundaryTests {
       }
     }
     let frame = nested(68)
-    #expect(try SlopDocumentJSON(data: frame.encoded()) == frame)
-    #expect(try JSONDecoder().decode(SlopDocumentJSON.self, from: frame.encoded()) == frame)
+    #expect(try FixtureJSON(data: frame.encoded()) == frame)
+    #expect(try JSONDecoder().decode(FixtureJSON.self, from: frame.encoded()) == frame)
     let tooDeep = nested(69)
     #expect(throws: (any Error).self) { try tooDeep.encoded() }
     #expect(throws: (any Error).self) {
-      try SlopDocumentJSON(
+      try FixtureJSON(
         data: Data(
           (String(repeating: "[", count: 69) + "1" + String(repeating: "]", count: 69)).utf8))
     }
     #expect(throws: (any Error).self) {
       try JSONDecoder().decode(
-        SlopDocumentJSON.self,
+        FixtureJSON.self,
         from: Data(
           (String(repeating: "[", count: 69) + "1" + String(repeating: "]", count: 69)).utf8))
     }
@@ -75,19 +75,19 @@ struct DocumentBoundaryTests {
           escaped
           ? String(repeating: "\0", count: count / 6) + String(repeating: "x", count: count % 6)
           : String(repeating: "x", count: count)
-        let value = SlopDocumentJSON.object(["text": .string(string)])
+        let value = FixtureJSON.object(["text": .string(string)])
         #expect(try value.encoded().count == size)
         let root = try directory()
         defer { try? FileManager.default.removeItem(at: root) }
         let storage = try SlopCommandStorage(root: root)
-        let snapshot: SlopDocumentJSON = .object([
+        let snapshot: FixtureJSON = .object([
           "documentId": .string("doc"), "schemaHash": .string("schema"),
           "authority": .string("local"), "revision": .number(0),
           "data": .object(["text": .string("")]),
         ])
         try storage.initialize(snapshot: snapshot)
         let opening = try storage.open(now: 0)
-        let request: SlopDocumentJSON = .object([
+        let request: FixtureJSON = .object([
           "documentId": snapshot["documentId"], "schemaHash": snapshot["schemaHash"],
           "authority": snapshot["authority"], "leaseId": opening["lease"]["id"],
           "requestId": .string("size"),
@@ -114,7 +114,7 @@ struct DocumentBoundaryTests {
       }
     }
     // Multiple separators, multibyte keys/text, escaped keys, arrays and empty containers.
-    let value: SlopDocumentJSON = .object([
+    let value: FixtureJSON = .object([
       "é\n": .string("🇨🇦\0"), "b": .array([.string("中"), .null, .object([:])]),
     ])
     let bytes = try value.encoded()
@@ -126,8 +126,11 @@ struct DocumentBoundaryTests {
   @Test(arguments: [62, 63, 64, 65]) func durableDepth(_ depth: Int) throws {
     let root = try directory()
     defer { try? FileManager.default.removeItem(at: root) }
-    var source: SlopDocumentJSON = .object(["x-hitslop": .object(["container": .string("atomic")])])
-    var initial = SlopDocumentJSON.null
+    var source: FixtureJSON = .object([
+      "type": .string("object"), "additionalProperties": .bool(true),
+      "x-hitslop": .object(["container": .string("atomic")]),
+    ])
+    var initial = FixtureJSON.object([:])
     for _ in 0..<20 {
       source = .object([
         "type": .string("object"), "properties": .object(["v": source]),
@@ -136,15 +139,15 @@ struct DocumentBoundaryTests {
       initial = .object(["v": initial])
     }
     source["x-hitslop"]["version"] = .number(1)
-    let schema = try SlopDocumentSchema(source)
+    let schema = try FixtureSchema(source)
     let storage = try SlopCommandStorage(root: root)
-    let seed: SlopDocumentJSON = .object([
+    let seed: FixtureJSON = .object([
       "documentId": .string("doc"), "schemaHash": .string("schema"), "authority": .string("local"),
       "revision": .number(0), "data": initial,
     ])
     try storage.initialize(snapshot: seed)
     let open = try storage.open(now: 0)
-    let request: SlopDocumentJSON = .object([
+    let request: FixtureJSON = .object([
       "documentId": seed["documentId"], "schemaHash": seed["schemaHash"],
       "authority": seed["authority"], "leaseId": open["lease"]["id"], "requestId": .string("edit"),
       "ops": .array([
@@ -156,7 +159,7 @@ struct DocumentBoundaryTests {
       ]),
     ])
     try SlopJSONLimits.check(
-      SlopDocumentJSON.object(["method": .string("document.execute"), "request": request]).encoded()
+      FixtureJSON.object(["method": .string("document.execute"), "request": request]).encoded()
     )
     let outcome = try storage.apply(request, schema: schema, now: 1)
     #expect(outcome.result["ok"] == .bool(depth <= 64))
@@ -164,17 +167,17 @@ struct DocumentBoundaryTests {
     let reopened = try SlopCommandStorage(root: root)
     #expect(try reopened.load()?.snapshot == outcome.snapshot)
     #expect(try reopened.apply(request, schema: schema, now: 2).result == outcome.result)
-    let envelopes: [SlopDocumentJSON] = [
+    let envelopes: [FixtureJSON] = [
       .object(["$slop": .object(["format": .number(2)]), "data": outcome.snapshot["data"]]),
-      .object(["type": .string("snapshot"), "snapshot": outcome.snapshot]),
+      .object(["type": .string("snapshot"), "snapshot": outcome.snapshot.fixtureValue]),
       .object([
         "type": .string("ready"),
-        "open": .object(["snapshot": outcome.snapshot, "lease": open["lease"]]),
+        "open": .object(["snapshot": outcome.snapshot.fixtureValue, "lease": open["lease"]]),
         "peers": .array([]),
       ]),
     ]
     for envelope in envelopes {
-      #expect(try SlopDocumentJSON(data: envelope.encoded()) == envelope)
+      #expect(try FixtureJSON(data: envelope.encoded()) == envelope)
     }
     // Storage's non-prepared initialization/save paths obey the same invariant.
     let copy = try directory()
@@ -182,10 +185,13 @@ struct DocumentBoundaryTests {
     let other = try SlopCommandStorage(root: copy)
     try other.initialize(snapshot: outcome.snapshot)
     #expect(try other.load()?.snapshot == outcome.snapshot)
-    var invalid = outcome.snapshot
+    var invalid = outcome.snapshot.fixtureValue
     invalid["data"] = nested(65)
     #expect(throws: (any Error).self) {
-      try other.save(.init(snapshot: invalid, metadata: .init(mode: .local)))
+      try other.save(
+        .init(
+          snapshot: other.engine.call("frameSnapshot", [invalid.json], as: StateSnapshot.self),
+          metadata: .init(mode: .local)))
     }
     #expect(try other.load()?.snapshot == outcome.snapshot)
   }
@@ -193,10 +199,10 @@ struct DocumentBoundaryTests {
     let root = try directory()
     defer { try? FileManager.default.removeItem(at: root) }
     let source = try documentSchema(.object(["text": .object(["type": .string("string")])])).source
-    let initial: SlopDocumentJSON = .object(["text": .string("original")])
+    let initial: FixtureJSON = .object(["text": .string("original")])
     let document = try SlopCommandDocument(root: root, schema: source, initial: initial)
-    let seed = try await document.prepareSharing()
-    var opening: SlopDocumentJSON = .object([
+    let seed = try await document.fixtureSeed()
+    var opening: FixtureJSON = .object([
       "snapshot": seed,
       "lease": .object(["id": .string("lease"), "expiresAt": .number(9_999_999_999_999)]),
     ])
@@ -212,13 +218,13 @@ struct DocumentBoundaryTests {
     await #expect(throws: (any Error).self) { try await document.receive(invalid) }
     invalid["data"] = nested(65)
     await #expect(throws: (any Error).self) { try await document.receive(invalid) }
-    #expect(try await document.frame().data == initial)
+    #expect(try await document.frame().fixtureData == initial)
     #expect(try SlopCommandStorage(root: root).load()?.snapshot["revision"] == .number(0))
     try await document.close()
   }
 
   @Test func recordKeysAndLegacyRejection() throws {
-    let field: SlopDocumentJSON = .object([
+    let field: FixtureJSON = .object([
       "type": .string("object"),
       "patternProperties": .object([#"^[\s\S]*$"#: .object(["type": .string("number")])]),
       "x-hitslop": .object(["container": .string("record")]),
@@ -226,20 +232,20 @@ struct DocumentBoundaryTests {
     let schema = try documentSchema(.object(["values": field]))
     for key in ["", "a\nb", "a\rb", "a\u{2028}b", "a\u{2029}b", "a\0b", "__proto__", "constructor"]
     {
-      let good: SlopDocumentJSON = .object(["values": .object([key: .number(2)])])
+      let good: FixtureJSON = .object(["values": .object([key: .number(2)])])
       try schema.validate(good)
       #expect(throws: (any Error).self) {
         try schema.validate(.object(["values": .object([key: .string("wrong")])]))
       }
-      let path: SlopDocumentJSON = .array([
+      let path: FixtureJSON = .array([
         .object(["key": .string("values")]), .object(["key": .string(key)]),
       ])
-      let changed = try SlopDocumentOps.apply(
+      let changed = try FixtureOps.apply(
         .array([.object(["op": .string("set"), "path": path, "value": .number(3)])]), to: good,
         schema: schema)
       #expect(changed["values"][key] == .number(3))
       #expect(throws: (any Error).self) {
-        try SlopDocumentOps.apply(
+        try FixtureOps.apply(
           .array([.object(["op": .string("set"), "path": path, "value": .string("bad")])]),
           to: good, schema: schema)
       }

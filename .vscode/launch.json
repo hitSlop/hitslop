@@ -59,6 +59,26 @@
       "target": "json-schema-comparison",
       "configuration": "release",
       "preLaunchTask": "swift: Build Release json-schema-comparison (spikes/json-schema-comparison)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Debug hitslop-javascriptcore-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-javascriptcore-spike",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug hitslop-javascriptcore-spike (apps/apple/Packages/HitSlopApple)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:hitslop}/apps/apple/Packages/HitSlopApple",
+      "name": "Release hitslop-javascriptcore-spike (apps/apple/Packages/HitSlopApple)",
+      "target": "hitslop-javascriptcore-spike",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release hitslop-javascriptcore-spike (apps/apple/Packages/HitSlopApple)"
     }
   ]
 }

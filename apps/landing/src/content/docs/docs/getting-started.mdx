@@ -63,13 +63,27 @@ or newer.
 
 4. **Change the counter.**
 
-   The starter stores its value in `state.current.count`. Svelte bindings and
-   event handlers can mutate that state directly:
+   The starter opens a document store from root `schema.ts` and `initial.ts`.
+   Read frozen `state.data`, and write with store verbs. Wrap the editor in
+   `<Slop>` so the host owns readiness, errors, and capture views:
 
    ```svelte
-   <button onclick={() => state.current.count += 1}>
-     Counted {state.current.count}
-   </button>
+   <script lang="ts">
+     import { createDocument, Slop } from "@hitslop/svelte";
+     import counterSchema from "../schema";
+     import initial from "../initial";
+
+     const state = createDocument({ schema: counterSchema, initial });
+     const { fields } = state;
+   </script>
+
+   <Slop document={state}>
+     <button onclick={() => { void state.increment(fields.count); }}>
+       Counted {state.data.count}
+     </button>
+     {#snippet icon()}<Icon />{/snippet}
+     {#snippet exportView()}<Export title="Tiny Counter" count={state.data.count} />{/snippet}
+   </Slop>
    ```
 
    If you add or rename data, update `schema.ts` and the explicit `initial`
@@ -123,3 +137,4 @@ or newer.
 - [Design its icon and exports](/docs/guides/icons-and-exports/) from current data.
 - [Define its data and media](/docs/guides/data-and-schemas/) around the real job.
 - [Build and share it](/docs/guides/build-and-share/) when it is ready.
+- [Share a document live](/docs/guides/live-sharing/) when you want to edit together.

@@ -1,0 +1,166 @@
+---
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import AppleIcon from "./AppleIcon.astro";
+import { SITE_LINKS } from "../constants";
+import * as s from "./Hero.css";
+
+const categories = [
+  { emoji: "📝", label: "Notes" },
+  { emoji: "✅", label: "Tasks" },
+  { emoji: "🍴", label: "Recipes" },
+  { emoji: "🎧", label: "Music players" },
+  { emoji: "🐾", label: "Desktop pets" },
+  { emoji: "🍅", label: "Focus timers" },
+  { emoji: "📓", label: "Journals" },
+  { emoji: "🌿", label: "Habit streaks" },
+  { emoji: "🎨", label: "Pixel art" },
+  { emoji: "🧾", label: "Invoices" },
+  { emoji: "🌧️", label: "Soundscapes" },
+  { emoji: "✈️", label: "Travel plans" },
+  { emoji: "🗂️", label: "Flashcards" },
+  { emoji: "📊", label: "Spreadsheets" },
+  { emoji: "🗓️", label: "Weekly planners" },
+  { emoji: "📚", label: "Reading lists" },
+  { emoji: "💸", label: "Expense logs" },
+  { emoji: "🧳", label: "Packing lists" },
+  { emoji: "🎮", label: "Word games" },
+  { emoji: "🥑", label: "Grocery lists" },
+  { emoji: "📻", label: "Internet radio" },
+  { emoji: "💪", label: "Workout logs" },
+  { emoji: "⏳", label: "Countdowns" },
+  { emoji: "💧", label: "Water trackers" },
+  { emoji: "📋", label: "Kanban boards" },
+  { emoji: "😊", label: "Mood journals" },
+  { emoji: "🎯", label: "Goal planners" },
+  { emoji: "💼", label: "Résumés" },
+  { emoji: "🎵", label: "Metronomes" },
+  { emoji: "💰", label: "Budgets" },
+  { emoji: "🎓", label: "Class schedules" },
+  { emoji: "💬", label: "Meeting notes" },
+  { emoji: "🌅", label: "Morning pages" },
+  { emoji: "🪪", label: "Contact cards" },
+  { emoji: "🔁", label: "Subscription trackers" },
+  { emoji: "⚖️", label: "Pros & cons" },
+  { emoji: "📌", label: "Priority boards" },
+  { emoji: "✍️", label: "Markdown editors" },
+  { emoji: "📒", label: "Bullet journals" },
+  { emoji: "📅", label: "Daily planners" },
+  { emoji: "📖", label: "Assignment trackers" },
+  { emoji: "💛", label: "Gratitude journals" },
+  { emoji: "⛰️", label: "Field notes" },
+  { emoji: "🖥️", label: "Presentations" },
+  { emoji: "🖼️", label: "Moodboards" },
+];
+const heroPoster = "/assets/desktop-hero-current.png";
+const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/assets/desktop-hero.mp4" : null;
+---
+
+    <script>
+      const shelf = document.querySelector<HTMLElement>("[data-category-list]");
+      const shelfFrame = document.querySelector<HTMLElement>("[data-category-shelf]");
+      const pause = document.querySelector<HTMLButtonElement>("[data-shelf-pause]");
+      if (shelf && shelfFrame && pause) {
+        const motion = matchMedia("(prefers-reduced-motion: reduce)");
+        let paused = false;
+        let hovered = false;
+        let focused = false;
+        let loopWidth = 0;
+        let lastTime = 0;
+        let frame = 0;
+        let fractionalStep = 0;
+        const measure = () => {
+          const first = shelf.firstElementChild;
+          const repeat = shelf.querySelector("[data-repeat]");
+          if (first && repeat) loopWidth = repeat.getBoundingClientRect().left - first.getBoundingClientRect().left;
+        };
+        const move = (distance: number) => {
+          if (loopWidth) shelf.scrollLeft = (shelf.scrollLeft + distance + loopWidth) % loopWidth;
+        };
+        const tick = (time: number) => {
+          if (lastTime) {
+            fractionalStep += Math.min(time - lastTime, 50) * .025;
+            const pixels = Math.floor(fractionalStep);
+            if (pixels) { move(pixels); fractionalStep -= pixels; }
+          }
+          lastTime = time;
+          frame = requestAnimationFrame(tick);
+        };
+        const sync = () => {
+          cancelAnimationFrame(frame);
+          lastTime = 0;
+          const stopped = paused || motion.matches;
+          pause.dataset.paused = String(stopped);
+          pause.setAttribute("aria-label", stopped ? "Play category scrolling" : "Pause category scrolling");
+          pause.disabled = motion.matches;
+          if (!stopped && !hovered && !focused && !document.hidden) frame = requestAnimationFrame(tick);
+        };
+        pause.addEventListener("click", () => { paused = !paused; sync(); });
+        shelfFrame.addEventListener("pointerenter", () => { hovered = true; sync(); });
+        shelfFrame.addEventListener("pointerleave", () => { hovered = false; sync(); });
+        shelfFrame.addEventListener("focusin", () => { focused = true; sync(); });
+        shelfFrame.addEventListener("focusout", (event) => {
+          focused = event.relatedTarget instanceof Node && shelfFrame.contains(event.relatedTarget);
+          sync();
+        });
+        document.querySelectorAll<HTMLButtonElement>("[data-shelf-direction]").forEach((button) => {
+          button.addEventListener("click", () => move(Number(button.dataset.shelfDirection) * shelf.clientWidth * .65));
+        });
+        motion.addEventListener("change", sync);
+        document.addEventListener("visibilitychange", sync);
+        new ResizeObserver(measure).observe(shelf);
+        document.fonts.ready.then(measure);
+        measure();
+        sync();
+        window.addEventListener("pagehide", () => cancelAnimationFrame(frame));
+        window.addEventListener("pageshow", sync);
+      }
+    </script>
+<section class={s.hero} aria-labelledby="hero-title" data-hero>
+  <div class={s.copy}>
+    <p class={s.eyebrow}>
+      <svg class={s.rays} viewBox="0 0 48 46" aria-hidden="true"><path d="m11 7 14 16M5 32l13 4M40 4l-3 15" /></svg>
+      Local-first mini apps for macOS
+    </p>
+    <h1 class={s.title} id="hero-title">
+      <span class={s.titleLine}>Tiny apps.</span>
+      <span class={s.titleLine}><span class={s.big}>Big</span> personality.</span>
+      <svg class={s.burst} viewBox="0 0 36 54" aria-hidden="true"><path d="m14 11 9-6M17 27l12 1M13 42l9 7" /></svg>
+    </h1>
+    <p class={s.subhead}>Interactive docs, tools, and weird little desktop experiments—all in one file.</p>
+    <p class={s.lede}>Each <code class={s.slop}>.slop</code> bundles the app, data, and media into one portable file. Keep it local, no account required. Share it when you want, and edit together in real time.</p>
+    <div class={s.actions}>
+      <a class={s.primary} href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon <svg class={s.actionArrow} viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" /></svg></a>
+      <a class={s.secondary} href="#objects">Try the slops <svg class={s.actionArrow} viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></a>
+    </div>
+    <p class={s.meta}><span>macOS 14+ · Signed &amp; notarized</span><span class={s.later}>Windows + iOS coming later</span></p>
+    <ul class={s.benefits} aria-label="Key hitSlop features">
+      <li class={s.benefit}><img class={s.benefitIcon} src="/assets/hero/folder.svg" width="42" height="42" alt="" /><span>Everything<br />in one file</span></li>
+      <li class={s.benefit}><img class={s.benefitIcon} src="/assets/hero/edit.svg" width="42" height="42" alt="" /><span class={s.benefitText}>Editable by<br />you or your AI<svg class={s.littleUnderline} viewBox="0 0 100 9" preserveAspectRatio="none" aria-hidden="true"><path d="M3 6Q46 0 97 4" /></svg></span></li>
+      <li class={s.benefit}><a class={s.benefitLink} href="#together"><img class={s.benefitIcon} src="/assets/hero/together.svg" width="42" height="42" alt="" /><span>Real-time<br />collaboration</span></a></li>
+    </ul>
+    <p class={s.localNote} aria-hidden="true">Small files.<br />Big possibilities.
+      <svg class={s.arrow} viewBox="0 0 70 50"><path d="M4 8c27-11 44 13 53 31m-15-7 17 9 2-17" /></svg>
+    </p>
+  </div>
+  <figure class={s.picture}>
+    <div class={s.mediaFrame}>
+      <img class={s.poster} src={heroPoster} alt="A colorful Mac desktop with a music player, habit tracker, recipe, notes, focus timer, invoice, and tiny pet app" width="1448" height="1086" fetchpriority="high" />
+      {heroVideo && <video class={s.video} autoplay muted loop playsinline poster={heroPoster} aria-hidden="true"><source src={heroVideo} type="video/mp4" /></video>}
+    </div>
+    <svg class={s.starsTop} viewBox="0 0 36 75" aria-hidden="true"><path d="M21 3c0 18 4 23 12 25-8 2-12 8-12 23-1-15-5-21-13-23C16 25 20 20 21 3Z" /><path stroke="#f443a1" d="M8 48c0 8 2 11 7 12-5 2-7 4-7 12-1-8-3-10-7-12 4-1 6-4 7-12Z" /></svg>
+    <svg class={s.starsBottom} viewBox="0 0 26 38" aria-hidden="true"><path d="M13 2c0 11 3 15 11 17-8 2-11 6-11 17C12 25 9 21 2 19 9 17 12 13 13 2Z" /></svg>
+    <figcaption class={s.stickyNote} aria-hidden="true">Your ideas,<br />right here.
+      <svg class={s.noteArrow} viewBox="0 0 70 50"><path d="M8 40c30 3 45-11 48-33M46 18 57 5l4 18" /></svg>
+    </figcaption>
+  </figure>
+  <div class={s.shelf} data-category-shelf aria-label="Things you can make with hitSlop">
+    <button class={s.shelfButton} type="button" data-shelf-direction="-1" aria-label="Scroll categories left" aria-controls="category-list"><svg class={s.controlIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
+    <ul class={s.categoryList} id="category-list" data-category-list>
+      {categories.map((item) => <li class={s.category}><span class={s.emoji} aria-hidden="true">{item.emoji}</span>{item.label}</li>)}
+      {categories.map((item) => <li class={s.category} data-repeat aria-hidden="true"><span class={s.emoji}>{item.emoji}</span>{item.label}</li>)}
+    </ul>
+    <button class={s.shelfButton} type="button" data-shelf-direction="1" aria-label="Scroll categories right" aria-controls="category-list"><svg class={s.controlIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
+    <button class={s.shelfButton} type="button" data-shelf-pause data-paused="false" aria-label="Pause category scrolling" aria-controls="category-list"><svg class={s.pauseIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14" /></svg><svg class={s.playIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z" /></svg></button>
+  </div>
+</section>

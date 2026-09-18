@@ -1,7 +1,7 @@
 import { RETRY_WINDOW_MS } from "../document-protocol.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { dataSchemaFromJSON } from "../data.ts";
+import { generatedSchema } from "./schema.ts";
 import {
   BridgeRequestSchema,
   BridgeMethodSchema,
@@ -19,9 +19,8 @@ export async function generateBridge(
     "apps/apple/Packages/HitSlopApple/Sources/HitSlopRuntime/Resources",
   );
   await mkdir(runtimeResources, { recursive: true });
-  const bridgeSchema = JSON.stringify(dataSchemaFromJSON(BridgeRequestSchema), null, 2) + "\n";
+  const bridgeSchema = JSON.stringify(generatedSchema(BridgeRequestSchema), null, 2) + "\n";
   await writeFile(resolve(generated, "bridge-request.schema.json"), bridgeSchema);
-  await writeFile(resolve(runtimeResources, "bridge-request.schema.json"), bridgeSchema);
   const guest = await Bun.build({
     entrypoints: [resolve(sourceRoot, "packages/runtime/src/host-bridge.ts")],
     target: "browser",

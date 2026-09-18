@@ -62,8 +62,15 @@ my-counter.slop/
 ```
 
 The interface, data, media, and preview now travel together as one Finder
-document. Copying or sharing this document includes its personal stores.
-Publishing the source project builds a clean template instead.
+document. Copying this document includes its personal stores. **Share** from
+the Mac app is the live-collaboration path: it publishes an immutable app
+bundle plus a JSON seed, and the room owns the live document. Publishing the
+source project still builds a clean template instead.
+
+Durable JSON lives in `state/document.sqlite`. `stores/data.json` is an editable
+projection with a `$slop` envelope plus `data`. See
+[Live sharing](/docs/guides/live-sharing/) and
+[Edit installed data](/docs/guides/edit-installed-data/).
 
 ## What may change
 

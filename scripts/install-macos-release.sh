@@ -45,7 +45,7 @@ app="$stage_dir/derived/Build/Products/Release/hitSlop.app"
 native_resources="$app/Contents/Helpers/HitSlopApple_HitSlopCore.bundle"
 provisioning_profile="$app/Contents/embedded.provisionprofile"
 
-for required in "$app" "$native_resources" "$app/Contents/Helpers/HitSlopApple_HitSlopRuntime.bundle" "$provisioning_profile"; do
+for required in "$app" "$native_resources" "$app/Contents/Helpers/HitSlopApple_HitSlopRuntime.bundle" "$app/Contents/Helpers/HitSlopApple_HitSlopDocumentEngine.bundle" "$provisioning_profile"; do
   if [ ! -e "$required" ]; then
     echo "Release output is missing: $required" >&2
     exit 70

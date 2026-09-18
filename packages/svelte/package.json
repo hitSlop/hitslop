@@ -35,7 +35,7 @@
   "scripts": {
     "build": "bun ../../scripts/clean-dist.ts && svelte-package -i src -o dist",
     "check": "svelte-check --tsgo --tsconfig ./tsconfig.json",
-    "test": "bun run --cwd ../runtime build && bun test"
+    "test": "bun run --cwd ../schema build && bun run --cwd ../document-engine build && bun run --cwd ../runtime build && bun test"
   },
   "dependencies": {
     "@hitslop/runtime": "^0.3.0",
@@ -50,6 +50,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "svelte": "^5.57.0",
     "svelte-check": "^4.7.6",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "@hitslop/document-engine": "^0.3.0"
   }
 }

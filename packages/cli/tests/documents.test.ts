@@ -188,24 +188,21 @@ test.each([
   { args: ["create"] },
   { args: ["inspect", "/missing/document.slop"] },
   { args: ["unknown-command"] },
-])(
-  "CLI returns one JSON error envelope: $args",
-  async ({ args }) => {
-    const child = Bun.spawn(
-      [process.execPath, resolve(import.meta.dir, "../src/cli.ts"), ...args, "--json"],
-      { stdout: "pipe", stderr: "pipe" },
-    );
-    const [out] = await Promise.all([
-      new Response(child.stdout).text(),
-      new Response(child.stderr).text(),
-    ]);
-    expect(await child.exited).toBe(1);
-    expect(JSON.parse(out)).toMatchObject({
-      ok: false,
-      error: { message: expect.any(String), code: expect.any(String) },
-    });
-  },
-);
+])("CLI returns one JSON error envelope: $args", async ({ args }) => {
+  const child = Bun.spawn(
+    [process.execPath, resolve(import.meta.dir, "../src/cli.ts"), ...args, "--json"],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const [out] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+  ]);
+  expect(await child.exited).toBe(1);
+  expect(JSON.parse(out)).toMatchObject({
+    ok: false,
+    error: { message: expect.any(String), code: expect.any(String) },
+  });
+});
 
 test("inspect and open preserve malformed editable JSON while exposing diagnostics", async () => {
   const { path } = await document();

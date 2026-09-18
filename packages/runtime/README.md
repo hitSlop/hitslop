@@ -31,7 +31,7 @@ without a host call, and throws if secure randomness is unavailable.
 `@hitslop/runtime/adapter` exports `createDocumentController`. It owns typed
 commands, serial requests, immutable confirmed data, authority handoffs, exact
 retry and the close/export flush barrier. Framework adapters register local text
-drafts; Swift or the room owns authoritative validation and durable commits.
+drafts; the shared state core validates commands, while Swift or the room owns durable commits.
 
 The host API is `slop.document.open/send/flush/subscribe/onConnection` with an
 optional explicit `onHandoff`. On the native wire, send maps to

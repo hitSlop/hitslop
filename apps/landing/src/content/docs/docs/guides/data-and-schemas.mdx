@@ -1,11 +1,11 @@
 ---
 title: Data and media
-description: Define validated JSON data and named images or files in a Svelte slop.
+description: Define a schema-backed document store and optional images or files in a Svelte slop.
 ---
 
 Use JSON for one compact object graph such as a checklist, settings object, or
-small document model. The supported starter connects a root TypeBox schema
-directly to the Svelte store.
+small document model. The supported starter connects a root `S.Document` schema
+directly to `createDocument`.
 
 ## Define the data shape
 
@@ -13,85 +13,108 @@ Author `schema.ts` at the project root. Keep it deterministic because the app
 and package builder evaluate it separately.
 
 ```ts title="schema.ts"
-import * as Type from "typebox";
+import * as S from "@hitslop/schema/document";
 
-export default Type.Object({
-  title: Type.String(),
-  items: Type.Array(Type.Object({
-    id: Type.String(),
-    text: Type.String(),
-    done: Type.Boolean(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+const checklistSchema = S.Document({
+  title: S.String(),
+  tasks: S.List(
+    S.Object({
+      id: S.String(),
+      text: S.String(),
+      done: S.Boolean(),
+    }),
+    "id",
+  ),
+});
+
+export type Checklist = S.Static<typeof checklistSchema>;
+export default checklistSchema;
 ```
 
-`additionalProperties: true` preserves fields added by future versions or
-external tools. Validation never coerces values, inserts defaults, or removes
-unknown properties.
+`S.List` is an ordered identity list. `S.Array` is replaced as a whole. Put
+explicit defaults in root `initial.ts`; validation never coerces values, inserts
+defaults, or removes unknown properties. Unknown fields are preserved.
 
-## Open the JSON store
+## Open the document store
 
 Import the schema directly. TypeScript infers the state shape, and no generated
 file or running development server is required for editor types.
 
 ```svelte title="src/App.svelte"
 <script lang="ts">
-  import { ready } from "@hitslop/runtime";
-  import { jsonStore } from "@hitslop/svelte";
-  import { onDestroy } from "svelte";
+  import { createDocument, Slop } from "@hitslop/svelte";
   import dataSchema from "../schema";
+  import initial from "../initial";
 
-  const document = jsonStore({
-    schema: dataSchema,
-    initial: { title: "My list", items: [] },
-  });
-
-  $effect(() => { if (document.isReady) ready(); });
-  onDestroy(() => document.destroy());
+  const document = createDocument({ schema: dataSchema, initial });
+  const { fields } = document;
 </script>
+
+<Slop {document}>
+  <!-- editor UI -->
+</Slop>
 ```
+
+`<Slop>` owns host readiness, teardown, error reporting, and capture snippets.
+Read frozen `document.data`. There is no writable document proxy.
 
 The explicit initial value must satisfy the schema. It is used when a writable
 document has no JSON store yet; builds never ship seed stores.
 
 ## Update data from the interface
 
-Mutate `document.current` directly. Nested changes are observed and saved as
-one validated JSON document.
+Write with store verbs. Each call returns `{ ok: true, revision, … }` or
+`{ ok: false, error }` — do not throw and `.catch`.
 
 ```ts
-document.current.items.push({
-  id: crypto.randomUUID(),
-  text: "Ship the first useful version",
-  done: false,
-});
-
-document.current.items[0].done = true;
-document.current.title = "Launch list";
+await document.set(fields.title, "Launch list");
+await document.toggle(fields.tasks.item(id).done);
+await document.insert(fields.tasks, { text: "Ship the first useful version", done: false });
+await document.remove(fields.tasks, id);
+await document.move(fields.tasks, id, { before: otherId });
 ```
 
-The adapter batches ordinary edits automatically. Use
-`await document.flush()` before an app-controlled transition that must wait for
-disk. Normal close, quit, duplicate, and export already ask the host to flush
-pending guest writes.
+`insert` fills the declared identity when you omit it. Use
+`transaction(tx => { … })` to batch several commands atomically:
 
-## Show loading and save failures
+```ts
+await document.transaction((tx) => {
+  tx.set(fields.tasks.item(id).done, true);
+  tx.set(fields.tasks.item(id).archived, true);
+});
+```
 
-Disable editing until `isReady` and `isLoading` allow it. Display `error` and
-offer `flush()` to retry a failed save or `reload()` to retry a failed initial
-load. Invalid in-memory values are never written.
+Text fields should use a local draft so typing stays smooth:
+
+```svelte
+<textarea {@attach document.text(fields.title)}></textarea>
+<textarea {@attach document.text(fields.tasks.item(task.id).text)}></textarea>
+```
+
+Successful nonempty mutations expose `result.undo()` while this command is still
+the latest revision. Disable the action with `result.canUndo`.
+
+Disable editing until `document.canWrite`. Display `error` and offer `flush()`
+when the host reports a failure. Invalid in-memory values are never written.
 
 Browser development uses in-memory JSON and resets on reload. Register the
-template and open a writable copy to test persistence and external changes.
+template and open a writable copy to test persistence, sharing, and external
+changes.
 
 ## Add named media
 
-Use named media for a small set of known image or file roles. Storage is
-implicit: do not add storage declarations to `manifest.json`.
+Declare optional media on the schema, then bind a store to that path. Storage
+is implicit: do not add storage declarations to `manifest.json`.
 
-Names must match `[a-z][a-z0-9-]{0,63}`, such as `cover-image` or
-`source-document`. A store is created lazily when the app uses it, and the
-writable file lives under the document's `stores/media/` directory.
+```ts title="schema.ts"
+photo: S.Optional(S.Media()),
+attachment: S.Optional(S.Media()),
+```
+
+Add those fields to the same `S.Document({ … })` as the rest of the data.
+
+The host writes immutable bytes under `stores/media/<sha256>` and keeps
+`{ sha256, mime, bytes, filename? }` in the document.
 
 ### Let the user choose an image
 
@@ -100,24 +123,23 @@ replacement. Its reactive `src` switches automatically when the media changes.
 
 ```svelte title="src/CoverImage.svelte"
 <script lang="ts">
-  import { imageStore } from "@hitslop/svelte";
-  import { onDestroy } from "svelte";
+  import { imageStore, type SlopDocument } from "@hitslop/svelte";
+  import schema from "../schema";
 
-  const cover = imageStore("cover-image", {
+  let { document }: { document: SlopDocument<typeof schema> } = $props();
+  const cover = imageStore(document, document.fields.photo, {
     fallback: "/assets/cover-placeholder.png",
   });
-
-  onDestroy(() => cover.destroy());
 </script>
 
 <img src={cover.src} alt="Document cover" />
 
-<button onclick={() => cover.choose()} disabled={cover.isLoading}>
+<button onclick={() => cover.choose()} disabled={!document.canWrite || cover.isLoading}>
   Choose image
 </button>
 
-{#if cover.hasCustomImage}
-  <button onclick={() => void cover.remove()} disabled={cover.isLoading}>
+{#if cover.reference}
+  <button onclick={() => void cover.clear()} disabled={!document.canWrite || cover.isLoading}>
     Use default
   </button>
 {/if}
@@ -128,8 +150,12 @@ replacement. Its reactive `src` switches automatically when the media changes.
 ```
 
 Use `choose()` for the native file picker or `await replace(file)` when your UI
-already has a browser `File`, such as from a drop target. `remove()` deletes the
-owner replacement and restores the image fallback.
+already has a browser `File`, such as from a drop target. `clear()` removes the
+document reference and restores the image fallback. Destroy is owned by the
+adapter.
+
+If you are not inside `<Slop>`, pass the same `createDocument` instance you
+already opened rather than creating a second store.
 
 ### Store another known file role
 
@@ -139,21 +165,19 @@ picker:
 ```ts
 import { fileStore } from "@hitslop/svelte";
 
-const attachment = fileStore("source-document", {
+const attachment = fileStore(document, fields.attachment, {
   accept: ".pdf,.txt,text/markdown",
 });
 
 attachment.choose();
 ```
 
-The reactive `src` is `null` until a custom file exists. Check
-`hasCustomFile`, `isLoading`, and `error` when drawing the interface.
+The reactive `src` is `null` until a custom file exists. Check `reference`,
+`isLoading`, and `error` when drawing the interface.
 
-Both store types provide `choose()`, `replace(file)`, `remove()`, `reload()`,
-and `flush()`. Call `destroy()` when their component is destroyed. Normal close,
-quit, duplicate, capture, and export already join registered flush work, but
-you can `await store.flush()` before an app-controlled transition that must
-wait for an in-flight replacement.
+Both store types provide `choose()`, `replace(file)`, `clear()`, `reload()`,
+and `flush()`. Normal close, quit, duplicate, capture, and export already join
+registered flush work.
 
 Named media suits stable roles known by the interface. Keep arbitrary lists of
 records in JSON and store only their small metadata there.

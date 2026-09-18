@@ -15,7 +15,7 @@ native binaries and temporary local services; packing tarballs does not publish 
 
 ## Release gate
 
-From a clean checkout with Bun **1.4.0** (the root `packageManager` version) and
+From a clean checkout with Bun **1.4.2** (the root `packageManager` version) and
 Xcode installed. Use that exact Bun version for generation and release checks:
 the bundled bridge's minified output changes between Bun versions.
 
@@ -67,7 +67,7 @@ tarball includes only `dist`, permitted templates/generated schema,
 `package.json`, `README.md`, and `LICENSE`; confirm repository metadata,
 MIT license, and intended `0.3.x` version.
 
-The initial v1 format uses command/snapshot sync, SQLite/bridge/room version 3 and projection envelope version 2,
+The initial v1 format uses command/snapshot sync, SQLite version 4, bridge/room version 3 and projection envelope version 2,
 and `hitslop-publish/1`. There is no pre-release data migration. Rebuild authored
 templates for the matching host; preserve unsupported old documents separately.
 
@@ -82,7 +82,7 @@ Durable Object class from `apps/cloudflare`. Point `api.hitslop.com` at that
 Worker; the static Astro Worker remains at `hitslop.com`.
 
 Cloudflare Workers Builds connects `hitslop-landing` to `hitSlop/hitslop`, with
-production branch `master`, repository root `/`, and `BUN_VERSION=1.4.0`.
+production branch `master`, repository root `/`, and `BUN_VERSION=1.4.2`.
 The build command is:
 
 ```sh

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "check": "tsc -p tsconfig.json",
-    "test": "bun run --cwd ../../packages/schema build && bun run --cwd ../../packages/api build && bun test tests",
+    "test": "bun run --cwd ../../packages/schema build && bun run --cwd ../../packages/document-engine build && bun run --cwd ../../packages/api build && bun test tests",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
@@ -17,7 +17,8 @@
     "jose": "^6.1.0",
     "@orpc/server": "2.0.0-beta.36",
     "@orpc/openapi": "2.0.0-beta.36",
-    "@hitslop/api": "0.3.0"
+    "@hitslop/api": "0.3.0",
+    "@hitslop/document-engine": "^0.3.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "latest",

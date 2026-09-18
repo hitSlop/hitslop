@@ -122,12 +122,17 @@ import SwiftUI
         let canonical = url.standardizedFileURL.resolvingSymlinksInPath()
         if DocumentFactory.isManagedTemplatePackage(canonical, templatesRoot: catalogServices.templatesURL) {
             showCatalog()
-            do {
-                let package = try SlopPackage(rootURL: canonical); try package.validateAsTemplate()
+            Task { do {
+                let package = try await SlopPreparation.run {
+                    let package = try SlopPackage(rootURL: canonical)
+                    try package.validateAsTemplate()
+                    return package
+                }
+                guard store.quitPhase == .running else { return }
                 var entry = CatalogEntry(id: "local:\(package.manifest.slug)", source: .local(canonical), title: package.manifest.title)
                 CatalogServices.apply(package.manifest, to: &entry)
                 store.send(.catalog(.primaryAction(entry)))
-            } catch { store.send(.externalFailure(error.localizedDescription)) }
+            } catch { store.send(.externalFailure(error.localizedDescription)) } }
         } else { store.send(.openDocument(canonical)) }
     }
     public func revealDocuments() {
@@ -204,7 +209,7 @@ import SwiftUI
             throw SlopPackageError.invalid("Create a document from this template before opening it.")
         }
         try Task.checkCancellation()
-        let controller = try SlopDocumentWindowController(packageURL: url)
+        let controller = try await SlopDocumentWindowController.open(packageURL: url)
         controllers[id] = controller
         onOpened?(id, controller)
         if presentsWindows {

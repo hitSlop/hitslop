@@ -71,13 +71,14 @@ func jsonCompatibilitySpike() throws {
   let input = try JSONDecoder().decode(SpikeInput.self, from: Data(contentsOf: inputURL))
   var report = SpikeReport()
   for group in input.groups where group.native {
-    let schema: SlopDocumentSchema
+    let engine: StateEngine
     do {
-      schema = try SlopDocumentSchema(SlopDocumentJSON(data: Data(group.schema.utf8)))
+      engine = try StateEngine()
+      try engine.configure(group.schema)
       report.schemas.append(
         .init(
           group: group.name, accepted: true,
-          outputJSON: String(decoding: try schema.source.encoded(), as: UTF8.self), error: nil))
+          outputJSON: group.schema, error: nil))
     } catch {
       report.schemas.append(
         .init(
@@ -89,17 +90,17 @@ func jsonCompatibilitySpike() throws {
       for (index, fixture) in group.cases.enumerated() {
         var row = SpikeObservation(pass: pass)
         do {
-          let value = try SlopDocumentJSON(data: Data(fixture.json.utf8))
+          let value = fixture.json
           row.phase = "serialization"
-          row.parsedJSON = String(decoding: try value.encoded(), as: UTF8.self)
+          row.parsedJSON = try engine.call("canonical", [value], as: String.self)
           row.phase = "validation"
           do {
-            row.outputJSON = String(decoding: try schema.prepare(value).bytes, as: UTF8.self)
+            row.outputJSON = try engine.call("validateData", [value], as: String.self)
             row.accepted = true
           } catch { row.error = String(error.localizedDescription.prefix(1500)) }
           // Check nonmutation on failures, too.
           if row.outputJSON == nil {
-            row.outputJSON = String(decoding: try value.encoded(), as: UTF8.self)
+            row.outputJSON = try engine.call("canonical", [value], as: String.self)
           }
         } catch {
           if row.phase != "parse" { row.complete = false }
@@ -127,14 +128,17 @@ private func runSpikeBoundary(_ boundary: SpikeInput.Boundary, report: inout Spi
     "hitslop-json-spike-\(UUID().uuidString)")
   try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
   defer { try? FileManager.default.removeItem(at: root) }
-  let source: SlopDocumentJSON
-  let initial: SlopDocumentJSON
-  let replacement: SlopDocumentJSON
-  let path: [SlopDocumentJSON]
+  let source: FixtureJSON
+  let initial: FixtureJSON
+  let replacement: FixtureJSON
+  let path: [FixtureJSON]
   let expected: Bool
   if boundary.kind == "depth" {
-    var node: SlopDocumentJSON = .object(["x-hitslop": .object(["container": .string("atomic")])])
-    var seed = SlopDocumentJSON.null
+    var node: FixtureJSON = .object([
+      "type": .string("object"), "additionalProperties": .bool(true),
+      "x-hitslop": .object(["container": .string("atomic")]),
+    ])
+    var seed = FixtureJSON.object([:])
     for _ in 0..<20 {
       node = .object([
         "type": .string("object"), "properties": .object(["v": node]),
@@ -145,13 +149,13 @@ private func runSpikeBoundary(_ boundary: SpikeInput.Boundary, report: inout Spi
     node["x-hitslop"]["version"] = .number(1)
     source = node
     initial = seed
-    var value = SlopDocumentJSON.number(1)
+    var value = FixtureJSON.number(1)
     for _ in 0..<(boundary.size - 20) { value = .object(["n": value]) }
     replacement = value
     path = (0..<20).map { _ in .object(["key": .string("v")]) }
     expected = boundary.size <= 64
   } else {
-    source = try SlopDocumentJSON(
+    source = try FixtureJSON(
       data: Data(
         #"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"text":{"type":"string"}},"required":["text"]}"#
           .utf8))
@@ -165,15 +169,15 @@ private func runSpikeBoundary(_ boundary: SpikeInput.Boundary, report: inout Spi
     path = [.object(["key": .string("text")])]
     expected = boundary.size <= SlopJSONLimits.documentBytes
   }
-  let schema = try SlopDocumentSchema(source)
+  let schema = try FixtureSchema(source)
   let storage = try SlopCommandStorage(root: root)
-  let snapshot: SlopDocumentJSON = .object([
+  let snapshot: FixtureJSON = .object([
     "documentId": .string("spike"), "schemaHash": .string("schema"),
     "authority": .string("local"), "revision": .number(0), "data": initial,
   ])
   try storage.initialize(snapshot: snapshot)
   let opening = try storage.open(now: 0)
-  let request: SlopDocumentJSON = .object([
+  let request: FixtureJSON = .object([
     "documentId": .string("spike"), "schemaHash": .string("schema"),
     "authority": .string("local"), "leaseId": opening["lease"]["id"],
     "requestId": .string("boundary"),
@@ -192,7 +196,7 @@ private func runSpikeBoundary(_ boundary: SpikeInput.Boundary, report: inout Spi
           error: error.localizedDescription))
     }
   }
-  let bridgeBytes = try SlopDocumentJSON.object([
+  let bridgeBytes = try FixtureJSON.object([
     "method": .string("document.execute"), "request": request,
   ]).encoded()
   let requestLimit = SlopRuntimeSecurity.requestLimit(.documentExecute)
@@ -214,25 +218,27 @@ private func runSpikeBoundary(_ boundary: SpikeInput.Boundary, report: inout Spi
   }
   record("retry") { try storage.apply(request, schema: schema, now: 2).result == outcome.result }
   record("disk-projection") {
-    let envelope: SlopDocumentJSON = .object([
+    let envelope: FixtureJSON = .object([
       "$slop": .object([
         "format": .number(2), "documentId": .string("spike"), "schemaHash": .string("schema"),
         "authority": .string("local"), "baseRevision": outcome.snapshot["revision"],
       ]), "data": outcome.snapshot["data"],
     ])
-    return try SlopDocumentJSON(data: envelope.encoded()) == envelope
+    return try FixtureJSON(data: envelope.encoded()) == envelope
   }
   record("room-frame") {
-    let frame: SlopDocumentJSON = .object([
-      "type": .string("snapshot"), "snapshot": outcome.snapshot,
+    let frame: FixtureJSON = .object([
+      "type": .string("snapshot"), "snapshot": outcome.snapshot.fixtureValue,
     ])
-    return try SlopDocumentJSON(data: frame.encoded()) == frame
+    return try FixtureJSON(data: frame.encoded()) == frame
   }
   record("room-ready") {
-    let frame: SlopDocumentJSON = .object([
-      "type": .string("ready"), "open": .object(["snapshot": outcome.snapshot, "lease": opening["lease"]]), "peers": .array([])
+    let frame: FixtureJSON = .object([
+      "type": .string("ready"),
+      "open": .object(["snapshot": outcome.snapshot.fixtureValue, "lease": opening["lease"]]),
+      "peers": .array([]),
     ])
-    return try SlopDocumentJSON(data: frame.encoded()) == frame
+    return try FixtureJSON(data: frame.encoded()) == frame
   }
-  if !accepted { record("rollback") { outcome.snapshot == snapshot } }
+  if !accepted { record("rollback") { outcome.snapshot.fixtureValue == snapshot } }
 }

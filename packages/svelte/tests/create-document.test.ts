@@ -3,7 +3,7 @@ import { compileModule } from "svelte/compiler";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as S from "@hitslop/schema/document";
-import { MemoryAuthority } from "@hitslop/schema/document-authority";
+import { MemoryAuthority } from "@hitslop/document-engine/web";
 import type { Request, Result } from "@hitslop/schema/document-protocol";
 import { registerDocumentWriter } from "../src/document-lifecycle.js";
 

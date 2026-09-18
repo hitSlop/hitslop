@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import * as S from "@hitslop/schema/document";
 import { paths, read } from "@hitslop/schema/document";
-import { MemoryAuthority } from "@hitslop/schema/document-authority";
+import { MemoryAuthority } from "@hitslop/document-engine/web";
 import type { Request, Snapshot, Result } from "@hitslop/schema/document-protocol";
 import {
   createDocumentController as createController,

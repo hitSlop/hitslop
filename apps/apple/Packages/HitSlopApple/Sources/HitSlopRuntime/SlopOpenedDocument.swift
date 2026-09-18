@@ -11,5 +11,15 @@ import HitSlopCore
         session = try SlopRuntimeSession(packageURL: self.presentedURL)
     }
 
+    private init(presentedURL: URL, session: SlopRuntimeSession) {
+        self.presentedURL = presentedURL.standardizedFileURL
+        self.session = session
+    }
+
+    public static func open(presentedURL: URL) async throws -> SlopOpenedDocument {
+        let session = try await SlopRuntimeSession.open(packageURL: presentedURL)
+        return SlopOpenedDocument(presentedURL: presentedURL, session: session)
+    }
+
     public func close() { session.close() }
 }

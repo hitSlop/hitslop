@@ -154,7 +154,7 @@ test("package boundaries require one v2 envelope and reject raw or future schema
 });
 
 test("document limits reject non-JSON, excess depth, and oversized initial data", () => {
-  const schema = S.Document({ value: S.Atomic(Type.Unknown()) });
+  const schema = S.Document({});
   for (const value of [Infinity, undefined, new Date()])
     expect(() => S.validateDocument(schema, { value })).toThrow("plain JSON");
   let nested: unknown = {};

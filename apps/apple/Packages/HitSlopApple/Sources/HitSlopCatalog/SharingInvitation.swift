@@ -52,18 +52,24 @@ struct SharingInvitation: Equatable {
                 guard !FileManager.default.fileExists(atPath: destination.path) else { throw SlopDocumentError("Choose a new destination; an existing document will not be replaced") }
                 let staging = destination.deletingLastPathComponent().appendingPathComponent(".join-\(UUID().uuidString).slop")
                 defer { try? SlopDuplicator.makeWritable(staging); try? FileManager.default.removeItem(at: staging) }
-                try SlopArchive.extractDocument(archive, to: staging, expectedSHA256: shared.packageSha256)
+                try await SlopPreparation.run {
+                    try SlopArchive.extractDocument(archive, to: staging, expectedSHA256: shared.packageSha256)
+                }
                 let token = try await api.session(documentId: shared.documentId)
                 let seed = try await api.seed(documentId: shared.documentId, token: token.token)
-                let transfer = try seed.validatedTransfer(documentId: shared.documentId, schema: shared.schema)
-                let package = try SlopPackage(rootURL: staging)
-                guard package.manifest.slug == shared.slug else { throw SlopDocumentError("Shared app identity mismatch") }
-                guard let document = try SlopCommandDocument.open(package: package, seed: transfer) else {
-                    throw SlopDocumentError("This package does not support collaboration")
+                let document = try await SlopPreparation.run {
+                    let transfer = try seed.validatedTransfer(documentId: shared.documentId, schema: shared.schema)
+                    let package = try SlopPackage(rootURL: staging)
+                    guard package.manifest.slug == shared.slug else { throw SlopDocumentError("Shared app identity mismatch") }
+                    guard let document = try SlopCommandDocument.open(package: package, seed: transfer) else {
+                        throw SlopDocumentError("This package does not support collaboration")
+                    }
+                    return document
                 }
-                try await document.close()
+                do { try await document.close() }
+                catch { try await document.shutDownAndWait(); throw error }
                 try FileManager.default.moveItem(at: staging, to: destination)
-                SlopPreviewWriter.installExistingPreview(for: destination)
+                await SlopPreviewWriter.installExistingPreviewAsync(for: destination)
                 opened(destination); finished?()
             } catch { self.error = error.localizedDescription }
         }

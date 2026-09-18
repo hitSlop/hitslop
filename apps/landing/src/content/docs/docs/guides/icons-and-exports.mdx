@@ -44,27 +44,32 @@ transparent; draw a simple, legible object inside it.
 </style>
 ```
 
-Mount it with `IconTarget` beside the editor and pass the existing store data.
-Do not open a second store inside the icon.
+Pass it as the `icon` snippet on `<Slop>` and use the same document store as
+the editor. Do not open a second store inside the icon.
 
 ```svelte title="src/App.svelte"
 <script lang="ts">
-  import { IconTarget } from "@hitslop/svelte";
+  import { createDocument, Slop } from "@hitslop/svelte";
   import Icon from "./Icon.svelte";
+  import Export from "./Export.svelte";
 
-  // `document` is the same jsonStore used by the editor.
+  const document = createDocument({ schema, initial });
 </script>
 
-<main>
-  <!-- editor UI -->
-</main>
-
-<IconTarget>
-  <Icon count={document.current.count} />
-</IconTarget>
+<Slop {document}>
+  <main>
+    <!-- editor UI -->
+  </main>
+  {#snippet icon()}
+    <Icon count={document.data.count} />
+  {/snippet}
+  {#snippet exportView()}
+    <Export count={document.data.count} />
+  {/snippet}
+</Slop>
 ```
 
-`IconTarget` mounts only in the icon renderer and provides a transparent
+The snippet mounts only in the icon renderer and provides a transparent
 512 × 512 canvas. In browser development, open the preview with
 `?capture=icon` to inspect that view.
 
@@ -112,14 +117,9 @@ Use normal document flow in `Export.svelte`: no fixed viewport height and no
 nested scrolling. Then mount it with the current app data.
 
 ```svelte title="src/App.svelte"
-<script lang="ts">
-  import { ExportTarget } from "@hitslop/svelte";
-  import Export from "./Export.svelte";
-</script>
-
-<ExportTarget>
-  <Export title={document.current.title} items={document.current.items} />
-</ExportTarget>
+{#snippet exportView()}
+  <Export title={document.data.title} items={document.data.tasks} />
+{/snippet}
 ```
 
 When a dedicated component is unnecessary, hide editor-only elements:
@@ -139,5 +139,5 @@ slop export path/to/document.slop --format png --output document.png
 slop export path/to/document.slop --format pdf --output document.pdf
 ```
 
-Wait for fonts and images before calling `ready()`, and test long, empty, and
-wrapped content before publishing.
+`createDocument` already reports host readiness, including a failed first open.
+Test long, empty, and wrapped content before publishing.

@@ -55,19 +55,31 @@ asynchronous preparation through the framework-neutral runtime.
 
 TypeBox definitions cover the manifest, controlled categories, package paths, and
 the signed publish protocol. Generation emits the public JSON Schema, Swift
-Codable model, and bundled Swift validation schema. Change TypeBox first, run
+Codable model, and the bundled TypeScript engine for Apple. Change TypeBox first, run
 `bun run schema:generate`, and commit every generated result.
 
 `@hitslop/schema/validation` provides TypeBox runtime checks.
 `@hitslop/schema/json` contains plain-JSON assertions. Authoring apps import
 schemas directly; the builder emits JSON Schema for the native host.
 
+## @hitslop/document-engine
+
+One deterministic evaluator implements commands, schema validation, receipts and
+undo decisions. It imports `@hitslop/schema`; it has no storage, clock, network or
+identity-generation dependencies. Hosts supply time, identities and committed
+state, then durably commit the returned delta before acknowledgement.
+
+`/web` supplies Web Crypto request preparation, leases and the disposable preview
+authority. `/jsc` supplies the JSON string ABI used by Apple’s trusted bundled
+engine. Cloudflare imports the evaluator directly. Build the Apple resource with
+`bun run schema:generate`; never edit the generated JavaScript.
+
 ## Dependency direction
 
 ```text
-schema  ◀── cli, api, registry
-runtime ◀── svelte
-schema-generated JSON/Swift ◀── Apple Core
+schema ◀── document-engine ◀── CLI preview, Cloudflare, Apple/JSC
+schema ◀── api, runtime ◀── svelte
+schema-generated fixed Swift models ◀── Apple Core
 ```
 
 Framework adapters may depend on `runtime/adapter`; runtime must not depend on

@@ -22,11 +22,12 @@ for (const failedOpen of [false, true]) {
       webkit: {
         messageHandlers: {
           hitslop: {
-            postMessage: (request: { method: string }) => {
+            postMessage: (raw: string) => {
+              const request = JSON.parse(raw);
               sent.push(request.method);
               return request.method === "document.open"
-                ? opening
-                : Promise.resolve({ ok: true, value: null });
+                ? opening.then(JSON.stringify)
+                : Promise.resolve(JSON.stringify({ ok: true, value: null }));
             },
           },
         },

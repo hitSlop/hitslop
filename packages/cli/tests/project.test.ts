@@ -126,7 +126,7 @@ describe("immutable artifacts", () => {
     );
     await writeFile(
       join(root, "schema.ts"),
-      `import * as Type from ${JSON.stringify(import.meta.resolve("@hitslop/schema/document"))};\nexport default Type.Document({ count: Type.Number({ default: 0, description: "Current count" }) });\n`,
+      `import * as Type from ${JSON.stringify(import.meta.resolve("@hitslop/schema/document"))};\nexport default Type.Document({ count: Type.Number({ description: "Current count" }) });\n`,
     );
     await writeFile(join(root, "assets", "theme.css"), ":root { --slop-accent: tomato; }\n");
     if (await Bun.file(join(root, "schema.ts")).exists())

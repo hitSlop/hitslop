@@ -2,6 +2,27 @@ export type JSONValue =
   null | boolean | number | string | JSONValue[] | { [key: string]: JSONValue };
 import type { DocumentMapping } from "./document.js";
 
+/** WHATWG UTF-8 length, without allocating encoded bytes. */
+export function utf8Length(value: string): number {
+  if (!/[\u0080-\uffff]/.test(value)) return value.length;
+  let bytes = 0;
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code < 0x80) bytes++;
+    else if (code < 0x800) bytes += 2;
+    else if (
+      code >= 0xd800 &&
+      code <= 0xdbff &&
+      value.charCodeAt(i + 1) >= 0xdc00 &&
+      value.charCodeAt(i + 1) <= 0xdfff
+    ) {
+      bytes += 4;
+      i++;
+    } else bytes += 3;
+  }
+  return bytes;
+}
+
 /** Reject values JSON.stringify would silently change or discard. */
 export function assertJSON(
   value: unknown,

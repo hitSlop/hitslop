@@ -70,13 +70,16 @@ Keep important controls away from transparent or skinned window edges.
 
 ## Keep captures intentional
 
-Editing controls should disappear from static output. The starter includes
-`IconTarget` and `ExportTarget`; pass them the same current data as the editor
+Editing controls should disappear from static output. Pass `icon` and
+`exportView` snippets on `<Slop>` with the same current data as the editor
 instead of opening a second store.
 
 ```svelte
-<IconTarget><Icon count={state.current.count} /></IconTarget>
-<ExportTarget><Export count={state.current.count} /></ExportTarget>
+<Slop document={state}>
+  <!-- editor UI -->
+  {#snippet icon()}<Icon count={state.data.count} />{/snippet}
+  {#snippet exportView()}<Export count={state.data.count} />{/snippet}
+</Slop>
 ```
 
 Export content belongs in normal document flow with no nested scrolling or
