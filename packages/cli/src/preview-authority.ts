@@ -1,3 +1,5 @@
+import { installPresentationStage } from "@hitslop/runtime/presentation";
+Object.assign(window, { __hitslopInstallPresentationStage: installPresentationStage });
 import { MemoryAuthority } from "@hitslop/document-engine/web";
 import type { JSONValue } from "@hitslop/schema/document-protocol";
 import type { TSchema } from "typebox";

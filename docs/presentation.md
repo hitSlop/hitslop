@@ -138,25 +138,35 @@ The host returns the size it could apply. The manifest remains the initial size.
 
 ## Transparent backgrounds
 
-For a floating or non-rectangular standard window, make the page and WebView
-surface transparent:
+Start with `background: "transparent"` and a built-in `shape`. The host makes
+`html` and `body` transparent and viewport-sized before first paint. `<Slop>`
+marks the application root; framework-neutral apps can mark their root with
+`data-hitslop-root`. The host fills that root and its mount ancestors too.
+Author CSS can override these low-specificity rules. Standard opaque documents
+receive no layout reset. Stage layout rules are disabled during capture.
 
-```css
-html, body, #app { background: transparent; }
-.object {
-  background: color-mix(in srgb, #16181d 94%, transparent);
-  border-radius: 32px;
-  overflow: clip;
-}
-```
+The host supplies these values on `document.documentElement` in native windows
+and disposable browser previews:
 
-Keep interactive content inside the visible object and provide adequate
-contrast. Transparency alone does not change hit testing; use a PNG skin when
-you need pixel-shaped click-through behavior.
+| Value | Meaning |
+| --- | --- |
+| `data-slop-presentation` | `standard`, `transparent`, or `skin` |
+| `data-slop-shape` | Built-in shape; absent for PNG skins |
+| `data-slop-resizable` | Present when user resizing is enabled |
+| `--slop-width`, `--slop-height` | Initial manifest dimensions as CSS lengths |
+
+Use fluid sizing for the live viewport. The CSS variables describe initial size,
+not live resize measurements. Transparency alone does not create arbitrary input
+holes: the native shape or PNG alpha determines the input silhouette.
+
+Move windows with the native toolbar handle. There is no guest drag API or
+`data-slop-drag` attribute contract; controls keep ordinary pointer behavior.
 
 ## PNG skins
 
-A skin is an exact-size RGBA PNG under `assets/`:
+Use a PNG only for a hole or an outline a built-in shape cannot describe.
+Skins are fixed-size and cannot resize. A skin is an exact-size RGBA PNG under
+`assets/`:
 
 ```json
 {
@@ -168,8 +178,8 @@ A skin is an exact-size RGBA PNG under `assets/`:
 }
 ```
 
-The PNG is the native backing and alpha mask. Pixels below 10% alpha are
-click-through. A skinned window is fixed-size: its DOM, image, and hit-test mask
+The PNG is the native backing and alpha mask. Alpha values 0–25 are
+click-through; values 26–255 receive input. A skinned window is fixed-size: its DOM, image, and hit-test mask
 must share exact dimensions. Keep important controls away from feathered edges,
 and test dragging plus pointer behavior around transparent holes.
 
@@ -222,3 +232,11 @@ keyboard focus, IME input, and the narrowest supported window. Make failures
 recoverable and keep user input visible. Check the editor and its export/icon
 views separately. Fix observed issues in a bounded pass, then verify the same
 states again; do not redesign working surfaces just to make them different.
+
+## Presentation test fixtures
+
+Run `bun run presentation:fixtures` to generate temporary rectangle, ellipse, and
+PNG washer packages outside the active gallery. The command prints their paths.
+Open them in the current development build of hitSlop. See
+[fixture checks](../packages/runtime/tests/fixtures/presentation/README.md) for
+layout, capture, toolbar, and desktop click-through checks.

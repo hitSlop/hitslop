@@ -12,16 +12,28 @@ returned host-applied size. Never assume the screen can fit the request.
 
 ## Transparent backgrounds
 
-Set `html`, `body`, and the app root transparent, then paint only the visible
-object. Transparency does not make pixels click-through. Keep focus rings and
-content within the painted surface. Use an exact RGBA PNG skin when native
-alpha-shaped hit testing is required.
+Start with a built-in shape and `background: "transparent"`. The host supplies
+page sizing/transparency and fills `<Slop>`'s root and its mount ancestors.
+Framework-neutral apps mark their root `data-hitslop-root`. No manual transparent
+page reset is needed. Standard opaque windows retain authored layout.
+
+The host sets `data-slop-presentation` (`standard`, `transparent`, `skin`),
+`data-slop-shape` for built-in shapes, `data-slop-resizable` when enabled, and
+`--slop-width`/`--slop-height` for initial dimensions. Use fluid CSS for live size.
+These low-specificity layout rules are disabled during capture.
+
+Transparency alone does not create input holes. Keep focus rings and controls
+inside the native silhouette. Move windows using the native toolbar handle;
+there is no guest drag API or drag-attribute contract.
 
 ## PNG skins
 
-The skin path is under `assets/`; PNG dimensions must exactly equal manifest
-dimensions and include alpha. Pixels below 10% alpha are click-through. Skinned
-windows cannot resize. Avoid critical controls on antialiased/translucent edges.
+Use a PNG only for a hole or an outline no built-in shape describes. The skin
+path is under `assets/`; RGBA dimensions exactly equal manifest dimensions.
+The image is both native backing artwork and alpha mask. Alpha 0–25 is
+click-through; 26–255 receives input. Skinned windows cannot resize. Avoid
+critical controls on antialiased/translucent edges. Verify clicks actually reach
+the application behind a hole, not merely that a DOM element ignores them.
 
 ## Static output
 

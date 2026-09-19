@@ -29,10 +29,6 @@ const fromBridge = (bridge: WindowSlop): SlopHost => ({
     bridge.window?.resize
       ? bridge.window.resize(size)
       : Promise.reject(new Error("The hitSlop host does not support dynamic window sizing.")),
-  dragWindow: () =>
-    bridge.window?.drag
-      ? bridge.window.drag()
-      : Promise.reject(new Error("The hitSlop host does not support window dragging.")),
   watch: (_kind, callback) => bridge.media.onChange(callback),
 });
 
@@ -62,7 +58,6 @@ export const slop = {
   },
   window: {
     resize: (size: SlopWindowSize) => getHost().resizeWindow(size),
-    drag: () => getHost().dragWindow(),
   },
 };
 

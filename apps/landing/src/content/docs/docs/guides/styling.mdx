@@ -68,6 +68,18 @@ Use fluid dimensions, grid or flex reflow, container queries, visible focus,
 and reduced-motion styles. Test the manifest size and a smaller supported size.
 Keep important controls away from transparent or skinned window edges.
 
+## Transparent and skinned stages
+
+For transparent or PNG-skinned apps, the host supplies the viewport sizing and
+transparent-page reset. Use `<Slop>` or mark a plain root `data-hitslop-root`.
+Keep owned surface styles in your app; no duplicated window dimensions are needed.
+`--slop-width` and `--slop-height` contain initial manifest dimensions, while
+`data-slop-presentation` identifies the derived mode. Host layout rules are
+low-specificity and disabled during capture. The standard opaque example above
+still owns its reset.
+
+Use the native toolbar handle for window dragging.
+
 ## Keep captures intentional
 
 Editing controls should disappear from static output. Pass `icon` and

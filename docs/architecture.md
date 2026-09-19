@@ -74,7 +74,6 @@ slop.media.add(base64, "image" | "file")
 slop.media.onChange(callback)
 
 slop.window.resize({ width, height })
-slop.window.drag()
 ```
 
 `@hitslop/runtime` exposes this contract. The Svelte package adapts it

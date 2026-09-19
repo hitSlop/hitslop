@@ -4,6 +4,7 @@ import Testing
 @testable import HitSlopRuntime
 
 @MainActor struct CommandRoomTests {
+  // Server fixtures deliberately use the room wire version, not the WebView bridge constant.
   private let schema = try! FixtureJSON(
     data: Data(
       #"{"type":"object","x-hitslop":{"version":1,"container":"map"},"properties":{"count":{"type":"integer"}},"required":["count"]}"#
@@ -44,7 +45,7 @@ import Testing
       },
       connect: { _ in socket })
     session.start()
-    socket.deliver(["type": "welcome", "protocol": slopProtocolVersion, "peers": []])
+    socket.deliver(["type": "welcome", "protocol": 3, "peers": []])
     try await eventually { socket.frames("hello").count == 1 }
     socket.deliver([
       "type": "ready",
@@ -91,7 +92,7 @@ import Testing
     defer { session.stop() }
     session.start()
     try await eventually { calls.value == 1 }
-    first.deliver(["type": "welcome", "protocol": slopProtocolVersion, "peers": []])
+    first.deliver(["type": "welcome", "protocol": 3, "peers": []])
     try await eventually { first.frames("hello").count == 1 }
     let opening = FixtureJSON.object([
       "snapshot": seed,
@@ -106,7 +107,7 @@ import Testing
     // No reply arrives. The watchdog reconnects with fresh credentials.
     try await eventually { calls.value == 2 }
     #expect(try await sending.value["error"]["code"].string == "unknown_outcome")
-    second.deliver(["type": "welcome", "protocol": slopProtocolVersion, "peers": []])
+    second.deliver(["type": "welcome", "protocol": 3, "peers": []])
     try await eventually { second.frames("hello").count == 1 }
     var next = opening
     next["lease"]["id"] = .string("lease-two")

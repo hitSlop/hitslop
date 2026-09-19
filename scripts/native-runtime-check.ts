@@ -1,3 +1,4 @@
+import { buildPresentationFixtures } from "./build-presentation-fixtures.ts";
 import { rm } from "node:fs/promises";
 import { buildWrapperFixture } from "./build-wrapper-fixture.ts";
 import { resolve } from "node:path";
@@ -12,6 +13,9 @@ for (const [slug, variable] of [["quick-checklist", "HITSLOP_PILOT_PACKAGE"]] as
   await validateRuntimePackage(directory, { template: true });
   packages[variable] = resolve(directory);
 }
+
+const presentation = await buildPresentationFixtures();
+packages.HITSLOP_PRESENTATION_FIXTURES = JSON.stringify(presentation.packages);
 
 const wrapper = await buildWrapperFixture();
 packages.HITSLOP_WRAPPER_PACKAGE = wrapper.directory;
@@ -31,4 +35,5 @@ try {
   if ((await child.exited) !== 0) throw new Error("Native runtime checks failed");
 } finally {
   await rm(wrapper.parent, { recursive: true, force: true });
+  await rm(presentation.parent, { recursive: true, force: true });
 }

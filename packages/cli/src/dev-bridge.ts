@@ -1,9 +1,11 @@
+import { presentationStage, presentationStageCSS } from "@hitslop/runtime/presentation";
+import type { SlopPresentation } from "@hitslop/schema/manifest";
 import { fileURLToPath } from "node:url";
 import { protocolVersion } from "@hitslop/schema/bridge";
 // Browser-only half of `slop dev`. This disposable window.slop fake exists to
 // keep authored UI renderable; it deliberately does not model durable storage.
 
-export const hostStyle = `<style data-hitslop-host>*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}</style>`;
+export const hostStyle = `<style data-hitslop-host>${presentationStageCSS()}</style>`;
 
 const previewBundle = await Bun.build({
   entrypoints: [fileURLToPath(import.meta.resolve("./preview-authority.js"))],
@@ -39,7 +41,6 @@ export const devHostJavaScript = `${previewAuthorityJavaScript}\n(() => {
     return () => listeners[kind].delete(callback);
   };
   const resize = async (size) => size;
-  const drag = async () => undefined;
 
   let errorPanel;
   const reportError = async issue => {
@@ -69,7 +70,7 @@ export const devHostJavaScript = `${previewAuthorityJavaScript}\n(() => {
   window.addEventListener('unhandledrejection', event => { void reportError({source:'unhandled',message:String(event.reason)}); });
   window.slop = Object.freeze({
     reportError,
-    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['host.info', 'document.open', 'document.execute', 'document.flush', 'window.resize', 'window.drag'] }),
+    info: async () => ({ protocolVersion: ${protocolVersion}, capabilities: ['host.info', 'document.open', 'document.execute', 'document.flush', 'window.resize'] }),
     flush: async () => undefined,
     document: Object.freeze({
       connected: true, writable: true,
@@ -101,7 +102,7 @@ export const devHostJavaScript = `${previewAuthorityJavaScript}\n(() => {
       },
       onChange: (callback) => watch('media', callback)
     }),
-    window: Object.freeze({ resize, drag }),
+    window: Object.freeze({ resize }),
     ready: () => {
       document.documentElement.dataset.hitslopReady = 'true';
       window.dispatchEvent(new Event('slop:ready'));
@@ -115,6 +116,7 @@ export const injectHost = (
   html: string,
   options: {
     themeHref?: string;
+    presentation?: SlopPresentation;
     review?: { pane: string; run: string; fingerprint: string; data?: unknown };
   } = {},
 ): string => {
@@ -124,11 +126,14 @@ export const injectHost = (
   const reviewConfig = options.review
     ? `<script>window.__hitslopReviewConfig=${JSON.stringify(options.review).replaceAll("<", "\\u003c").replaceAll("\u2028", "\\u2028").replaceAll("\u2029", "\\u2029")}</script>`
     : "";
+  const stage = options.presentation ? presentationStage(options.presentation) : undefined;
+  const stageScript = `<script>window.__hitslopInstallPresentationStage(${JSON.stringify(stage) ?? "undefined"})</script>`;
   const payload =
     hostStyle +
     theme +
     reviewConfig +
     bridgeScript +
+    stageScript +
     (options.review ? `<script>${reviewHostJavaScript}</script>` : "");
   return /<head(?:\s[^>]*)?>/i.test(html)
     ? html.replace(/<head(?:\s[^>]*)?>/i, (tag) => tag + payload)

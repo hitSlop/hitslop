@@ -17,6 +17,7 @@ import { mockHostPlugin } from "../src/dev.ts";
 
 type Change = { kind: string; source: string; revision?: string | null };
 type PreviewSlop = {
+  info: () => Promise<{ protocolVersion: number; capabilities: string[] }>;
   document: {
     open: (initial?: unknown) => Promise<Open>;
     send: (request: Request) => Promise<Result>;
@@ -32,7 +33,6 @@ type PreviewSlop = {
   };
   window: {
     resize: (size: { width: number; height: number }) => Promise<{ width: number; height: number }>;
-    drag: () => Promise<void>;
   };
   ready: () => void;
 };
@@ -118,7 +118,8 @@ test("browser preview supplies media, window, and readiness stubs", async () => 
     width: 500,
     height: 400,
   });
-  expect(await slop.window.drag()).toBeUndefined();
+  expect("drag" in slop.window).toBe(false);
+  expect((await slop.info()).capabilities).not.toContain("window.drag");
   slop.ready();
   expect(host.document.documentElement.dataset.hitslopReady).toBe("true");
   expect(host.window.dispatched).toEqual(["slop:ready"]);
@@ -232,4 +233,24 @@ test("review capture failures remain unready and visible", async () => {
   const { messages } = await reviewDiagnostics("Font failed to load");
   expect(messages.at(-1).ready).toBe(false);
   expect(messages.at(-1).errors.join(" ")).toContain("Font failed to load");
+});
+
+test("preview starts at bridge version one without deferred input regions", async () => {
+  const slop = previewHost().window.slop!;
+  expect((await slop.info()).protocolVersion).toBe(1);
+  expect((await slop.info()).capabilities).not.toContain("window.setInputRegions");
+  expect("setInputRegions" in slop.window).toBe(false);
+});
+
+test("preview injects derived presentation for documents and HTML fragments", () => {
+  for (const html of ["<!doctype html><html><head></head><body></body></html>", "<head></head>"]) {
+    const result = injectHost(html, {
+      presentation: { width: 720, height: 560, skin: "assets/private-mask.png" },
+    });
+    expect(result).toContain(
+      'window.__hitslopInstallPresentationStage({"mode":"skin","width":720,"height":560,"resizable":false})',
+    );
+    expect(result).not.toContain("private-mask.png");
+    expect(result).toContain(":not([data-slop-capture])");
+  }
 });

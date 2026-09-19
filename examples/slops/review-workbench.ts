@@ -3,14 +3,14 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { applicationSchema, validateDocument } from "@hitslop/schema/document";
 import { loadDataSchema } from "../../packages/cli/src/data-schema";
-import { devHostJavaScript } from "../../packages/cli/src/dev-bridge";
+import { devHostJavaScript, hostStyle } from "../../packages/cli/src/dev-bridge";
 
 export type ReviewCase = { id: string; label: string; data: unknown };
 export type ReviewInfo = { cases: ReviewCase[]; fingerprint: string };
 const ignored = new Set(["node_modules", "dist", ".impeccable", ".git", "DESIGN.md", "README.md"]);
 
 export async function reviewFingerprint(directory: string): Promise<string> {
-  const hash = createHash("sha256").update(devHostJavaScript);
+  const hash = createHash("sha256").update(devHostJavaScript).update(hostStyle);
   async function walk(path: string, prefix = "") {
     for (const entry of (await readdir(path, { withFileTypes: true })).sort((a, b) =>
       a.name.localeCompare(b.name),

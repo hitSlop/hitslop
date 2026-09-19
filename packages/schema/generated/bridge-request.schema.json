@@ -749,19 +749,6 @@
         }
       },
       "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "method"
-      ],
-      "properties": {
-        "method": {
-          "type": "string",
-          "const": "window.drag"
-        }
-      },
-      "additionalProperties": false
     }
   ]
 }

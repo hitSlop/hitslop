@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import Foundation
 import HitSlopCore
@@ -40,7 +41,7 @@ import Testing
     #expect(layer.backgroundColor?.alpha == 0)
 }
 
-private func maskedFixture() throws -> URL {
+private func maskedFixture(alpha: (Int, Int) -> UInt8 = { _, y in y < 90 ? 255 : 0 }) throws -> URL {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-host-mask-\(UUID().uuidString)", isDirectory: true)
     let root = directory.appendingPathComponent("asymmetric.slop", isDirectory: true)
     try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
@@ -51,8 +52,8 @@ private func maskedFixture() throws -> URL {
 
     let width = 240, height = 180
     var pixels = [UInt8](repeating: 255, count: width * height * 4)
-    for y in height / 2..<height {
-        for x in 0..<width { pixels[(y * width + x) * 4 + 3] = 0 }
+    for y in 0..<height {
+        for x in 0..<width { pixels[(y * width + x) * 4 + 3] = alpha(x, y) }
     }
     let data = Data(pixels)
     guard let provider = CGDataProvider(data: data as CFData),
@@ -69,4 +70,35 @@ private func writeCanonicalDocumentSkill(to root: URL) throws {
     let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
     try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
     try SlopPackage.canonicalDocumentSkillData().write(to: skill)
+}
+
+@Test @MainActor func ringMaskLetsClicksFallThroughItsTransparentHole() throws {
+    let root = try maskedFixture { x, y in let r = hypot(Double(x - 120), Double(y - 90)); return r >= 40 && r <= 80 ? 255 : 0 }
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let mask = try SlopWindowMask(package: SlopPackage(rootURL: root))
+    let bounds = CGRect(x: 0, y: 0, width: 240, height: 180)
+    for point in [CGPoint(x: 60,y: 90),CGPoint(x: 180,y: 90),CGPoint(x: 120,y: 30),CGPoint(x: 120,y: 150)] { #expect(mask.contains(point, in: bounds)) }
+    #expect(!mask.contains(CGPoint(x: 120,y: 90), in: bounds))
+}
+@Test @MainActor func imageMaskTreatsAlphaAtTheThresholdAsOpaqueAndJustBelowAsClickThrough() throws {
+    let root = try maskedFixture { x, _ in x < 120 ? 26 : 25 }
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let mask = try SlopWindowMask(package: SlopPackage(rootURL: root))
+    #expect(mask.contains(CGPoint(x: 60,y: 90), in: CGRect(x: 0,y: 0,width: 240,height: 180)))
+    #expect(!mask.contains(CGPoint(x: 180,y: 90), in: CGRect(x: 0,y: 0,width: 240,height: 180)))
+}
+@Test @MainActor func imageMaskHitTestingIsIndependentOfBackingScale() throws {
+    let root = try maskedFixture()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let mask = try SlopWindowMask(package: SlopPackage(rootURL: root))
+    for point in [CGPoint(x: 120,y: 30),CGPoint(x: 120,y: 150)] {
+        #expect(mask.contains(point, in: CGRect(x: 0,y: 0,width: 240,height: 180)) == mask.contains(CGPoint(x: point.x * 2,y: point.y * 2), in: CGRect(x: 0,y: 0,width: 480,height: 360)))
+    }
+}
+@Test @MainActor func skinnedWindowsAreNeverResizableAndDropTheResizableStyleMask() throws {
+    let root = try maskedFixture()
+    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+    let package = try SlopPackage(rootURL: root)
+    #expect(!package.isResizable)
+    #expect(!slopDocumentWindowStyleMask(resizable: package.isResizable).contains(.resizable))
 }

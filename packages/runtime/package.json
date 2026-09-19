@@ -28,7 +28,8 @@
   "exports": {
     ".": "./dist/index.js",
     "./adapter": "./dist/adapter.js",
-    "./theme": "./dist/theme.js"
+    "./theme": "./dist/theme.js",
+    "./presentation": "./dist/presentation.js"
   },
   "scripts": {
     "build": "bun ../../scripts/clean-dist.ts && tsc -p tsconfig.build.json",

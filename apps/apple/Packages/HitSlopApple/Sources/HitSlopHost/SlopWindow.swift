@@ -230,10 +230,6 @@ public enum SlopDocumentCommand: Equatable, Sendable {
         if toolbar?.isVisible == true { showToolbar() }
         return frame.size
     }
-    public func runtimeSessionDidRequestWindowDrag(_ session: SlopRuntimeSession) throws {
-        guard let window else { throw SlopPackageError.invalid("document window is unavailable") }
-        try session.performWindowDrag(on: window)
-    }
     public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {
         if let onRuntimeFailure { onRuntimeFailure(error.localizedDescription) }
         else { updateRuntimeFailure(error.localizedDescription) }

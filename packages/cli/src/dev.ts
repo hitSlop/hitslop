@@ -6,7 +6,7 @@ import { loadManifest } from "./project.ts";
 import { readThemeCSS } from "./theme.ts";
 
 /** Browser-only preview host. Durable storage behavior is tested in a built .slop. */
-export function mockHostPlugin(options: { themeHref?: string } = {}): Plugin {
+export function mockHostPlugin(options: Parameters<typeof injectHost>[1] = {}): Plugin {
   return {
     name: "hitslop-browser-preview",
     transformIndexHtml: {
@@ -17,11 +17,14 @@ export function mockHostPlugin(options: { themeHref?: string } = {}): Plugin {
 }
 
 export async function runDev(root: string): Promise<void> {
-  await loadManifest(root);
+  const manifest = await loadManifest(root);
   const themeHref = (await readThemeCSS(root)) !== undefined ? "/assets/theme.css" : undefined;
   const server = await createServer({
     root,
-    plugins: [themePreviewPlugin(root), mockHostPlugin(themeHref ? { themeHref } : {})],
+    plugins: [
+      themePreviewPlugin(root),
+      mockHostPlugin({ presentation: manifest.presentation, ...(themeHref ? { themeHref } : {}) }),
+    ],
   });
   await server.listen();
   const url = server.resolvedUrls?.local[0];

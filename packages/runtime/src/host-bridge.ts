@@ -1,3 +1,5 @@
+import { installPresentationStage } from "./presentation.js";
+Object.assign(window, { __hitslopInstallPresentationStage: installPresentationStage });
 import type { Open, Snapshot } from "@hitslop/schema/document-protocol";
 import "./capture.js";
 import {
@@ -172,9 +174,6 @@ const bridge: WindowSlop = {
   },
   window: {
     resize: (size) => call("window.resize", size),
-    drag: async () => {
-      await call("window.drag", {});
-    },
   },
   reportError: async (issue) => {
     await call("runtime.reportError", { issue });

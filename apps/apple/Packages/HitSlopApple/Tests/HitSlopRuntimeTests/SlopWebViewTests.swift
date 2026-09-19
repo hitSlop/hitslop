@@ -101,16 +101,18 @@
     #expect(!session.package.isResizable)
   }
 
-  @Test @MainActor func runtimeRejectsWindowDragWithoutCurrentMouseDown() throws {
-    let root = try webViewPackage(skinned: false, transparent: true)
-    defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
-    let session = try SlopRuntimeSession(packageURL: root)
-    let window = NSWindow(
-      contentRect: .init(x: 0, y: 0, width: 320, height: 240), styleMask: .borderless,
-      backing: .buffered, defer: false)
-    defer { session.close() }
-
-    #expect(throws: SlopPackageError.self) { try session.performWindowDrag(on: window) }
+  @Test @MainActor func runtimeInstallsSharedPresentationStageWithoutGuestDrag() throws {
+    for (skinned, transparent, mode) in [(true, false, "skin"), (false, true, "transparent"), (false, false, "standard")] {
+      let root = try webViewPackage(skinned: skinned, transparent: transparent)
+      defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+      let session = try SlopRuntimeSession(packageURL: root)
+      defer { session.close() }
+      let source = session.webView.configuration.userContentController.userScripts.map(\.source).joined()
+      #expect(source.contains("window.__hitslopInstallPresentationStage("))
+      #expect(source.contains("\"mode\":\"\(mode)\""))
+      #expect(source.contains(":not([data-slop-capture])"))
+      #expect(!source.contains("window.drag"))
+    }
   }
 
   @Test @MainActor func runtimeCanFetchDocumentMediaThroughItsCustomScheme() async throws {
@@ -422,6 +424,40 @@
     let pixel = try #require(result["pixel"] as? [Int])
     try #require(pixel.count == 4)
     #expect(abs(pixel[0] - 17) <= 5 && abs(pixel[1] - 201) <= 5 && abs(pixel[2] - 63) <= 5)
+  }
+
+  @Test @MainActor func presentationStageFillsNestedRootsAndRestoresAfterCapture() async throws {
+    for skinned in [false, true] {
+      let root = try webViewPackage(skinned: skinned, transparent: true)
+      defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
+      try Data("<html><body><div id='mount'><section><main data-hitslop-root>Fixture</main></section></div><script>window.slop.ready()</script></body></html>".utf8).write(to: root.appendingPathComponent("app.html"))
+      let session = try SlopRuntimeSession(packageURL: root)
+      defer { session.close() }
+      session.webView.frame = CGRect(x: 0, y: 0, width: 320, height: 240)
+      session.load(); try await session.waitUntilReady()
+      let result = try #require(await session.webView.callAsyncJavaScript(#"""
+        const host = await window.slop.info();
+        const height = () => document.querySelector('main').getBoundingClientRect().height;
+        const initial = height();
+        const icon = document.createElement('div'); icon.style.cssText = 'width:512px;height:512px'; document.body.append(icon);
+        const unregister = window.__hitslopCapture.registerTarget('icon',{element:icon,prepare(){},restore(){}});
+        const measured = await window.__hitslopCapture.begin('stage-test','icon');
+        const during = height(); await window.__hitslopCapture.restore('stage-test'); unregister(); icon.remove();
+        const restored = height();
+        const override = document.createElement('style'); override.textContent='body{margin:7px}';document.head.append(override);
+        return { initial, during, restored, iconWidth:measured.width, iconHeight:measured.height, margin:getComputedStyle(document.body).marginTop, protocol:host.protocolVersion, capabilities:host.capabilities, drag:typeof window.slop.window.drag, regions:typeof window.slop.window.setInputRegions };
+        """#, arguments: [:], in: nil, contentWorld: .page) as? [String: Any])
+      #expect(result["initial"] as? Int == 240)
+      #expect(result["restored"] as? Int == 240)
+      #expect(result["during"] as? Int != 240)
+      #expect(result["iconWidth"] as? Int == 512)
+      #expect(result["iconHeight"] as? Int == 512)
+      #expect(result["margin"] as? String == "7px")
+      #expect(result["protocol"] as? Int == 1)
+      #expect(result["drag"] as? String == "undefined")
+      #expect(result["regions"] as? String == "undefined")
+      if skinned { #expect(!(result["capabilities"] as? [String] ?? []).contains("window.resize")) }
+    }
   }
 
   private func webViewPackage(skinned: Bool, transparent: Bool = false) throws -> URL {

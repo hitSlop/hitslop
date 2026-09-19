@@ -94,6 +94,7 @@
         "@crustjs/core": "^0.0.19",
         "@hitslop/api": "^0.3.0",
         "@hitslop/document-engine": "^0.3.0",
+        "@hitslop/runtime": "^0.3.0",
         "@hitslop/schema": "^0.3.0",
         "@noble/ed25519": "^3.2.0",
         "fast-png": "^8.0.0",

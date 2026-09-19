@@ -10,28 +10,26 @@ import WebKit
   import UIKit
 #endif
 
-private func hostBridgeSource() throws -> String {
+private func hostBridgeSource(package: SlopPackage) throws -> String {
   guard let url = Bundle.module.url(forResource: "host-bridge", withExtension: "js") else {
     throw SlopPackageError.missing("bundled host bridge")
   }
-  return try String(contentsOf: url, encoding: .utf8) + #"""
-    ;(() => {
-      const install = () => {
-        const style = document.createElement('style');
-        style.dataset.hitslopHost = '';
-        style.textContent = '*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}';
-        (document.head || document.documentElement).appendChild(style);
-      };
-      if (document.documentElement) install();
-      else document.addEventListener('DOMContentLoaded', install, {once:true});
-    })();
-    """#
+  // SlopPackage validates dimensions against TypeBox before decoding Swift models.
+  // Only derived geometry crosses this boundary; no asset paths or author text.
+  let spec = package.manifest.presentation
+  var stage: [String: Any] = [
+    "mode": package.isSkinned ? "skin" : package.usesTransparentBackground ? "transparent" : "standard",
+    "width": spec.width, "height": spec.height, "resizable": package.isResizable,
+  ]
+  if !package.isSkinned { stage["shape"] = package.shape.rawValue }
+  let json = String(decoding: try JSONSerialization.data(withJSONObject: stage, options: [.sortedKeys]), as: UTF8.self)
+  return try String(contentsOf: url, encoding: .utf8)
+    + ";window.__hitslopInstallPresentationStage(\(json));"
 }
 
 @MainActor public protocol SlopRuntimeSessionDelegate: AnyObject {
   func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
   func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize
-  func runtimeSessionDidRequestWindowDrag(_ session: SlopRuntimeSession) throws
   func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue)
   func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
   func runtimeSession(_ session: SlopRuntimeSession, documentNeedsAttention frame: SlopCommandFrame)
@@ -43,9 +41,6 @@ extension SlopRuntimeSessionDelegate {
     -> CGSize
   {
     throw SlopPackageError.invalid("the host does not support dynamic window sizing")
-  }
-  public func runtimeSessionDidRequestWindowDrag(_ session: SlopRuntimeSession) throws {
-    throw SlopPackageError.invalid("the host does not support window dragging")
   }
   public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
   public func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue) {}
@@ -69,7 +64,7 @@ private struct PreparedRuntime: Sendable {
   init(packageURL: URL) throws {
     try SlopLocalDocument.requireLocal(packageURL)
     package = try SlopPackage(rootURL: packageURL)
-    source = try hostBridgeSource()
+    source = try hostBridgeSource(package: package)
     do {
       document = try SlopCommandDocument.open(package: package)
       documentError = nil
@@ -179,7 +174,7 @@ private struct PreparedRuntime: Sendable {
         case .hostInfo:
           var capabilities = SlopBridgeMethod.allCases.map(\.rawValue)
           #if !os(macOS)
-            capabilities.removeAll { $0 == "window.drag" || $0 == "window.resize" }
+            capabilities.removeAll { $0 == "window.resize" }
           #endif
           if package.isSkinned { capabilities.removeAll { $0 == "window.resize" } }
           value = ["protocolVersion": slopProtocolVersion, "capabilities": capabilities]
@@ -208,9 +203,6 @@ private struct PreparedRuntime: Sendable {
           let size = CGSize(width: width.doubleValue, height: height.doubleValue)
           let applied = try session.bridgeDidRequestResize(size)
           value = ["width": applied.width, "height": applied.height]
-        case .windowDrag:
-          try session.bridgeDidRequestWindowDrag()
-          value = NSNull()
         default:
           inFlight += 1
           if method == .mediaAdd { mediaImportInFlight = true }
@@ -593,22 +585,6 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
     }
     return try delegate.runtimeSession(self, resizeContentTo: size)
   }
-  fileprivate func bridgeDidRequestWindowDrag() throws {
-    guard let delegate else {
-      throw SlopPackageError.invalid("the host does not support window dragging")
-    }
-    try delegate.runtimeSessionDidRequestWindowDrag(self)
-  }
-  #if os(macOS)
-    public func performWindowDrag(on window: NSWindow) throws {
-      guard let webView = webView as? InteractiveWebView,
-        let event = webView.consumeWindowDragEvent(for: window)
-      else {
-        throw SlopPackageError.invalid("window dragging requires a current left mouse-down gesture")
-      }
-      window.performDrag(with: event)
-    }
-  #endif
   private func scheduleExternalRefresh() {
     refreshTask?.cancel()
     refreshTask = Task { @MainActor [weak self] in
@@ -764,41 +740,7 @@ private final class SlopSchemeHandler: NSObject, WKURLSchemeHandler {
   }
 
   private final class InteractiveWebView: WKWebView {
-    private var windowDragEvent: NSEvent?
-    nonisolated(unsafe) private var windowDragMonitor: Any?
-
-    override init(frame: CGRect, configuration: WKWebViewConfiguration) {
-      super.init(frame: frame, configuration: configuration)
-      windowDragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) {
-        [weak self] event in
-        guard let self, event.window === self.window,
-          self.bounds.contains(self.convert(event.locationInWindow, from: nil))
-        else { return event }
-        self.windowDragEvent = event
-        return event
-      }
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-      fatalError("InteractiveWebView must be created programmatically")
-    }
-
-    deinit {
-      if let windowDragMonitor { NSEvent.removeMonitor(windowDragMonitor) }
-    }
-
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var mouseDownCanMoveWindow: Bool { false }
-    func consumeWindowDragEvent(for window: NSWindow) -> NSEvent? {
-      defer { windowDragEvent = nil }
-      guard let event = windowDragEvent,
-        event.type == .leftMouseDown,
-        event.buttonNumber == 0,
-        event.window === window,
-        ProcessInfo.processInfo.systemUptime - event.timestamp < 1
-      else { return nil }
-      return event
-    }
   }
 #endif

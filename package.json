@@ -28,7 +28,8 @@
     "slops:review": "bun run --cwd examples/slops dev --review",
     "test:local": "bun scripts/local-check.ts",
     "format": "prettier --write \"{packages,apps/cloudflare,apps/landing,examples/slops,scripts}/**/*.{ts,tsx,js,mjs,cjs}\"",
-    "format:check": "prettier --check \"{packages,apps/cloudflare,apps/landing,examples/slops,scripts}/**/*.{ts,tsx,js,mjs,cjs}\""
+    "format:check": "prettier --check \"{packages,apps/cloudflare,apps/landing,examples/slops,scripts}/**/*.{ts,tsx,js,mjs,cjs}\"",
+    "presentation:fixtures": "bun scripts/build-presentation-fixtures.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

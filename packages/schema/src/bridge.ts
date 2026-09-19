@@ -9,7 +9,7 @@ import {
 } from "./document-protocol.js";
 import * as Type from "typebox";
 
-export const protocolVersion = 3;
+export const protocolVersion = 1;
 export const BridgeErrorCodeSchema = Type.Enum([
   "invalid_request",
   "unsupported",
@@ -78,7 +78,6 @@ export const BridgeMethods = {
       height: Type.Number({ exclusiveMinimum: 0 }),
     }),
   ),
-  "window.drag": method({}, Type.Null()),
 } as const;
 
 export type BridgeMethod = keyof typeof BridgeMethods;

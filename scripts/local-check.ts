@@ -119,6 +119,9 @@ try {
     [
       "slopWrapperReportsFailuresAndResetsWithoutReopeningStore",
       "guestErrorsReachHostWithoutBreakingReadiness",
+      "presentationFixturesExportWithoutNativeMaskAndRenderSquareIcons",
+      "presentationStageFillsNestedRootsAndRestoresAfterCapture",
+      "ringMaskLetsClicksFallThroughItsTransparentHole",
       "quickChecklistCompiledSveltePersistsAndReopens",
       "quickChecklistKeyboardCompositionReorderRemoveUndoAndEmptyState",
       "compiledChecklistExportsSelectedViewLongContentAndDynamicIcon",

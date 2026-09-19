@@ -190,7 +190,7 @@ import HitSlopDocumentEngine
       }
       switch message.type {
       case "welcome":
-        guard message.protocol == slopProtocolVersion else {
+        guard message.protocol == slopRoomProtocolVersion else {
           throw ProtocolFailure("Unsupported room protocol")
         }
         guard status == .connecting else { throw ProtocolFailure("Unsupported room protocol") }
@@ -198,7 +198,7 @@ import HitSlopDocumentEngine
         try updatePeers(message.peers)
         struct Hello: Encodable {
           let type = "hello"
-          let `protocol` = slopProtocolVersion
+          let `protocol` = slopRoomProtocolVersion
           let documentId: String
           let schema: String
         }

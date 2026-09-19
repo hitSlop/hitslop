@@ -39,7 +39,7 @@ adding persistence or changing the runtime boundary.
   Keep schema definitions deterministic: app and builder evaluate separately.
   Never manually supply a validator or rewrite ordinary schema imports. Preserve
   unknown fields with `additionalProperties: true`; never coerce or insert defaults.
-  Quick Checklist is the only active example. Paused source is preserved in
+  Quick Checklist is the only active template. Paused source is preserved in
   `examples/archive/`, excluded from active checks, tests, and builds.
   Promote and migrate one example at a time. The CLI counter starter follows the same APIs.
 - Authored templates and published artifacts contain no stores, source,

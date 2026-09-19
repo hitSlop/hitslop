@@ -3,7 +3,7 @@
 The implementation uses explicit commands and one authority per document.
 `@hitslop/document-engine` evaluates commands in every runtime. A local
 Swift actor owns SQLite and one document-scoped JavaScriptCore VM; a shared room Durable Object owns JSON state, with Swift
-as the WebView's gateway. The production bridge uses protocol 3 commands and
+as the WebView's gateway. The WebView bridge is version 1. Document rooms separately use protocol 3 commands and
 snapshots. There is no commands-to-`after` shim.
 
 ## Contract

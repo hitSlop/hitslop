@@ -13,7 +13,6 @@ export interface SlopHost {
   mediaOpen(sha256: string): Promise<SlopMediaSnapshot>;
   mediaAdd(data: string, kind: "image" | "file"): Promise<MediaReference>;
   resizeWindow(size: SlopWindowSize): Promise<SlopWindowSize>;
-  dragWindow(): Promise<void>;
   watch(kind: "media", callback: (event: SlopChange) => void): () => void;
 }
 
@@ -32,7 +31,6 @@ export type WindowSlop = {
   };
   window?: {
     resize: (size: SlopWindowSize) => Promise<SlopWindowSize>;
-    drag?: () => Promise<void>;
   };
   ready?: () => void;
   flush?: () => Promise<void>;

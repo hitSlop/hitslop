@@ -1,3 +1,4 @@
+import type { SlopPresentation } from "@hitslop/schema/manifest";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
@@ -22,13 +23,14 @@ type GallerySlop = {
   width: number;
   height: number;
   hasTheme: boolean;
+  presentation: SlopPresentation;
 };
 
 type GalleryManifest = {
   slug: string;
   title: string;
   description: string;
-  presentation: { width: number; height: number };
+  presentation: SlopPresentation;
 };
 
 async function readGalleryManifest(path: string): Promise<GalleryManifest> {
@@ -75,6 +77,7 @@ export async function discoverSlops(directory = root): Promise<GallerySlop[]> {
     const manifest = await readGalleryManifest(join(child, "manifest.json"));
     slops.push({
       directory: entry.name,
+      presentation: manifest.presentation,
       slug: manifest.slug,
       title: manifest.title,
       description: manifest.description,
@@ -293,6 +296,7 @@ export function galleryPlugin(slops: GallerySlop[], directory = root): Plugin {
           }
         }
         const hosted = injectHost(prefixed, {
+          presentation: slop.presentation,
           ...(slop.hasTheme ? { themeHref: `/${slug}/assets/theme.css` } : {}),
           ...(review ? { review } : {}),
         });

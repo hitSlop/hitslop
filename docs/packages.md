@@ -23,7 +23,7 @@ files.
 ## @hitslop/runtime
 
 Application-facing exports are `slop`, `ready`, `capture`, `flush`, and `hostInfo`.
-They cover JSON, document media, window resize/drag, host readiness,
+They cover JSON, document media, window resize, host readiness,
 capture lifecycle, and host capability discovery.
 
 `@hitslop/runtime/adapter` exposes lower-level persistence/media primitives

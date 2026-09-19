@@ -3,7 +3,6 @@ import { installHost, slop, type SlopHost } from "../src/index.ts";
 
 test("delegates storage calls to the installed host", async () => {
   let value = { count: 1 };
-  let dragged = false;
   const host: SlopHost = {
     reportError: async () => {},
     document: {
@@ -29,9 +28,6 @@ test("delegates storage calls to the installed host", async () => {
     mediaOpen: async () => ({ src: null }),
     mediaAdd: async () => ({ sha256: "a".repeat(64), bytes: 5, mime: "image/png" }),
     resizeWindow: async (size) => size,
-    dragWindow: async () => {
-      dragged = true;
-    },
     watch: () => () => {},
   };
   const uninstall = installHost(host);
@@ -42,7 +38,6 @@ test("delegates storage calls to the installed host", async () => {
     width: 725,
     height: 438,
   });
-  await slop.window.drag();
-  expect(dragged).toBe(true);
+  expect("drag" in slop.window).toBe(false);
   uninstall();
 });
