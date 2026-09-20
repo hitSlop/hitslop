@@ -8,4 +8,5 @@ public struct SlopRuntimeIssue: Decodable, Sendable {
     public let source: Source
     public let code: String?
     public let message: String
+    public init(source: Source, code: String? = nil, message: String) { self.source = source; self.code = code; self.message = message }
 }

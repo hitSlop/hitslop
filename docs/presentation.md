@@ -185,9 +185,9 @@ and test dragging plus pointer behavior around transparent holes.
 
 ## Capture views
 
-Prefer optional `Export.svelte` and `Icon.svelte` presentation components wrapped
-in `ExportTarget` and `IconTarget` from `@hitslop/svelte`. Pass current data and
-selected view, share presentation components and theme variables, and keep
+Use inline `exportView` and `icon` snippets inside `<Slop {document}>` from
+`@hitslop/document/svelte`. Separate presentation components are optional.
+Read current data and the selected view, share theme variables, and keep
 export content in normal flow. Simple slops can use the existing static CSS
 fallback. The runtime owns preparation, asset readiness, and restoration.
 

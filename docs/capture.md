@@ -1,65 +1,39 @@
-# Capture, icons, and exports
+# Preview, export, and Finder icons
 
-## Capture views
-
-Svelte is the supported authoring integration. Keep the interactive editor in
-`App.svelte`; optionally provide `Icon.svelte` and `Export.svelte` as ordinary
-presentation components. They share data and styles with the editor, not another
-store or persistence model:
+`<Slop {document}>` from `@hitslop/document/svelte` is the Svelte authoring boundary. Keep editor, export, and icon markup in one App.svelte; separate components are optional. The host still owns document loading, persistence, and teardown.
 
 ```svelte
 <script lang="ts">
-  import { Slop } from "@hitslop/svelte";
-  import Icon from "./Icon.svelte";
-  import Export from "./Export.svelte";
+  import { Slop, useDocument } from "@hitslop/document/svelte";
+  import schema from "./schema";
+  const document = useDocument(schema);
 </script>
 
-<Slop document={checklist}>
-  <main><!-- editor --></main>
-  {#snippet icon()}<Icon completed={finished} total={tasks.length} />{/snippet}
-  {#snippet exportView()}<Export checklist={checklist.data} view={activeView} />{/snippet}
+<Slop {document}>
+  <!-- Interactive editor -->
+  <h1>{document.current.title}</h1>
+  {#snippet exportView()}
+    <article><h1>{document.current.title}</h1></article>
+  {/snippet}
+  {#snippet icon()}
+    <!-- Square artwork, optionally derived from document.current -->
+    <div class={styles.icon}>✓</div>
+  {/snippet}
 </Slop>
 ```
 
-The `icon` snippet uses `IconTarget`, which mounts its children only in icon capture. It supplies a transparent
-512×512 surface; supplying it opts into Finder icon refresh when a document
-closes. The signed `QuickLook/Icon.png` is immutable; only Finder metadata changes.
-Without an icon target, the existing static icon remains.
+The wrapper reports rendering failures, exposes its document facade through `useSlop()`, flushes before capture, and registers lazy capture surfaces. Export/icon snippets mount only for capture, sharing the existing document; they do not create another session. Nested wrappers for multiple documents are unsupported. The host mounts one document per app.
 
-The `exportView` snippet uses `ExportTarget`, which mounts its children for previews and PNG/PDF exports. Pass the
-current selected view explicitly. Keep content in normal flow, with no fixed
-viewport heights, nested scrolling, editing controls, or transient notices.
-Share presentation components and theme variables to avoid visual drift.
-`Export.svelte` is optional: without a target, the existing app is captured with
-`data-slop-capture="static"` and `data-slop-export="hide"` controls omitted.
+Preview and PNG/PDF export use exportView when supplied and fall back to the editor otherwise. An absent icon snippet leaves the generic native icon. Icon artwork occupies a 512px square with a transparent background. Shared preparation hooks remain available through `capture.onPrepare`; do not mutate durable state in these hooks.
 
-A dedicated `ExportTarget` is the catalog/Quick Look preview: native capture
-snapshots that object’s rectangle at 2×, not the empty editor window. Without
-an export target, preview stays at the manifest viewport. Export uses the
-current window width and full content height. Dedicated exports have their own
-rectangular content surface rather than a stretched window mask. PNG is 2×, limited to 16,384 pixels
-per side and 24 megapixels; use PDF for longer documents. PDF is one page sized
-to the content, with selectable text. Very long PDFs combine WebKit's pages and
-scale uniformly to a maximum 14,400-point page dimension, preserving all content
-and vector sharpness within [Acrobat's page-coordinate limits](https://opensource.adobe.com/dc-acrobat-sdk-docs/library/jsapiref/doc.html). Their physical page width
-is scaled too; no content is clipped or converted to a bitmap.
+The framework-neutral `capture.registerTarget("export" | "icon", {element, prepare, restore})` API remains available. Target elements must be direct body children. Native code consumes the capture controller's `dedicated` flag and measured geometry, without a separate DOM-marker protocol.
 
-The runtime waits for target mounting, used fonts, visible image decoding, and
-stable geometry, with a ten-second timeout for each preparation/settling stage.
-Motion is disabled during capture. Canvas, charts, CSS background images, or
-virtualized lists can register extra work with
-`capture.onPrepare(async (mode, signal) => { ... })`; await required assets or
-rendering and respect the abort signal. The returned function unregisters the
-hook. Hooks should not modify durable data. `createDocument` signals readiness
-after its first open attempt, including a failed attempt that needs recovery.
+Capture commits local typing drafts and flushes persistence, then waits for fonts, visible images and stable layout. Native capture blocks CLI mutations; the controller blocks UI interaction and restores focus, selection, scroll, styles and input rendering on success or failure. Mark editor controls `data-slop-export="hide"`; fallback capture renders native text inputs as wrapping text. Dedicated exports should use normal flow rather than nested scrolling or fixed viewport heights.
 
-Use `?capture=icon` or `?capture=export` in `slop dev` or the shared gallery to
-inspect disposable capture views. Reload to return to normal editing. Native
-capture remains the authority for image/PDF fidelity.
+PNG exports render at 2×, limited to 16,384 pixels per side and 24 megapixels. PDF retains selectable text and vectors on a continuous page, scaled to a maximum 14,400-point dimension. Icon PNGs render at 512×512. Failed captures never replace the output file.
 
-Background captures operate on temporary snapshots,
-and cannot initialize or modify the source stores. User exports use the current
-session to preserve view state; captures are serialized and restore the editor
-on success or failure. Preview and icon failures are independent. Close-time
-refreshes keep the last successful images on failure; quit gives pending jobs
-up to five seconds after data has been saved.
+`slop build` and `register` use the macOS Swift helper to generate `QuickLook/Preview.png` and, when authored, `QuickLook/Icon.png`. They render disposable copies so templates contain no database, locks or Finder metadata. Development builds prepare runtime resources, compile the native helper, then render templates. An explicit `HITSLOP_NATIVE_CLI` can select a matching prebuilt helper. Browser `slop dev` remains disposable and does not require native capture.
+
+The app derives each new document's Finder custom icon from immutable `QuickLook/Icon.png`. Closing a document refreshes `QuickLook/Preview.png` and, if an icon view exists, Finder custom-icon metadata using a disposable saved-state snapshot. It does not rewrite the immutable icon asset. Catalog and Finder display PNGs without loading Loro; capture loads the host-provided WASM engine, never an engine embedded in the slop.
+
+CLI export uses the same live capture flow when the document is open. For example, Quick Checklist exports the selected Filed tab at the current window width. Closed exports use a disposable saved-state copy and the app's initial view. See [CLI ownership, retries, and export](cli.md).

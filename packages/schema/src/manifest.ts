@@ -1,5 +1,9 @@
 import * as Type from "typebox";
-import { validate } from "./validation.js";
+import { Check } from "typebox/value";
+function validate<S extends Type.TSchema>(schema: S, input: unknown): Type.Static<S> {
+  if (!Check(schema, input)) throw new Error("Invalid v1 manifest");
+  return input as Type.Static<S>;
+}
 
 export const manifestSchemaURL = "https://api.hitslop.com/schemas/v1/manifest.schema.json" as const;
 export const SlopCategorySchema = Type.Enum(
@@ -61,6 +65,7 @@ export const SlopPresentationSchema = Type.Union(
 export const SlopManifestSchema = Type.Object(
   {
     $schema: Type.Literal(manifestSchemaURL),
+    runtime: Type.Literal("hitslop-v1"),
     author: SlopAuthorSchema,
     slug: Type.String({ minLength: 2, maxLength: 64, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }),
     title: Type.String({ minLength: 1, maxLength: 80 }),

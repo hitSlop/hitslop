@@ -1,86 +1,22 @@
-# hitSlop
+# hitSlop v1
 
-`.slop` packages are framework-neutral runtime web apps with optional host-owned
-JSON, document media, and theme override data. Read `manifest.json` first.
+Read manifest.json first. Only runtime `hitslop-v1` is accepted. No migration or backward compatibility.
 
-- Quick Checklist is the only active template in `examples/slops/`; other examples live in
-  `examples/archive/` and older templates in `archive/templates/`.
-  Backlog source is excluded from gallery discovery, builds, tests, and checks.
-  Runtime packages never contain source, dependencies,
-  build caches, seed stores, or editable stylesheets.
-- Preview with `bun slop dev examples/slops/<id>` and build with
-  `bun slop build examples/slops/<id>`.
-- Historical migration notes in `archive/docs/` are reference-only. Restored
-  examples must meet the current v1 contract and local test gate.
-- Use `_vibe/` as local visual reference material. It is inspiration-only and
-  must not be copied into source, runtime packages, or the open-source release.
-- For example design work, read `examples/slops/PRODUCT.md` and the shared
-  language guide in `docs/presentation.md`, then the target's own `DESIGN.md`
-  when present. Each slop owns its visual identity; do not reuse another slop's
-  palette or shell as a collection-wide theme.
-- Use exported Vanilla Extract `style()` classes for owned UI elements, with
-  state selectors and size queries beside the base style. Reserve `globalStyle()`
-  for document defaults and necessary scoped descendants; see the design guide.
-- A runtime package has `manifest.json`, generated `app.html`, optional immutable
-  `assets/`, optional generated `data.schema.json`, the canonical embedded
-  `.agents/skills/hitslop-document` skill, optional canonical
-  `stores/data.json`, `stores/theme.css`, and user-selected
-  supported media under `stores/media/`,
-  and optional `QuickLook/Preview.png` and `QuickLook/Icon.png`.
-- Manifest storage is implicit. A slop can use JSON with optional document attachments, or no persistence. Replace JSON and media atomically.
-- Manifest `author.name` is required and `author.url` may be an HTTP(S) URL.
-  Attribution belongs to the signed artifact; the publisher identity is only a
-  signing key.
-- Browser previews are disposable: no bridge server, disk stores, or polling.
-  Routine migrations use the shared gallery for UI smoke tests; persistence and
-  native behavior are reserved for explicit release-gate work.
-- Author JSON schemas with `S.Document` from `@hitslop/schema/document` in root `schema.ts`.
-  Import that schema directly into `createDocument({ schema, initial })`.
-  Types are inferred from the schema; the store uses TypeBox runtime validation.
-  No generated files or dev server are needed for editor types. Schemas must be
-  deterministic because the app and package builder evaluate them separately.
-  Validation never coerces, inserts defaults, or strips fields. Use explicit
-  initial values and `additionalProperties: true` to preserve unknown fields.
-  Quick Checklist and the CLI counter starter use this workflow; archived examples remain deferred.
-- Quick Checklist is the platform pilot. Define its theme once in root
-  `theme.ts` with `defineTheme` from `@hitslop/runtime/theme`; builds generate
-  immutable `assets/theme.css`. Keep owner overrides in `stores/theme.css`.
-- Builds embed document guidance, but opening a document never depends on its
-  exact text or presence. Do not make optional guidance a runtime prerequisite.
-- The bridge contract lives in `packages/schema/src/bridge.ts`. Generate its
-  native resources with `bun run schema:generate`; do not edit generated code.
-- Treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`, `.agents/`,
-  and `QuickLook/Icon.png` as immutable in a document. Never add `style.css`,
-  `document.json`, or a build directory. The macOS host may add the
-  Finder-managed `Icon\r` metadata file to local documents; templates and
-  published artifacts must not contain it.
-- Reusable TypeScript lives in `packages/`. Apple Swift products live in the
-  app-local `apps/apple/Packages/HitSlopApple` package; AppKit code remains in
-  its macOS-only Host, Catalog, and NativeCLI targets.
-- macOS uses built-in package Quick Look for previews and derives each local
-  document's initial Finder custom icon from immutable `QuickLook/Icon.png`.
-  Optional authored icon targets refresh Finder metadata on close. Background
-  capture uses disposable snapshots; dedicated Svelte export/icon views share
-  data with the editor through `<Slop>` capture snippets. Standalone `ExportTarget`
-  and `IconTarget` remain available.
-- Catalog selection caches immutable artifacts at
-  `~/.hitslop/templates/cache/<publisher>/<slug>/<release>.slop`, verifies
-  SHA-256, and copies one to the user-selected path. Local `slop register`
-  writes `~/.hitslop/templates/<slug>.slop`. Anything under
-  `~/.hitslop/templates` is a catalog master, never a writable document.
-  Cloudflare D1 stores public catalog metadata and R2 stores immutable published
-  artifacts. Catalog clients use the oRPC API; they never access D1 directly.
-  Firebase provides authentication and telemetry, not catalog storage.
-- TypeBox is authoritative. Run `bun run schema:generate` after schema changes;
-  JSON Schema then generates the Swift types and validates Swift manifests.
+- The live document is Loro in the WebView. Swift stores opaque checkpoint/update bytes in state/document.sqlite (format 1).
+- One OS writer lock owns a local package. CLI commands route to the live native session or acquire ownership when closed. Never bypass a busy lock or unlink writer.lock.
+- Author schema.ts with defineDocument/s from @hitslop/document. state.schema.json is a descriptor, not JSON Schema. initial.json is immutable creation-only data.
+- App state uses text, finite scalar registers, enums, optional scalars, objects, and movable object lists. $id is row identity. Use typed handles and synchronous transaction(tx => ...); snapshots are read-only.
+- Never add stores/data.json, projections, watchers for JSON reconciliation, a JavaScriptCore document engine, compatibility lenses, or a second document engine.
+- Host and CLI ship the same pinned SDK/Loro release. App bundles must not embed Loro or the document implementation. slop dev uses the same runtime with disposable memory storage.
+- Keep TypeBox authoritative for platform manifest/bridge contracts. Generate native contracts with bun run schema:generate; do not edit generated files.
+- Runtime packages contain manifest.json, app.html, assets/, state.schema.json, initial.json, optional QuickLook images and embedded .agents/skills/hitslop-document guidance. Builds contain no state, stores, source, dependencies or caches.
+- Preserve the existing macOS client: TCA Features, Catalog, Host slop windows/hover toolbar, Firebase, OpenAPI, Sparkle, and NativeCLI. HitSlopWasm supplies the common document engine; HitSlopRuntime integrates it. A runtime rewrite must not replace the client.
+- Flush local drafts and document writes before close/export. Failed saves retain ownership and show native retry. Destroy WebViews on close.
+- Native code validates package isolation, symlinks, bridge envelopes and resource sizes. Authored code can damage its own document; no independent native semantic validator.
+- Quick Checklist and Small Expenses are the only active examples. Each owns its design; use exported Vanilla Extract style classes. Read examples/slops/PRODUCT.md and docs/presentation.md for visual changes. _vibe is inspiration only.
+- CLI: bun slop dev/build/register SOURCE; schema/get/apply/batch/compact DOCUMENT. Runtime masters are immutable; create a writable copy to edit.
+- PDF/PNG export is in scope. Collaboration, media import, remote catalog cutover, publication, undo UI, schema evolution, history pruning, iCloud and other synced folders are deferred.
+- Tests: bun run check; bun run test; bun run build; bun run swift:test. Historical _docs/, archive/, deferred/, retired command-engine tests and backend source are not active tests or implementation contracts.
 
-- Every JSON-backed document uses command/snapshot sync and `state/document.sqlite`.
-  `stores/data.json` is the editable `$slop` revision envelope plus `data`.
-  Use schema-derived `store.fields` and store verbs; `transaction(tx => ...)` batches commands.
-  Confirmed `data` is read-only; `{@attach store.text(path)}` owns local typing drafts.
-  `createDocument` owns readiness and teardown. Wrap document editors in `<Slop document={store}>`
-  for host error reporting, context, loading semantics, and capture snippets.
-  Root `initial.ts` defines defaults shared with the build. See `docs/storage.md`.
-- Share uploads an immutable sender app bundle to R2 and a JSON seed to a raw Durable
-  Object. The room owns mutable ACLs/invitations; D1 owns immutable metadata.
-  iOS is archived; iCloud document locations and legacy persistence formats are rejected.
+- The native Swift CLI edits through the live Unix socket or an engine-only invisible WebKit session. Installed editing needs no Node/Bun. Never load authored app code for headless document operations.
+- Catalog discovery from ~/.hitslop/templates and recents stays active offline; only hosted loading and sharing are deferred.

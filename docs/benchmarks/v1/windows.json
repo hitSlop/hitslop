@@ -1,0 +1,67 @@
+{
+  "loro" : "1.16.1",
+  "method" : "One sequential run per cell, fully rendered rows, host plus identified WebContent physical footprints; excludes GPU\/network processes. Creation plus opening, warm machine. Not comparable to retired Mirror matrix.",
+  "results" : [
+    {
+      "database_bytes_after_100_edits" : 28672,
+      "durable_edit_p95_ms" : 11,
+      "host_footprint_after_close_mib" : 31.90875244140625,
+      "host_plus_content_footprint_mib" : 131.598388671875,
+      "open_ms" : 668.5110330581665,
+      "processes_measured" : 2,
+      "rows" : 100,
+      "windows" : 1
+    },
+    {
+      "database_bytes_after_100_edits" : 28672,
+      "durable_edit_p95_ms" : 13.999999999999886,
+      "host_footprint_after_close_mib" : 48.25262451171875,
+      "host_plus_content_footprint_mib" : 764.5853271484375,
+      "open_ms" : 1733.22594165802,
+      "processes_measured" : 11,
+      "rows" : 100,
+      "windows" : 10
+    },
+    {
+      "database_bytes_after_100_edits" : 28672,
+      "durable_edit_p95_ms" : 28,
+      "host_footprint_after_close_mib" : 63.92462158203125,
+      "host_plus_content_footprint_mib" : 1351.964599609375,
+      "open_ms" : 3083.4120512008667,
+      "processes_measured" : 21,
+      "rows" : 100,
+      "windows" : 20
+    },
+    {
+      "database_bytes_after_100_edits" : 151552,
+      "durable_edit_p95_ms" : 42,
+      "host_footprint_after_close_mib" : 47.09649658203125,
+      "host_plus_content_footprint_mib" : 249.44268798828125,
+      "open_ms" : 376.90699100494385,
+      "processes_measured" : 2,
+      "rows" : 1000,
+      "windows" : 1
+    },
+    {
+      "database_bytes_after_100_edits" : 151552,
+      "durable_edit_p95_ms" : 40.000000000000455,
+      "host_footprint_after_close_mib" : 52.98712158203125,
+      "host_plus_content_footprint_mib" : 1434.9161376953125,
+      "open_ms" : 2787.9810333251953,
+      "processes_measured" : 11,
+      "rows" : 1000,
+      "windows" : 10
+    },
+    {
+      "database_bytes_after_100_edits" : 151552,
+      "durable_edit_p95_ms" : 42.000000000000909,
+      "host_footprint_after_close_mib" : 62.79962158203125,
+      "host_plus_content_footprint_mib" : 2900.0625,
+      "open_ms" : 7486.1860275268555,
+      "processes_measured" : 21,
+      "rows" : 1000,
+      "windows" : 20
+    }
+  ],
+  "runtime" : "hitslop-v1"
+}

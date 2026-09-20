@@ -6,17 +6,12 @@
 | --- | --- |
 | `apps/apple` | Thin macOS target plus project/release configuration |
 | `apps/apple/Packages/HitSlopApple` | Shared Swift Core, Runtime, Registry, Host, Catalog, and native CLI |
-| `apps/cloudflare` | oRPC API, D1 catalog, R2 artifacts, and SQLite document rooms |
-| `apps/landing` | Static Astro site for `hitslop.com` |
-| `packages/api` | oRPC HTTP contracts, typed client, OpenAPI 3.1 and Swift client input |
-| `packages/cli` | Authoring, browser preview fake, build, capture, identity, register, publish |
-| `packages/runtime` | Framework-neutral host API and adapter building blocks |
-| `packages/svelte` | Svelte 5 state adapters |
-| `archive/packages/react` | Paused React adapter, excluded from workspaces/releases |
-| `packages/schema` | TypeBox source, JSON Schema, publish protocol, generated Swift |
-| `examples/slops` | Quick Checklist and the active gallery/test harness |
-| `archive/templates` | Local ignored prior art |
-| `archive/prototypes` | Local ignored experiments |
+| `packages/document` | Shared Loro runtime, typed document handles, Svelte and capture adapters |
+| `packages/schema` | TypeBox platform contracts and generated native validation |
+| `packages/cli` | Authoring, disposable preview, template capture/registration, native command forwarding |
+| `examples/slops` | Active Quick Checklist and Small Expenses examples |
+| `deferred` | Historical tooling and tests; excluded from active contracts |
+| `scripts/v1` | Current generation, checks, builds, storage and crash verification |
 
 ## Change discipline
 
@@ -26,7 +21,7 @@ package; AppKit stays in macOS-only targets.
 
 TypeBox is authoritative. Never edit generated Swift or JSON Schema by hand.
 Runtime packages never contain source, dependencies, caches, seed stores, or
-editable stylesheets. Preserve this boundary in fixtures and tests.
+mutable document state. Preserve this boundary in fixtures and tests.
 
 The worktree may contain another contributor's changes. Keep patches focused,
 do not reset unrelated work, and describe any generated changes.

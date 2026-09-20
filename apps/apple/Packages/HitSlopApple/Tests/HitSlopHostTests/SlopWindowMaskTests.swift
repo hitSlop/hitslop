@@ -32,7 +32,9 @@ import Testing
     defer { try? FileManager.default.removeItem(at: parent) }
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
-    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"transparent","title":"Transparent","description":"Tests transparent geometry.","categories":["utilities"],"presentation":{"width":240,"height":180,"background":"transparent"}}"#
+    try Data(#"{"format":1,"root":{"kind":"object","properties":{}}}"#.utf8).write(to: root.appendingPathComponent("state.schema.json"))
+    try Data("{}".utf8).write(to: root.appendingPathComponent("initial.json"))
+    let manifest = #"{"runtime":"hitslop-v1","$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"transparent","title":"Transparent","description":"Tests transparent geometry.","categories":["utilities"],"presentation":{"width":240,"height":180,"background":"transparent"}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try writeCanonicalDocumentSkill(to: root)
     let mask = try SlopWindowMask(package: SlopPackage(rootURL: root))
@@ -46,7 +48,9 @@ private func maskedFixture(alpha: (Int, Int) -> UInt8 = { _, y in y < 90 ? 255 :
     let root = directory.appendingPathComponent("asymmetric.slop", isDirectory: true)
     try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
     try Data("<html></html>".utf8).write(to: root.appendingPathComponent("app.html"))
-    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","categories":["utilities"],"presentation":{"width":240,"height":180,"skin":"assets/window-mask.png"}}"#
+    try Data(#"{"format":1,"root":{"kind":"object","properties":{}}}"#.utf8).write(to: root.appendingPathComponent("state.schema.json"))
+    try Data("{}".utf8).write(to: root.appendingPathComponent("initial.json"))
+    let manifest = #"{"runtime":"hitslop-v1","$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"asymmetric","title":"Asymmetric","description":"Tests image mask orientation.","categories":["utilities"],"presentation":{"width":240,"height":180,"skin":"assets/window-mask.png"}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try writeCanonicalDocumentSkill(to: root)
 
@@ -69,7 +73,7 @@ private func maskedFixture(alpha: (Int, Int) -> UInt8 = { _, y in y < 90 ? 255 :
 private func writeCanonicalDocumentSkill(to root: URL) throws {
     let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
     try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
+    try Data(contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../../../../../packages/cli/skills/hitslop-document/SKILL.md").standardizedFileURL).write(to: skill)
 }
 
 @Test @MainActor func ringMaskLetsClicksFallThroughItsTransparentHole() throws {

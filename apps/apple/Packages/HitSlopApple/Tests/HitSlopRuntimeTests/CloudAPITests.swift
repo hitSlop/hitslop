@@ -63,8 +63,7 @@ private actor RecordingTransport: ClientTransport {
       origin: URL(string: "https://example.com")!, transport: SeedTransport(bytes: Data(raw.utf8)),
       authorization: { "token" })
     let seed = try await api.seed(documentId: "test-room", token: "room-token")
-    let snapshot = try seed.validatedTransfer(documentId: "test-room", schema: hash)
-    #expect(snapshot.data.utf8.elementsEqual(data.utf8))
+    #expect(seed.json.utf8.elementsEqual(raw.utf8))
     await #expect(throws: (any Error).self) {
       try await api.seed(documentId: "test-room\n", token: "room-token")
     }
@@ -74,36 +73,6 @@ private actor RecordingTransport: ClientTransport {
     await #expect(throws: (any Error).self) {
       try await invalid.seed(documentId: "test-room", token: "room-token")
     }
-  }
-  @Test func generatedMultipartAndBinaryRequestsPreserveCredentialsAndBytes() async throws {
-    let transport = RecordingTransport()
-    let api = SlopCloudAPI(
-      origin: URL(string: "https://example.com")!, transport: transport,
-      authorization: { "firebase-token" })
-    let document = try await api.createDocument(
-      id: "test-room", title: "Test", slug: "test", schema: String(repeating: "a", count: 64),
-      package: Data("zip".utf8),
-      seed: FixtureJSON.object([
-        "documentId": .string("test-room"),
-        "schemaHash": .string(String(repeating: "a", count: 64)), "authority": .string("epoch"),
-        "revision": .number(0), "data": .object([:]),
-      ]))
-    #expect(document.invite == nil)
-    #expect(document.members.first?.id == "owner")
-    _ = try await api.putMedia(Data([1, 2, 3]), mime: "image/png")
-    let requests = await transport.sent
-    #expect(requests[0].request.path == "/api/documents")
-    #expect(requests[0].request.headerFields[.authorization] == "Bearer firebase-token")
-    #expect(
-      requests[0].request.headerFields[.contentType]?.hasPrefix("multipart/form-data; boundary=")
-        == true)
-    let form = String(decoding: requests[0].body, as: UTF8.self)
-    #expect(form.contains("name=\"documentId\""))
-    #expect(form.contains("test-room"))
-    #expect(form.contains("filename=\"test.slop.zip\""))
-    #expect(form.contains("zip"))
-    #expect(requests[1].request.headerFields[.contentType] == "image/png")
-    #expect(requests[1].body == Data([1, 2, 3]))
   }
   @Test func roomCredentialsAndHTTPStatusSurviveTheGeneratedClient() async throws {
     let transport = RecordingTransport()

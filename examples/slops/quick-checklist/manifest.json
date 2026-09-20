@@ -15,5 +15,6 @@
     "width": 480,
     "height": 620,
     "shape": "rounded"
-  }
+  },
+  "runtime": "hitslop-v1"
 }

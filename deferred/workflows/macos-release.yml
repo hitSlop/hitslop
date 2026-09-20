@@ -1,0 +1,104 @@
+name: Release macOS
+
+on:
+  push:
+    tags:
+      - "macos-v*"
+
+concurrency:
+  group: macos-release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Sign, notarize, and publish
+    if: github.repository == 'hitslop/hitslop'
+    runs-on: macos-15
+    env:
+      ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+      ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+      ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+      HITSLOP_DEVELOPMENT_TEAM: "78UAXU8QG8"
+      HITSLOP_CODESIGN_IDENTITY: "Developer ID Application: Mushroom DAO Holdings Corp. (78UAXU8QG8)"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Import Developer ID certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$MACOS_CERTIFICATE"
+          test -n "$MACOS_CERTIFICATE_PASSWORD"
+          test -n "$KEYCHAIN_PASSWORD"
+          CERTIFICATE_PATH="$RUNNER_TEMP/hitslop-certificate.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/hitslop-signing.keychain-db"
+          printf '%s' "$MACOS_CERTIFICATE" | base64 -D > "$CERTIFICATE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+      - name: Install Developer ID provisioning profile
+        env:
+          MACOS_PROVISIONING_PROFILE: ${{ secrets.MACOS_PROVISIONING_PROFILE }}
+        run: |
+          set -euo pipefail
+          test -n "$MACOS_PROVISIONING_PROFILE"
+          PROFILES_PATH="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+          mkdir -p "$PROFILES_PATH"
+          printf '%s' "$MACOS_PROVISIONING_PROFILE" | base64 -D > "$PROFILES_PATH/56d9d799-f24d-4527-9159-582b28a5c03f.provisionprofile"
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          test -n "$ASC_API_KEY_ID"
+          test -n "$ASC_API_ISSUER_ID"
+          test -n "$ASC_API_KEY_P8"
+          test -n "$SPARKLE_PRIVATE_KEY"
+      - name: Package notarized DMG
+        run: scripts/package-macos-release.sh
+      - name: Verify Gatekeeper
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#macos-v}"
+          APP="$RUNNER_TEMP/verify/hitSlop.app"
+          mkdir -p "$RUNNER_TEMP/verify"
+          hdiutil attach "dist/macos/hitSlop-${VERSION}.dmg" -nobrowse -mountpoint "$RUNNER_TEMP/dmg"
+          ditto "$RUNNER_TEMP/dmg/hitSlop.app" "$APP"
+          hdiutil detach "$RUNNER_TEMP/dmg"
+          test "$(lipo -archs "$APP/Contents/MacOS/hitSlop")" = "arm64"
+          test "$(lipo -archs "$APP/Contents/Helpers/hitslop-native")" = "arm64"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          spctl --assess --type execute --verbose=2 "$APP"
+          stapler validate "dist/macos/hitSlop-${VERSION}.dmg"
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#macos-v}"
+          NOTES="$RUNNER_TEMP/release-notes.md"
+          cat > "$NOTES" <<EOF
+          hitSlop $VERSION for Apple silicon Macs.
+
+          Signed and notarized by Apple (Developer ID: Mushroom DAO Holdings Corp.).
+          Requires a Mac with an Apple M-series processor and macOS 14 or newer.
+          Drag hitSlop.app into Applications, then open a \`.slop\` document.
+          EOF
+          gh release create "$GITHUB_REF_NAME" \
+            --title "hitSlop $VERSION" \
+            --notes-file "$NOTES" \
+            "dist/macos/hitSlop-${VERSION}.dmg" \
+            "dist/macos/hitSlop-${VERSION}.zip" \
+            dist/macos/hitSlop.dmg \
+            dist/macos/hitSlop.zip \
+            dist/macos/appcast.xml \
+            dist/macos/SHA256SUMS

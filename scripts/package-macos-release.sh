@@ -131,13 +131,12 @@ assert_arm64_only "$app/Contents/MacOS/hitSlop"
 assert_arm64_only "$app/Contents/Helpers/hitslop-native"
 
 echo "Signing nested helper and app…"
-/usr/bin/codesign --force --timestamp --sign "$identity" "$app/Contents/Helpers/HitSlopApple_HitSlopCore.bundle"
 /usr/bin/codesign --force --timestamp --sign "$identity" "$app/Contents/Helpers/HitSlopApple_HitSlopRuntime.bundle"
-/usr/bin/codesign --force --timestamp --sign "$identity" "$app/Contents/Helpers/HitSlopApple_HitSlopDocumentEngine.bundle"
+/usr/bin/codesign --force --timestamp --sign "$identity" "$app/Contents/Helpers/HitSlopApple_HitSlopWasm.bundle"
 /usr/bin/codesign --force --timestamp --options runtime --sign "$identity" "$app/Contents/Helpers/hitslop-native"
 /usr/bin/codesign --force --timestamp --options runtime --sign "$identity" "$app/Contents/Frameworks/Sparkle.framework"
 /usr/bin/codesign --force --timestamp --options runtime \
-  --entitlements "$project_dir/App/Shared/hitSlop.entitlements" \
+  --entitlements "$project_dir/App/macOS/hitSlop.entitlements" \
   --sign "$identity" "$app"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$app"
 

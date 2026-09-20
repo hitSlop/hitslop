@@ -21,21 +21,6 @@ import ZIPFoundation
     #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: false) }
 }
 
-@Test func damagedMediaIsRejectedAtAccessNotDocumentOpening() throws {
-    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
-    let media = root.appendingPathComponent("stores/media")
-    try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
-    try Data("broken".utf8).write(to: media.appendingPathComponent(String(repeating: "a", count: 64)))
-    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
-    #expect(throws: SlopPackageError.self) { _ = try SlopMediaStore(directoryURL: media).open(String(repeating: "a", count: 64)) }
-    let store = SlopMediaStore(directoryURL: media)
-    let before = try store.directoryRevision()
-    try Data("still broken, but changed".utf8).write(to: media.appendingPathComponent(String(repeating: "a", count: 64)))
-    #expect(try store.directoryRevision() != before)
-    try FileManager.default.createSymbolicLink(at: media.appendingPathComponent("linked"), withDestinationURL: root.appendingPathComponent("app.html"))
-    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
-}
-
 @Test func validatesSchemaAndRuntimeBoundary() throws {
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
@@ -67,21 +52,6 @@ import ZIPFoundation
     try Data(#"{}"#.utf8).write(to: destination.appendingPathComponent("stores/data.json"))
 }
 
-@Test func duplicateDocumentPreservesCanonicalStores() throws {
-    let source = try fixture(), temporary = source.deletingLastPathComponent(); defer { try? FileManager.default.removeItem(at: temporary) }
-    try FileManager.default.createDirectory(at: source.appendingPathComponent("stores"), withIntermediateDirectories: true)
-    try Data(#"{"count":3}"#.utf8).write(to: source.appendingPathComponent("stores/data.json"))
-    let media = source.appendingPathComponent("stores/media", isDirectory: true)
-    try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
-    let input = temporary.appendingPathComponent("photo.png")
-    try writeSkin(to: input, width: 2, height: 2)
-    let hash = try SlopMediaStore(directoryURL: media).add(Data(contentsOf: input)).sha256
-    let destination = temporary.appendingPathComponent("document-copy.slop")
-    try SlopDuplicator.duplicate(from: source, to: destination)
-    #expect(try Data(contentsOf: destination.appendingPathComponent("stores/data.json")) == Data(#"{"count":3}"#.utf8))
-    #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores/media/\(hash)").path))
-}
-
 @Test func documentMediaIsImmutableAndVerified() throws {
     let root = try fixture(), temporary = root.deletingLastPathComponent(); defer { try? FileManager.default.removeItem(at: temporary) }
     let input = temporary.appendingPathComponent("input.png")
@@ -95,7 +65,7 @@ import ZIPFoundation
     #expect(try FileManager.default.contentsOfDirectory(atPath: store.url(for: first.sha256).deletingLastPathComponent().path).count == 1)
     #expect(throws: SlopPackageError.self) { _ = try store.open("../photo") }
     #expect(throws: SlopPackageError.self) { _ = try store.add(Data("not an image".utf8)) }
-    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
+    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) } // media imports are deferred in v1
     try Data("corrupt".utf8).write(to: store.url(for: first.sha256))
     #expect(throws: SlopPackageError.self) { _ = try store.read(first.sha256) }
     #expect(throws: SlopPackageError.self) { _ = try store.add(bytes) }
@@ -111,19 +81,7 @@ import ZIPFoundation
     #expect(reference.mime == "application/zip")
     #expect(throws: SlopPackageError.self) { _ = try store.add(archive, imageOnly: true) }
     #expect(throws: SlopPackageError.self) { _ = try store.add(Data("not media".utf8)) }
-    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
-}
-
-@Test func documentsAllowOnlyCanonicalLazyStores() throws {
-    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
-    try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
-    try Data("{}\n".utf8).write(to: root.appendingPathComponent("stores/data.json"))
-    try Data(":root { --slop-accent: tomato; }\n".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
-    try writeV1Schema(root)
-    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
-    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: false) }
-    try Data("{}\n".utf8).write(to: root.appendingPathComponent("stores/state.json"))
-    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
+    #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) } // media imports are deferred in v1
 }
 
 @Test func rejectsInvalidSchemaMetadataButOpensDamagedMutableTheme() throws {
@@ -140,23 +98,6 @@ import ZIPFoundation
     let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     try Data(#"{"type":"object"}"#.utf8).write(to: root.appendingPathComponent("schema.json"))
     #expect(throws: SlopPackageError.self) { _ = try SlopPackage(rootURL: root) }
-}
-
-@Test func decodesDataSchemasAtOpenAndRejectsOtherDialects() throws {
-    let root = try fixture(); defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
-    let url = root.appendingPathComponent("data.schema.json")
-    try writeV1Schema(root)
-    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
-    for schema in [#"{"type":"bogus"}"#, #"{"type":"string","minLength":"wrong"}"#, "[]", "true",
-                   #"{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"}"#,
-                   #"{"$schema":null,"type":"object"}"#] {
-        try Data(schema.utf8).write(to: url)
-        #expect(throws: (any Error).self) { _ = try SlopPackage(rootURL: root) }
-    }
-    try writeV1Schema(root)
-    try FileManager.default.createDirectory(at: root.appendingPathComponent("stores"), withIntermediateDirectories: true)
-    try Data(#"{"count":"broken"}"#.utf8).write(to: root.appendingPathComponent("stores/data.json"))
-    #expect(throws: Never.self) { _ = try SlopPackage(rootURL: root) }
 }
 
 @Test func manifestURIFormatDoesNotRepairInvalidAuthorURLs() throws {
@@ -197,13 +138,13 @@ import ZIPFoundation
     try FileManager.default.createDirectory(at: quickLook, withIntermediateDirectories: true)
     let png = Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")!
     try png.write(to: quickLook.appendingPathComponent("Preview.png"))
-    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
+    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: true) }
     try writeSkin(to: quickLook.appendingPathComponent("Icon.png"), width: 512, height: 512)
-    #expect(throws: Never.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
+    #expect(throws: Never.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: true) }
     try writeSkin(to: quickLook.appendingPathComponent("Icon.png"), width: 2, height: 1)
-    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
+    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: true) }
     try Data("different".utf8).write(to: quickLook.appendingPathComponent("Icon.png"))
-    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate() }
+    #expect(throws: SlopPackageError.self) { try SlopPackage(rootURL: root).validateAsTemplate(requirePreview: true) }
 }
 
 private func fixture(skin: Bool = false) throws -> URL {
@@ -211,8 +152,10 @@ private func fixture(skin: Bool = false) throws -> URL {
     let root = directory.appendingPathComponent("tiny-counter.slop", isDirectory: true)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try Data("<html><head></head><body></body></html>".utf8).write(to: root.appendingPathComponent("app.html"))
+    try Data(#"{"format":1,"root":{"kind":"object","properties":{}}}"#.utf8).write(to: root.appendingPathComponent("state.schema.json"))
+    try Data("{}".utf8).write(to: root.appendingPathComponent("initial.json"))
     let presentation = skin ? #"{"width":320,"height":240,"skin":"assets/skin.png"}"# : #"{"width":320,"height":240}"#
-    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","categories":["utilities"],"presentation":\#(presentation)}"#
+    let manifest = #"{"runtime":"hitslop-v1","$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"tiny-counter","title":"Tiny Counter","description":"Counts things.","categories":["utilities"],"presentation":\#(presentation)}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     try writeCanonicalDocumentSkill(to: root)
     if skin { try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true); try writeSkin(to: root.appendingPathComponent("assets/skin.png"), width: 320, height: 240) }
@@ -222,7 +165,7 @@ private func fixture(skin: Bool = false) throws -> URL {
 private func writeCanonicalDocumentSkill(to root: URL) throws {
     let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
     try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
+    try Data(contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../../../../../packages/cli/skills/hitslop-document/SKILL.md").standardizedFileURL).write(to: skill)
 }
 
 private func writeSkin(to url: URL, width: Int, height: Int) throws {
@@ -239,7 +182,7 @@ private func writeSkin(to url: URL, width: Int, height: Int) throws {
     let root = try fixture()
     defer { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     for name in ["stores", "state"] { try FileManager.default.createDirectory(at: root.appendingPathComponent(name), withIntermediateDirectories: true) }
-    try Data("private".utf8).write(to: root.appendingPathComponent("stores/data.json"))
+    try Data("private".utf8).write(to: root.appendingPathComponent("stores/theme.css"))
     try Data("private".utf8).write(to: root.appendingPathComponent("state/document.sqlite"))
     let archive = root.deletingLastPathComponent().appendingPathComponent("share.zip")
     try SlopArchive.packSharedApp(root).write(to: archive)

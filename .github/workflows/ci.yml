@@ -1,78 +1,29 @@
-name: CI
-
+name: macOS client and Loro runtime
 on:
   pull_request:
   push:
-    branches: [master]
-
+    branches: [master, refactor]
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
-  javascript:
-    name: JavaScript
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-      - run: bun install --frozen-lockfile
-      - run: bun run format:check
-      - run: bun run release:check
-        env:
-          HITSLOP_SKIP_SWIFT: "1"
-
-  macos:
-    name: macOS
+  foundation:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.2"
       - run: bun install --frozen-lockfile
-      - name: Complete local gate
-        run: bun run test:local
-      - name: Save local test evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: local-test-evidence
-          path: .hitslop/local-tests/
-      - name: Install XcodeGen
-        run: brew install xcodegen
-      - name: Generate Apple project
-        working-directory: apps/apple
-        run: xcodegen generate
-      - name: Verify macOS app contents
-        working-directory: apps/apple
-        run: |
-          derived="$RUNNER_TEMP/hitslop-macos-derived"
-          xcodebuild \
-            -skipPackagePluginValidation \
-            -skipMacroValidation \
-            -project hitSlop.xcodeproj \
-            -scheme hitSlop-macOS \
-            -configuration Debug \
-            -destination "platform=macOS" \
-            -derivedDataPath "$derived" \
-            CODE_SIGNING_ALLOWED=NO \
-            build
-          debug_app="$derived/Build/Products/Debug/hitSlop.app"
-          test ! -e "$debug_app/Contents/PlugIns/SlopThumbnail.appex"
-          xcodebuild \
-            -skipPackagePluginValidation \
-            -skipMacroValidation \
-            -project hitSlop.xcodeproj \
-            -scheme hitSlop-macOS \
-            -configuration Release \
-            -destination "platform=macOS" \
-            -derivedDataPath "$derived" \
-            CODE_SIGNING_ALLOWED=NO \
-            ARCHS="$(uname -m)" \
-            ONLY_ACTIVE_ARCH=YES \
-            build
-          release_plugins="$derived/Build/Products/Release/hitSlop.app/Contents/PlugIns"
-          test ! -e "$release_plugins/SlopThumbnail.appex"
+      - run: bun run build
+      - run: bun run check
+      - run: bun run swift:build
+      - run: bun run test
+      - run: bun run swift:test
+      - run: bun run test:storage
+      - run: brew install xcodegen
+      - run: bun run apple:build
+      - run: bun run test:native-crash

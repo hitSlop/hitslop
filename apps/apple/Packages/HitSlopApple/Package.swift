@@ -13,8 +13,6 @@ let package = Package(
     .library(name: "HitSlopFeatures", targets: ["HitSlopFeatures"]),
     .library(name: "HitSlopCatalog", targets: ["HitSlopCatalog"]),
     .executable(name: "hitslop-native", targets: ["HitSlopNativeCLI"]),
-    // Production regression harness; never embedded in the app or native helper.
-    .executable(name: "hitslop-javascriptcore-spike", targets: ["HitSlopSpikeNativeCLI"]),
   ],
   dependencies: [
     .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.13.1"),
@@ -28,17 +26,8 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2"),
   ],
   targets: [
-    .target(
-      name: "HitSlopDocumentEngine", resources: [.copy("Resources/document-engine.js")],
-      linkerSettings: [.linkedFramework("JavaScriptCore")]),
-    .executableTarget(
-      name: "HitSlopSpikeNativeCLI",
-      dependencies: ["HitSlopRuntime"],
-      path: "Spikes/JavaScriptCore",
-      linkerSettings: [
-        .linkedFramework("JavaScriptCore"), .linkedFramework("WebKit"), .linkedFramework("AppKit"),
-      ]
-    ),
+    .target(name: "HitSlopWasm", dependencies: ["HitSlopCore"], resources: [.copy("Resources/runtime")], linkerSettings: [.linkedFramework("WebKit"), .linkedLibrary("sqlite3")]),
+    .testTarget(name: "HitSlopWasmTests", dependencies: ["HitSlopWasm"]),
     .target(
       name: "HitSlopAPI",
       dependencies: [
@@ -52,10 +41,8 @@ let package = Package(
       name: "HitSlopCore",
       dependencies: [
         .product(name: "ZIPFoundation", package: "ZIPFoundation"),
-        "HitSlopDocumentEngine",
       ],
-      resources: [.copy("Resources/skills")],
-      linkerSettings: [.linkedFramework("ImageIO")]
+      linkerSettings: [.linkedFramework("ImageIO"), .linkedLibrary("sqlite3")]
     ),
     .target(
       name: "HitSlopFirebase",
@@ -70,9 +57,9 @@ let package = Package(
     .target(
       name: "HitSlopRuntime",
       dependencies: [
-        "HitSlopCore", "HitSlopAPI",
-        "HitSlopDocumentEngine",
+        "HitSlopCore", "HitSlopAPI", "HitSlopWasm",
       ],
+      exclude: ["SlopMediaSync.swift", "SlopStorage.swift", "SlopStorageWorker.swift"],
       resources: [.copy("Resources/host-bridge.js")],
       linkerSettings: [
         .linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS])),
@@ -86,7 +73,7 @@ let package = Package(
     ),
     .target(
       name: "HitSlopHost",
-      dependencies: ["HitSlopCore", "HitSlopRuntime"],
+      dependencies: ["HitSlopCore", "HitSlopRuntime", "HitSlopWasm"],
       linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit")]
     ),
     .target(
@@ -104,6 +91,7 @@ let package = Package(
         .product(name: "GoogleSignIn", package: "GoogleSignIn-iOS"),
         .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
       ],
+      exclude: ["DocumentSharing.swift", "SharingInvitation.swift"],
       resources: [.process("Resources")],
       linkerSettings: [.linkedFramework("AppKit")]
     ),
@@ -112,7 +100,7 @@ let package = Package(
       dependencies: [
         "HitSlopCore",
         "HitSlopHost",
-        "HitSlopRuntime",
+        "HitSlopRuntime", "HitSlopWasm",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
       ],
       linkerSettings: [.linkedFramework("AppKit")]
@@ -126,7 +114,7 @@ let package = Package(
     .testTarget(
       name: "HitSlopRuntimeTests", dependencies: ["HitSlopRuntime", "HitSlopCore"],
       resources: [.copy("Fixtures")]),
-    .testTarget(name: "HitSlopHostTests", dependencies: ["HitSlopHost", "HitSlopCore"]),
+    .testTarget(name: "HitSlopHostTests", dependencies: ["HitSlopHost", "HitSlopCore", "HitSlopRuntime", "HitSlopWasm"]),
     .testTarget(
       name: "HitSlopCatalogTests",
       dependencies: ["HitSlopCatalog", "HitSlopCore", "HitSlopRuntime", "HitSlopFeatures"]

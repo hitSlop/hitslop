@@ -1,29 +1,5 @@
-# hitSlop documentation
+# Documentation
 
-## Build with hitSlop
+The current v1 contracts are [architecture](architecture.md), [storage](storage.md), [package format](package-format.md), [authoring](authoring.md), and [capture](capture.md). The existing macOS client remains active, including its local catalog, frameless windows/hover toolbar, TCA, Firebase, OpenAPI generation and Swift CLI. Historical command/snapshot and sync documents are reference-only; hosted catalog loading and sharing are deferred.
 
-- [Authoring a slop](authoring.md) — scaffold, preview, validate, build, register,
-  and publish.
-- [Design and presentation](presentation.md) — Paper/Instrument/Skin, responsive
-  layout, transparent windows, resizing, icon art, and static export.
-- [Package format](package-format.md) — the exact source/runtime boundary.
-- [Storage](storage.md) — JSON, document media, concurrency, and sharing.
-- [Framework packages](packages.md) — CLI, runtime, schema, and Svelte.
-
-## Understand the platform
-
-- [Architecture](architecture.md) — trust boundaries and end-to-end data flow.
-- [Apple apps](apps/apple.md) — Core, Runtime, Host, Catalog, Registry, and CLI.
-  and retirement of the old backend.
-- [Self-hosting](self-hosting.md) — replace the official hosted services.
-- [Repository guide](repository.md) — workspace map and change discipline.
-- [Releasing](releasing.md) — versions, checks, npm, services, and macOS.
-
-## Local readiness
-
-[Local testing](local-testing.md) defines the pre-release gate and remaining manual
-checks. [Command/snapshot sync](command-snapshot.md) describes the document contract and verification.
-[JavaScriptCore spike](benchmarks/javascriptcore.md) records the shared TypeScript
-engine experiment, correctness checks, and native performance measurements.
-
-Local `archive/` material is ignored by Git; current docs are authoritative.
+[CLI commands, helper discovery, retries, and export](cli.md).

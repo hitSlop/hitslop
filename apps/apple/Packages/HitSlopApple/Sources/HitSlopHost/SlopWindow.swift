@@ -1,6 +1,7 @@
 import AppKit
 import HitSlopCore
 import HitSlopRuntime
+import HitSlopWasm
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -198,6 +199,7 @@ public enum SlopDocumentCommand: Equatable, Sendable {
         self.opened = opened
         self.packageURL = opened.presentedURL
         session = opened.session
+        SlopRenderer.installCLIExport(on: session)
         let windowMask = try SlopWindowMask(package: session.package)
         let spec = session.package.manifest.presentation, size = NSSize(width: spec.width, height: spec.height)
         let window = FramelessDocumentWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: slopDocumentWindowStyleMask(resizable: session.package.isResizable), backing: .buffered, defer: false)
@@ -240,55 +242,27 @@ public enum SlopDocumentCommand: Equatable, Sendable {
         guestIssue = issue
         showDocumentAttention()
     }
-    public func runtimeSession(_ session: SlopRuntimeSession, documentNeedsAttention frame: SlopCommandFrame) {
-        attentionFrame = frame
-        showDocumentAttention()
-    }
-    private func showDocumentAttention() {
-        let frame = attentionFrame
-        let nativeMessage = frame?.projectionError ?? frame?.error
-        let issue = nativeMessage == nil ? guestIssue : nil
-        guard let message = nativeMessage ?? issue?.message else {
-            documentAttention?.close(); documentAttention = nil; attentionMessage = nil; return
-        }
-        let key = "\(issue?.source.rawValue ?? "native"):\(message)"
-        guard key != attentionMessage || documentAttention?.isVisible != true else { return }
-        attentionMessage = key
-        let panel = documentAttention ?? NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 260), styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        panel.title = "Document changes"; panel.isReleasedWhenClosed = false
-        panel.contentView = NSHostingView(rootView: DocumentAttention(message: message, hasProposal: frame?.proposalPath != nil,
-            issue: issue,
-            retry: { [weak self] in self?.recoverDocument(issue?.source == .render ? "render" : "retry") },
-            copy: { [weak self] in self?.recoverDocument("copy") },
-            discard: { [weak self] in self?.recoverDocument("discard") },
-            reveal: { if let path = frame?.proposalPath { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) } },
-            useConfirmed: { [weak self] in self?.recoverDocument("confirmed") },
-            dismiss: { [weak self] in self?.guestIssue = nil; self?.documentAttention?.close(); self?.documentAttention = nil; self?.attentionMessage = nil }))
-        if let window, documentAttention == nil { window.addChildWindow(panel, ordered: .above); panel.setFrameOrigin(NSPoint(x: window.frame.midX - 190, y: window.frame.midY - 130)) }
-        documentAttention = panel; panel.orderFront(nil)
+    public func runtimeSession(_ session: SlopRuntimeSession, saveStatus: WasmSaveStatus) {
+        window?.isDocumentEdited = saveStatus.status != "saved"
+        if let message = saveStatus.error { attentionMessage = message; showDocumentAttention() }
+        else if saveStatus.status == "saved" { if let panel = documentAttention { window?.endSheet(panel);panel.orderOut(nil) }; documentAttention = nil; attentionMessage = nil }
     }
     private var guestIssue: SlopRuntimeIssue?
     private var issueGeneration = 0
-    private var attentionFrame: SlopCommandFrame?
-    private func recoverDocument(_ action: String) {
-        let generation = issueGeneration
-        Task {
-            do {
-                if action == "confirmed" { try await session.document?.discardExternalProposal(); return }
-                let result = try await session.webView.callAsyncJavaScript("return await window.__hitslopDocumentRecovery?.(action)", arguments: ["action": action == "copy" ? "status" : action], in: nil, contentWorld: .page)
-                if action == "copy", let result = result as? [String: Any], let drafts = result["drafts"] as? [[String: Any]] {
-                    let text = drafts.map { "\($0["path"] as? String ?? "Text")\n\($0["value"] as? String ?? "")" }.joined(separator: "\n\n")
-                    NSPasteboard.general.clearContents(); NSPasteboard.general.setString(text, forType: .string)
-                } else if let result = result as? [String: Any], let error = result["error"] as? [String: Any], let message = error["message"] as? String {
-                    throw SlopDocumentError(message)
-                } else {
-                    try await session.document?.flush()
-                    guard generation == issueGeneration else { return }
-                    guestIssue = nil
-                    documentAttention?.close(); documentAttention = nil; attentionMessage = nil
-                }
-            } catch { present("Changes still need attention", error) }
+    private func showDocumentAttention() {
+        guard let message = attentionMessage ?? guestIssue?.message else { return }
+        let alert = NSAlert(); alert.messageText = "Document needs attention"; alert.informativeText = message
+        alert.addButton(withTitle: "Retry Save"); alert.addButton(withTitle: "Dismiss")
+        if let window, window.attachedSheet == nil {
+            documentAttention = alert.window as? NSPanel
+            alert.beginSheetModal(for:window) { [weak self] result in
+                if result == .alertFirstButtonReturn { self?.recoverDocument("retry") }
+            }
         }
+    }
+    private func recoverDocument(_ action:String) {
+        Task { do { try await session.flush(); attentionMessage = nil; guestIssue = nil }
+            catch { present("Changes still need attention",error) } }
     }
 
     private func setupToolbar() {
@@ -355,20 +329,12 @@ public enum SlopDocumentCommand: Equatable, Sendable {
             try await session.flush()
             let source = session.package.rootURL
             let destination = try await SlopPreparation.run { try SlopDuplicator.duplicate(from: source, to: target) }
-            do {
-                if let document = session.document {
-                    let copy = try await document.independentCopy(to: destination)
-                    try await copy.close()
-                }
-                return destination
-            } catch {
-                try? FileManager.default.removeItem(at: destination)
-                throw error
-            }
+            return destination
+
         case .exportPNG: export(.png)
         case .exportPDF: export(.pdf)
         case .share:
-            if let onShare { onShare() } else { share() }
+            present("Sharing unavailable", SlopPackageError.invalid("Sync is deferred in this local release"))
         case .reveal: reveal()
         case .copyPath: copyPath()
         case .openEditor(let app): try await openInEditor(app)
@@ -441,6 +407,7 @@ public enum SlopDocumentCommand: Equatable, Sendable {
         super.close()
     }
     public func prepareToClose() async throws {
+        if session.engine.rendererDead || !session.isReady { return }
         try await session.flush()
         await onPrepareClose?()
         do { try await session.flush() } catch { onCloseCancelled?(); throw error }
@@ -515,7 +482,6 @@ private struct SlopToolbar: View {
             Group {
             icon("doc.on.doc", "Duplicate", duplicate)
             Menu { Button("Export PNG…", action: png); Button("Export PDF…", action: pdf) } label: { Image(systemName: "arrow.down.doc").frame(width: 25, height: 25) }.menuStyle(.borderlessButton).fixedSize().help("Export")
-            icon("square.and.arrow.up", "Share", share)
             Menu { ForEach(editors, id: \.1) { editor in Button(editor.0) { openEditor(editor.1) } }; if !editors.isEmpty { Divider() }; Button("Reveal in Finder", action: reveal); Button("Copy Path", action: copyPath) } label: { Image(systemName: "arrow.up.forward.square").frame(width: 25, height: 25) }.menuStyle(.borderlessButton).fixedSize().help("Open in")
             }.disabled(!commandsEnabled)
         }.padding(.horizontal, 9).padding(.vertical, 6).background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().stroke(.white.opacity(0.25))).padding(2)

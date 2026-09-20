@@ -1,17 +1,7 @@
-import * as S from "@hitslop/schema/document";
-
-const checklistSchema = S.Document({
-  title: S.String(),
-  tasks: S.List(
-    S.Object({
-      id: S.String(),
-      text: S.String(),
-      done: S.Boolean(),
-      archived: S.Boolean(),
-    }),
-    "id",
-  ),
+import { defineDocument, s, type Value } from "@hitslop/document";
+export const checklist = defineDocument({
+  title: s.text(),
+  tasks: s.list(s.object({ text: s.text(), done: s.boolean(), archived: s.boolean() })),
 });
-
-export type Checklist = S.Static<typeof checklistSchema>;
-export default checklistSchema;
+export type Checklist = Value<typeof checklist.descriptor.root>;
+export default checklist;

@@ -4,12 +4,13 @@ import Foundation
 import HitSlopCore
 import HitSlopHost
 import HitSlopRuntime
+import HitSlopWasm
 
 @main struct NativeCLI: AsyncParsableCommand {
   static let configuration = CommandConfiguration(
-    commandName: "hitslop-native", abstract: "Native rendering companion for @hitslop/cli.",
+    commandName: "hitslop-native", abstract: "Read, edit, open, and export hitSlop documents.",
     subcommands: [
-      Screenshot.self, Export.self, OpenDev.self, Inspect.self, Apply.self, Create.self, Open.self,
+      StorageProbe.self, Screenshot.self, Export.self, OpenDev.self, Get.self, Schema.self, Apply.self, Batch.self, Compact.self, Create.self, Open.self,
     ])
 }
 
@@ -20,6 +21,7 @@ struct Screenshot: AsyncParsableCommand {
   @Option var target: Target = .preview
   @Flag var ifPresent = false
   @MainActor func run() async throws {
+    initializeNativeApplication()
     let data: Data?
     switch target {
     case .preview: data = try await SlopRenderer.previewPNGData(packageURL: package)
@@ -39,50 +41,57 @@ struct Export: AsyncParsableCommand {
   @Option var format: Format
   @Option(transform: URL.init(fileURLWithPath:)) var output: URL
   @MainActor func run() async throws {
-    let data =
-      format == .png
-      ? try await SlopRenderer.exportPNGData(packageURL: package)
-      : try await SlopRenderer.exportPDFData(packageURL: package)
-    try data.write(to: output, options: .atomic)
+    initializeNativeApplication()
+    try await SlopRenderer.exportDocument(packageURL: package, format: format.rawValue, output: output)
     print(output.path)
   }
 }
-struct Inspect: AsyncParsableCommand {
+struct DocumentArguments: ParsableArguments {
   @Argument(transform: URL.init(fileURLWithPath:)) var package: URL
-  @MainActor func run() async throws {
-    let opened = try SlopPackage(rootURL: package)
-    guard let document = try SlopCommandDocument.open(package: opened) else {
-      throw ValidationError("This slop does not use a collaborative document.")
-    }
-    try await document.start()
-    let frame = try await document.frame()
-    print(frame.data)
-    try await document.close()
+}
+struct RetryOptions: ParsableArguments {
+  @Option(help: "Original mutation request ID; requires --epoch.") var id: String?
+  @Option(help: "Original session epoch; requires --id.") var epoch: String?
+  func validate() throws {
+    guard (id == nil) == (epoch == nil) else { throw ValidationError("Provide --id and --epoch together, or omit both") }
   }
 }
-
+@MainActor private func initializeNativeApplication() {
+  _ = NSApplication.shared
+  NSApp.setActivationPolicy(.prohibited)
+}
+@MainActor private func printDocument(_ method: String, _ arguments: DocumentArguments, retry: RetryOptions? = nil, operation: String? = nil, operations: String? = nil) async throws {
+  if method != "schema" { initializeNativeApplication() }
+  let result = try await DocumentCommand.run(method: method, url: arguments.package,
+    operation: operation.map { Data($0.utf8) }, operations: operations.map { Data($0.utf8) },
+    id: retry?.id, epoch: retry?.epoch)
+  print(String(decoding: result, as: UTF8.self))
+}
+struct Get: AsyncParsableCommand {
+  @OptionGroup var document: DocumentArguments
+  @MainActor func run() async throws { try await printDocument("get", document) }
+}
+struct Schema: AsyncParsableCommand {
+  @OptionGroup var document: DocumentArguments
+  @MainActor func run() async throws { try await printDocument("schema", document) }
+}
 struct Apply: AsyncParsableCommand {
-  @Argument(transform: URL.init(fileURLWithPath:)) var package: URL
-  @Option(name: .customLong("json")) var json: String
-  @MainActor func run() async throws {
-    let opened = try SlopPackage(rootURL: package)
-    guard let document = try SlopCommandDocument.open(package: opened) else {
-      throw ValidationError("This slop does not use a collaborative document.")
-    }
-    guard let bytes = json.data(using: .utf8) else { throw ValidationError("--json must be UTF-8") }
-    try await document.start()
-    let frame = try await document.frame()
-    let opening = try await document.openGuest()
-    let request: String = try document.engine.call(
-      "replace",
-      [frame.snapshot.json, try StateEngine.utf8(bytes), opening.lease.json, UUID().uuidString])
-    let result = try await document.apply(request)
-    guard result.ok else { throw ValidationError(result.error?.message ?? "Document edit failed") }
-    try await document.close()
-    print(package.path)
-  }
+  @OptionGroup var document: DocumentArguments
+  @OptionGroup var retry: RetryOptions
+  @Option var op: String
+  @MainActor func run() async throws { try await printDocument("apply", document, retry: retry, operation: op) }
 }
-
+struct Batch: AsyncParsableCommand {
+  @OptionGroup var document: DocumentArguments
+  @OptionGroup var retry: RetryOptions
+  @Option var ops: String
+  @MainActor func run() async throws { try await printDocument("batch", document, retry: retry, operations: ops) }
+}
+struct Compact: AsyncParsableCommand {
+  @OptionGroup var document: DocumentArguments
+  @OptionGroup var retry: RetryOptions
+  @MainActor func run() async throws { try await printDocument("compact", document, retry: retry) }
+}
 struct Create: AsyncParsableCommand {
   @Option(name: .customLong("from"), transform: URL.init(fileURLWithPath:)) var source: URL?
   @Option(transform: URL.init(fileURLWithPath:)) var catalogEntry: URL?
@@ -168,5 +177,20 @@ struct OpenDev: AsyncParsableCommand {
       SlopRenderer.openDevelopmentURL(url, size: .init(width: width, height: height))
       application.run()
     }
+  }
+}
+
+struct StorageProbe: ParsableCommand {
+  static let configuration = CommandConfiguration(shouldDisplay:false)
+  @Argument var root:String
+  @Argument var phase:String
+  @Argument var marker:String
+  @Argument var payload:String
+  func run() throws {
+    #if DEBUG
+    try DebugStorageProbe.run([root,phase,marker,payload])
+    #else
+    throw ValidationError("Debug-only probe")
+    #endif
   }
 }

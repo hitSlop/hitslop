@@ -33,7 +33,7 @@ private struct UpdateSettingsView: View {
 }
 
 @MainActor final class HitSlopAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
-    private lazy var coordinator = SlopApplicationCoordinator(catalogURL: catalogURL)
+    private lazy var coordinator = SlopApplicationCoordinator(catalogURL: catalogURL, templatesURL: ProcessInfo.processInfo.environment["HITSLOP_TEMPLATES_ROOT"].map { URL(fileURLWithPath: $0) } ?? DocumentFactory.defaultTemplatesRoot)
     private var recentMenu: NSMenu?
     private var settingsWindow: NSWindow?
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
@@ -47,14 +47,6 @@ private struct UpdateSettingsView: View {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         installMenus()
-        let skillVersion = "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development")-\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0")"
-        Task.detached(priority: .utility) {
-            do {
-                for conflict in try SlopAgentSkills.sync(appVersion: skillVersion) {
-                    NSLog("Left existing agent skill unchanged: %@", conflict.path)
-                }
-            } catch { NSLog("Could not refresh agent skills: %@", error.localizedDescription) }
-        }
         let urls = CommandLine.arguments.dropFirst().filter { $0.hasSuffix(".slop") }.map(URL.init(fileURLWithPath:))
         if urls.isEmpty { showCatalog() } else { urls.forEach(openDocument) }
     }
@@ -163,7 +155,6 @@ private struct UpdateSettingsView: View {
         item(file, "Duplicate…", #selector(duplicateActive), "d")
         let export = NSMenuItem(title: "Export", action: nil, keyEquivalent: ""), exportMenu = NSMenu(title: "Export"); export.submenu = exportMenu; file.addItem(export)
         item(exportMenu, "Export PNG…", #selector(exportPNG), ""); item(exportMenu, "Export PDF…", #selector(exportPDF), "")
-        item(file, "Share…", #selector(shareActive), "")
         file.addItem(.separator())
         file.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
 

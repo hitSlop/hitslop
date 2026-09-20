@@ -25,17 +25,9 @@ import HitSlopRuntime
     }
 
     private func hosted(category: String?, sort: CatalogSort) -> AsyncStream<CatalogSnapshot> {
-        AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
-            let task = Task { @MainActor [self] in
-                do {
-                    let snapshot = try await fetchHosted(category: category, sort: sort)
-                    continuation.yield(snapshot)
-                } catch {
-                    continuation.yield(CatalogSnapshot(issues: [error.localizedDescription]))
-                }
-                continuation.finish()
-            }
-            continuation.onTermination = { _ in task.cancel() }
+        AsyncStream { continuation in
+            continuation.yield(CatalogSnapshot())
+            continuation.finish()
         }
     }
 

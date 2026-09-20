@@ -1,168 +1,21 @@
 # Architecture
 
-hitSlop separates an immutable web application from mutable, host-owned
-document data. That one boundary lets a tiny app remain framework-neutral while
-native hosts provide reliable persistence, windows, preview, export, and cloud
-coordination.
+A `.slop` is immutable app code plus a structured local document. The host installs one pinned document SDK and Loro JS/WASM release; each WebView creates its own live Loro document. Svelte is a thin adapter over immutable projections and typed operations. The Swift CLI runs the same bundled WASM runtime in an engine-only invisible WebKit session when no native owner exists. It never loads authored app code.
 
 ```text
-author source ──CLI build──> immutable .slop template
-                                  │
-                        copy to user-selected path
-                                  ▼
-                         writable .slop document
-                                  │
-             WebView bridge ◀──── host ────▶ JSON / media / theme
-                                  │
-                           preview and export
-
-publish ──signed ZIP──> Cloudflare Worker ──artifact──> R2
-                              │
-                              └──metadata──> D1
+App → typed operations → host-supplied Loro runtime
+                              ↓ update bytes
+                        native storage queue → SQLite
+CLI → live Unix socket ────────┘
+CLI → exclusive lock → same WASM runtime in WebKit → Swift SQLite (when closed)
 ```
 
-## Trust boundaries
+Swift does not interpret application fields. It validates packages, isolates resource access, owns disk writes and close/export, and presents save/application errors. SDK validation applies to supported commands; it is not a security boundary from authored code sharing the page.
 
-The guest WebView is untrusted package code. It runs in an ephemeral WebKit data
-store behind the `slop://` scheme, which serves `app.html`, immutable `assets/`,
-document media, and the dedicated writable theme override endpoint. It cannot
-resolve the manifest, arbitrary stores, Quick Look images, or
-arbitrary file URLs.
+An edit returns after acceptance in memory. `flush()` and a successful CLI mutation acknowledge local persistence. No network acknowledgement exists in v1. Renderer death can lose unsaved edits.
 
-The native host validates the manifest before loading, exposes a narrow message
-bridge, validates media by content, and owns every filesystem mutation. JSON commands are applied to a candidate and validated before SQLite commit and publication.
-`stores/data.json` is an atomically replaced projection of committed state. Media import is
-atomic.
+The builder externalizes runtime imports and rejects embedded engine modules. Native and preview runtime resources are generated from the same entry point. Runtime loading verifies `hitslop-v1`, uses a separate WASM resource, and downloads no executable code. The current release has one runtime; no compatibility archive exists.
 
-The publish gateway treats the submitted ZIP as hostile. It verifies the
-Ed25519 envelope, hash and byte count; rejects unsafe paths, duplicates,
-symlinks, encryption, unsupported compression, excessive entry counts and
-expansion; validates the manifest, package allowlist, PNGs, and exact RGBA skin
-dimensions; then stores content-addressed immutable bytes.
+No JavaScriptCore engine, JSON projection, external JSON editing, proposal recovery, or room authority remains in the active graph. The existing macOS client, TCA, local catalog, Firebase, OpenAPI generation, and native CLI remain active. Only remote catalog loading and document sharing are deferred. The old `slop` s-expression skill is unrelated to this package format.
 
-## Template, cache, document
-
-These three things must never be confused:
-
-- A built or published **template** is immutable and contains no stores.
-- A **catalog master** under `~/.hitslop/templates` is immutable input. Hosted
-  entries live at `cache/<publisher>/<slug>/<release>.slop` and are verified by
-  SHA-256.
-- A **document** is a copy at a user-selected path. Only the copy may create or
-  change `stores/`, refresh `QuickLook/Preview.png`, or gain Finder metadata.
-
-Cloudflare D1 and R2 store public catalog metadata and immutable published artifacts,
-while live sharing separately stores an immutable sender app in R2 and authoritative JSON
-snapshots in a per-document Durable Object. A release does not mutate existing documents.
-The public `templates` collection carries a nested current-release projection so
-native clients never join against private release history. Successful document
-copies increment a lifetime popularity counter; release updates preserve that
-counter and the template's original publication time.
-
-## Browser bridge
-
-The framework-neutral API is deliberately ID-free:
-
-```ts
-slop.document.open()
-slop.document.send({ documentId, schemaHash, authority, leaseId, requestId, ops })
-slop.document.flush()
-slop.document.subscribe(callback)
-
-slop.media.open(sha256)
-slop.media.add(base64, "image" | "file")
-slop.media.onChange(callback)
-
-slop.window.resize({ width, height })
-```
-
-`@hitslop/runtime` exposes this contract. The Svelte package adapts it
-to its reactive model; it does not define a second persistence system.
-
-`packages/schema/src/bridge.ts` defines the wire requests, reply envelope,
-error codes, host information, and change events. One
-`BridgeMethods` registry pairs parameter and result schemas for each method.
-JavaScript calls infer their result from the method and validate the
-reply envelope and method-specific value before returning it. Generation emits
-Swift method/error enums, the browser bridge bundle, and the trusted
-JavaScriptCore state-engine bundle. Requests and replies cross WebKit as JSON
-strings so native value conversion cannot change application data. The Apple host validates every request before dispatch. Storage runs
-on a serial worker, while WebKit and window operations remain on the UI actor.
-`hostInfo()` reports protocol version and capabilities; errors expose a stable
-`code`. `flush()` waits for registered framework stores and bridge writes.
-
-Browser `slop dev` injects a disposable in-memory implementation of this
-contract for UI work. It has no disk-backed bridge or polling. On macOS, built
-documents use FSEvents to wake revision checks after external file changes.
-
-## Schema pipeline
-
-TypeBox under `packages/schema/src` is authoritative for the shared manifest and
-publish protocol:
-
-```text
-TypeBox → JSON Schema draft 2020-12 → fixed Swift Codable models
-       └──→ @hitslop/document-engine → trusted JavaScriptCore bundle
-```
-
-Run `bun run schema:generate` after schema changes. Generated output is
-committed and CI rejects drift.
-
-Each Svelte app with a JSON store also default-exports its data schema from root
-`schema.ts` and attaches it to `createDocument({ schema, initial })`. The CLI emits
-that app-specific persisted-value contract as `data.schema.json` during build.
-The native host and CLI validate it without coercion or field removal.
-
-Every new build also embeds one immutable Agent Skill at
-`.agents/skills/hitslop-document`. It teaches compatible agents the package
-boundary and safe direct-file workflows. A publisher may add only one bounded
-Markdown reference through source `document-guide.md`; scripts, extra skills,
-and arbitrary resources are rejected by authoring validation. Guidance is
-optional when opening a document; its contents are not compared with the host's
-current copy.
-
-The CLI and macOS app also install the current `hitslop-authoring`,
-`hitslop-design`, and `hitslop-document` skills into `~/.hitslop/skills` and
-link those names into `~/.agents/skills` and `~/.claude/skills`. That machine
-cache is the updatable source of truth for coding agents; runtime packages still
-embed `hitslop-document` so a copied `.slop` stays self-describing.
-
-The app refreshes once per app version; CLI initialization only fills missing
-skills, and `slop skills sync` explicitly replaces the bundle. Both installers
-stage the complete tree before activation and use an OS file lock to serialize
-replacement. A sibling backup restores the previous installation after failed
-or interrupted activation. Discovery links never replace user directories or
-unrelated links. Installation errors do not block documents or source creation.
-Global document guidance resolves app-specific instructions inside the target
-`.slop`, not inside its own installation directory.
-
-## Capture and export
-
-Background capture uses a hidden WebView with a disposable package snapshot.
-Interactive export uses the current session, serializes capture, and restores
-editor state. A shared runtime controller prepares optional Svelte capture views,
-awaits assets and stable layout, and retains the existing static CSS fallback.
-Preview and icon failures are independent; Finder metadata refreshes on close.
-See [Capture views](capture.md) for authoring, dimensions, and limits.
-
-## Platform topology
-
-- [Apple apps](apps/apple.md) own documents and native presentation.
-- [Cloudflare backend](../apps/cloudflare/README.md) owns hostile artifact ingress, immutable
-  Storage objects, public catalog metadata, and release numbering.
-- [Packages](packages.md) provide authoring and browser APIs.
-
-## Local and shared authorities
-
-Local JSON documents evaluate commands with `@hitslop/document-engine` in one independent
-JavaScriptCore VM per document and commit through Swift to `state/document.sqlite`.
-Shared rooms and disposable previews import that same TypeScript evaluator. Swift
-owns disk, networking and UI; it no longer implements document operations or
-recursive JSON validation. The engine accepts and returns JSON text, preserving
-Unicode keys, unknown fields and JSON number semantics across runtimes.
-There is no guest WASM sync engine and no second JSON persister. The runtime
-controller manages authored drafts; the host alone validates and commits them.
-One raw Durable Object per shared document owns invitations, membership, and
-command validation, JSON snapshots and receipt deduplication. D1 does not duplicate mutable room ACL state. HTTP clients
-use the oRPC contract and generated OpenAPI Swift client; Worker-to-DO calls use
-native RPC. See [Storage](storage.md) for durability, joining, and recovery.
+Document sockets validate generated TypeBox envelopes. Reads execute directly; a small `hello` supplies the current runtime session epoch for new mutations. The host supplies a live export callback to reuse native capture without adding renderer dependencies to the engine. See [CLI](cli.md).

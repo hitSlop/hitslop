@@ -1,62 +1,16 @@
 ---
 name: hitslop-authoring
-description: Create, preview, validate, build, register, or publish hitSlop authoring projects with the TypeScript CLI. Use for manifests, storage choices, package boundaries, capture, identity, and release workflow.
+description: Create, preview, validate, build, and register hitSlop authoring projects with the TypeScript CLI. Use for manifests, storage choices, package boundaries, capture, identity, and release workflow.
 ---
 
-# hitSlop authoring
+# Author local v1 mini apps
 
-Read `manifest.json` first. Work on the authored source project, never a built
-runtime document.
+Read manifest.json first; only runtime hitslop-v1 is supported. Use schema.ts with defineDocument/s from @hitslop/document, explicit initial.ts, and theme.ts. App components use useDocument and bindText; read immutable current and write typed handles. transaction(tx => ...) is synchronous and atomic; flush is the durability barrier.
 
-## Workflow
+The host supplies the document SDK and Loro runtime. Do not embed the engine into app bundles or expose a second JSON writer. Build emits state.schema.json (a descriptor), initial.json, app.html, assets and document guidance. Never include state/, stores/, source, dependencies or caches in templates.
 
-1. Fix the single job, categories, and initial window size in the manifest.
-2. Choose no persistence or JSON with optional document attachments.
-3. Develop against the disposable browser fake and test live plus static capture states.
-4. Validate and build a source-free, store-free runtime package.
-5. Register a local master, create a writable copy, and test reopen/export.
-6. Publish one signed immutable artifact.
+Use bun slop dev/build/register SOURCE. Preview state is disposable; rerun dev to rebuild source. Create a writable copy of a built/registered template before editing. Agents use schema/get/apply/batch/compact. Old documents are rejected without migration.
 
-Use `bun slop <command> <path>` inside the hitSlop repository. In a scaffolded
-project use its Bun scripts, `slop`, or `bunx @hitslop/cli`.
+Quick Checklist and Small Expenses are the active examples. Use Vanilla Extract style classes and each app's own visual identity. Read docs/authoring.md, docs/package-format.md, docs/presentation.md and docs/capture.md. PNG/PDF export is supported; hosted publishing and catalog are deferred.
 
-Read [references/workflow.md](references/workflow.md) for commands, capture,
-identity, and the definition of done. Read
-[references/storage-and-packages.md](references/storage-and-packages.md) before
-adding persistence or changing the runtime boundary.
-
-## Non-negotiable package rules
-
-- Runtime packages contain `manifest.json`, generated `app.html`, optional
-  `data.schema.json`, the canonical document Agent Skill, optional immutable `assets/`, optional host-owned
-  `stores/` in writable documents, and optional `QuickLook/` images.
-- Author root `schema.ts` with `import * as S from "@hitslop/schema/document"`.
-  Import that schema directly into `createDocument({ schema, initial })`. Get `fields`
-  from the store and wrap markup in `<Slop document={store}>`; use text attachments
-  and explicit verbs, with `transaction(tx => ...)` for atomic changes.
-  Type inference requires no generated files or running dev server. The store
-  uses TypeBox runtime validation; builds emit `data.schema.json` for the host.
-  Keep schema definitions deterministic: app and builder evaluate separately.
-  Never manually supply a validator or rewrite ordinary schema imports. Preserve
-  unknown fields with `additionalProperties: true`; never coerce or insert defaults.
-  Quick Checklist is the only active template. Paused source is preserved in
-  `examples/archive/`, excluded from active checks, tests, and builds.
-  Promote and migrate one example at a time. The CLI counter starter follows the same APIs.
-- Authored templates and published artifacts contain no stores, source,
-  dependencies, build caches, editable stylesheets, unsupported stores, or
-  Finder-managed `Icon\r`.
-- Storage is implicit and ID-free. Never add storage declarations or release
-  versions to the manifest.
-- Treat `dist/<slug>.slop` as generated output.
-- Quick Checklist and the CLI counter starter use root `theme.ts` uses `defineTheme`
-  from `@hitslop/runtime/theme`, supplying typed variables and generated
-  immutable `assets/theme.css`. Owners still edit `stores/theme.css`.
-- Builds embed document guidance; missing or changed guidance never prevents
-  opening. Do not compare its text with the host's current copy.
-- Publishing captures `QuickLook/Preview.png`, produces an exact 512×512
-  `QuickLook/Icon.png`, and signs one immutable ZIP.
-- Publisher ownership comes from the local Ed25519 identity; back it up with
-  `slop identity export`.
-
-When creating or substantially revising an interface, also use the
-`hitslop-design` skill.
+Use `<Slop {document}>` from `@hitslop/document/svelte`; optional inline exportView and icon snippets mount only during capture. Keep markup together in App.svelte unless a separate component helps. Build/register generate Quick Look artwork through the native helper, without bundling Loro. Register backs up and replaces an existing stateless master only after a successful complete build.

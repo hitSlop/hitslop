@@ -129,27 +129,21 @@ struct SlopDocumentAssets: Sendable {
 
     public static func targetPNGData(session: SlopRuntimeSession, target: SlopRenderTarget) async throws -> Data? {
         await acquire(session)
-        defer { release(session) }
+        defer { session.engine.capturing = false; release(session) }
+        session.engine.capturing = true
+        try await session.flush()
         try Task.checkCancellation()
         let token = UUID().uuidString, originalFrame = session.webView.frame
         let background = session.webView.value(forKey: "drawsBackground") as? Bool ?? true
         defer { session.webView.setValue(background, forKey: "drawsBackground") }
         do {
             session.webView.frame.size = CGSize(width: max(512, originalFrame.width), height: max(512, originalFrame.height))
-            _ = try await begin(session.webView, token: token, mode: "icon")
-            let value = try await session.webView.callAsyncJavaScript(#"""
-                const matches = [...document.querySelectorAll('[data-slop-render="icon"]')];
-                if (!matches.length) return null;
-                if (matches.length !== 1) return {count:matches.length};
-                const rect = matches[0].getBoundingClientRect();
-                return {x:rect.x,y:rect.y,width:rect.width,height:rect.height};
-                """#, arguments: [:], in: nil, contentWorld: .page)
-            guard let value = value as? [String: Any] else {
+            let value = try await begin(session.webView, token: token, mode: "icon")
+            guard value["dedicated"] as? Bool == true else {
                 session.webView.frame = originalFrame
                 try await restore(session.webView, token: token)
                 return nil
             }
-            if value["count"] != nil { throw SlopPackageError.invalid("Expected one icon capture target") }
             let rect = try geometry(value)
             guard rect.width > 0, abs(rect.width - rect.height) < 0.5,
                   rect.minX >= -0.5, rect.minY >= -0.5,
@@ -182,7 +176,9 @@ struct SlopDocumentAssets: Sendable {
 
     private static func capture(session: SlopRuntimeSession, output: CaptureOutput) async throws -> Data {
         await acquire(session)
-        defer { release(session) }
+        defer { session.engine.capturing = false; release(session) }
+        session.engine.capturing = true
+        try await session.flush()
         try Task.checkCancellation()
         let token = UUID().uuidString, originalFrame = session.webView.frame
         let isPreview = output == .previewPNG

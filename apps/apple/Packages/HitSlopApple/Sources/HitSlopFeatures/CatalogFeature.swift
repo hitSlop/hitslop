@@ -101,7 +101,13 @@ public extension DependencyValues {
         public var recentsGeneration = 0
         public init() {}
         public var visibleEntries: [CatalogEntry] {
-            let items = switch filter { case .all, .category: hosted; case .myTemplates: local; case .recents: recents }
+            let items: [CatalogEntry]
+            switch filter {
+            case .all: items = local + hosted
+            case .category(let category): items = (local + hosted).filter { $0.categories.contains(category) }
+            case .myTemplates: items = local
+            case .recents: items = recents
+            }
             return searchTerm.isEmpty ? items : items.filter { $0.searchableText.contains(searchTerm) }
         }
         public var selectedEntry: CatalogEntry? { visibleEntries.first { $0.id == selectedID } }

@@ -54,3 +54,11 @@ _vibe/
 /archive/
 /examples/archive/
 /Prototypes/
+
+/generated/
+/apps/apple/Packages/HitSlopApple/Sources/HitSlopFoundation/Resources/
+.v1-build-test-*/
+
+/apps/apple/Packages/HitSlopApple/Sources/HitSlopWasm/Resources/
+
+**/.crust/

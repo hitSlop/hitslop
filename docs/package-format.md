@@ -1,109 +1,26 @@
-# Package format
+# Package format v1
 
-Read `manifest.json` first. It is the complete declarative contract for
-identity, discovery, and initial native presentation; storage is implicit.
-
-## Authored source
-
-A source project normally contains:
+Built packages require `runtime: "hitslop-v1"` in the manifest, together with author, slug, title, description, categories and presentation. The manifest remains TypeBox-defined; generation emits native Codable models and JSON Schema.
 
 ```text
-my-app/
-├── manifest.json
-├── package.json
-├── AGENTS.md                    portable coding-agent notes; platform skills live in ~/.hitslop/skills
-├── schema.ts                    required when using createDocument
-├── initial.ts                   explicit document defaults, emitted as assets/initial.json
-├── theme.ts                     optional single-source theme definition
-├── document-guide.md            optional app-specific agent guidance
-├── index.html
-├── vite.config.ts
-├── src/
-└── assets/                      optional immutable runtime files
+Example.slop/
+  manifest.json
+  app.html
+  assets/                       immutable application code, CSS and assets
+  state.schema.json             {format:1, root:...} document descriptor
+  initial.json                  immutable creation-only values
+  .agents/skills/hitslop-document/SKILL.md
+  QuickLook/
+    Preview.png                 generated template preview; refreshed in documents
+    Icon.png                    immutable authored icon, when supplied
+  state/                        writable documents only
+    document.sqlite             format 1, checkpoint and updates
+    writer.lock                 permanent OS lock inode
+    host.lock                   live native discovery
 ```
 
-It may also contain an `Icon.svelte` component and local
-screenshots. It must not contain real document stores.
+The host supplies runtime/index.js and Loro resources through `slop://app/__runtime__/`; they are never bundled into the document. Author sources, editable stylesheets, node_modules, caches, state and stores never belong in templates. Embedded guidance is useful but optional when opening.
 
-## Runtime template
+A build or registered master is immutable. Copy it to a user-selected path before opening. Initial values seed only a new database. Schema changes require new documents. Old packages and databases are rejected, not imported or upgraded.
 
-```text
-my-app.slop/
-├── manifest.json              immutable
-├── app.html                   generated and immutable
-├── data.schema.json           optional generated data contract
-├── assets/                    optional and immutable
-│   └── theme.css              optional public --slop-* defaults
-├── .agents/skills/hitslop-document/
-│   ├── SKILL.md               canonical, immutable document instructions
-│   └── references/
-│       └── app-guide.md       optional publisher guide, maximum 32 KiB
-└── QuickLook/
-    ├── Preview.png            mutable host snapshot; required to publish
-    └── Icon.png               immutable Finder/catalog artwork
-```
-
-Generated JavaScript, workers, fonts, and WASM also live under immutable
-`assets/`. Structural styles remain in `app.html`. Every new CLI build embeds
-document guidance, but its text or absence is never a prerequisite for opening
-a document. Publishing validation accepts optional UTF-8 guidance as well.
-
-Asset preservation is not a guarantee of browser API support: the current
-Apple host permits blob workers, not direct custom-scheme worker URLs. Use
-Vite's inline worker mode for now; external worker execution needs a separate
-native compatibility test before being advertised as supported.
-
-A writable document may lazily add canonical data:
-
-```text
-state/document.sqlite         authoritative JSON, revision, retry receipts
-state/share-bootstrap.zip     frozen immutable app for share retries
-stores/data.json               $slop revision envelope plus data
-stores/media/<sha256>
-stores/theme.css               optional owner theme overrides
-Icon\r                         Finder-managed local metadata on macOS
-```
-
-Templates and published artifacts must never contain `stores/`, `state/`, `Icon\r`,
-source, `node_modules`, build directories,
-`style.css`, or `document.json`.
-
-## Manifest
-
-A minimal v1 manifest:
-
-```json
-{
-  "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
-  "author": {
-    "name": "Jordan Singer",
-    "url": "https://example.com"
-  },
-  "slug": "tiny-counter",
-  "title": "Tiny Counter",
-  "description": "Counts one small thing.",
-  "categories": ["utilities"],
-  "presentation": { "width": 560, "height": 420 }
-}
-```
-
-Choose one or two controlled categories: `productivity`, `utilities`,
-`finance`, `media`, `games`, `developer-tools`, `education`,
-`business`, `personal`, or `other`.
-
-`author.name` is required and travels with the artifact. `author.url` is an
-optional public HTTP(S) URL. Author attribution is intentionally separate from
-the publisher signing key: the manifest says who made the work, while the key
-proves who controls its catalog releases.
-
-There is intentionally no document ID, release lineage, entry path, storage
-declaration, tags, seed data, or runtime version. Publisher ownership and
-releases live outside the artifact. Copying a template preserves the manifest
-byte-for-byte.
-
-## Immutability rule
-
-In a document, treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`,
-`.agents/`, and `QuickLook/Icon.png` as immutable. The host may atomically
-update stores, refresh `QuickLook/Preview.png`, and manage local filesystem
-metadata.
+The existing native host retains frameless slop windows, the hover toolbar, masks, PNG skins, resizability and transparent backgrounds.

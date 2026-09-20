@@ -1,5 +1,5 @@
 import * as Type from "typebox";
-import { DocumentIdSchema } from "./room.js";
+const DocumentIdSchema = Type.String({ minLength: 1, maxLength: 80, pattern: "^[a-zA-Z0-9_-]+$" });
 import { Sha256Schema } from "./publish.js";
 
 export const SharedDocumentFieldsSchema = Type.Object(

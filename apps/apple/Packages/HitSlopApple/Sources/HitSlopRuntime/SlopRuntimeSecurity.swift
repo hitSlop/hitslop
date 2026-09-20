@@ -21,31 +21,4 @@ enum SlopRuntimeSecurity {
     static func isDocument(_ url: URL) -> Bool {
         isOrigin(url) && ["", "/", "/index.html"].contains(url.path) && url.query == nil
     }
-    static func requestLimit(_ method: SlopBridgeMethod) -> Int {
-        switch method {
-        case .mediaAdd: 36 * 1024 * 1024
-        case .documentExecute: 1024 * 1024
-        default: 64 * 1024
-        }
-    }
-    static func publicFailure(_ error: Error) -> SlopBridgeFailure {
-        if let error = error as? SlopLimitError { return SlopBridgeFailure(.limitExceeded, error.message) }
-        if let error = error as? SlopBridgeFailure { return error }
-        if error is CancellationError { return SlopBridgeFailure(.closed, "Document session is closed") }
-        if let error = error as? SlopDocumentError {
-            return SlopBridgeFailure(.validationFailed, error.limitMessage ?? "Document change could not be applied; review the document in hitSlop")
-        }
-        return SlopBridgeFailure(.storageError, "The host could not complete this operation")
-    }
-}
-
-/// Revocation also reaches work waiting on the document actor or storage queue.
-final class SlopRequestLease: @unchecked Sendable {
-    private let lock = NSLock()
-    private var active = true
-    func invalidate() { lock.lock(); defer { lock.unlock() }; active = false }
-    func check() throws {
-        lock.lock(); defer { lock.unlock() }
-        guard active else { throw SlopBridgeFailure(.closed, "Document session is closed") }
-    }
 }

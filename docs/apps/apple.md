@@ -1,82 +1,34 @@
 # Apple apps and Swift package
 
-`apps/apple` contains one Xcode project with a thin macOS app target.
-Shared implementation lives in
-`apps/apple/Packages/HitSlopApple`, a Swift 6 package supporting macOS 14 and
-iOS 17.
+`apps/apple` contains the existing macOS app and the Swift 6 package in `Packages/HitSlopApple`. Preserve its client target graph.
 
-## Targets
+- **HitSlopCore** validates packages, generated platform contracts, local paths, and copies.
+- **HitSlopWasm** hosts the pinned JS/WASM document runtime, opaque SQLite storage, exclusive writer ownership, and per-document sockets.
+- **HitSlopRuntime** integrates document sessions with the client and retains document creation and API infrastructure.
+- **HitSlopHost** owns AppKit document windows, masks, toolbar, native capture, previews, and Finder icons.
+- **HitSlopCatalog** and **HitSlopFeatures** preserve the local catalog, recents, and TCA client flows.
+- **HitSlopFirebase** and **HitSlopRegistry** retain Firebase and generated OpenAPI integrations; hosted loading and sharing remain deferred.
+- **HitSlopNativeCLI** reads, edits, creates, opens, and exports documents without requiring Node/Bun.
 
-- **HitSlopDocumentEngine** owns the trusted bundled TypeScript evaluator, with one
-  JavaScriptCore VM per document on a dedicated thread. Its string ABI preserves
-  arbitrary JSON; Swift decodes only fixed metadata. Closing releases the VM.
+## Sessions and capture
 
-- **HitSlopCore** validates packages/manifests, copies documents safely,
-  and manages document media. It is platform-neutral apart from system image facilities.
-- **HitSlopRuntime** hosts the WebKit scheme/bridge, JSON storage,
-  command/SQLite ownership, sharing, document creation, and guest readiness.
-- **HitSlopFirebase** configures Analytics, Crashlytics, App Check, and the
-  Firebase authentication.
-- **HitSlopRegistry** presents the public Cloudflare catalog using the generated
-  oRPC/OpenAPI client. D1 owns catalog metadata and creation counts; R2 owns artifacts.
-  Catalog reads follow every pagination cursor before filtering and sorting.
-- **HitSlopHost** is macOS AppKit: windows, masks, hidden rendering, Quick Look
-  images, PNG/PDF export, and Finder custom icons.
-- **HitSlopCatalog** is the macOS catalog UI and immutable local/hosted template
-  cache.
-- **HitSlopNativeCLI** exposes native validation/capture operations to the
-  TypeScript CLI.
+Use the `open` factories for client flows. Each visible document owns one live Loro replica in its WebView. A closed-document CLI edit uses an engine-only invisible WebKit session with the same runtime and no authored app code. Swift never evaluates application schemas or maintains a second document engine.
 
-AppKit code must remain in Host, Catalog, or NativeCLI so Core/Runtime continue
-to build for iOS.
+The writer lock is authoritative. CLI mutations use the live owner's socket when busy, and acknowledge persistence before returning success. HitSlopHost attaches the live export callback without making HitSlopWasm depend on the renderer. See [CLI](../cli.md).
 
-## Opening a document
+Normal close commits drafts and flushes before releasing ownership. Failed saves retain ownership and native retry UI. Await `closeAndWait()` before removing temporary packages. Successful close destroys the WebView; failed background teardown retains its snapshot.
 
-The host validates the package, derives a Finder icon from immutable
-`QuickLook/Icon.png` where appropriate, creates an ephemeral WebView,
-serves only allowed immutable resources, and wires the bridge to canonical
-stores. Closing a macOS document uses a separate hidden renderer to refresh
-preview assets; it does not put the interactive window into capture mode.
+Inline export/icon snippets share the existing document. Live export preserves transient view selection; closed export renders a disposable saved-state copy. Closing refreshes QuickLook previews and Finder icon metadata without rewriting the immutable icon asset. See [capture](../capture.md).
 
-Use the async `open` factories on `SlopRuntimeSession`, `SlopOpenedDocument`, and
-`SlopDocumentWindowController` in UI flows. Package validation, database opening,
-and engine setup run on the bounded `SlopPreparation` queue; WebKit and AppKit
-construction stays on the main actor. Synchronous initializers remain available
-for compatibility. The engine thread runs at user-initiated QoS; evaluation
-inside a SQLite transaction remains synchronous to preserve atomic commits.
+## Copies and local catalog
 
-`finish()` preserves the guest flush barrier for normal close. For disposal,
-await `closeAndWait()` before removing package files. The synchronous `close()`
-only starts that teardown. Background captures await disposal on success,
-failure, and cancellation; a failed teardown retains the temporary snapshot.
-
-## Copies and caches
-
-Every catalog path duplicates a validated immutable master to a user-selected
-location. The destination becomes writable only after the copy is complete.
-Cache keys include publisher, slug, and release; downloads are hash-verified
-before becoming masters. Nothing under `~/.hitslop/templates` is a writable
-user document. After each app update, macOS refreshes
-`~/.hitslop/skills` from bundled `hitslop-authoring`, `hitslop-design`, and
-`hitslop-document` and links those names into `~/.agents/skills` and
-`~/.claude/skills`. Subsequent launches only repair missing skills and links,
-preserving explicit CLI updates. Refresh runs in the background; failures are
-logged and retried on a later launch without blocking documents. Existing user
-directories and unrelated links are never replaced.
-
-## Deferred platforms
-
-iOS and the SQLite document lab are archived under `archive/apple`, outside the
-active Xcode project and CI. iCloud locations are rejected before a writable
-session or destination is created. Live sharing uses rooms, not file syncing.
+Templates under `~/.hitslop/templates` remain immutable masters. Create a writable copy to edit. Local catalog discovery and recents work offline. Agent skills are packaged and installed by the TypeScript CLI (`bun run skills:build`, then `bun slop skills`); the native app does not manage skill links. Synced folders, iCloud, hosted loading, sharing, and media import remain deferred.
 
 ## Development
 
 ```sh
-swift test --package-path apps/apple/Packages/HitSlopApple
-swift build --package-path apps/apple/Packages/HitSlopApple --product hitslop-native
+bun run build
+bun run swift:test
 ```
 
-The macOS app is version `1.0.5`. Release signing,
-notarization, Sparkle, and App Store credentials are local/CI secrets, never
-repository files.
+Build generates runtime resources, compiles the helper, then captures both active templates. `scripts/embed-hitslop-native.sh` embeds the helper and matching resource bundles. Signing, notarization, Sparkle, and store credentials remain local/CI secrets.

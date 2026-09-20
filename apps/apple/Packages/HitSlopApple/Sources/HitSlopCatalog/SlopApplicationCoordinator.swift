@@ -18,7 +18,6 @@ import SwiftUI
     private var catalogWindow: NSWindowController?
     private var observation: ObserveToken?
     private var documentObservations: [UUID: ObserveToken] = [:]
-    private var sharing: [UUID: DocumentSharing] = [:]
     private var invitationPanel: NSPanel?
 
     // NotificationCenter removal is thread-safe; registration and all callbacks stay on MainActor.
@@ -69,23 +68,10 @@ import SwiftUI
     public func handleAuthenticationURL(_ url: URL) -> Bool { accountServices.handle(url) }
     public func handleSharingURL(_ url: URL) -> Bool {
         guard url.scheme == "hitslop" else { return false }
-        guard let invitation = SharingInvitation(url: url) else {
-            store.send(.externalFailure("This hitSlop invitation is invalid.")); return true
-        }
-        let model = JoinSharingModel(
-            account: store.scope(state: \.account, action: \.account),
-            invitation: invitation,
-            api: cloudAPI,
-            opened: { [weak self] in self?.openDocument($0) }
-        )
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 300), styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        panel.isReleasedWhenClosed = false; panel.title = "Join document"
-        panel.contentViewController = NSHostingController(rootView: JoinSharingView(model: model))
-        model.finished = { [weak panel] in panel?.close() }
-        invitationPanel?.close(); invitationPanel = panel
-        panel.center(); panel.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        store.send(.externalFailure("Document sharing is not available in this local release."))
         return true
     }
+
     private var cloudAPI: SlopCloudAPI {
         SlopCloudAPI(origin: catalogServices.catalogURL) { [accountServices] in try await accountServices.idToken() }
     }
@@ -125,7 +111,7 @@ import SwiftUI
             Task { do {
                 let package = try await SlopPreparation.run {
                     let package = try SlopPackage(rootURL: canonical)
-                    try package.validateAsTemplate()
+                    try package.validateAsTemplate(requirePreview: false)
                     return package
                 }
                 guard store.quitPhase == .running else { return }
@@ -157,17 +143,7 @@ import SwiftUI
         controller.onCommand = { [weak self] command in self?.send(.command(command.featureCommand), to: id) }
         controller.onRuntimeReady = { [weak self] in self?.send(.runtimeReady, to: id) }
         controller.onRuntimeFailure = { [weak self] message in self?.send(.runtimeFailed(message), to: id) }
-        let sharing = DocumentSharing(controller: controller, account: store.scope(state: \.account, action: \.account), api: cloudAPI)
-        self.sharing[id] = sharing
-        if presentsWindows { sharing.start() }
-        controller.onShare = { sharing.show() }
-        controller.onPrepareClose = { await sharing.pauseAndDrain() }
-        controller.onCloseCancelled = { sharing.reconnect() }
-        controller.onClose = { [weak self] in
-            self?.sharing[id]?.stop()
-            self?.sharing[id] = nil
-            self?.documentObservations.removeValue(forKey: id)
-        }
+        controller.onClose = { [weak self] in self?.documentObservations.removeValue(forKey: id) }
         if let document = store.scope(state: \.documents[id: id], action: \.documents[id: id]) {
             documentObservations[id] = observe { [weak self, weak controller] in
                 controller?.updatePresentation(pinned: document.isPinned, commandsEnabled: document.acceptsCommands, runtimeError: document.runtimeError)

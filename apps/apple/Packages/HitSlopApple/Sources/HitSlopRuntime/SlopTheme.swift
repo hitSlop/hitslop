@@ -57,12 +57,12 @@ enum SlopTheme {
     }
 
     static func validate(_ css: String, contract: Set<String>) throws {
-        guard try properties(css).isSubset(of: contract) else { throw SlopBridgeFailure(.validationFailed, "Theme override contains unknown tokens") }
+        guard try properties(css).isSubset(of: contract) else { throw SlopPackageError.invalid( "Theme override contains unknown tokens") }
         let regex = try NSRegularExpression(pattern: #"var\(\s*(--slop-[a-z0-9-]+)"#, options: [.caseInsensitive])
         let text = css as NSString
         for match in regex.matches(in: css, range: NSRange(location: 0, length: text.length)) {
-            guard contract.contains(text.substring(with: match.range(at: 1))) else { throw SlopBridgeFailure(.validationFailed, "Theme references an unknown token") }
+            guard contract.contains(text.substring(with: match.range(at: 1))) else { throw SlopPackageError.invalid( "Theme references an unknown token") }
         }
     }
-    private static func invalid() -> SlopBridgeFailure { .init(.validationFailed, "Theme must contain one :root rule with nonempty --slop-* declarations") }
+    private static func invalid() -> SlopPackageError { .invalid( "Theme must contain one :root rule with nonempty --slop-* declarations") }
 }

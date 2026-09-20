@@ -1,129 +1,27 @@
-# hitSlop
+# hitSlop v1
 
-> Tiny apps. Big ideas. Your data stays yours.
-
-hitSlop is a native home for small, personal, local-first web apps. Each
-`.slop` is a document you can open, move, duplicate, share, commit, and keep—not
-an account you have to maintain. The app owns its interface; the host owns
-durable JSON, document media, previews, export, and native window behavior.
-
-<p align="center">
-  <img src="apps/landing/public/assets/desktop-hero-current.png" width="80%" alt="hitSlop on macOS">
-</p>
-
-A slop can feel like **paper** (invoice, recipe, résumé), an **instrument**
-(timer, picker, mixer), or a **skin** (a tiny object with its own silhouette).
-Those are design directions, not runtime frameworks: the package contract is
-plain HTML plus host data.
-
-## Same file, same truth
-
-Slops are designed for bidirectional editing. Change a value in the rendered
-interface and its local store updates. Change the JSON data on disk
-and an open slop can follow the new revision. You and your AI can work on the
-same ordinary local data without a proprietary cloud record in the middle.
-
-Start from an existing slop and fork it into the tool you actually want. Ask
-your AI to change the design, add a field, or use a different store; keep the
-source project and build another portable `.slop`.
-
-Publishing does not require hosting a web app, provisioning a database, or
-building authentication. The catalog receives a signed, source-free runtime
-artifact, while personal document stores stay out of the published template.
-When the result—not the app—is what you need to share, export the current
-document as a high-resolution PNG or a PDF with selectable text and vector
-output.
-
-## Make one
-
-Bun and the Svelte template are the supported v1 authoring path:
+Local mini apps with a shared Loro document runtime, native SQLite persistence, and one operation language for UI and CLI. This is a fresh prelaunch format: old documents and published templates are intentionally unsupported.
 
 ```sh
-bunx @hitslop/cli init my-tiny-app
-cd my-tiny-app
 bun install
-bun run dev
 bun run build
-bun run register
-# when it is ready for the public catalog:
-bun run publish
+bun run check
+bun run test
+bun run swift:build
+bun run swift:test
+bun slop dev examples/slops/quick-checklist
 ```
 
-The CLI scaffolds a Svelte source project, previews it with disposable in-memory
-data, and builds a source-free `dist/<slug>.slop`. The runtime remains framework-neutral;
-the React adapter is archived while supported authoring focuses on Svelte.
-
-Read [Authoring a slop](docs/authoring.md) for the full workflow and
-[Designing tiny software](docs/presentation.md) for object families,
-transparent backgrounds, resizing, icon art, and export-safe layouts.
-
-## What is inside a `.slop`?
-
-```text
-tiny-app.slop/
-├── manifest.json
-├── app.html
-├── data.schema.json            optional, generated
-├── assets/                    optional, immutable
-├── .agents/skills/hitslop-document/
-├── state/document.sqlite        host-owned JSON state and receipts
-├── stores/                    optional, host-owned document data
-│   ├── data.json
-│   ├── media/
-│   └── theme.css
-└── QuickLook/
-    ├── Preview.png
-    └── Icon.png
-```
-
-Authored templates and published artifacts never contain source, dependencies,
-build caches, seed stores, editable stylesheets, unsupported stores, or Finder's
-local `Icon\r` metadata. Storage is implicit: use JSON with optional document attachments, or no persistence. See [Package format](docs/package-format.md) and
-[Storage](docs/storage.md).
-
-## The system at a glance
-
-- `apps/apple` — the macOS document host, catalog UI, Quick Look, export,
-  local SQLite persistence and sharing, and the native capture CLI.
-- `apps/landing` — the static Astro site served at `hitslop.com`.
-- `apps/cloudflare` — Worker API, D1 catalog, R2 artifacts, and Durable Object
-  rooms for shared document sync.
-- `packages/api` — typed HTTP contracts, oRPC client, and OpenAPI for native generation.
-- `packages/cli` — create, validate, preview, build, register, sign, and publish.
-- `packages/runtime` — the framework-neutral browser bridge.
-- `packages/svelte` — reactive adapters and optional icon/export components.
-- `packages/schema` — authoritative TypeBox schemas and generated Swift/JSON
-  boundaries.
-- `examples/slops` — Quick Checklist, the sole active example; `examples/archive` preserves
-  other examples locally. Archive directories are ignored by Git and excluded
-  from the open-source checkout.
-
-The hosted catalog is the convenient default. The protocol and services are
-open, and [self-hosting](docs/self-hosting.md) is documented.
-
-## Work on hitSlop
+For the macOS application, run `xcodegen generate --spec apps/apple/project.yml`, then open `apps/apple/hitSlop.xcodeproj`. Register Checklist and Expenses with `bun slop register SOURCE`; the existing catalog discovers templates under `~/.hitslop/templates`. File → New from Template opens the browser. File → Export provides PNG and PDF.
 
 ```sh
-bun install
-bun run test:local
+bun slop build examples/slops/quick-checklist
+bun slop register examples/slops/quick-checklist
+bun slop schema /path/to/Document.slop
+bun slop get /path/to/Document.slop
+bun slop apply /path/to/Document.slop --op '{"type":"text.replace","path":["title"],"value":"Packing"}'
 ```
 
-That first-launch gate checks generated schemas, the public TypeScript/Svelte
-packages, clean-room npm tarballs, Cloudflare package ingestion, documentation and
-tracked-file hygiene, the landing build, and the Swift package.
-`bun run examples:check` checks Quick Checklist; paused examples stay excluded. If
-you are changing platform TypeBox schemas, run `bun run schema:generate` first.
+See [architecture](docs/architecture.md), [authoring](docs/authoring.md), [storage](docs/storage.md), [package format](docs/package-format.md), and [capture](docs/capture.md).
 
-Start with the [documentation map](docs/README.md), then read
-[Architecture](docs/architecture.md), [Repository guide](docs/repository.md),
-and [Contributing](CONTRIBUTING.md).
-
-The MVP authoring path is macOS + Svelte + JSON, demonstrated by Quick Checklist.
-The macOS app is at `1.0.5` and public npm packages are at `0.3.0`.
-SQLite stores authoritative JSON and command receipts for local documents. iOS is archived; iCloud document
-locations are unsupported. Live sharing uses Cloudflare rooms.
-
-## License
-
-MIT © 2026 hitSlop contributors. See [LICENSE](LICENSE) and
-[third-party notices](THIRD_PARTY_NOTICES.md).
+The active workspace is `packages/document`, `packages/schema`, `packages/cli`, and `examples/slops`. Apple retains the full macOS client, TCA features, local catalog, frameless windows and hover toolbar, Firebase, Sparkle, OpenAPI client generation, and Swift CLI. The new `HitSlopWasm` target supplies the document engine. Only hosted catalog loading and document sharing are disabled. Installed document editing uses `hitSlop.app/Contents/Helpers/hitslop-native`, with no Node/Bun requirement. `deferred/` retains retired command-engine tests and deferred tooling. Collaboration, media imports, migrations, history pruning, and synced folders are out of scope.

@@ -2,7 +2,6 @@ import Foundation
 import HTTPTypes
 import HitSlopAPI
 import HitSlopCore
-import HitSlopDocumentEngine
 import OpenAPIRuntime
 import OpenAPIURLSession
 
@@ -39,11 +38,6 @@ extension SlopCatalogTemplate {
 extension SlopSharedDocument {
   public var inviteURL: URL? {
     invite.flatMap { URL(string: "hitslop://join/\(documentId)#\($0)") }
-  }
-}
-extension SlopRoomSeed {
-  public func validatedTransfer(documentId: String, schema: String) throws -> StateSnapshot {
-    return try StateEngine.utility(.seed, [json, documentId, schema])
   }
 }
 
@@ -115,23 +109,7 @@ public struct SlopCloudAPI: Sendable {
         upTo: 25 * 1024 * 1024)
     }
   }
-  public func createDocument(
-    id: String, title: String, slug: String, schema: String, package: Data, seed: StateSnapshot
-  ) async throws -> SlopSharedDocument {
-    try await call {
-      try await client().createDocument(
-        body: .multipartForm(
-          .init([
-            .documentId(.init(payload: .init(body: HTTPBody(id)))),
-            .title(.init(payload: .init(body: HTTPBody(title)))),
-            .slug(.init(payload: .init(body: HTTPBody(slug)))),
-            .schema(.init(payload: .init(body: HTTPBody(schema)))),
-            .seed(.init(payload: .init(body: HTTPBody(Data(seed.json.utf8))))),
-            .package(.init(payload: .init(body: HTTPBody(package)), filename: "\(slug).slop.zip")),
-          ]))
-      ).ok.body.json
-    }
-  }
+
   public func updateInvitation(documentId: String, enabled: Bool) async throws -> SlopSharedDocument
   {
     try await call {

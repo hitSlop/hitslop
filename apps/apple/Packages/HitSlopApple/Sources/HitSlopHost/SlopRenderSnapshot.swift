@@ -21,26 +21,7 @@ final class SlopRenderSnapshot: @unchecked Sendable {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         do {
             url = try SlopDuplicator.duplicate(from: packageURL, to: directory.appendingPathComponent("document.slop"))
-            let source = packageURL.appendingPathComponent("state/document.sqlite")
-            if FileManager.default.fileExists(atPath: source.path) {
-                let target = url.appendingPathComponent("state/document.sqlite")
-                try FileManager.default.removeItem(at: target)
-                try? FileManager.default.removeItem(at: url.appendingPathComponent("state/document.sqlite-journal"))
-                let storage = try SlopCommandStorage(root: packageURL)
-                do {
-                    try storage.backup(to: target)
-                    try storage.close()
-                    storage.engine.close()
-                } catch {
-                    try? storage.close()
-                    storage.engine.close()
-                    throw error
-                }
-                // A file copy and a database backup may observe different commits.
-                // Regenerate the projection from the backed-up history on open.
-                let projection = url.appendingPathComponent("stores/data.json")
-                if FileManager.default.fileExists(atPath: projection.path) { try FileManager.default.removeItem(at: projection) }
-            }
+
         }
         catch { try? FileManager.default.removeItem(at: directory); throw error }
     }
