@@ -7,7 +7,14 @@ A `.slop` is a directory package macOS presents as one document. It carries the 
 
 ## Source is not the runtime package
 
-Authoring source contains `App.svelte`, `styles.css`, `theme.ts`, `schema.ts`, `initial.ts`, `main.ts`, and a package manifest. Build turns that into:
+Authoring source contains `App.svelte`, `styles.css`, `theme.ts`, `schema.ts`, `initial.ts`, `main.ts`, and a package manifest. Authors define theme defaults once in `theme.ts`, using `defineTheme`. The builder generates two files from those same defaults: `assets/theme.css` declares the `--slop-*` CSS variables, and `assets/theme.json` lets the runtime load the declared tokens and apply owner overrides. You do not maintain either generated file.
+
+```text
+theme.ts   ── build ──→ assets/theme.css + assets/theme.json
+styles.css ── build ──→ assets/main.css
+```
+
+The `assets/` folder in the built package contains compiled output and any bundled static resources. Build produces:
 
 ```text
 My.slop/
@@ -27,7 +34,7 @@ My.slop/
   .agents/skills/hitslop-document/
 ```
 
-`assets/theme.css` contains immutable token defaults; `theme.json` exposes their contract. `runtime.json` identifies the required SDK/Loro release. The authored bundle does not contain its own document engine. The host supplies that pinned runtime.
+`assets/theme.css` and `assets/theme.json` are immutable build output from `theme.ts`. `runtime.json` identifies the required SDK/Loro release. The authored bundle does not contain its own document engine. The host supplies that pinned runtime.
 
 ## A writable copy adds state
 
@@ -43,7 +50,7 @@ Loro in the WebView owns the live document. Swift persists opaque checkpoints an
 
 The permanent `writer.lock` is the OS ownership lock: never unlink it. `host.lock` is discovery JSON, not ownership. CLI commands route to the live owner's socket or acquire the writer lock and use an engine-only hidden WebView. Headless editing never loads authored `app.html`.
 
-Theme overrides are separate, bounded platform metadata. Use theme commands rather than editing files underneath a running owner. Duplicating a document preserves its saved content and overrides while creating fresh ownership files.
+Owner changes go into `state/theme.json`, a separate, bounded token object. It contains overrides, not another copy of the authored theme defaults. Use theme commands rather than editing files underneath a running owner. Duplicating a document preserves its saved content and overrides while creating fresh ownership files.
 
 ## Masters and copies
 

@@ -3,7 +3,6 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import AppleIcon from "./AppleIcon.astro";
 import { SITE_LINKS } from "../constants";
-import * as s from "./Hero.css";
 
 const categories = [
   { emoji: "📝", label: "Notes" },
@@ -116,51 +115,720 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
         window.addEventListener("pageshow", sync);
       }
     </script>
-<section class={s.hero} aria-labelledby="hero-title" data-hero>
-  <div class={s.copy}>
-    <p class={s.eyebrow}>
-      <svg class={s.rays} viewBox="0 0 48 46" aria-hidden="true"><path d="m11 7 14 16M5 32l13 4M40 4l-3 15" /></svg>
+<section class="hero-hero" aria-labelledby="hero-title" data-hero>
+  <div class="hero-copy">
+    <p class="hero-eyebrow">
+      <svg class="hero-rays hero-doodle" viewBox="0 0 48 46" aria-hidden="true"><path d="m11 7 14 16M5 32l13 4M40 4l-3 15" /></svg>
       Local-first mini apps for macOS
     </p>
-    <h1 class={s.title} id="hero-title">
-      <span class={s.titleLine}>Tiny apps.</span>
-      <span class={s.titleLine}><span class={s.big}>Big</span> personality.</span>
-      <svg class={s.burst} viewBox="0 0 36 54" aria-hidden="true"><path d="m14 11 9-6M17 27l12 1M13 42l9 7" /></svg>
+    <h1 class="hero-title" id="hero-title">
+      <span class="hero-title-line">Tiny apps.</span>
+      <span class="hero-title-line"><span class="hero-big">Big</span> personality.</span>
+      <svg class="hero-burst hero-doodle" viewBox="0 0 36 54" aria-hidden="true"><path d="m14 11 9-6M17 27l12 1M13 42l9 7" /></svg>
     </h1>
-    <p class={s.subhead}>Interactive docs, tools, and weird little desktop experiments—all in one file.</p>
-    <p class={s.lede}>Each <code class={s.slop}>.slop</code> bundles the app and saved data into one portable file. Keep it local, no account required. Start with Quick Checklist or Small Expenses, then export your work as PNG or PDF.</p>
-    <div class={s.actions}>
-      <a class={s.primary} href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon <svg class={s.actionArrow} viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" /></svg></a>
-      <a class={s.secondary} href="#objects">Try the slops <svg class={s.actionArrow} viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></a>
+    <p class="hero-subhead">Interactive docs, tools, and weird little desktop experiments—all in one file.</p>
+    <p class="hero-lede">Each <code class="hero-slop">.slop</code> bundles the app and saved data into one portable file. Keep it local, no account required. Start with Quick Checklist or Small Expenses, then export your work as PNG or PDF.</p>
+    <div class="hero-actions">
+      <a class="hero-primary hero-action" href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon <svg class="hero-action-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" /></svg></a>
+      <a class="hero-secondary hero-action" href="#objects">Try the slops <svg class="hero-action-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></a>
     </div>
-    <p class={s.meta}><span>macOS 14+ · Signed &amp; notarized</span><span class={s.later}>Windows + iOS coming later</span></p>
-    <ul class={s.benefits} aria-label="Key hitSlop features">
-      <li class={s.benefit}><img class={s.benefitIcon} src="/assets/hero/folder.svg" width="42" height="42" alt="" /><span>Everything<br />in one file</span></li>
-      <li class={s.benefit}><img class={s.benefitIcon} src="/assets/hero/edit.svg" width="42" height="42" alt="" /><span class={s.benefitText}>Editable by<br />you or your AI<svg class={s.littleUnderline} viewBox="0 0 100 9" preserveAspectRatio="none" aria-hidden="true"><path d="M3 6Q46 0 97 4" /></svg></span></li>
-      <li class={s.benefit}><a class={s.benefitLink} href="#export-title"><img class={s.benefitIcon} src="/assets/hero/together.svg" width="42" height="42" alt="" /><span>PNG &amp; PDF<br />export</span></a></li>
+    <p class="hero-meta"><span>macOS 14+ · Signed &amp; notarized</span><span class="hero-later">Windows + iOS coming later</span></p>
+    <ul class="hero-benefits" aria-label="Key hitSlop features">
+      <li class="hero-benefit"><img class="hero-benefit-icon" src="/assets/hero/folder.svg" width="42" height="42" alt="" /><span>Everything<br />in one file</span></li>
+      <li class="hero-benefit"><img class="hero-benefit-icon" src="/assets/hero/edit.svg" width="42" height="42" alt="" /><span class="hero-benefit-text">Editable by<br />you or your AI<svg class="hero-little-underline" viewBox="0 0 100 9" preserveAspectRatio="none" aria-hidden="true"><path d="M3 6Q46 0 97 4" /></svg></span></li>
+      <li class="hero-benefit"><a class="hero-benefit-link" href="#export-title"><img class="hero-benefit-icon" src="/assets/hero/together.svg" width="42" height="42" alt="" /><span>PNG &amp; PDF<br />export</span></a></li>
     </ul>
-    <p class={s.localNote} aria-hidden="true">Small files.<br />Big possibilities.
-      <svg class={s.arrow} viewBox="0 0 70 50"><path d="M4 8c27-11 44 13 53 31m-15-7 17 9 2-17" /></svg>
+    <p class="hero-local-note hero-handwritten" aria-hidden="true">Small files.<br />Big possibilities.
+      <svg class="hero-arrow" viewBox="0 0 70 50"><path d="M4 8c27-11 44 13 53 31m-15-7 17 9 2-17" /></svg>
     </p>
   </div>
-  <figure class={s.picture}>
-    <div class={s.mediaFrame}>
-      <img class={s.poster} src={heroPoster} alt="A colorful Mac desktop with a music player, habit tracker, recipe, notes, focus timer, invoice, and tiny pet app" width="1448" height="1086" fetchpriority="high" />
-      {heroVideo && <video class={s.video} autoplay muted loop playsinline poster={heroPoster} aria-hidden="true"><source src={heroVideo} type="video/mp4" /></video>}
+  <figure class="hero-picture">
+    <div class="hero-media-frame">
+      <img class="hero-poster" src={heroPoster} alt="A colorful Mac desktop with a music player, habit tracker, recipe, notes, focus timer, invoice, and tiny pet app" width="1448" height="1086" fetchpriority="high" />
+      {heroVideo && <video class="hero-video hero-poster" autoplay muted loop playsinline poster={heroPoster} aria-hidden="true"><source src={heroVideo} type="video/mp4" /></video>}
     </div>
-    <svg class={s.starsTop} viewBox="0 0 36 75" aria-hidden="true"><path d="M21 3c0 18 4 23 12 25-8 2-12 8-12 23-1-15-5-21-13-23C16 25 20 20 21 3Z" /><path stroke="#f443a1" d="M8 48c0 8 2 11 7 12-5 2-7 4-7 12-1-8-3-10-7-12 4-1 6-4 7-12Z" /></svg>
-    <svg class={s.starsBottom} viewBox="0 0 26 38" aria-hidden="true"><path d="M13 2c0 11 3 15 11 17-8 2-11 6-11 17C12 25 9 21 2 19 9 17 12 13 13 2Z" /></svg>
-    <figcaption class={s.stickyNote} aria-hidden="true">Your ideas,<br />right here.
-      <svg class={s.noteArrow} viewBox="0 0 70 50"><path d="M8 40c30 3 45-11 48-33M46 18 57 5l4 18" /></svg>
+    <svg class="hero-stars-top hero-doodle" viewBox="0 0 36 75" aria-hidden="true"><path d="M21 3c0 18 4 23 12 25-8 2-12 8-12 23-1-15-5-21-13-23C16 25 20 20 21 3Z" /><path stroke="#f443a1" d="M8 48c0 8 2 11 7 12-5 2-7 4-7 12-1-8-3-10-7-12 4-1 6-4 7-12Z" /></svg>
+    <svg class="hero-stars-bottom hero-doodle" viewBox="0 0 26 38" aria-hidden="true"><path d="M13 2c0 11 3 15 11 17-8 2-11 6-11 17C12 25 9 21 2 19 9 17 12 13 13 2Z" /></svg>
+    <figcaption class="hero-sticky-note hero-handwritten" aria-hidden="true">Your ideas,<br />right here.
+      <svg class="hero-note-arrow hero-arrow" viewBox="0 0 70 50"><path d="M8 40c30 3 45-11 48-33M46 18 57 5l4 18" /></svg>
     </figcaption>
   </figure>
-  <div class={s.shelf} data-category-shelf aria-label="Things you can make with hitSlop">
-    <button class={s.shelfButton} type="button" data-shelf-direction="-1" aria-label="Scroll categories left" aria-controls="category-list"><svg class={s.controlIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
-    <ul class={s.categoryList} id="category-list" data-category-list>
-      {categories.map((item) => <li class={s.category}><span class={s.emoji} aria-hidden="true">{item.emoji}</span>{item.label}</li>)}
-      {categories.map((item) => <li class={s.category} data-repeat aria-hidden="true"><span class={s.emoji}>{item.emoji}</span>{item.label}</li>)}
+  <div class="hero-shelf" data-category-shelf aria-label="Things you can make with hitSlop">
+    <button class="hero-shelf-button" type="button" data-shelf-direction="-1" aria-label="Scroll categories left" aria-controls="category-list"><svg class="hero-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
+    <ul class="hero-category-list" id="category-list" data-category-list>
+      {categories.map((item) => <li class="hero-category"><span class="hero-emoji" aria-hidden="true">{item.emoji}</span>{item.label}</li>)}
+      {categories.map((item) => <li class="hero-category" data-repeat aria-hidden="true"><span class="hero-emoji">{item.emoji}</span>{item.label}</li>)}
     </ul>
-    <button class={s.shelfButton} type="button" data-shelf-direction="1" aria-label="Scroll categories right" aria-controls="category-list"><svg class={s.controlIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
-    <button class={s.shelfButton} type="button" data-shelf-pause data-paused="false" aria-label="Pause category scrolling" aria-controls="category-list"><svg class={s.pauseIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14" /></svg><svg class={s.playIcon} viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z" /></svg></button>
+    <button class="hero-shelf-button" type="button" data-shelf-direction="1" aria-label="Scroll categories right" aria-controls="category-list"><svg class="hero-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7" /></svg></button>
+    <button class="hero-shelf-button" type="button" data-shelf-pause data-paused="false" aria-label="Pause category scrolling" aria-controls="category-list"><svg class="hero-pause-icon hero-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14" /></svg><svg class="hero-play-icon hero-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z" /></svg></button>
   </div>
 </section>
+
+<style>
+.hero-hero {
+  position: relative;
+  isolation: isolate;
+  color: #10132c;
+  font-family: "HitSlop Sans", sans-serif;
+  width: min(1800px, 100%);
+  margin: 0 auto;
+  padding: 42px clamp(24px, 4vw, 64px) 28px;
+  display: grid;
+  gap: 32px;
+  align-items: center;
+}
+
+.hero-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc((100% - 100vw) / 2);
+  pointer-events: none;
+  background: radial-gradient(ellipse at 73% 14%, #e8e2ff 0, transparent 53%), radial-gradient(ellipse at 28% 67%, #fff0fa 0, transparent 48%), radial-gradient(ellipse at 90% 90%, #e5fbfa 0, transparent 44%);
+}
+
+@media screen and (min-width: 1100px) {
+  .hero-hero {
+    grid-template-columns: minmax(0, 43fr) minmax(0, 57fr);
+    gap: 22px 36px;
+    padding-top: 32px;
+    padding-bottom: 24px;
+  }
+}
+
+@media screen and (min-width: 1100px) and (max-height: 850px) {
+  .hero-hero {
+    padding-top: 24px;
+    padding-bottom: 16px;
+    gap: 16px 28px;
+  }
+}
+
+@media screen and (max-width: 599px) {
+  .hero-hero {
+    padding: 36px 24px 24px;
+    gap: 28px;
+  }
+}
+
+.hero-copy {
+  position: relative;
+  min-width: 0;
+  z-index: 2;
+}
+
+.hero-eyebrow {
+  position: relative;
+  margin: 0 0 16px;
+  padding-left: 4px;
+  color: #6c16ed;
+  font-size: clamp(.7rem, .9vw, .85rem);
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.hero-title {
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+  font-family: "HitSlop Display", "Arial Rounded MT Bold", sans-serif;
+  font-size: clamp(4rem, 8vw, 6.5rem);
+  font-weight: 400;
+  line-height: .98;
+  letter-spacing: -.025em;
+  text-wrap: initial;
+}
+
+@media screen and (min-width: 1100px) {
+  .hero-title {
+    font-size: clamp(4rem, 5.55vw, 6.3rem);
+  }
+}
+
+@media screen and (min-width: 1100px) and (max-height: 850px) {
+  .hero-title {
+    font-size: clamp(4rem, 5.25vw, 5.7rem);
+  }
+}
+
+@media screen and (max-width: 599px) {
+  .hero-title {
+    font-size: clamp(3.05rem, 11.3vw, 4.25rem);
+  }
+}
+
+.hero-title-line {
+  display: block;
+}
+
+.hero-big {
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  color: #6c16ed;
+  transform: rotate(-3deg);
+}
+
+.hero-big::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -7%;
+  right: -4%;
+  bottom: 1%;
+  height: .28em;
+  border-radius: 48% 35% 43% 28%;
+  background: #ffe56f;
+  transform: rotate(-5deg);
+}
+
+.hero-subhead {
+  margin: 24px 0 0;
+  max-width: 29ch;
+  font-size: clamp(1.25rem, 1.65vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.025em;
+}
+
+@media screen and (min-width: 1100px) and (max-height: 850px) {
+  .hero-subhead {
+    margin-top: 20px;
+    font-size: clamp(1.25rem, 1.6vw, 1.6rem);
+  }
+}
+
+.hero-lede {
+  margin: 16px 0 0;
+  max-width: 53ch;
+  color: #4e527a;
+  font-size: clamp(1rem, 1.15vw, 1.16rem);
+  line-height: 1.5;
+}
+
+@media screen and (min-width: 1100px) and (max-height: 850px) {
+  .hero-lede {
+    margin-top: 12px;
+  }
+}
+
+.hero-slop {
+  color: #10132c;
+  font-weight: 700;
+  font-size: .95em;
+}
+
+.hero-actions {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media screen and (min-width: 1100px) and (max-height: 850px) {
+  .hero-actions {
+    margin-top: 20px;
+  }
+}
+
+@media screen and (max-width: 599px) {
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+.hero-action {
+  min-height: 56px;
+  padding: 0 clamp(16px, 1.6vw, 26px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid;
+  border-radius: 20px;
+  font-size: clamp(.9rem, 1.05vw, 1.05rem);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.hero-action:focus-visible {
+  outline: 3px solid #6c16ed;
+  outline-offset: 4px;
+}
+
+.hero-action:active {
+  transform: translateY(2px);
+}
+
+@media (hover: hover) {
+  .hero-action:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.hero-primary {
+  color: #fff;
+  border-color: #303146;
+  background: linear-gradient(#242537, #101320 55%);
+  box-shadow: inset 0 2px 3px #ffffff20, 0 4px 0 #090c1b, 0 8px 16px #26105415;
+}
+
+.hero-secondary {
+  border-color: #dbd0fd;
+  color: #10132c;
+  background: #ffffffde;
+  box-shadow: 0 3px 0 #e5ddf7, 0 7px 18px #6c16ed0d;
+}
+
+.hero-action-arrow {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  margin: 13px 0 0;
+  color: #686286;
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.hero-later::before {
+  content: "·";
+  margin-right: 12px;
+}
+
+.hero-benefits {
+  margin: 26px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  gap: 14px;
+}
+
+@media screen and (min-width: 1100px) and (max-height: 850px) {
+  .hero-benefits {
+    margin-top: 22px;
+  }
+}
+
+@media screen and (max-width: 599px) {
+  .hero-benefits {
+    gap: 12px;
+  }
+}
+
+.hero-benefit {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(.8rem, 1vw, .98rem);
+  font-weight: 700;
+  line-height: 1.32;
+}
+
+.hero-benefit + .hero-benefit {
+  border-left: 1px solid #ded8ee;
+  padding-left: 14px;
+}
+
+@media screen and (max-width: 599px) {
+  .hero-benefit {
+    flex-direction: column;
+    align-items: start;
+    gap: 8px;
+  }
+}
+
+.hero-benefit-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-benefit-link:focus-visible {
+  outline: 3px solid #6c16ed;
+  outline-offset: 4px;
+}
+
+.hero-benefit-link:hover {
+  color: #6c16ed;
+}
+
+@media screen and (max-width: 599px) {
+  .hero-benefit-link {
+    flex-direction: column;
+    align-items: start;
+    gap: 8px;
+  }
+}
+
+.hero-benefit-icon {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+@media screen and (max-width: 599px) {
+  .hero-benefit-icon {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+.hero-benefit-text {
+  position: relative;
+}
+
+.hero-little-underline {
+  position: absolute;
+  width: 95%;
+  height: 9px;
+  left: 0;
+  bottom: -8px;
+  fill: none;
+  stroke: #f443a1;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.hero-handwritten {
+  font-family: "HitSlop Handwriting", cursive;
+  font-weight: 400;
+  font-size: clamp(1.05rem, 1.4vw, 1.5rem);
+  line-height: 1.13;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hero-local-note {
+  width: max-content;
+  margin: 26px 0 0 -12px;
+  color: #6c16ed;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  transform: rotate(-6deg);
+}
+
+@media screen and (min-width: 1100px) and (max-height: 850px) {
+  .hero-local-note {
+    margin-top: 20px;
+  }
+}
+
+@media screen and (max-width: 599px) {
+  .hero-local-note {
+    margin-left: 0;
+    margin-top: 24px;
+  }
+}
+
+.hero-arrow {
+  width: 62px;
+  height: 45px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hero-picture {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  justify-self: end;
+}
+
+@media screen and (min-width: 1100px) {
+  .hero-picture {
+    width: min(100%, calc((100svh - 185px) * 1.3333));
+  }
+}
+
+@media screen and (max-width: 599px) {
+  .hero-picture {
+    margin-bottom: 20px;
+  }
+}
+
+.hero-media-frame {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 2px solid #ffffffdd;
+  box-shadow: 0 22px 55px #414d8228;
+}
+
+@media screen and (max-width: 599px) {
+  .hero-media-frame {
+    border-radius: 18px;
+  }
+}
+
+.hero-poster {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-video {
+  position: absolute;
+  inset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-video {
+    display: none;
+  }
+}
+
+.hero-sticky-note {
+  position: absolute;
+  right: -24px;
+  bottom: 28px;
+  padding: 18px 16px 14px;
+  color: #10132c;
+  background: #fff19a;
+  box-shadow: 2px 5px 8px #69542214;
+  border-radius: 2px 5px 3px 2px;
+  transform: rotate(-10deg);
+  z-index: 3;
+}
+
+@media screen and (max-width: 599px) {
+  .hero-sticky-note {
+    right: -8px;
+    bottom: -20px;
+    padding: 12px 14px;
+    font-size: 1rem;
+  }
+}
+
+.hero-note-arrow {
+  position: absolute;
+  right: 8px;
+  bottom: -47px;
+  transform: rotate(-25deg);
+  color: #10132c;
+}
+
+@media screen and (max-width: 599px) {
+  .hero-note-arrow {
+    display: none;
+  }
+}
+
+.hero-doodle {
+  position: absolute;
+  pointer-events: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hero-rays {
+  color: #6c16ed;
+  width: 42px;
+  height: 46px;
+  left: -43px;
+  top: -12px;
+  stroke-width: 7;
+  transform: rotate(-8deg);
+}
+
+@media (min-width: 600px) and (max-width: 1199px) {
+  .hero-rays {
+    width: 28px;
+    height: 28px;
+    left: -30px;
+    top: -14px;
+  }
+}
+
+@media screen and (max-width: 599px) {
+  .hero-rays {
+    width: 28px;
+    height: 28px;
+    left: -17px;
+    top: -13px;
+  }
+}
+
+.hero-burst {
+  color: #f443a1;
+  width: 36px;
+  height: 54px;
+  right: -25px;
+  bottom: 2px;
+  stroke-width: 7;
+}
+
+@media (max-width: 1199px) {
+  .hero-burst {
+    display: none;
+  }
+}
+
+.hero-stars-top {
+  color: #ffa92a;
+  width: 36px;
+  height: 75px;
+  right: -39px;
+  top: 9%;
+  stroke-width: 2.5;
+}
+
+@media (max-width: 1199px) {
+  .hero-stars-top {
+    display: none;
+  }
+}
+
+.hero-stars-bottom {
+  color: #398cff;
+  width: 26px;
+  height: 38px;
+  right: -34px;
+  bottom: 26%;
+  stroke-width: 2;
+}
+
+@media (max-width: 1199px) {
+  .hero-stars-bottom {
+    display: none;
+  }
+}
+
+.hero-shelf {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 9px 10px;
+  border: 1px solid #ffffff;
+  border-radius: 40px;
+  background: #ffffffb8;
+  box-shadow: 0 10px 30px #61478a12;
+}
+
+@media screen and (max-width: 599px) {
+  .hero-shelf {
+    margin-inline: -12px;
+    padding: 7px 3px;
+  }
+}
+
+.hero-category-list {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 2px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  list-style: none;
+}
+
+.hero-category-list::-webkit-scrollbar {
+  display: none;
+}
+
+.hero-category {
+  flex-shrink: 0;
+  min-height: 42px;
+  padding: 0 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e2def1;
+  border-radius: 24px;
+  background: #ffffffed;
+  box-shadow: 0 3px 5px #31226309;
+  font-size: .86rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.hero-emoji {
+  font-size: 1.2rem;
+}
+
+.hero-shelf-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: #6c16ed;
+  cursor: pointer;
+}
+
+.hero-shelf-button:hover {
+  background: #ede4ff;
+}
+
+.hero-shelf-button:focus-visible {
+  outline: 3px solid #6c16ed;
+  outline-offset: 4px;
+}
+
+.hero-shelf-button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+@media screen and (max-width: 599px) {
+  .hero-shelf-button {
+    width: 34px;
+  }
+}
+
+.hero-control-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-paused="true"] .hero-pause-icon {
+  display: none;
+}
+
+.hero-play-icon {
+  display: none;
+}
+
+[data-paused="true"] .hero-play-icon {
+  display: block;
+}
+
+</style>

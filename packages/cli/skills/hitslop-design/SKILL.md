@@ -97,7 +97,7 @@ Use motion to explain an interaction or reinforce the object's character: a
 pressed control, settling needle, or changing liquid level. Keep idle objects
 quiet unless ongoing motion communicates a real function.
 
-- Keep simple hover/press feedback in `.css.ts` transitions. Use Svelte
+- Keep simple hover/press feedback in CSS transitions. Use Svelte
   transitions for entering/leaving DOM and `animate:flip` for keyed-list
   reordering. Use `Spring` for physical responses or `Tween` for predictable
   interpolation from `svelte/motion`; prefer these over legacy `spring`/`tweened`.

@@ -2,7 +2,6 @@
   import { onMount } from "svelte";
   import type { CatalogTemplate } from "@hitslop/schema";
   import { SITE_LINKS } from "../constants";
-  import * as s from "./TemplateBrowser.css";
 
   type Category = CatalogTemplate["categories"][number];
   type LoadState = "loading" | "ready" | "error";
@@ -119,21 +118,21 @@
     {/if}
     <div class="result-heading" aria-live="polite"><h3>{heading}</h3><span>{filtered.length} {filtered.length === 1 ? "result" : "results"}</span></div>
     {#if filtered.length}
-      <div class={s.grid}>
+      <div class="template-grid">
         {#each filtered as template}
-          <article class={s.card}>
-            <a class={s.previewStage} href={template.download.url} download={`${template.slug}.slop.zip`} aria-label={`Download ${template.title}`}>
-              <img class={s.previewImage} src={template.preview.url} alt={`Preview of ${template.title}`} loading="lazy" />
-              <span class={s.previewAction}>Download .slop <b aria-hidden="true">↓</b></span>
+          <article class="template-card">
+            <a class="template-preview-stage" href={template.download.url} download={`${template.slug}.slop.zip`} aria-label={`Download ${template.title}`}>
+              <img class="template-preview-image" src={template.preview.url} alt={`Preview of ${template.title}`} loading="lazy" />
+              <span class="template-preview-action">Download .slop <b aria-hidden="true">↓</b></span>
             </a>
-            <div class={s.copy}>
-              <div class={s.titleRow}><img class={s.icon} src={template.icon.url} alt="" loading="lazy" /><div class={s.identity}><small class={s.categories}>{template.categories.join(" · ")}</small><h4 class={s.title}>{template.title}</h4></div></div>
-              <p class={s.description}>{template.description}</p>
-              <div class={s.byline}>
-                <span>By {#if template.author.url}<a class={s.authorLink} href={template.author.url} target="_blank" rel="noreferrer">{template.author.name}</a>{:else}{template.author.name}{/if}</span>
+            <div class="template-copy">
+              <div class="template-title-row"><img class="template-icon" src={template.icon.url} alt="" loading="lazy" /><div class="template-identity"><small class="template-categories">{template.categories.join(" · ")}</small><h4 class="template-title">{template.title}</h4></div></div>
+              <p class="template-description">{template.description}</p>
+              <div class="template-byline">
+                <span>By {#if template.author.url}<a class="template-author-link" href={template.author.url} target="_blank" rel="noreferrer">{template.author.name}</a>{:else}{template.author.name}{/if}</span>
                 <span>Release {template.release.number} · {formatDate(template.release.publishedAt)}</span>
               </div>
-              <div class={s.footer}><span class={s.fileSize}>{formatBytes(template.download.bytes)}</span><a class={s.download} href={template.download.url} download={`${template.slug}.slop.zip`}>Download template <b class={s.downloadArrow} aria-hidden="true">↓</b></a></div>
+              <div class="template-footer"><span class="template-file-size">{formatBytes(template.download.bytes)}</span><a class="template-download" href={template.download.url} download={`${template.slug}.slop.zip`}>Download template <b class="template-download-arrow" aria-hidden="true">↓</b></a></div>
             </div>
           </article>
         {/each}
@@ -146,6 +145,185 @@
 </div>
 
 <style>
+.template-grid {
+  margin-top: 34px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 32px 20px;
+}
+
+.template-card {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.template-preview-stage {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--ink), transparent 87%);
+  border-radius: 14px;
+  background: oklch(93% .025 250);
+}
+
+.template-preview-image {
+  position: absolute;
+  inset: 16px;
+  width: calc(100% - 32px);
+  height: calc(100% - 32px);
+  object-fit: contain;
+  filter: drop-shadow(0 10px 14px oklch(18% .03 65 / .18));
+  transition: transform 280ms cubic-bezier(.22,1,.36,1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .template-preview-stage:hover .template-preview-image {
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .template-preview-image {
+    transition: none;
+  }
+}
+
+.template-preview-action {
+  position: absolute;
+  right: 13px;
+  bottom: 13px;
+  min-height: 37px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 7px;
+  color: oklch(98% .004 250);
+  background: var(--ink);
+  font-size: .64rem;
+  font-weight: 750;
+  box-shadow: 0 7px 18px oklch(20% .03 65 / .16);
+  transform: translateY(4px);
+  opacity: 0;
+  transition: transform 220ms cubic-bezier(.22,1,.36,1), opacity 180ms ease-out;
+}
+
+.template-preview-stage:focus-visible .template-preview-action {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .template-preview-stage:hover .template-preview-action {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .template-preview-action {
+    transition: none;
+  }
+}
+
+.template-copy {
+  min-width: 0;
+  padding: 12px 2px 0;
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}
+
+.template-title-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.template-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  box-shadow: 0 4px 10px oklch(20% .03 65 / .13);
+}
+
+.template-identity {
+  display: grid;
+  gap: 2px;
+}
+
+.template-categories {
+  color: var(--muted);
+  font-size: .56rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: capitalize;
+}
+
+.template-title {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: -.025em;
+}
+
+.template-description {
+  flex-grow: 1;
+  min-height: 3.2em;
+  margin: 11px 0 0;
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.58;
+}
+
+.template-byline {
+  margin-top: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px 14px;
+  color: var(--muted);
+  font-size: .58rem;
+}
+
+.template-author-link {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.template-footer {
+  margin-top: 13px;
+  padding-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.template-file-size {
+  color: var(--muted);
+  font-size: .59rem;
+}
+
+.template-download {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .66rem;
+  font-weight: 750;
+}
+
+.template-download-arrow {
+  font-size: .85rem;
+}
+
+
   :global(*) { box-sizing: border-box; }
   button, input { font: inherit; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

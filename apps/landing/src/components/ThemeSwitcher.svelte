@@ -82,7 +82,7 @@
 
   <div class="theme-file">
     <span class="status-dot" aria-hidden="true"></span>
-    <code>stores/theme.css</code>
+    <code>Saved theme overrides</code>
     <span>Your override stays with this file</span>
   </div>
   <p class="sr-only" aria-live="polite">{active.label} theme selected.</p>

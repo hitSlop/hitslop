@@ -1,6 +1,5 @@
 ---
 import Hero from "../components/Hero.astro";
-import { headerType } from "../components/Hero.css";
 import FocusTimer from "../components/FocusTimer.svelte";
 import Invoice from "../components/Invoice.svelte";
 import TerminalWalkthrough from "../components/TerminalWalkthrough.astro";
@@ -14,7 +13,7 @@ const faqs = [
   { question: "Where does my data live?", answer: "In the document on your Mac. Your interface and saved state travel together. The two included templates work offline." },
   { question: "Can an AI edit it?", answer: "Yes. A coding agent can create a slop from source, then follow the document’s included instructions to change tasks, notes, numbers, or other saved data. Agents use the document CLI to edit the same live state safely." },
   { question: "Can we edit together?", answer: "Live collaboration is deferred. This release is a local editor with PNG and PDF export." },
-  { question: "Can I change how a slop looks?", answer: "Authors style each app in its source project and build a new template. Existing documents keep their interface." },
+  { question: "Can I change how a slop looks?", answer: "Yes. Change the app’s declared theme tokens with the theme commands; your colors stay with that document. Authors change layout and structure in source and build a new template." },
   { question: "Do I need to host anything?", answer: "No. The Mac app includes two templates and works with local documents. Hosted discovery and public author publishing are deferred." },
   { question: "Will my slops update automatically?", answer: "No. Your existing documents keep the app version they were created with. Building a new template makes it available for new copies; it does not change the documents you already use." },
   { question: "Can I share the result without sharing the app?", answer: "Yes. Export the current document as a high-resolution PNG or a PDF with selectable text and vector output—handy for invoices, recipes, plans, and anything meant to leave your desktop." },
@@ -38,7 +37,7 @@ const comingSoon = "macOS 14+ · Apple silicon";
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
-    <header class:list={["masthead", headerType]}>
+    <header class="masthead">
       <a class="wordmark" href="/" aria-label="hitSlop home"><span class="brand-mark"><img src="/assets/appicon.png" alt="" /></span><span>hitSlop</span></a>
       <nav aria-label="Primary navigation">
         <a href="#why">Why hitSlop</a><a href="#make">Make one</a><a href="#templates">Browse</a>
@@ -84,8 +83,8 @@ const comingSoon = "macOS 14+ · Apple silicon";
               <div class="layer-label"><span>app files</span><small>fixed for this release</small></div>
               <div class="file-row immutable"><span>manifest.json</span><small>identity + presentation</small></div>
               <div class="file-row immutable"><span>app.html</span><small>generated interface</small></div>
-              <div class="file-row immutable optional"><span>state.schema.json</span><small>data contract</small></div>
-              <div class="file-row immutable optional"><span>assets/</span><small>app-owned media</small></div>
+              <div class="file-row immutable"><span>state.schema.json</span><small>data contract</small></div>
+              <div class="file-row immutable"><span>assets/</span><small>compiled JS, CSS + assets</small></div>
               <div class="file-row immutable"><span>.agents/skills/</span><small>AI editing guide</small></div>
               <div class="file-row immutable optional"><span>QuickLook/</span><small>Finder preview + icon</small></div>
             </div>
@@ -117,3 +116,7 @@ const comingSoon = "macOS 14+ · Apple silicon";
     </footer>
   </body>
 </html>
+
+<style>
+  .masthead { font-family: "HitSlop Sans", sans-serif; color: #10132c; }
+</style>
