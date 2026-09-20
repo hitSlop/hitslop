@@ -100,8 +100,12 @@ import HitSlopCore
             do {
                 for id in ids { try await client.prepareToQuit(id) }
                 await client.finishAssetRefreshes()
+                for id in ids { try await client.finishQuit(id) }
                 await send(.quitFinished)
-            } catch { await send(.quitFailed(error.localizedDescription)) }
+            } catch {
+                for id in ids { await client.cancelQuit(id) }
+                await send(.quitFailed(error.localizedDescription))
+            }
         }
     }
     private func cancelQuit(_ state: inout State, message: String) -> Effect<Action> {

@@ -23,6 +23,9 @@ public struct SlopPackage: Sendable {
 
   public init(rootURL: URL) throws {
     let fileManager = FileManager.default
+    guard try rootURL.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else {
+      throw SlopPackageError.invalid("document package cannot be a symlink")
+    }
     let root = rootURL.standardizedFileURL.resolvingSymlinksInPath()
     var isDirectory: ObjCBool = false
     guard root.pathExtension.lowercased() == "slop" else {
@@ -48,7 +51,7 @@ public struct SlopPackage: Sendable {
     }
     let topLevel = try fileManager.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
     let allowedTopLevel = Set([
-      "manifest.json", "app.html", "assets", "stores", "state", "QuickLook", ".agents", "Icon\r",
+      "manifest.json", "app.html", "assets", "state", "QuickLook", ".agents", "Icon\r",
       "state.schema.json", "initial.json",
     ])
     if let unknown = topLevel.first(where: { !allowedTopLevel.contains($0.lastPathComponent) }) {
@@ -77,7 +80,7 @@ public struct SlopPackage: Sendable {
             "runtime documents require regular files and directories, without symlinks")
         }
         let relative = String(url.path.dropFirst(root.path.count + 1))
-        if !relative.hasPrefix("stores/") && relative != "stores" && !relative.hasPrefix("state/")
+        if !relative.hasPrefix("state/")
           && relative != "state" && relative != "Icon\r"
         {
           immutableCount += 1
@@ -98,7 +101,6 @@ public struct SlopPackage: Sendable {
         }
       }
     }
-    try validateStores()
     try validateState()
     try validateSchemaMetadata()
     try validateDocumentSkill()
@@ -109,13 +111,9 @@ public struct SlopPackage: Sendable {
   public var entryURL: URL { rootURL.appendingPathComponent("app.html") }
   public var previewURL: URL { rootURL.appendingPathComponent("QuickLook/Preview.png") }
   public var iconURL: URL { rootURL.appendingPathComponent("QuickLook/Icon.png") }
-  public var storesURL: URL { rootURL.appendingPathComponent("stores", isDirectory: true) }
   public var stateURL: URL { rootURL.appendingPathComponent("state", isDirectory: true) }
-  public var jsonStoreURL: URL { storesURL.appendingPathComponent("data.json") }
   public var dataSchemaURL: URL { rootURL.appendingPathComponent("state.schema.json") }
   public var initialURL: URL { rootURL.appendingPathComponent("initial.json") }
-  public var mediaStoresURL: URL { storesURL.appendingPathComponent("media", isDirectory: true) }
-  public var themeOverrideURL: URL { storesURL.appendingPathComponent("theme.css") }
   public var isSkinned: Bool { manifest.presentation.skin != nil }
   public var usesTransparentBackground: Bool {
     isSkinned || manifest.presentation.background == .transparent
@@ -158,9 +156,6 @@ public struct SlopPackage: Sendable {
 
   public func validateAsTemplate(requirePreview: Bool = false) throws {
     try validateDocumentSkill(strict: true)
-    if FileManager.default.fileExists(atPath: storesURL.path) {
-      throw SlopPackageError.invalid("templates cannot contain stores")
-    }
     if FileManager.default.fileExists(atPath: stateURL.path) {
       throw SlopPackageError.invalid("templates cannot contain state")
     }
@@ -242,61 +237,22 @@ public struct SlopPackage: Sendable {
     return try Self.containedURL(root: rootURL, relativePath: relative)
   }
 
-  public func mediaURL(sha256: String) throws -> URL {
-    try SlopMediaStore(directoryURL: mediaStoresURL).url(for: sha256)
-  }
-
   private static func validateManifest(_ data: Data) throws {
     guard String(data: data, encoding: .utf8) != nil else {
       throw SlopPackageError.invalid("manifest.json must be UTF-8")
     }
-    guard PlatformContract.valid(try JSONSerialization.jsonObject(with: data), against: manifestValidationSchema) else { throw SlopPackageError.invalid("unsupported or invalid v1 manifest") }
-  }
-
-  private func validateStores() throws {
-    let fileManager = FileManager.default
-    guard fileManager.fileExists(atPath: storesURL.path) else { return }
-    let allowed = Set(["theme.css"])
-    for url in try fileManager.contentsOfDirectory(
-      at: storesURL,
-      includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
-    {
-      guard allowed.contains(url.lastPathComponent) else {
-        throw SlopPackageError.invalid("unexpected store file \(url.lastPathComponent)")
-      }
-      let values = try url.resourceValues(forKeys: [
-        .isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey,
-      ])
-      if url.lastPathComponent == "media" {
-        guard values.isDirectory == true, values.isSymbolicLink != true else {
-          throw SlopPackageError.invalid("media store must be a directory")
-        }
-        for entry in try fileManager.contentsOfDirectory(
-          at: url, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-        {
-          let entryValues = try entry.resourceValues(forKeys: [
-            .isRegularFileKey, .isSymbolicLinkKey,
-          ])
-          guard SlopMediaStore.isValidHash(entry.lastPathComponent),
-            entryValues.isRegularFile == true, entryValues.isSymbolicLink != true
-          else {
-            throw SlopPackageError.invalid("invalid media store entry")
-          }
-        }
-      } else {
-        guard values.isRegularFile == true, values.isSymbolicLink != true else {
-          throw SlopPackageError.invalid("store must be a regular file: \(url.lastPathComponent)")
-        }
-      }
-    }
-    // Mutable contents are validated when accessed. A damaged store must not
-    // prevent the guest from opening and presenting a recoverable error.
+    guard
+      PlatformContract.valid(
+        try JSONSerialization.jsonObject(with: data), against: manifestValidationSchema)
+    else { throw SlopPackageError.invalid("unsupported or invalid v1 manifest") }
   }
 
   private func validateState() throws {
     let fileManager = FileManager.default
     guard fileManager.fileExists(atPath: stateURL.path) else { return }
-    let allowed = Set(["document.sqlite", "document.sqlite-journal", "writer.lock", "host.lock"])
+    let allowed = Set([
+      "document.sqlite", "document.sqlite-journal", "writer.lock", "host.lock", "theme.json",
+    ])
     for url in try fileManager.contentsOfDirectory(
       at: stateURL, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey])
     {
@@ -311,7 +267,9 @@ public struct SlopPackage: Sendable {
 
   private func validateSchemaMetadata() throws {
     let descriptor = try SlopFile.read(dataSchemaURL, within: rootURL, maximumBytes: 1024 * 1024)
-    guard let header = try JSONSerialization.jsonObject(with: descriptor) as? [String: Any], header["format"] as? Int == 1 else { throw SlopPackageError.invalid("unsupported v1 document descriptor") }
+    guard let header = try JSONSerialization.jsonObject(with: descriptor) as? [String: Any],
+      header["format"] as? Int == 1
+    else { throw SlopPackageError.invalid("unsupported v1 document descriptor") }
     _ = try JSONSerialization.jsonObject(with: SlopFile.read(initialURL, within: rootURL))
   }
 
@@ -463,7 +421,8 @@ public enum SlopArchive {
       try? FileManager.default.removeItem(at: temporary)
     }
     for path in [
-      "manifest.json", "app.html", "state.schema.json", "initial.json", "assets", ".agents", "QuickLook/Icon.png",
+      "manifest.json", "app.html", "state.schema.json", "initial.json", "assets", ".agents",
+      "QuickLook/Icon.png",
     ] {
       let source = package.rootURL.appendingPathComponent(path)
       guard FileManager.default.fileExists(atPath: source.path) else { continue }

@@ -2,29 +2,25 @@
 import Hero from "../components/Hero.astro";
 import { headerType } from "../components/Hero.css";
 import FocusTimer from "../components/FocusTimer.svelte";
-import BidirectionalSync from "../components/BidirectionalSync.svelte";
-import LiveTogether from "../components/LiveTogether.svelte";
 import Invoice from "../components/Invoice.svelte";
 import TerminalWalkthrough from "../components/TerminalWalkthrough.astro";
 import RandomPicker from "../components/RandomPicker.svelte";
-import TemplateBrowser from "../components/TemplateBrowser.svelte";
-import ThemeSwitcher from "../components/ThemeSwitcher.svelte";
 import AppleIcon from "../components/AppleIcon.astro";
 import { SITE_LINKS } from "../constants";
 import "../styles/global.css";
 
 const faqs = [
   { question: "What is a .slop?", answer: "A .slop is a tiny app or living document you can open, move, duplicate, share, commit, and keep. Its interface and local data travel together as one package." },
-  { question: "Where does my data live?", answer: "In the writable document on your Mac. A slop can use JSON, named media, or no persistence at all. The public catalog never stores your local document." },
-  { question: "Can an AI edit it?", answer: "Yes. A coding agent can create a slop from source, then follow the document’s included instructions to change tasks, notes, numbers, or other saved data. Edits in the app write back to that same file, and file edits show up in the UI." },
-  { question: "Can we edit together?", answer: "Yes. Keep the file local until you want company, then Share from the Mac app. Everyone with the invite sees the same document update live. If you disconnect, a shared copy becomes read-only rather than turning into a second original." },
-  { question: "Can I change how a slop looks?", answer: "Theme-ready slops expose a validated set of colors and type choices as --slop-* variables. Your overrides live in stores/theme.css, apply without reloading the app, and stay with your document." },
-  { question: "Do I need to host anything?", answer: "No. A published slop is a signed, source-free artifact people can download and run. You do not need to deploy a web app, provision a database, or build user accounts just to share a useful little tool." },
-  { question: "Will my slops update automatically?", answer: "No. Your existing documents keep the app version they were created with. Publishing a new release makes it available for new copies; it does not change the documents you already use." },
+  { question: "Where does my data live?", answer: "In the document on your Mac. Your interface and saved state travel together. The two included templates work offline." },
+  { question: "Can an AI edit it?", answer: "Yes. A coding agent can create a slop from source, then follow the document’s included instructions to change tasks, notes, numbers, or other saved data. Agents use the document CLI to edit the same live state safely." },
+  { question: "Can we edit together?", answer: "Live collaboration is deferred. This release is a local editor with PNG and PDF export." },
+  { question: "Can I change how a slop looks?", answer: "Authors style each app in its source project and build a new template. Existing documents keep their interface." },
+  { question: "Do I need to host anything?", answer: "No. The Mac app includes two templates and works with local documents. Hosted discovery and public author publishing are deferred." },
+  { question: "Will my slops update automatically?", answer: "No. Your existing documents keep the app version they were created with. Building a new template makes it available for new copies; it does not change the documents you already use." },
   { question: "Can I share the result without sharing the app?", answer: "Yes. Export the current document as a high-resolution PNG or a PDF with selectable text and vector output—handy for invoices, recipes, plans, and anything meant to leave your desktop." },
 ];
 
-const comingSoon = "iOS and Windows coming soon";
+const comingSoon = "macOS 14+ · Apple silicon";
 ---
 
 <!doctype html>
@@ -33,7 +29,7 @@ const comingSoon = "iOS and Windows coming soon";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#fafbfd" />
-    <meta name="description" content="Tiny local-first apps and documents that live on your desktop. Keep them local, or share and edit together in real time." />
+    <meta name="description" content="Tiny local-first apps and documents that live on your desktop. Create from included templates, edit locally, and export PNG or PDF." />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="preload" href="/assets/hero/fonts/lilita-one-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -58,7 +54,7 @@ const comingSoon = "iOS and Windows coming soon";
       <Hero />
 
       <section class="objects" id="objects" aria-labelledby="objects-title">
-        <div class="section-intro"><p class="eyebrow">One format, many personalities</p><h2 id="objects-title">Little apps.<br />Real objects.</h2><p>Useful little things, each with a personality of its own. Start a timer, send an invoice, or let fate make a decision. Go on, these actually work.</p></div>
+        <div class="section-intro"><p class="eyebrow">One format, many personalities</p><h2 id="objects-title">Little apps.<br />Real objects.</h2><p>Interactive design demos show what small desktop tools can feel like. The Mac release includes Quick Checklist and Small Expenses; these demos are not installed templates.</p></div>
         <div class="object-gallery">
           <article class="object object-focus"><div class="object-stage focus-stage"><FocusTimer client:visible /></div><div class="object-caption"><span><strong>Pomodoro</strong>Focus and rest, without a dashboard.</span><small>Instrument · Interactive</small></div></article>
           <article class="object object-invoice"><div class="object-stage invoice-stage"><Invoice client:visible /></div><div class="object-caption"><span><strong>Invoice</strong>Edit the document directly. Totals follow.</span><small>Paper · Interactive</small></div></article>
@@ -66,48 +62,20 @@ const comingSoon = "iOS and Windows coming soon";
         </div>
       </section>
 
-      <section class="collab-section" id="together" aria-labelledby="together-title">
-        <div class="collab-copy">
-          <p class="eyebrow">Better together</p>
-          <h2 id="together-title">Keep it local. Share it live.</h2>
-          <p>A slop stays a file on your Mac until you share it. Then everyone with the invite sees the same document update as you type, check, or rearrange — no app backend to run. Disconnect, and a shared copy is read-only rather than becoming a second local original.</p>
-          <p>The same document store works on your Mac and in a shared room. Authors do not wire up a second API.</p>
-        </div>
-        <LiveTogether client:visible />
-      </section>
 
-      <section class="theme-section" aria-labelledby="theme-title">
-        <div class="theme-copy">
-          <p class="eyebrow">Make it yours</p><h2 id="theme-title">Every slop can feel like yours.</h2>
-          <p>Theme-ready slops expose a small set of colors and type choices. Pick a look yourself or ask your AI to write an override. The app stays intact, and the appearance travels with your file.</p>
-          <div class="theme-contract"><code>stores/theme.css</code><span>Appearance changes. Structure stays sound.</span></div>
-        </div>
-        <ThemeSwitcher client:visible />
-      </section>
 
-      <section class="sync-section" aria-labelledby="sync-title">
-        <div class="sync-copy"><p class="eyebrow">You or your LLM</p><h2 id="sync-title">Create and edit<br />with AI.</h2><p>Ask a coding agent to make the slop, then let it help with the everyday changes: add tasks, update an invoice, or tidy a list. Work in the UI or edit the saved JSON — each side writes through, so the document you open is the document the model just changed.</p></div>
-        <BidirectionalSync client:visible />
-      </section>
 
       <section class="make-section" id="make" aria-labelledby="make-title">
         <div class="make-copy"><h2 id="make-title">From your terminal to your desktop.</h2><p>Create a starter, open it in your coding agent, and describe the little app you want. Preview it as you work, then build a <code>.slop</code> you can open on your Mac.</p><p>You’ll need Bun to get started. The project includes instructions for your coding agent, and you keep both the source and the finished app.</p><a class="text-link" href={SITE_LINKS.authoring}>Create your first slop <span aria-hidden="true">→</span></a></div>
         <TerminalWalkthrough />
       </section>
 
-      <section class="publish-section" aria-labelledby="publish-title">
-        <div class="publish-copy"><p class="eyebrow">Share software without starting a startup</p><h2 id="publish-title">No hosting. No database setup. No auth maze.</h2><p>Publish your <code>.slop</code> to the catalog and people get their own working copy. There’s no server to run or user accounts to manage. Release a new version whenever you like—existing documents keep working as they are.</p><code class="publish-command">bun run publish</code></div>
-        <div class="publish-board">
-          <div class="infra-list" aria-label="Less to manage"><p><span aria-hidden="true">×</span><strong>Hosting</strong><small>No server to keep alive</small></p><p><span aria-hidden="true">×</span><strong>Database setup</strong><small>No cloud schema to provision</small></p><p><span aria-hidden="true">×</span><strong>User accounts</strong><small>No auth flows or password resets</small></p><p><span aria-hidden="true">×</span><strong>Forced updates</strong><small>Existing documents keep their version</small></p></div>
-          <div class="publish-flow" aria-label="Publishing flow"><div><span>1</span><strong>Your source</strong><small>Svelte, React, or plain HTML</small></div><i aria-hidden="true">→</i><div><span>2</span><strong>Signed .slop</strong><small>Runtime, preview, and icon</small></div><i aria-hidden="true">→</i><div><span>3</span><strong>Catalog</strong><small>Ready to download and fork</small></div></div>
-        </div>
-      </section>
 
       <section class="local-section" id="why" aria-labelledby="local-title">
         <div class="local-copy">
           <p class="eyebrow">A file, not an account</p><h2 id="local-title">Everything travels with the document.</h2>
-          <p>The app, your saved work, and your images stay together in one file on your Mac. Move it, duplicate it, or share it—everything comes along.</p>
-          <div class="local-actions" aria-label="Things you can do with a slop"><span>Open</span><span>Move</span><span>Duplicate</span><span>Share</span><span>Commit</span><span>Keep</span></div>
+          <p>The app and your saved work stay together in one package on your Mac. Close it before moving or copying it. Export a PNG or PDF to share the result.</p>
+          <div class="local-actions" aria-label="Things you can do with a slop"><span>Open</span><span>Move</span><span>Duplicate</span><span>Export</span><span>Keep</span></div>
         </div>
         <div class="package-anatomy" aria-label="Contents of a slop document">
           <div class="package-tab"><img src="/assets/appicon.png" alt="" /><span>my-work.slop</span><small>on your Mac</small></div>
@@ -116,19 +84,17 @@ const comingSoon = "iOS and Windows coming soon";
               <div class="layer-label"><span>app files</span><small>fixed for this release</small></div>
               <div class="file-row immutable"><span>manifest.json</span><small>identity + presentation</small></div>
               <div class="file-row immutable"><span>app.html</span><small>generated interface</small></div>
-              <div class="file-row immutable optional"><span>data.schema.json</span><small>data contract</small></div>
+              <div class="file-row immutable optional"><span>state.schema.json</span><small>data contract</small></div>
               <div class="file-row immutable optional"><span>assets/</span><small>app-owned media</small></div>
               <div class="file-row immutable"><span>.agents/skills/</span><small>AI editing guide</small></div>
               <div class="file-row immutable optional"><span>QuickLook/</span><small>Finder preview + icon</small></div>
             </div>
             <div class="store-group">
-              <div class="store-label"><span>stores/</span><small>your editable data</small></div>
-              <div class="file-row optional"><span>data.json</span><small>structured state</small></div>
-              <div class="file-row optional"><span>theme.css</span><small>your colors + type</small></div>
-              <div class="file-row optional"><span>media/</span><small>images + named files</small></div>
+              <div class="store-label"><span>state/</span><small>saved document</small></div>
+              <div class="file-row optional"><span>document.sqlite</span><small>durable local state</small></div>
             </div>
           </div>
-          <p class="package-note"><span>optional</span> where needed · portable in Finder · legible in Git</p>
+          <p class="package-note"><span>optional</span> where needed · portable in Finder</p>
         </div>
       </section>
 
@@ -138,8 +104,8 @@ const comingSoon = "iOS and Windows coming soon";
       </section>
 
       <section class="catalog-section" id="templates" aria-labelledby="catalog-title">
-        <div class="catalog-heading"><div><p class="eyebrow">The public catalog</p><h2 id="catalog-title">Find your next<br />{" "}favorite tiny app.</h2></div><p>Download a published template, open your own writable copy, and adapt it to the way you work. Every slop is a starting point, not a constraint.</p></div>
-        <TemplateBrowser client:visible />
+        <div class="catalog-heading"><div><p class="eyebrow">Included templates</p><h2 id="catalog-title">Find your next<br />{" "}favorite tiny app.</h2></div><p>Start with a checklist or a small expense tracker. Each creates its own local document.</p></div>
+        <p>Quick Checklist and Small Expenses are included in the Mac app. Create a writable copy and start using it offline. Hosted discovery and public publishing are planned for a later release.</p>
       </section>
       <section class="faq-section" aria-labelledby="faq-title"><div><h2 id="faq-title">Got questions?</h2></div><div class="faq-list">{faqs.map((faq) => <details><summary>{faq.question}<span aria-hidden="true">+</span></summary><p>{faq.answer}</p></details>)}</div></section>
       <section class="final-cta" aria-labelledby="cta-title"><div><p class="eyebrow">Small files. Big ideas.</p><h2 id="cta-title">Put your next tiny tool on your desktop.</h2></div><a class="button button-primary" href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon</a><p class="download-meta">Apple silicon · macOS 14+ · Signed &amp; notarized</p><p class="download-soon">{comingSoon}</p><div class="cta-art" aria-hidden="true"><span></span><span></span><img src="/assets/appicon.png" alt="" /></div></section>

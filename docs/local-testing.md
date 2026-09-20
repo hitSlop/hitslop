@@ -1,55 +1,39 @@
-# Local testing before release
+# Local release validation
 
-Use macOS, Xcode, and the exact Bun version in root `package.json` (1.4.2).
-Install dependencies with `bun install --frozen-lockfile`, then run:
+Run `bun install --frozen-lockfile`, then `bun run test:local` on macOS.
 
-```sh
-bun run test:local
-```
+The gate builds the pinned runtime and both templates, checks generated contracts and authoring types, builds the native helper, runs JS and Swift tests, verifies relocated helper editing/export without Node/Bun, exercises storage crashes, packs and tests the public CLI outside the checkout with Node absent, builds the Apple app, and tests native process death. Worker rooms, npm publication, JSON file editing, and old command-engine tests are not release gates.
 
-The gate checks source hygiene, generated drift, package types/tests, packed npm
-installs outside the workspace, the starter, Quick Checklist, Swift, local
-Cloudflare rooms, and relocated Debug helper resources. It neither publishes npm
-packages nor deploys services or produces distribution builds. Wrangler uses
-disposable local D1/R2/room state and a test-only authentication entrypoint.
+Useful individual commands: `bun run check`, `bun run test`, `bun run build`, `bun run swift:test`, `bun run test:native-helper`, `bun run test:storage`, `bun run apple:build`, and `bun run test:native-crash`.
 
-Evidence is retained under `.hitslop/local-tests/<timestamp>/`: command logs,
-`results.json`, and native captures. Clean-room npm fixtures remain in a separate
-temporary directory outside the repository; its path is recorded in the logs. Required integration
-tests must report a pass; a zero command exit with a required test skipped fails
-the gate. Bare `swift test` remains useful for unit work but is not the local gate.
-The deliberate crash-writer test runs only as a subprocess of the durability
-test; its skip in the ordinary suite is expected. Starter and room tests execute
-in their separate configured harnesses, even though the ordinary Swift suite
-reports them skipped.
+Native tests include the actual WebView, socket, headless isolation, lost storage replies, renderer death after commit before acknowledgement, close failure, capture restoration, oversized logs, and symlink replacement. The storage-only Bun adapter is a test fixture, never a production CLI fallback.
 
-## Inspect the real app
+For a signed app, run `bun scripts/v1/release-artifact.ts /path/to/hitSlop.app`. This verifies matching host/helper resources, both packaged starters, and installed create/get/apply/PNG/PDF with a system-only PATH.
 
-After the automated gate, build/run the macOS Debug target using Xcode. Use
-disposable local copies of Quick Checklist. Verify:
+## Manual release acceptance
 
-- Create, type with an IME, reorder, complete, file, restore, and delete tasks.
-- Close immediately after typing; reopen and quit/relaunch without losing edits.
-- Keyboard navigation, focus, empty/error states, and narrow/default window sizes.
-- External valid/invalid JSON edits, theme changes, duplicate identity, and
-  multiple windows. Invalid bytes must remain available for correction.
-- PNG/PDF exports and Finder previews/icons agree with the selected checklist
-  view; long content is complete and capture leaves the editor usable.
+Record the commit, app version/build, OS, and result in the release notes. Test macOS 14 and the current supported macOS on Apple silicon:
 
-The automated native tests cover persistence, interrupted projection/transaction
-recovery, durable command receipts, forced process termination after an
-acknowledged commit, malformed inputs, limits, and multiple local owners.
-The real-room tests cover offline read-only behavior, lost-result recovery,
-Worker restart, invitation limits/rotation, revocation, and native snapshot
-adoption followed by reopen. Compiled Quick Checklist tests exercise text,
-list operations, undo, file edits, and capture through the real WebKit bridge.
-The native gate also builds a small `<Slop>` fixture outside the gallery to check
-typed context, host error reporting, close after rejection, and render recovery
-that keeps the existing store and text drafts.
+- Fresh offline account: two starters, create copy, open, and recents.
+- Type and immediately close; reorder; IME commit; quit multiple documents.
+- Inject save failure: retain ownership, retry, and cancel quit without losing another document.
+- Kill WebContent: remove discovery, reopen saved state, then continue editing.
+- PNG/PDF, Finder preview/icon, keyboard focus, narrow windows, repeated open/close.
+- Gatekeeper launch from downloaded DMG and ZIP; installed helper without Bun/Node.
+- Sparkle update from the previous signed release; verify publisher identity and resulting version.
 
-## Separate release checks
+The tagged GitHub workflow runs the complete gate before signing and publication. Automated checks do not substitute for the signed-app/manual acceptance record.
 
-Production Firebase sign-in, signed-app camera/microphone permission prompts,
-notarization, Sparkle delivery, and relocated Release helper verification remain
-release-specific checks. Record them as unverified until exercised; local test
-authentication and Debug binaries cannot certify those boundaries.
+## CLI package release
+
+`bun run packages:pack` produces the three tarballs in `generated/v1/npm`.
+`bun run test:packed` installs those exact artifacts in a temporary directory
+whose path contains spaces, checks the bunx entrypoint, authoring, registration,
+themes, PNG/PDF, disposable preview, and installed skills after cache removal.
+Consumer-only overrides connect unpublished tarballs; published manifests contain
+only registry versions, never workspace or filesystem dependencies.
+
+Release `@hitslop/schema`, `@hitslop/document`, then `@hitslop/cli` at the matching
+version after the signed Mac app is available. Publication is a separate release
+action; packing and CI never publish. Verify the public `bunx @hitslop/cli init`
+and global-install workflows from a fresh directory after publication.

@@ -2,10 +2,10 @@
 import * as s from "./TerminalWalkthrough.css";
 
 const steps = [
-  { note: "Create a starter. Follow the setup questions.", commands: ["bunx @hitslop/cli init my-slop"] },
-  { note: "Step into your project.", commands: ["cd my-slop", "bun install"] },
-  { note: "Make it yours with your coding agent. Preview as you go.", commands: ["bun run dev"] },
-  { note: "Stop the preview with Ctrl+C, then build your app.", commands: ["bun run build"] },
+  { note: "From the hitSlop source checkout.", commands: ["bun install --frozen-lockfile", "bun slop init my-slop"] },
+  { note: "Preview with disposable memory storage.", commands: ["bun slop dev my-slop"] },
+  { note: "Build a template with native previews.", commands: ["bun slop build my-slop"] },
+  { note: "Add it to your local template catalog.", commands: ["bun slop register my-slop"] },
 ];
 ---
 
@@ -27,6 +27,6 @@ const steps = [
   </div>
   <figcaption class={s.result}>
     <svg class={s.fileIcon} aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z" /><path d="M14 3v6h6M8 14h8M8 17h5" /></svg>
-    <div class={s.resultCopy}><code class={s.output}>dist/my-slop.slop</code><span class={s.resultHint}>Your app, ready to open in hitSlop.</span></div>
+    <div class={s.resultCopy}><code class={s.output}>my-slop.slop</code><span class={s.resultHint}>Your app, ready to open in hitSlop.</span></div>
   </figcaption>
 </figure>

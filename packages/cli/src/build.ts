@@ -1,44 +1,14 @@
 import { build as esbuild, transform, type Plugin } from "esbuild";
-import { vanillaExtractPlugin } from "@vanilla-extract/esbuild-plugin";
 import { compile, compileModule } from "svelte/compiler";
 import { cp, mkdir, readFile, writeFile, rm, rename, stat } from "node:fs/promises";
 import { resolve, dirname, join } from "node:path";
 import { parseManifest } from "@hitslop/schema";
 import { fromDescriptor, validate } from "@hitslop/document";
 import { fileURLToPath } from "node:url";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-export const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-export const runtimeDirectory = resolve(repository, "generated/v1/runtime");
-export async function buildRuntime() {
-  await mkdir(runtimeDirectory, { recursive: true });
-  await cp(
-    join(repository, "packages/document/src/headless.js"),
-    join(runtimeDirectory, "headless.js"),
-  );
-  await esbuild({
-    entryPoints: [join(repository, "packages/document/src/runtime-entry.ts")],
-    outfile: join(runtimeDirectory, "index.js"),
-    bundle: true,
-    format: "esm",
-    platform: "browser",
-    target: "safari17",
-    minify: true,
-    plugins: [
-      {
-        name: "loro-external",
-        setup(b) {
-          b.onResolve({ filter: /^loro-crdt$/ }, () => ({
-            path: "./loro/index.js",
-            external: true,
-          }));
-        },
-      },
-    ],
-  });
-  const loro = dirname(Bun.resolveSync("loro-crdt/package.json", repository));
-  await cp(join(loro, "web"), join(runtimeDirectory, "loro"), { recursive: true });
-}
+import { createRequire } from "node:module";
+import identity from "@hitslop/document/identity";
+export const cliRoot = fileURLToPath(new URL("../", import.meta.url));
+export const runtimeDirectory = join(cliRoot, "runtime");
 const adapters = new Set(["document.ts", "handles.ts", "bind-text.ts", "capture.ts"]);
 export const runtimePlugin: Plugin = {
   name: "host-runtime",
@@ -50,7 +20,7 @@ export const runtimePlugin: Plugin = {
       if (args.path === "@hitslop/document/capture")
         return { path: "/__runtime__/index.js", external: true };
       if (
-        args.importer.includes("/packages/document/src/") &&
+        /\/(?:packages\/document|@hitslop\/document)\/src\//.test(args.importer) &&
         adapters.has(args.path.replace("./", "").replace(/(?<!\.ts)$/, ".ts"))
       )
         return { path: "/__runtime__/index.js", external: true };
@@ -58,25 +28,39 @@ export const runtimePlugin: Plugin = {
   },
 };
 export async function buildProject(source: string, destination?: string) {
-  const { stdout } = await promisify(execFile)(
-    process.env.HITSLOP_NODE ?? "node",
+  const child = Bun.spawn(
     [
-      "--import",
-      "tsx",
-      join(repository, "packages/cli/src/build-worker.ts"),
+      process.execPath,
+      join(cliRoot, "src/build-worker.ts"),
       resolve(source),
       ...(destination ? [resolve(destination)] : []),
     ],
-    { cwd: repository, maxBuffer: 8 * 1024 * 1024 },
+    { cwd: cliRoot, stdout: "pipe", stderr: "pipe" },
   );
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  if (code) throw new Error(stderr || "Authoring build failed");
   return stdout.trim().split("\n").at(-1)!;
 }
-export async function buildProjectInNode(source: string, destination?: string) {
+export async function buildProjectInBun(source: string, destination?: string) {
   source = resolve(source);
   const manifest = parseManifest(JSON.parse(await readFile(join(source, "manifest.json"), "utf8")));
   const out = destination ? resolve(destination) : join(source, "dist", manifest.slug + ".slop");
   if (out === source || !out.endsWith(".slop"))
     throw new Error("Build output must be a separate .slop directory");
+  const installedIdentity = JSON.parse(
+    await readFile(
+      createRequire(join(source, "package.json")).resolve("@hitslop/document/identity"),
+      "utf8",
+    ),
+  );
+  if (Object.entries(identity).some(([key, value]) => installedIdentity[key] !== value))
+    throw new Error(
+      `Project SDK does not match CLI ${identity.sdkVersion}. Install matching @hitslop/document and @hitslop/cli versions.`,
+    );
   const schemaModule = await import(join(source, "schema.ts"));
   const definition = Object.values(schemaModule).find((v: any) => v?.descriptor) as any;
   if (!definition) throw new Error("schema.ts must export a document definition");
@@ -115,7 +99,7 @@ export async function buildProjectInNode(source: string, destination?: string) {
               if (args.pluginData?.svelteRoot) return;
               return b.resolve(args.path, {
                 kind: args.kind,
-                resolveDir: repository,
+                resolveDir: cliRoot,
                 pluginData: { svelteRoot: true },
               });
             });
@@ -139,7 +123,6 @@ export async function buildProjectInNode(source: string, destination?: string) {
             }));
           },
         },
-        vanillaExtractPlugin(),
       ],
     });
     for (const input of Object.keys(result.metafile!.inputs))
@@ -149,13 +132,15 @@ export async function buildProjectInNode(source: string, destination?: string) {
     await writeFile(join(stage, "state.schema.json"), JSON.stringify(descriptor, null, 2));
     await writeFile(join(stage, "initial.json"), JSON.stringify(initial, null, 2));
     await writeFile(join(stage, "assets/theme.css"), theme.css);
+    await writeFile(join(stage, "assets/theme.json"), JSON.stringify(theme.defaults));
+    await writeFile(join(stage, "assets/runtime.json"), JSON.stringify(identity));
     await writeFile(
       join(stage, "app.html"),
       '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>hitSlop</title><link rel="stylesheet" href="/assets/theme.css"><link rel="stylesheet" href="/assets/main.css"></head><body><script type="module" src="/assets/main.js"></script></body></html>',
     );
     await mkdir(join(stage, ".agents/skills/hitslop-document"), { recursive: true });
     await cp(
-      join(repository, "packages/cli/skills/hitslop-document/SKILL.md"),
+      join(cliRoot, "skills/hitslop-document/SKILL.md"),
       join(stage, ".agents/skills/hitslop-document/SKILL.md"),
     );
     if (

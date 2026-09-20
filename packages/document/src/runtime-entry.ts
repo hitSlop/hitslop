@@ -14,3 +14,6 @@ export async function initialize() {
 
 export { installPresentationStage } from "./presentation";
 export { fromDescriptor } from "./schema";
+
+export { openTheme } from "./theme-runtime";
+export { default as runtimeIdentity } from "./runtime-identity.json";

@@ -16,9 +16,10 @@
   function assertRenderable() { if (renderFailure) throw renderFailure; }
   function reportRenderError(error: unknown) {
     renderFailure = error;
+    globalThis.document.dispatchEvent(new CustomEvent("hitslop:render-error", { detail: error }));
     renderError = error instanceof Error ? error.message : String(error);
     const storage = (globalThis as any).webkit?.messageHandlers?.storage;
-    void storage?.postMessage({ method: "runtimeError", kind: "application", error: renderError.slice(0, 4096) }).catch(() => {});
+    void storage?.postMessage({ method: "runtimeError", kind: "application", error: (error instanceof Error ? error.stack ?? renderError : renderError).slice(0, 4096) }).catch(() => {});
   }
   onMount(() => capture.onPrepare(async () => {
     assertRenderable();

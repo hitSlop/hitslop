@@ -13,7 +13,7 @@ Read manifest.json first. Only runtime `hitslop-v1` is accepted. No migration or
 - Preserve the existing macOS client: TCA Features, Catalog, Host slop windows/hover toolbar, Firebase, OpenAPI, Sparkle, and NativeCLI. HitSlopWasm supplies the common document engine; HitSlopRuntime integrates it. A runtime rewrite must not replace the client.
 - Flush local drafts and document writes before close/export. Failed saves retain ownership and show native retry. Destroy WebViews on close.
 - Native code validates package isolation, symlinks, bridge envelopes and resource sizes. Authored code can damage its own document; no independent native semantic validator.
-- Quick Checklist and Small Expenses are the only active examples. Each owns its design; use exported Vanilla Extract style classes. Read examples/slops/PRODUCT.md and docs/presentation.md for visual changes. _vibe is inspiration only.
+- Quick Checklist and Small Expenses are the only active examples. Each owns its design; use plain CSS and defineTheme tokens. Read examples/slops/PRODUCT.md and docs/presentation.md for visual changes. _vibe is inspiration only.
 - CLI: bun slop dev/build/register SOURCE; schema/get/apply/batch/compact DOCUMENT. Runtime masters are immutable; create a writable copy to edit.
 - PDF/PNG export is in scope. Collaboration, media import, remote catalog cutover, publication, undo UI, schema evolution, history pruning, iCloud and other synced folders are deferred.
 - Tests: bun run check; bun run test; bun run build; bun run swift:test. Historical _docs/, archive/, deferred/, retired command-engine tests and backend source are not active tests or implementation contracts.

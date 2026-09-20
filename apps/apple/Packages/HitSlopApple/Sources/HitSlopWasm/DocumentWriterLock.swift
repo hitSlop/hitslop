@@ -8,13 +8,18 @@ public final class DocumentWriterLock {
   public init(root: URL) throws {
     let state = root.appendingPathComponent("state")
     try safeDirectory(state)
-    fd = Darwin.open(state.appendingPathComponent("writer.lock").path, O_RDWR | O_CREAT | O_NOFOLLOW, 0o600)
+    fd = Darwin.open(
+      state.appendingPathComponent("writer.lock").path, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
     guard fd >= 0 else { throw failure("Cannot open writer lock") }
     if flock(fd, LOCK_EX | LOCK_NB) != 0 {
       let code = errno
       close()
       if code == EWOULDBLOCK || code == EAGAIN {
-        throw NSError(domain: "HitSlopWriter", code: 2, userInfo: [NSLocalizedDescriptionKey: "Document has a live writer; retry through its socket"])
+        throw NSError(
+          domain: "HitSlopWriter", code: 2,
+          userInfo: [
+            NSLocalizedDescriptionKey: "Document has a live writer; retry through its socket"
+          ])
       }
       throw failure("Cannot acquire writer lock")
     }
@@ -25,7 +30,10 @@ public final class DocumentWriterLock {
   }
 
   public func close() {
-    if fd >= 0 { Darwin.close(fd); fd = -1 }
+    if fd >= 0 {
+      Darwin.close(fd)
+      fd = -1
+    }
   }
   deinit { close() }
 }
@@ -35,7 +43,9 @@ public struct NativeCommandDeadline: Sendable {
   private let end: ContinuousClock.Instant
   public init(timeout: Duration = .seconds(30)) { end = .now.advanced(by: timeout) }
   public func check() throws {
-    guard ContinuousClock.now < end else { throw failure("Command timed out; output was not published") }
+    guard ContinuousClock.now < end else {
+      throw failure("Command timed out; output was not published")
+    }
     try Task.checkCancellation()
   }
 }

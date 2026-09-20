@@ -13,4 +13,4 @@ Normal close/export commits local drafts and flushes. Failed close retains owner
 
 Run bun run swift:test for actual WKWebView, live/closed CLI, failed-save/close, and export coverage. bun run bench:windows measures the current SDK; do not reuse Mirror-era results as current evidence.
 
-Document socket envelopes are generated from TypeBox. Use hello for session identity and get for state. Mutation retries require both --id and --epoch. Live CLI exports reuse the existing host capture flow; closed exports render owned snapshots. HITSLOP_NATIVE_CLI is the explicit helper override for document and template commands.
+Document socket envelopes are generated from TypeBox. Use hello for session identity and get for state. There are no public mutation retry flags. After an unknown outcome run get before another edit; get flushes pending writes. Live CLI exports reuse the existing host capture flow; closed exports render owned snapshots. HITSLOP_NATIVE_CLI is the explicit helper override for document and template commands.

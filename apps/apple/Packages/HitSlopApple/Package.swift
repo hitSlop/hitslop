@@ -59,7 +59,6 @@ let package = Package(
       dependencies: [
         "HitSlopCore", "HitSlopAPI", "HitSlopWasm",
       ],
-      exclude: ["SlopMediaSync.swift", "SlopStorage.swift", "SlopStorageWorker.swift"],
       resources: [.copy("Resources/host-bridge.js")],
       linkerSettings: [
         .linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS])),
@@ -91,7 +90,6 @@ let package = Package(
         .product(name: "GoogleSignIn", package: "GoogleSignIn-iOS"),
         .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
       ],
-      exclude: ["DocumentSharing.swift", "SharingInvitation.swift"],
       resources: [.process("Resources")],
       linkerSettings: [.linkedFramework("AppKit")]
     ),

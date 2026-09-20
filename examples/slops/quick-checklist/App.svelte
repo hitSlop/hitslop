@@ -12,7 +12,6 @@
   import Ellipsis from "@lucide/svelte/icons/ellipsis";
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import schema from "./schema";
-  import * as s from "./styles.css";
 
   const document = useDocument(schema);
   let activeView = $state<"tasks" | "filed">("tasks");
@@ -67,27 +66,27 @@
 </script>
 
 {#snippet brand()}
-<header class={s.header}>
-  <span class={s.brand}><Check size={15} strokeWidth={3} /> Quick Checklist</span>
-  <span class={s.edition} aria-hidden="true">ONE THING AT A TIME</span>
+<header class="checklist-header">
+  <span class="checklist-brand"><Check size={15} strokeWidth={3} /> Quick Checklist</span>
+  <span class="checklist-edition" aria-hidden="true">ONE THING AT A TIME</span>
 </header>
 
 {/snippet}
 
 <Slop {document}>
 <main
-  class={s.shell}
+  class="checklist-shell"
   data-slop-selection="none"
 >
   {@render brand()}
   <section
-    class={s.paper}
+    class="checklist-paper"
     aria-label="Your checklist"
   >
-    <div class={s.heading}>
-      <p class={s.eyebrow}>A little less on your mind.</p>
+    <div class="checklist-heading">
+      <p class="checklist-eyebrow">A little less on your mind.</p>
       <textarea
-        class={s.title}
+        class="checklist-title"
         aria-label="Checklist title"
         rows="1"
         use:sizeToText={document.current.title}
@@ -95,7 +94,7 @@
         placeholder="Name your list"
         data-slop-export="hide"
       ></textarea>
-      <div class={s.progress}>
+      <div class="checklist-progress">
         <span aria-live="polite"
           >{visible.length && finished === visible.length
             ? "All done. Nicely done."
@@ -103,12 +102,12 @@
         >
         <span>{finished} / {visible.length} done</span>
       </div>
-      <div class={s.track} aria-hidden="true">
+      <div class="checklist-track" aria-hidden="true">
         <div style:transform={`scaleX(${fill.current / 100})`}></div>
       </div>
     </div>
     <form
-      class={s.composer}
+      class="checklist-composer"
       data-slop-export="hide"
       onsubmit={(event) => {
         event.preventDefault();
@@ -135,24 +134,24 @@
       }}
     >
       <Tabs.List
-        class={s.tabs}
+        class="checklist-tabs"
         aria-label="Checklist views"
         data-slop-export="hide"
       >
-        <Tabs.Trigger value="tasks" class={s.tab}
+        <Tabs.Trigger value="tasks" class="checklist-tab"
           >To do <span>{visible.length}</span></Tabs.Trigger
         >
-        <Tabs.Trigger value="filed" class={s.tab}
+        <Tabs.Trigger value="filed" class="checklist-tab"
           ><Archive size={14} /> Filed <span>{filed.length}</span></Tabs.Trigger
         >
       </Tabs.List>
     </Tabs.Root>
-    <div class={`${s.scroller} ${activeView === "filed" ? s.filedView : ""}`}>
+    <div class={`${"checklist-scroller"} ${activeView === "filed" ? "checklist-filed-view" : ""}`}>
       {#if activeView === "tasks"}
-        <ol class={s.list}>
+        <ol class="checklist-list">
           {#each visible as task, index (task.$id)}
             <li
-              class={s.row}
+              class="checklist-row"
               data-done={task.done}
               animate:flip={{ duration: flipMs }}
             >
@@ -167,7 +166,7 @@
                     />{/if}{/snippet}
               </Checkbox.Root>
               <textarea
-                class={s.taskText}
+                class="checklist-task-text"
                 aria-label={`Task ${index + 1}`}
                 rows="1"
                 use:sizeToText={task.text}
@@ -183,14 +182,14 @@
               ></textarea>
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger
-                  class={s.more}
+                  class="checklist-more"
                   aria-label={`Actions for ${task.text || "untitled task"}`}
                   data-slop-export="hide"
                   ><Ellipsis size={19} /></DropdownMenu.Trigger
                 >
                 <DropdownMenu.Portal
                   ><DropdownMenu.Content
-                    class={s.menu}
+                    class="checklist-menu"
                     sideOffset={5}
                     align="end"
                     data-slop-export="hide"
@@ -215,14 +214,14 @@
             </li>
           {/each}
         </ol>
-        {#if !visible.length}<div class={s.empty}>
+        {#if !visible.length}<div class="checklist-empty">
             <Check size={30} />
             <h2>A little breathing room.</h2>
             <p>Catch your next small task above.</p>
           </div>{/if}
       {:else}
-        <div class={s.filedList}>
-          {#each filed as task (task.$id)}<div class={s.filedRow}>
+        <div class="checklist-filed-list">
+          {#each filed as task (task.$id)}<div class="checklist-filed-row">
               <span>{task.text || "Untitled task"}</span><button
                 data-slop-export="hide"
                 onclick={() => restore(task.$id)}
@@ -230,7 +229,7 @@
                 ><RotateCcw size={16} /> Restore</button
               >
             </div>
-          {:else}<div class={s.empty}>
+          {:else}<div class="checklist-empty">
               <Archive size={30} />
               <h2>No filed tasks yet.</h2>
               <p>Finish a task, then file it from your to-do list.</p>
@@ -238,7 +237,7 @@
         </div>
       {/if}
     </div>
-    <div class={s.paperFoot} data-slop-export="hide">
+    <div class="checklist-paper-foot" data-slop-export="hide">
       <span
         >{activeView === "tasks"
           ? "Enter to add. Check to finish."
@@ -252,35 +251,35 @@
         >{/if}
     </div>
   </section>
-  {#if notice}<div class={s.notice} role="status" data-slop-export="hide">{notice}</div>{/if}
+  {#if notice}<div class="checklist-notice" role="status" data-slop-export="hide">{notice}</div>{/if}
 </main>
 
 {#snippet exportView()}
-<article class={s.shell}>
+<article class="checklist-shell">
   {@render brand()}
-  <section class={s.paper} aria-label="Exported checklist">
-    <div class={s.heading}>
-      <p class={s.eyebrow}>{activeView === "filed" ? "Filed tasks" : "A little less on your mind."}</p>
-      <h1 class={s.title} style:white-space="pre-wrap" style:overflow-wrap="anywhere">{document.current.title || "Untitled list"}</h1>
-      <div class={s.progress}><span>{activeView === "filed" ? `${exported.length} filed` : `${exported.length - exportFinished} left to do`}</span><span>{exportFinished} / {exported.length} done</span></div>
-      <div class={s.track}><div style:width={`${exported.length ? exportFinished / exported.length * 100 : 0}%`}></div></div>
+  <section class="checklist-paper" aria-label="Exported checklist">
+    <div class="checklist-heading">
+      <p class="checklist-eyebrow">{activeView === "filed" ? "Filed tasks" : "A little less on your mind."}</p>
+      <h1 class="checklist-title" style:white-space="pre-wrap" style:overflow-wrap="anywhere">{document.current.title || "Untitled list"}</h1>
+      <div class="checklist-progress"><span>{activeView === "filed" ? `${exported.length} filed` : `${exported.length - exportFinished} left to do`}</span><span>{exportFinished} / {exported.length} done</span></div>
+      <div class="checklist-track"><div style:width={`${exported.length ? exportFinished / exported.length * 100 : 0}%`}></div></div>
     </div>
-    <ol class={s.list}>
+    <ol class="checklist-list">
       {#each exported as task (task.$id)}
-        <li class={s.row} data-done={task.done}>
+        <li class="checklist-row" data-done={task.done}>
           <span data-checkbox-root data-state={task.done ? "checked" : "unchecked"} aria-label={task.done ? "Complete" : "Incomplete"}>{#if task.done}<Check size={17} strokeWidth={3} />{/if}</span>
-          <span class={s.taskText} style:white-space="pre-wrap">{task.text || "Untitled task"}</span>
+          <span class="checklist-task-text" style:white-space="pre-wrap">{task.text || "Untitled task"}</span>
         </li>
       {/each}
     </ol>
-    {#if !exported.length}<div class={s.empty}><Check size={30} /><h2>{activeView === "filed" ? "No filed tasks yet." : "A little breathing room."}</h2></div>{/if}
+    {#if !exported.length}<div class="checklist-empty"><Check size={30} /><h2>{activeView === "filed" ? "No filed tasks yet." : "A little breathing room."}</h2></div>{/if}
   </section>
 </article>
 
 {/snippet}
 {#snippet icon()}
 <div style="width:512px;height:512px;display:grid;place-items:center" aria-hidden="true">
-  <div class={s.iconTile}><div class={s.iconPaper}>
+  <div class="checklist-icon-tile"><div class="checklist-icon-paper">
     {#each [0, 1, 2] as index}
       <div data-complete={index < marks}><span>{#if index < marks}<Check size={32} strokeWidth={3} />{/if}</span><i></i></div>
     {/each}

@@ -9,8 +9,8 @@ Read manifest.json first; only runtime hitslop-v1 is supported. Use schema.ts wi
 
 The host supplies the document SDK and Loro runtime. Do not embed the engine into app bundles or expose a second JSON writer. Build emits state.schema.json (a descriptor), initial.json, app.html, assets and document guidance. Never include state/, stores/, source, dependencies or caches in templates.
 
-Use bun slop dev/build/register SOURCE. Preview state is disposable; rerun dev to rebuild source. Create a writable copy of a built/registered template before editing. Agents use schema/get/apply/batch/compact. Old documents are rejected without migration.
+Start anywhere with `bunx @hitslop/cli init NAME`, then `cd NAME` and `bun install`. Use the generated `bun run check/dev/build/register` scripts. Bun is the only JavaScript runtime required; build/register need the matching installed hitSlop Mac app, not Swift or Xcode. Preview state is disposable; rerun dev to rebuild source. Create a writable copy of a built/registered template before editing. Agents use schema/get/apply/batch/compact. Old documents are rejected without migration.
 
-Quick Checklist and Small Expenses are the active examples. Use Vanilla Extract style classes and each app's own visual identity. Read docs/authoring.md, docs/package-format.md, docs/presentation.md and docs/capture.md. PNG/PDF export is supported; hosted publishing and catalog are deferred.
+Quick Checklist and Small Expenses are the active examples. Use plain CSS and defineTheme tokens and each app's own visual identity. Read the bundled hitslop-design references for CSS, presentation, and capture. PNG/PDF export is supported; hosted publishing and catalog are deferred.
 
 Use `<Slop {document}>` from `@hitslop/document/svelte`; optional inline exportView and icon snippets mount only during capture. Keep markup together in App.svelte unless a separate component helps. Build/register generate Quick Look artwork through the native helper, without bundling Loro. Register backs up and replaces an existing stateless master only after a successful complete build.

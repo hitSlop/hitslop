@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import HitSlopCore
 import SQLite3
 
 func canonicalURL(_ url: URL) throws -> URL {
@@ -16,6 +17,8 @@ func failure(_ message: String) -> NSError {
 
 /// The caller serializes database calls on queue. Swift never interprets Loro bytes.
 final class Storage: @unchecked Sendable {
+  static let maximumBytes: Int64 = 32 * 1024 * 1024
+  static let maximumRows: Int64 = 4096
   let queue = DispatchQueue(label: "hitslop.sqlite")
   private var db: OpaquePointer?
   var testingPhase: ((String) -> Void)?
@@ -31,7 +34,10 @@ final class Storage: @unchecked Sendable {
   init(root: URL) throws {
     self.root = root
     let attributes = try FileManager.default.attributesOfItem(atPath: root.path)
-    self.inode = (attributes[.systemFileNumber] as! NSNumber).uint64Value
+    guard let inode = (attributes[.systemFileNumber] as? NSNumber)?.uint64Value else {
+      throw failure("Cannot identify document directory")
+    }
+    self.inode = inode
     ownership = try DocumentWriterLock(root: root)
     let state = root.appendingPathComponent("state")
     do {
@@ -68,7 +74,16 @@ final class Storage: @unchecked Sendable {
   }
   func close() {
     if let db {
-      sqlite3_close(db)
+      // All calls and teardown run on queue; no outstanding statement may outlive ownership.
+      while let statement = sqlite3_next_stmt(db, nil) {
+        NSLog("hitSlop: finalizing outstanding SQLite statement at close")
+        sqlite3_finalize(statement)
+      }
+      let result = sqlite3_close_v2(db)
+      guard result == SQLITE_OK else {
+        NSLog("hitSlop: SQLite close failed (%d); retaining document ownership", result)
+        return
+      }
       self.db = nil
     }
     ownership?.close()
@@ -92,25 +107,64 @@ final class Storage: @unchecked Sendable {
     guard sqlite3_step(s) == SQLITE_ROW else { throw error(sql) }
     return sqlite3_column_int64(s, 0)
   }
-  private func data(_ s: OpaquePointer, _ column: Int32) -> Data? {
+  private func data(_ s: OpaquePointer, _ column: Int32) throws -> Data? {
     guard sqlite3_column_type(s, column) != SQLITE_NULL else { return nil }
     let size = Int(sqlite3_column_bytes(s, column))
-    return size == 0 ? Data() : Data(bytes: sqlite3_column_blob(s, column)!, count: size)
+    if size == 0 { return Data() }
+    guard let pointer = sqlite3_column_blob(s, column) else { throw error("read blob") }
+    return Data(bytes: pointer, count: size)
   }
-  private func bind(_ data: Data, _ s: OpaquePointer, _ index: Int32) {
-    _ = data.withUnsafeBytes {
+  private func bind(_ data: Data, _ s: OpaquePointer, _ index: Int32) throws {
+    let result = data.withUnsafeBytes {
       sqlite3_bind_blob(
         s, index, $0.baseAddress, Int32(data.count),
         unsafeBitCast(-1, to: sqlite3_destructor_type.self))
     }
+    guard result == SQLITE_OK else { throw error("bind bytes") }
   }
   private func done(_ s: OpaquePointer) throws {
     guard sqlite3_step(s) == SQLITE_DONE else { throw error("write") }
   }
+  private func checkBounds(additionalRows: Int64 = 0, additionalBytes: Int64 = 0) throws {
+    let rows = try scalar("SELECT count(*) FROM updates")
+    let bytes =
+      try scalar("SELECT COALESCE(sum(length(bytes)),0) FROM updates")
+      + scalar("SELECT COALESCE(length(checkpoint),0) FROM document WHERE id=1")
+    let schemaBytes = try scalar(
+      "SELECT COALESCE(length(CAST(schema_key AS BLOB)),0) FROM document WHERE id=1")
+    guard schemaBytes <= 1_048_576, rows + additionalRows <= Self.maximumRows,
+      bytes + additionalBytes <= Self.maximumBytes
+    else {
+      throw failure(
+        "Document exceeds storage limits (32 MiB or 4096 updates); preserve the package for recovery"
+      )
+    }
+  }
   func call(_ args: [String: Any]) throws -> [String: Any] {
     try checkLocation()
     let method = args["method"] as? String ?? ""
+    if method == "theme.load" || method == "theme.save" {
+      let url = root.appendingPathComponent("state/theme.json")
+      try safeFile(url, optional: true)
+      if method == "theme.save" {
+        guard let values = args["values"] as? [String: String] else {
+          throw failure("Invalid theme values")
+        }
+        let bytes = try JSONSerialization.data(withJSONObject: values, options: [.sortedKeys])
+        guard bytes.count <= 65536 else { throw failure("Theme exceeds 64 KiB") }
+        try bytes.write(to: url, options: .atomic)
+        return [:]
+      }
+      if !FileManager.default.fileExists(atPath: url.path) { return ["values": [String: String]()] }
+      let bytes = try SlopFile.read(url, within: root, maximumBytes: 65536)
+      guard let values = try JSONSerialization.jsonObject(with: bytes) as? [String: String] else {
+        throw failure("Invalid theme overrides")
+      }
+      return ["values": values]
+    }
     if method == "load" {
+      // Aggregate lengths are checked before allocating or base64 encoding any blobs.
+      try checkBounds()
       let s = try statement("SELECT checkpoint,schema_key,generation FROM document WHERE id=1")
       defer { sqlite3_finalize(s) }
       guard sqlite3_step(s) == SQLITE_ROW else { throw error("read") }
@@ -120,12 +174,13 @@ final class Storage: @unchecked Sendable {
       var records: [String] = []
       var status = sqlite3_step(updates)
       while status == SQLITE_ROW {
-        records.append(data(updates, 0)!.base64EncodedString())
+        guard let bytes = try data(updates, 0) else { throw failure("Missing update bytes") }
+        records.append(bytes.base64EncodedString())
         status = sqlite3_step(updates)
       }
       guard status == SQLITE_DONE else { throw error("read updates") }
       return [
-        "checkpoint": data(s, 0)?.base64EncodedString() ?? NSNull() as Any, "schemaKey": schema,
+        "checkpoint": try data(s, 0)?.base64EncodedString() ?? NSNull() as Any, "schemaKey": schema,
         "generation": String(sqlite3_column_int64(s, 2)), "updates": records,
       ]
     }
@@ -138,13 +193,22 @@ final class Storage: @unchecked Sendable {
       switch method {
       case "append":
         guard let updates = args["updates"] as? [String] else { throw failure("Missing updates") }
-        for encoded in updates {
+        guard !updates.isEmpty, updates.count <= Self.maximumRows else {
+          throw failure("Invalid update count")
+        }
+        let incoming = try updates.map { encoded -> Data in
           guard let bytes = Data(base64Encoded: encoded), !bytes.isEmpty else {
             throw failure("Invalid update bytes")
           }
+          return bytes
+        }
+        try checkBounds(
+          additionalRows: Int64(incoming.count),
+          additionalBytes: incoming.reduce(0) { $0 + Int64($1.count) })
+        for bytes in incoming {
           let s = try statement("INSERT INTO updates(bytes) VALUES(?)")
           defer { sqlite3_finalize(s) }
-          bind(bytes, s, 1)
+          try bind(bytes, s, 1)
           try done(s)
         }
         try exec("UPDATE document SET generation=generation+1 WHERE id=1")
@@ -153,11 +217,17 @@ final class Storage: @unchecked Sendable {
           !bytes.isEmpty,
           let key = args["schemaKey"] as? String
         else { throw failure("Invalid checkpoint") }
+        guard bytes.count <= Self.maximumBytes, key.utf8.count <= 1_048_576 else {
+          throw failure("Document exceeds storage size limit")
+        }
         let s = try statement(
           "UPDATE document SET checkpoint=?,schema_key=?,generation=generation+1 WHERE id=1")
         defer { sqlite3_finalize(s) }
-        bind(bytes, s, 1)
-        sqlite3_bind_text(s, 2, key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        try bind(bytes, s, 1)
+        guard
+          sqlite3_bind_text(s, 2, key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            == SQLITE_OK
+        else { throw error("bind schema key") }
         try done(s)
         try exec("DELETE FROM updates")
       default: throw failure("Unknown storage method")

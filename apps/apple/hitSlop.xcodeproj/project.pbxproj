@@ -104,6 +104,7 @@
 			buildConfigurationList = 061408E3075D9AC11E06812C /* Build configuration list for PBXNativeTarget "hitSlop-macOS" */;
 			buildPhases = (
 				B41ABABB846BE1E8CEEC8CC3 /* Sources */,
+				235D8833AC6890C829D74782 /* Embed starter templates */,
 				2DB7E9D05D6BE55DAEF42F9D /* Embed hitslop-native */,
 				BD8949865138D172D8661AFF /* Resources */,
 				1DA3D296F3B487247A81E12C /* Frameworks */,
@@ -200,6 +201,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\ncase \"${CONFIGURATION:-}\" in\n  Release) ;;\n  *) exit 0 ;;\nesac\nif [ \"${CODE_SIGNING_ALLOWED:-YES}\" = \"NO\" ]; then\n  exit 0\nfi\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+		};
+		235D8833AC6890C829D74782 /* Embed starter templates */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed starter templates";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/../../scripts/embed-starter-templates.sh\" \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"";
 		};
 		2DB7E9D05D6BE55DAEF42F9D /* Embed hitslop-native */ = {
 			isa = PBXShellScriptBuildPhase;

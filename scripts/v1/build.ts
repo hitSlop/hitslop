@@ -1,10 +1,14 @@
 import { buildSkills } from "../../packages/cli/src/skills-build";
 import "./generate";
-import { repository } from "../../packages/cli/src/build";
-import { prepareRenderer, buildTemplate } from "../../packages/cli/src/template";
+import "./runtime";
+import { resolve } from "node:path";
+const repository = resolve(import.meta.dir, "../..");
+import { buildTemplate } from "../../packages/cli/src/template";
 import { join } from "node:path";
 await buildSkills();
-const renderer = await prepareRenderer();
+const build = Bun.spawn(["swift", "build", "--package-path", join(repository,"apps/apple/Packages/HitSlopApple"), "--product", "hitslop-native"], {stdout:"inherit",stderr:"inherit"});
+if (await build.exited) throw new Error("Native build failed");
+const renderer = join(repository,"apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native");
 for (const [source, name] of [
   ["quick-checklist", "Checklist"],
   ["small-expenses", "Expenses"],

@@ -63,9 +63,9 @@ private struct CatalogResultsFeatureView: View {
             selectedID: $store.selectedID.sending(\.selected),
             query: $store.query.sending(\.queryChanged), searchFocused: searchFocused,
             errorMessage: store.filter.isHosted ? store.hostedIssues.first : nil,
-            localIssues: store.filter == .myTemplates ? store.localIssues : [],
-            sort: $store.sort.sending(\.sortChanged), showsSort: store.filter.isHosted,
-            isLoading: store.isLoading && store.filter.isHosted,
+            localIssues: store.filter != .recents ? store.localIssues : [],
+            sort: $store.sort.sending(\.sortChanged), showsSort: store.hostedEnabled && store.filter.isHosted,
+            isLoading: store.isLoading && store.hostedEnabled,
             onRefresh: { store.send(.refreshSources) }
         )
     }
@@ -100,18 +100,9 @@ private struct CatalogSidebar: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 3) {
-                    SidebarButton(title: "All Slops", emoji: catalogFilterEmoji(.all), selected: filter == .all) { select(.all) }
+                    SidebarButton(title: "Templates", emoji: catalogFilterEmoji(.all), selected: filter == .all) { select(.all) }
                     SidebarButton(title: "Recents", emoji: catalogFilterEmoji(.recents), count: recentCount, selected: filter == .recents) { select(.recents) }
-                    SidebarButton(title: "Mine", emoji: catalogFilterEmoji(.myTemplates), count: localCount, selected: filter == .myTemplates) { select(.myTemplates) }
 
-                    Text("CATEGORIES")
-                        .font(.caption2.weight(.semibold)).tracking(1.2).foregroundStyle(.secondary)
-                        .padding(.horizontal, 12).padding(.top, 22).padding(.bottom, 6)
-                    ForEach(categories, id: \.self) { category in
-                        SidebarButton(title: categoryLabel(category), emoji: categoryEmoji(category), selected: filter == .category(category)) {
-                            select(.category(category))
-                        }
-                    }
                 }
                 .padding(.horizontal, 8).padding(.bottom, 18)
             }
@@ -128,16 +119,6 @@ private struct CatalogSidebar: View {
                     }.buttonStyle(.plain)
                 }
                 HStack(spacing: 9) {
-                    Button { showsAccount = true } label: {
-                        AccountAvatar(user: account.user)
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(account.user?.email.map { "Account: \($0)" } ?? "Account")
-                    .accessibilityLabel("Account")
-                    .popover(isPresented: $showsAccount) {
-                        AccountSettingsView(store: account)
-                    }
                     BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
                     BrandLink(name: "discord", label: "Discord", destination: CatalogLinks.discord)
                 }
@@ -326,7 +307,7 @@ private struct CatalogRow: View {
     }
 
     private var sourceLabel: String {
-        entry.isRecent ? "LOCAL DOCUMENT" : entry.isLocal ? "READY LOCALLY" : "CATALOG"
+        entry.isRecent ? "LOCAL DOCUMENT" : entry.isBundled ? "BUILT-IN" : entry.isLocal ? "READY LOCALLY" : "CATALOG"
     }
 }
 
@@ -414,7 +395,7 @@ private struct CatalogDetail: View {
     private func primaryTitle(for entry: CatalogEntry) -> String { entry.isRecent ? "Open" : "Create" }
     private func primaryIcon(for entry: CatalogEntry) -> String { entry.isRecent ? "arrow.up.forward.app" : "sparkles" }
     private func facts(for entry: CatalogEntry) -> [CatalogFact] {
-        var result = [CatalogFact(icon: "externaldrive", title: "Source", value: entry.isRecent ? "Local document" : entry.isLocal ? "Installed locally" : "Online catalog")]
+        var result = [CatalogFact(icon: "externaldrive", title: "Source", value: entry.isRecent ? "Local document" : entry.isBundled ? "Included with hitSlop" : entry.isLocal ? "Installed locally" : "Online catalog")]
         if entry.isRecent, let date = entry.createdAt { result.append(CatalogFact(icon: "calendar", title: "Created", value: date.formatted(date: .abbreviated, time: .omitted))) }
         if let release = entry.releaseNumber { result.append(CatalogFact(icon: "shippingbox", title: "Release", value: "Release \(release)")) }
         if let count = entry.creationCount { result.append(CatalogFact(icon: "doc.on.doc", title: "Creations", value: "\(count)")) }

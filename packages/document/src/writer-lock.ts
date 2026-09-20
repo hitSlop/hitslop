@@ -3,7 +3,8 @@ import { mkdir, open, lstat, type FileHandle } from "node:fs/promises";
 import { constants } from "node:fs";
 import { join } from "node:path";
 
-// Spike adapter for macOS/Linux. The descriptor is held for the entire session.
+// Test-only macOS/Linux flock adapter; production ownership lives in Swift.
+// The descriptor is held for the entire test session.
 // Never unlink a flock file: doing so would permit two independently locked inodes.
 const libc = dlopen(process.platform === "darwin" ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
   flock: { args: [FFIType.i32, FFIType.i32], returns: FFIType.i32 },

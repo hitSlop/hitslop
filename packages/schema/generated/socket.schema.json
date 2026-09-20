@@ -19,9 +19,108 @@
             "minLength": 1,
             "maxLength": 4096
           },
-          "schemaHash": {
+          "method": {
             "type": "string",
-            "maxLength": 1048576
+            "const": "theme.get"
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "id",
+          "documentPath",
+          "epoch",
+          "method",
+          "values"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "documentPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "epoch": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "method": {
+            "type": "string",
+            "const": "theme.set"
+          },
+          "values": {
+            "type": "object",
+            "patternProperties": {
+              "^[a-zA-Z][a-zA-Z0-9-]*$": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              }
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "id",
+          "documentPath",
+          "epoch",
+          "method"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "documentPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "epoch": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "method": {
+            "type": "string",
+            "const": "theme.reset"
+          },
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "id",
+          "documentPath",
+          "method"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "documentPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
           },
           "method": {
             "enum": [
@@ -52,10 +151,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 4096
-          },
-          "schemaHash": {
-            "type": "string",
-            "maxLength": 1048576
           },
           "epoch": {
             "type": "string",
@@ -93,10 +188,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 4096
-          },
-          "schemaHash": {
-            "type": "string",
-            "maxLength": 1048576
           },
           "epoch": {
             "type": "string",
@@ -137,10 +228,6 @@
             "minLength": 1,
             "maxLength": 4096
           },
-          "schemaHash": {
-            "type": "string",
-            "maxLength": 1048576
-          },
           "epoch": {
             "type": "string",
             "minLength": 1,
@@ -173,10 +260,6 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 4096
-          },
-          "schemaHash": {
-            "type": "string",
-            "maxLength": 1048576
           },
           "epoch": {
             "type": "string",
@@ -226,9 +309,6 @@
       },
       "error": {
         "type": "string"
-      },
-      "retryable": {
-        "type": "boolean"
       }
     },
     "additionalProperties": false

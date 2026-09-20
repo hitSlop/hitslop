@@ -17,7 +17,7 @@ bun slop export /path/to/List.slop --format pdf --output /path/to/List.pdf
 
 The permanent `state/writer.lock` decides ownership. Closed editing runs an engine-only invisible WebKit session; it never loads authored app code. Busy documents route through their owner's Unix socket. Missing or failed discovery never permits a second writer. A small `hello` handshake returns session identity without a document snapshot; ordinary reads need no handshake.
 
-Successful mutations acknowledge persistence. An uncertain mutation or retryable save failure reports `--id ID --epoch EPOCH`. Reuse both with exactly the same operation, or inspect state before expressing new intent. Supplying only one flag is an error. Receipts are bounded to the live session; restarting or rotating its epoch invalidates old retries. Validation errors are not instructions to retry a save.
+Successful mutations acknowledge persistence. No automatic replay or public retry flags exist. After an unknown outcome, run `slop get` before issuing another edit. `get` flushes pending drafts and writes before returning; save failures return an error. One internal epoch identifies each WebView lifetime.
 
 ## Export
 
@@ -29,9 +29,20 @@ The server waits 30 seconds for a command; the client allows 35 seconds for a re
 
 ## Helper discovery and authoring
 
-`HITSLOP_NATIVE_CLI` selects an explicit executable for both document commands and template capture. Missing/non-executable overrides fail; an executed helper is never retried through another binary. Document discovery otherwise checks the checkout Debug helper, `/Applications/hitSlop.app`, then `~/Applications/hitSlop.app`. Template builds compile a matching helper unless explicitly overridden.
+`HITSLOP_NATIVE_CLI` selects an explicit executable for both document commands and template capture. Missing/non-executable overrides fail; an executed helper is never retried through another binary. Helper discovery otherwise checks `/Applications/hitSlop.app`, then
+`~/Applications/hitSlop.app`. Authoring never compiles Swift. Build and register
+require an installed app with the matching SDK/Loro identity.
 
-TypeScript owns `init`, disposable browser `dev`, `build`, and `register`. The Bun document adapter is isolated development/test infrastructure and the non-macOS path; macOS editing defaults to Swift. Hosted publication and historical `deferred/cli` commands are not part of the active CLI.
+The published `@hitslop/cli` owns `init`, `check`, disposable browser `dev`,
+`build`, and `register`. Run `bunx @hitslop/cli init my-slop` from any directory,
+then `cd my-slop && bun install`. Bun is the only JavaScript runtime required.
+Native document editing is macOS-only; there is no Bun document engine fallback.
+
+`slop theme get DOCUMENT` reports defaults, overrides, and effective values.
+`slop theme set DOCUMENT --values '{"accent":"#123456"}'` changes declared tokens;
+`slop theme reset DOCUMENT [--token accent]` restores defaults. Live commands use
+the owner socket; closed commands use engine-only WebKit. Inspect `theme get`
+after an uncertain transport result before retrying.
 
 ## Agent skills
 
@@ -47,7 +58,7 @@ bun slop skills update --scope global
 
 The build packages the authored `hitslop`, `hitslop-authoring`, `hitslop-design`, and `hitslop-document` guides plus the generated `hitslop-cli` command reference. Authored sources live in `packages/cli/skills`; `bun run build` also builds these artifacts. Rebuild after changing command metadata or authored guidance. Generated output lives in `packages/cli/.crust/root/skills` and is not tracked.
 
-Interactive installation prompts for scope and agent targets. `--all` defaults to global scope unless `--scope` is supplied. Deselecting an installed target removes its owned link. Conflicting real directories are skipped by `--all`; interactive replacement requires explicit confirmation. Project links are relative, global links absolute. Keep the CLI checkout at its installed location, or run installation/update from the new location to repair links.
+Interactive installation prompts for scope and agent targets. `--all` defaults to global scope unless `--scope` is supplied. Deselecting an installed target removes its owned link. Conflicting real directories are skipped by `--all`; interactive replacement requires explicit confirmation. Installed links target a durable versioned copy in `~/.hitslop/cli/VERSION/skills`, so clearing the bunx package cache does not break them.
 
 `skills update` repairs existing links; it does not install absent skills or download newer content. Link repair is explicit (`autoUpdate: false`), so document and authoring commands do not rewrite repository discovery links. Old native-created links can be repaired; the old `~/.hitslop/skills` cache is left untouched.
 

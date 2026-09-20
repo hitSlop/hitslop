@@ -1,76 +1,45 @@
 ---
-title: Build and share
-description: Validate, install, export, and publish a finished slop.
+title: Build, register, and share
+description: Turn source into an immutable template, create writable copies, and distribute useful output.
 ---
 
-## Validate and build
+Keep three objects distinct: the source project you edit, the runtime template you build, and the writable document someone creates from that template.
+
+## Check and build
+
+In a generated project:
 
 ```sh
 bun run check
 bun run build
 ```
 
-`check` runs Svelte and TypeScript diagnostics. `build` validates the authoring
-contract, bundles the app, and validates the generated package. Use
-`bun run validate` when you want the manifest, skin, theme, schema, and document
-guidance checks without waiting for a bundle, or run
-`slop validate path/to/document.slop` to inspect an existing package.
+Build validates the manifest and initial values, compiles Svelte and plain CSS, emits the schema and theme defaults, and uses the installed Mac app to capture native artwork. Output goes to `dist/SLUG.slop`. It contains no source, dependencies, caches, or personal document state. A failed build must not replace an existing successful output, and a build must never overwrite a writable document.
 
-The builder writes `dist/<slug>.slop`. Inspect the result before sharing it. A
-runtime template may contain the manifest, generated `app.html`, generated data
-schema, immutable assets, embedded document guidance, and Quick Look artwork.
-It must not contain source, dependencies, build caches, or personal stores.
+The CLI and Mac app must supply matching SDK/Loro versions. An incompatibility is an update instruction, not a reason to compile Swift or install another document engine.
 
-With hitSlop installed, you can double-click `dist/<slug>.slop` on macOS for an
-immediate native test. Opening it directly may create local stores and refreshed
-Finder assets, so treat that copy as disposable and rebuild before registration
-or publishing. Use a registered template and writable copy for persistence
-testing.
-
-## Register and test locally
+## Register a local template
 
 ```sh
 bun run register
 ```
 
-Registration installs an immutable master in the local catalog. Open **My
-Templates** in hitSlop and choose a destination to create a writable copy.
+Registration builds and installs an immutable master in `~/.hitslop/templates`. The Mac catalog lists it alongside built-in starters. Choose **Create** and save a separate writable document. Re-registering updates the master; it does not modify documents already created from it.
 
-Before publishing, test keyboard and focus behavior, reduced motion, long and
-empty content, a smaller window, close and reopen persistence, duplication,
-Finder preview, icon legibility, and static export.
+## Share a template or a document
 
-See [Icons, previews, and exports](/docs/guides/icons-and-exports/) for dynamic
-capture targets, static `--icon` and `--preview` artwork, and browser capture
-modes.
+For a reusable app, distribute the freshly built `.slop` template. A `.slop` is a directory package; zip it when transferring through a service that does not preserve directory bundles. The recipient needs the matching Mac app.
 
-## Export a document
+For a filled document, save and close it before copying or zipping the complete package. Its `state/` contains the actual private document and theme overrides. Inspect that content before sharing a writable copy; distributing source or a clean template does not include it. Keep active documents outside synced folders.
 
-Export a writable document as a full-height PNG or PDF:
+For read-only output, export PNG or PDF:
 
 ```sh
-slop export path/to/document.slop --format png --output document.png
-slop export path/to/document.slop --format pdf --output document.pdf
+bunx @hitslop/cli export My.slop --format pdf --output My.pdf
 ```
 
-PDF preserves selectable text and vector output. PNG renders at high resolution.
+See [icons and exports](/docs/guides/icons-and-exports/) for layouts and live-versus-closed capture behavior. Public template publishing, hosted discovery, and live collaboration are deferred; file distribution and image/PDF exports work locally today.
 
-## Publish to the catalog
+## Release your source
 
-```sh
-slop identity show
-bun run publish
-```
-
-Publishing builds and captures one immutable artifact, signs its hash and size,
-and sends it to the official catalog. Public author attribution comes from the
-signed `manifest.json`; the local Ed25519 key proves control of releases.
-
-Back up that identity before relying on it:
-
-```sh
-slop identity export hitslop-identity-backup.json
-```
-
-The export is encrypted with the passphrase you enter. Store it somewhere safe
-and never commit identity material to a source project.
+Include the manifest, schema, initial values, theme, stylesheet, components, package manifest, and Bun lockfile. Keep generated `dist/`, writable documents, and dependencies out of source control. Test a fresh install, the smallest supported window, keyboard interaction, close-after-type, duplicate, theme reset, icon capture, and PNG/PDF output.

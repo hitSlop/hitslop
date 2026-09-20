@@ -50,7 +50,7 @@ private struct UpdateSettingsView: View {
         let urls = CommandLine.arguments.dropFirst().filter { $0.hasSuffix(".slop") }.map(URL.init(fileURLWithPath:))
         if urls.isEmpty { showCatalog() } else { urls.forEach(openDocument) }
     }
-    func application(_ application: NSApplication, open urls: [URL]) { urls.filter { !coordinator.handleSharingURL($0) && !coordinator.handleAuthenticationURL($0) && $0.isFileURL && $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
+    func application(_ application: NSApplication, open urls: [URL]) { urls.filter { $0.isFileURL && $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         coordinator.requestQuit()
@@ -99,12 +99,10 @@ private struct UpdateSettingsView: View {
     @objc private func duplicateActive() { coordinator.sendToActiveDocument(.duplicate) }
     @objc private func exportPNG() { coordinator.sendToActiveDocument(.exportPNG) }
     @objc private func exportPDF() { coordinator.sendToActiveDocument(.exportPDF) }
-    @objc private func shareActive() { coordinator.sendToActiveDocument(.share) }
     @objc private func togglePin() { coordinator.sendToActiveDocument(.pin(!coordinator.isActiveDocumentPinned)) }
     @objc private func showSettings() {
         if settingsWindow == nil {
             let content = TabView {
-                coordinator.accountSettings.tabItem { Label("Account", systemImage: "person.crop.circle") }
                 UpdateSettingsView(updater: updater).tabItem { Label("Updates", systemImage: "arrow.triangle.2.circlepath") }
             }.frame(width: 480, height: 340)
             let window = NSWindow(contentViewController: NSHostingController(rootView: content))
@@ -117,7 +115,7 @@ private struct UpdateSettingsView: View {
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-    @objc private func openWebsite() { NSWorkspace.shared.open(catalogURL) }
+    @objc private func openWebsite() { NSWorkspace.shared.open(URL(string: "https://hitslop.com")!) }
     @objc private func openRecent(_ sender: NSMenuItem) { if let url = sender.representedObject as? URL { openDocument(url) } }
     @objc private func clearRecent() { coordinator.clearRecentDocuments() }
 
@@ -159,10 +157,6 @@ private struct UpdateSettingsView: View {
         file.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
 
         let edit = NSMenu(title: "Edit"); editItem.submenu = edit
-        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        let redo = edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
-        redo.keyEquivalentModifierMask = [.command, .shift]
-        edit.addItem(.separator())
         edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
@@ -204,7 +198,7 @@ private struct UpdateSettingsView: View {
     }
     @discardableResult private func item(_ menu: NSMenu, _ title: String, _ action: Selector, _ key: String) -> NSMenuItem { let value = menu.addItem(withTitle: title, action: action, keyEquivalent: key); value.target = self; return value }
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if [#selector(duplicateActive), #selector(exportPNG), #selector(exportPDF), #selector(shareActive), #selector(togglePin)].contains(menuItem.action) { if menuItem.action == #selector(togglePin) { menuItem.state = coordinator.isActiveDocumentPinned ? .on : .off }; return coordinator.canPerformDocumentCommands }
+        if [#selector(duplicateActive), #selector(exportPNG), #selector(exportPDF), #selector(togglePin)].contains(menuItem.action) { if menuItem.action == #selector(togglePin) { menuItem.state = coordinator.isActiveDocumentPinned ? .on : .off }; return coordinator.canPerformDocumentCommands }
         return true
     }
 }

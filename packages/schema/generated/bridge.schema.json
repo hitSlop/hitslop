@@ -3,6 +3,53 @@
     {
       "type": "object",
       "required": [
+        "method"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "theme.load"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "method",
+        "values"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "theme.save"
+        },
+        "values": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-zA-Z][a-zA-Z0-9-]*$": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "method"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "runtimeRecovered"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
         "method",
         "width",
         "height"

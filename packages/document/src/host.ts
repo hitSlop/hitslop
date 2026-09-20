@@ -13,7 +13,13 @@ export async function mountDocument(App: Component) {
     const config = native
       ? await runtime.hostCall({ method: "config" })
       : { epoch: crypto.randomUUID() };
-    if (native) (globalThis as any).slop = Object.freeze({ window: { resize: (size: {width:number,height:number}) => runtime.hostCall({method:"window.resize",...size}) } });
+    if (native)
+      (globalThis as any).slop = Object.freeze({
+        window: {
+          resize: (size: { width: number; height: number }) =>
+            runtime.hostCall({ method: "window.resize", ...size }),
+        },
+      });
     if (config.presentation) runtime.installPresentationStage(config.presentation);
     const descriptor = await fetch("/state.schema.json").then((r) => {
       if (!r.ok) throw new Error("Missing document descriptor");
@@ -28,13 +34,38 @@ export async function mountDocument(App: Component) {
       native ? new runtime.HostStore() : new runtime.MemoryStore(),
       initial,
     );
-    const session = new runtime.Session(doc, config.epoch);
-    const app = mount(App, { target: document.body, context: new Map([[documentContext, doc]]) });
+    const session = new runtime.Session(doc, config.epoch, await runtime.openTheme(native));
+    let app = mount(App, { target: document.body, context: new Map([[documentContext, doc]]) });
     await tick();
     const capture = runtime.captureController();
     (globalThis as any).__slop = {
-      request: (request: any) => session.handle({ ...request, schemaHash: request.schemaHash ?? doc.key }),
+      reloadInterface: async () => {
+        await session.flush();
+        let failure: unknown;
+        const failed = (event: Event) => {
+          failure = (event as CustomEvent).detail;
+        };
+        document.addEventListener("hitslop:render-error", failed);
+        try {
+          await unmount(app);
+          app = mount(App, { target: document.body, context: new Map([[documentContext, doc]]) });
+          await tick();
+          if (failure !== undefined) throw failure;
+          if (native) await runtime.hostCall({ method: "runtimeRecovered" });
+        } finally {
+          document.removeEventListener("hitslop:render-error", failed);
+        }
+      },
+      request: (request: any) => session.handle(request),
       flush: () => session.flush(),
+      prepareClose: async () => {
+        await session.prepareClose();
+        document.body.inert = true;
+      },
+      cancelClose: () => {
+        session.cancelClose();
+        document.body.inert = false;
+      },
       retrySave: async () => {
         try {
           await session.flush();
@@ -45,7 +76,11 @@ export async function mountDocument(App: Component) {
       },
       close: async () => {
         await session.close();
-        await unmount(app);
+        try {
+          await unmount(app);
+        } catch (error) {
+          console.error(error);
+        }
       },
       captureBegin: async (token: string) => {
         await session.flush();

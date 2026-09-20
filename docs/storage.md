@@ -1,13 +1,15 @@
-# Local storage
+# Local document storage
 
-`state/document.sqlite` uses SQLite user_version 1, DELETE journaling and synchronous FULL. `document` contains one checkpoint, exact canonical descriptor identity, and a generation token; `updates` contains ordered Loro byte records. Checkpoint replacement and covered-row deletion are one transaction. Generation is a local storage token, not a document revision or Loro version vector.
+The WebView owns one pinned Loro replica. Swift stores opaque checkpoint/update bytes in state/document.sqlite, SQLite user_version 1, DELETE journaling, synchronous FULL. Checkpoint replacement and covered-row deletion are atomic. The exact canonical schema descriptor is the storage key. Generation is a storage token, not a Loro version.
 
-`state/writer.lock` has a permanent inode and an exclusive OS flock. `state/host.lock` is only live socket discovery. A failed connection never authorizes direct writes while the lock is held. Only successful ownership acquisition allows removal of stale discovery. Close drains accepted work and flushes before releasing ownership. Failed close retains the lock.
+One OS flock on the permanent state/writer.lock inode owns a package. state/host.lock contains socket discovery only. Closed editing uses an engine-only WebView without app.html. Live commands use the owner's socket. Never bypass a busy lock or delete writer.lock.
 
-Autosave starts 200 ms after the first pending edit. Explicit flush drains queued writes. At 256 update records or 4 MiB since the checkpoint, flush checkpoints automatically. Full snapshots retain CRDT history; checkpointing bounds replay, not lifetime history. Lost acknowledgements retain pending bytes and reload generation; replaying identical Loro bytes is idempotent.
+Autosave runs after 200 ms. Flush commits text drafts, persists pending updates, and checkpoints at 256 updates or 4 MiB. Native load/write bounds are 4096 rows and 32 MiB aggregate checkpoint/update bytes. The engine checkpoints before an append would exceed these bounds. Oversized snapshots fail visibly and preserve pending edits. An oversized existing package is refused intact for recovery; compact is not promised to repair packages that cannot be loaded.
 
-Live-session mutation receipts contain request identity and outcome, never old document snapshots. Reads are not cached. Retry windows are bounded to 256 receipts or ten minutes; once complete they rotate the session epoch. Old epochs fail, including after restart. Pending failed saves prevent rotation. A CLI failure prints retry identity; reuse both ID and epoch, or inspect state before expressing new intent. This is not cross-restart exactly-once execution.
+If an append commits but its acknowledgement is lost, the engine reloads storage metadata and retains the same Loro bytes. A later flush imports those bytes idempotently. This does not make repeating a user operation idempotent.
 
-Store and CLI reject symlinked state. Native SQLite also uses NOFOLLOW and canonical filesystem paths. Local packages must be closed before moving/renaming; missing/replaced paths fail writes. Cloud-synced locations are unsupported. Host bridge requests are bounded; individual stored records/checkpoints are capped at 32 MiB.
+CLI mutations are serialized and acknowledge persistence. get flushes drafts and writes before returning. No receipts, automatic mutation replay, or public retry identity exist. After an unknown outcome, run slop get before another edit. Each WebView lifetime has one internal epoch, including export handshake protection.
 
-There is no mutable JSON file. `slop get` projects readable state, and `slop schema` explains the declarative descriptor. Optional fields are absent, not null; unknown fields and schema mismatches reject without migration.
+Prepare-close commits drafts and freezes edits. Cancel-close restores editing on failure. Successful close removes discovery, tears down the WebView and bridge, drains storage, closes SQLite, and releases ownership. Renderer recovery retains ownership while rebuilding the WebView from saved bytes.
+
+Close documents before moving/renaming them. Symlinked state, iCloud, and other synced folders are unsupported. There are no mutable document JSON projections or media stores. Optional `state/theme.json` stores declared theme token overrides; it is host presentation state, not a document projection. Arbitrary CSS overrides are unsupported.

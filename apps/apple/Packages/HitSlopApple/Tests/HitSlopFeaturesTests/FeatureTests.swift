@@ -9,7 +9,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 
 @Test @MainActor func searchDebouncesAndSortKeepsTheSearch() async {
     let clock = TestClock()
-    var initial = CatalogFeature.State()
+    var initial = CatalogFeature.State(hostedEnabled: true)
     initial.hosted = [CatalogEntry(id: "a", source: .hosted("a"), title: "Counter"), CatalogEntry(id: "b", source: .hosted("b"), title: "Notes")]
     let store = TestStore(initialState: initial) { CatalogFeature() } withDependencies: {
         $0.continuousClock = clock
@@ -28,7 +28,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 
 @Test @MainActor func changingSourceCancelsSearchAndOldSnapshotsCannotReplaceResults() async {
     let clock = TestClock()
-    var initial = CatalogFeature.State()
+    var initial = CatalogFeature.State(hostedEnabled: true)
     initial.local = [CatalogEntry(id: "local", source: .local(documentURL), title: "Notes")]
     let store = TestStore(initialState: initial) { CatalogFeature() } withDependencies: { $0.continuousClock = clock }
     await store.send(.queryChanged("Notes")) { $0.query = "Notes" }
@@ -42,7 +42,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 
 @Test @MainActor func catalogSelectionFollowsSnapshotRemoval() async {
     let entry = CatalogEntry(id: "a", source: .hosted("a"), title: "Counter")
-    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() }
+    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() }
     await store.send(.hostedReceived(0, CatalogSnapshot(entries: [entry]))) { $0.hosted = [entry]; $0.selectedID = "a" }
     await store.send(.hostedReceived(0, CatalogSnapshot())) { $0.hosted = []; $0.selectedID = nil }
 }
@@ -51,7 +51,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     let entry = CatalogEntry(id: "a", source: .local(documentURL), title: "Counter")
     let calls = LockIsolated(0)
     let gate = AsyncStream<Void>.makeStream()
-    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
+    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() } withDependencies: {
         $0.catalogClient.recents = { [] }
         $0.catalogClient.create = { _ in
             calls.withValue { $0 += 1 }
@@ -70,7 +70,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 
 @Test @MainActor func failedCreationCanBeRetried() async {
     let entry = CatalogEntry(id: "a", source: .local(documentURL), title: "Counter")
-    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
+    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() } withDependencies: {
         $0.catalogClient.create = { _ in throw Failure() }
     }
     await store.send(.primaryAction(entry)) { $0.creating = entry }
@@ -154,6 +154,8 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     initial.documents = [document]
     let reply = LockIsolated<Bool?>(nil)
     let store = TestStore(initialState: initial) { AppFeature() } withDependencies: {
+        $0.documentClient.finishQuit = { _ in }
+        $0.documentClient.cancelQuit = { _ in }
         $0.documentClient.prepareToQuit = { _ in throw Failure() }
         $0.documentClient.replyToQuit = { reply.setValue($0) }
     }
@@ -186,6 +188,8 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
             for await _ in opening.stream { break }
             return "Counter"
         }
+        $0.documentClient.finishQuit = { _ in }
+        $0.documentClient.cancelQuit = { _ in }
         $0.documentClient.prepareToQuit = { id in
             prepared.withValue { $0.append(id) }
             for await _ in preparation.stream { break }
@@ -251,6 +255,8 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
             for await _ in gate.stream { break }
             events.withValue { $0.append("exported") }; return nil
         }
+        $0.documentClient.finishQuit = { _ in }
+        $0.documentClient.cancelQuit = { _ in }
         $0.documentClient.prepareToQuit = { _ in events.withValue { $0.append("prepared") } }
         $0.documentClient.finishAssetRefreshes = { events.withValue { $0.append("assets") } }
         $0.documentClient.replyToQuit = { _ in events.withValue { $0.append("reply") } }
@@ -290,7 +296,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     let terminated = LockIsolated(false)
     let requests = LockIsolated<[String?]>([])
     old.continuation.onTermination = { _ in terminated.setValue(true) }
-    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
+    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() } withDependencies: {
         $0.catalogClient.hosted = { category, _ in
             requests.withValue { $0.append(category) }
             return category == nil ? old.stream : next.stream
@@ -320,7 +326,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 
 @Test @MainActor func clearingSearchImmediatelyRestoresResultsAndCancelsDebounce() async {
     let clock = TestClock()
-    var state = CatalogFeature.State()
+    var state = CatalogFeature.State(hostedEnabled: true)
     state.hosted = [CatalogEntry(id: "a", source: .hosted("a"), title: "Counter")]
     state.query = "missing"; state.searchTerm = "missing"
     let store = TestStore(initialState: state) { CatalogFeature() } withDependencies: { $0.continuousClock = clock }
@@ -332,7 +338,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 
 @Test @MainActor func olderRecentsCannotUndoClearOrRefresh() async {
     let gate = AsyncStream<Void>.makeStream()
-    var state = CatalogFeature.State(); state.recentsGeneration = 4
+    var state = CatalogFeature.State(hostedEnabled: true); state.recentsGeneration = 4
     let store = TestStore(initialState: state) { CatalogFeature() } withDependencies: {
         $0.catalogClient.recents = { for await _ in gate.stream { break }; return [] }
     }
@@ -348,7 +354,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     let localCalls = LockIsolated(0)
     let hostedCalls = LockIsolated(0)
     let refreshCalls = LockIsolated(0)
-    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
+    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() } withDependencies: {
         $0.catalogClient.hosted = { _, _ in hostedCalls.withValue { $0 += 1 }; return .finished }
         $0.catalogClient.local = { localCalls.withValue { $0 += 1 }; return local.stream }
         $0.catalogClient.refreshLocal = { refreshCalls.withValue { $0 += 1 } }
@@ -425,6 +431,8 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
             for await _ in opening.stream { break }
             return "Duplicate"
         }
+        $0.documentClient.finishQuit = { _ in }
+        $0.documentClient.cancelQuit = { _ in }
         $0.documentClient.prepareToQuit = { id in
             prepared.withValue { $0.append(id) }
             if id == documentID { for await _ in preparation.stream { break } }
@@ -466,4 +474,49 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     await store.send(.saveFailed("Offline"))
     #expect(store.state.alert?.id != firstID)
     await store.send(.alert(.dismiss)) { $0.alert = nil }
+}
+
+@Test @MainActor func localReleaseNeverStartsHostedDiscovery() async {
+    let calls = LockIsolated(0)
+    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
+        $0.catalogClient.hosted = { _, _ in calls.withValue { $0 += 1 }; return .finished }
+        $0.catalogClient.local = { .finished }
+        $0.catalogClient.recents = { [] }
+    }
+    await store.send(.start) { $0.isStarted = true; $0.subscription = 1; $0.recentsGeneration = 1 }
+    await store.receive(\.recentsReceived)
+    #expect(calls.value == 0)
+    #expect(!store.state.isLoading)
+    await store.finish()
+}
+
+@Test @MainActor func multiDocumentQuitFailureCancelsEveryPreparationWithoutFinishing() async {
+    let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+    var initial = AppFeature.State()
+    for id in [documentID, secondID] {
+        var document = DocumentFeature.State(id: id, url: documentURL.appendingPathComponent(id.uuidString))
+        document.isOpening = false
+        initial.documents.append(document)
+    }
+    let events = LockIsolated<[String]>([])
+    let store = TestStore(initialState: initial) { AppFeature() } withDependencies: {
+        $0.documentClient.prepareToQuit = { id in
+            events.withValue { $0.append("prepare:\(id)") }
+            if id == secondID { throw Failure() }
+        }
+        $0.documentClient.finishQuit = { _ in events.withValue { $0.append("unexpected finish") } }
+        $0.documentClient.cancelQuit = { id in events.withValue { $0.append("cancel:\(id)") } }
+        $0.documentClient.replyToQuit = { allowed in events.withValue { $0.append("reply:\(allowed)") } }
+    }
+    await store.send(.quitRequested) {
+        $0.quitPhase = .preparing; $0.catalog.isQuitting = true
+        for id in [documentID, secondID] { $0.documents[id: id]?.isQuitting = true }
+    }
+    await store.receive(\.quitFailed) {
+        $0.quitPhase = .running; $0.catalog.isQuitting = false
+        for id in [documentID, secondID] { $0.documents[id: id]?.isQuitting = false }
+        $0.alert = .operationFailure("Save failed")
+    }
+    await store.finish()
+    #expect(events.value == ["prepare:\(documentID)", "prepare:\(secondID)", "cancel:\(documentID)", "cancel:\(secondID)", "reply:false"])
 }

@@ -1,7 +1,8 @@
-import { resolve, join } from "node:path";
+import { resolve, join, basename } from "node:path";
 import { mkdtemp, rm, cp, mkdir, readFile, writeFile, stat } from "node:fs/promises";
+import metadata from "../package.json";
 import { tmpdir, homedir } from "node:os";
-import { buildProject, buildRuntime, runtimeDirectory, repository } from "./build";
+import { buildProject, runtimeDirectory, cliRoot } from "./build";
 import { buildTemplate, prepareRenderer, installTemplate } from "./template";
 export async function runAuthoring(
   command: "init" | "build" | "register" | "dev",
@@ -9,7 +10,7 @@ export async function runAuthoring(
   port = 5173,
 ) {
   if (command === "init") {
-    const source = join(repository, "packages/cli/templates/checklist");
+    const source = join(cliRoot, "templates/checklist");
     const destination = resolve(target);
     if (
       await stat(destination).then(
@@ -19,10 +20,30 @@ export async function runAuthoring(
     )
       throw new Error("Choose a new source directory");
     await cp(source, destination, { recursive: true, errorOnExist: true, force: false });
-    const metadata = await readFile(join(destination, "package.json"), "utf8");
+    const name =
+      basename(destination)
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "my-slop";
+    const project = JSON.parse(await readFile(join(destination, "package.json"), "utf8"));
+    project.name = name;
+    project.dependencies["@hitslop/document"] = metadata.version;
+    project.devDependencies = { "@hitslop/cli": metadata.version };
+    project.scripts = {
+      dev: "slop dev .",
+      check: "slop check .",
+      build: "slop build .",
+      register: "slop register .",
+    };
+    await writeFile(join(destination, "package.json"), JSON.stringify(project, null, 2) + "\n");
+    const manifest = JSON.parse(await readFile(join(destination, "manifest.json"), "utf8"));
+    manifest.slug = name;
+    manifest.title = basename(destination);
+    await writeFile(join(destination, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+    await cp(join(cliRoot, "skills"), join(destination, ".agents/skills"), { recursive: true });
     await writeFile(
-      join(destination, "package.json"),
-      metadata.replace("__HITSLOP_DOCUMENT__", join(repository, "packages/document")),
+      join(destination, "AGENTS.md"),
+      "Read manifest.json and .agents/skills/hitslop-authoring/SKILL.md first. Use plain CSS, defineTheme tokens, and typed document handles. Run bun run check and bun run build.\n",
     );
     console.log(
       `Created ${destination}. Install its dependencies with bun install, then slop dev ${destination}.`,
@@ -38,7 +59,8 @@ export async function runAuthoring(
     await installTemplate(output, destination);
     console.log(destination);
   } else if (command === "dev") {
-    await buildRuntime();
+    if (!(await Bun.file(join(runtimeDirectory, "index.js")).exists()))
+      throw new Error("CLI preview runtime is missing. Reinstall @hitslop/cli.");
     const temporary = await mkdtemp(join(tmpdir(), "hitslop-preview-"));
     const out = await buildProject(target, join(temporary, "preview.slop"));
     const server = Bun.serve({

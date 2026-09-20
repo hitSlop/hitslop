@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { realpath, stat, type FileHandle } from "node:fs/promises";
 import { acquireWriter } from "./writer-lock.ts";
 import type { ByteStore, Stored } from "./storage.ts";
-/** Document format 1. Raw Loro records, no HSLU framing or materialized JSON. */
+/** Format-1 storage interoperability/crash test fixture. Never used by the document CLI. */
 export class SQLiteStore implements ByteStore {
   private constructor(
     private db: Database,

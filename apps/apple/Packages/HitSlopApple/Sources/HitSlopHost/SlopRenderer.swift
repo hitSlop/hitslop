@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import HitSlopCore
 import HitSlopRuntime
+import HitSlopWasm
 import WebKit
 
 @MainActor private final class SlopDevelopmentWindowBridge: NSObject, WKScriptMessageHandlerWithReply {
@@ -134,8 +135,8 @@ struct SlopDocumentAssets: Sendable {
         try await session.flush()
         try Task.checkCancellation()
         let token = UUID().uuidString, originalFrame = session.webView.frame
-        let background = session.webView.value(forKey: "drawsBackground") as? Bool ?? true
-        defer { session.webView.setValue(background, forKey: "drawsBackground") }
+        let background = WebViewBackground.get(session.webView)
+        defer { WebViewBackground.set(background, on: session.webView) }
         do {
             session.webView.frame.size = CGSize(width: max(512, originalFrame.width), height: max(512, originalFrame.height))
             let value = try await begin(session.webView, token: token, mode: "icon")
@@ -150,7 +151,7 @@ struct SlopDocumentAssets: Sendable {
                   rect.maxX <= session.webView.bounds.width + 0.5, rect.maxY <= session.webView.bounds.height + 0.5 else {
                 throw SlopPackageError.invalid("icon target must be a visible square inside the capture viewport")
             }
-            session.webView.setValue(false, forKey: "drawsBackground")
+            WebViewBackground.set(false, on: session.webView)
             let configuration = WKSnapshotConfiguration()
             configuration.rect = rect
             configuration.snapshotWidth = 512
@@ -182,8 +183,8 @@ struct SlopDocumentAssets: Sendable {
         try Task.checkCancellation()
         let token = UUID().uuidString, originalFrame = session.webView.frame
         let isPreview = output == .previewPNG
-        let background = session.webView.value(forKey: "drawsBackground") as? Bool ?? true
-        defer { session.webView.setValue(background, forKey: "drawsBackground") }
+        let background = WebViewBackground.get(session.webView)
+        defer { WebViewBackground.set(background, on: session.webView) }
         do {
             var measurement = try await begin(session.webView, token: token, mode: isPreview ? "preview" : "export")
             let dedicated = measurement["dedicated"] as? Bool == true
@@ -247,7 +248,7 @@ struct SlopDocumentAssets: Sendable {
                 let configuration = WKSnapshotConfiguration()
                 configuration.rect = rect
                 configuration.snapshotWidth = NSNumber(value: Double(width * scale))
-                if dedicated { session.webView.setValue(false, forKey: "drawsBackground") }
+                if dedicated { WebViewBackground.set(false, on: session.webView) }
                 let image = try await session.webView.takeSnapshot(configuration: configuration)
                 data = dedicated ? try SlopPreviewImage.png(from: image) : try SlopPreviewImage.png(from: image, package: session.package, scale: scale)
             case .pdf:

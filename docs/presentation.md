@@ -84,31 +84,20 @@ extending the guide or starting the next slop.
 Hybrids are welcome. An invoice can gain a thermal-receipt skin; a tracker can
 feel like a pocket instrument. Keep one dominant metaphor and one obvious job.
 
-## Organize styles with Vanilla Extract
+## Organize styles with plain CSS
 
-Use exported `style()` classes for the elements a slop owns, and import them
-into Svelte with `import * as s from "./styles.css"`. Bind classes directly,
-such as `class={s.startButton}`, so the component and its styles have checked
-references. Keep `theme.ts` as the public token source; local class names do
-not change how owners customize `stores/theme.css`.
+Import `styles.css` from `main.ts`. Use app-prefixed classes, keeping base rules,
+hover/focus states, descendants, and responsive rules together. Bits UI portal
+content needs an explicit class; it is outside the trigger's ancestor tree.
 
-Group one stylesheet into the surface, working area, controls, and capture
-views. Keep each element's hover/focus states, Bits UI data-attribute selectors,
-and media/container queries beside its base properties. Use composition for
-shared structure, and split files only when real component boundaries make
-that easier to maintain. Format substantial rules with readable property groups.
+Keep public tokens in `theme.ts` using `defineTheme` from
+`@hitslop/document/theme`. Use `var(--slop-TOKEN)` in CSS. The builder emits
+`assets/theme.css`; owners change declared tokens with `slop theme set/reset`,
+persisted in `state/theme.json`. Structural styles remain immutable.
 
-Reserve `globalStyle()` for document defaults and necessary descendants anchored
-to a scoped class. Give Bits UI primitives local classes and use selectors such
-as `&[data-state="active"]`; do not make the entire app a list of global class
-selectors. Fonts, resets, and page-level reduced-motion defaults may remain global.
-
-Focus Timer demonstrates this organization. During a refactor, preserve public
-tokens, behavior, and editor/export/icon appearance, then verify the emitted
-styles: composition and selector specificity can affect the cascade. The
-bundled `hitslop-design` skill includes a self-contained
-[`vanilla-extract.md`](../.agents/skills/hitslop-design/references/vanilla-extract.md)
-reference for new projects created with `slop init`.
+Preserve editor, export, and icon appearance when reorganizing styles. The
+bundled [CSS guide](../packages/cli/skills/hitslop-design/references/css.md)
+contains a self-contained pattern for new projects.
 
 ## Standard windows and resizing
 

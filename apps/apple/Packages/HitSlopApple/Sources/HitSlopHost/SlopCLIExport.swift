@@ -9,11 +9,16 @@ extension SlopRenderer {
     public static func installCLIExport(on session: SlopRuntimeSession) {
         session.engine.onExport = { [weak session] format, output, deadline in
             guard let session else { throw SlopPackageError.invalid("Document closed") }
-            try validateExportOutput(output, source: session.package.rootURL)
-            try deadline.check()
-            let data = try await exportData(session: session, format: format)
-            try publishExport(data, to: output, source: session.package.rootURL, deadline: deadline)
+            try await exportDocument(session: session, format: format, output: output, deadline: deadline)
         }
+    }
+
+    public static func exportDocument(session: SlopRuntimeSession, format: String, output: URL,
+                                      deadline: NativeCommandDeadline = NativeCommandDeadline()) async throws {
+        try validateExportOutput(output, source: session.package.rootURL)
+        try deadline.check()
+        let data = try await exportData(session: session, format: format)
+        try publishExport(data, to: output, source: session.package.rootURL, deadline: deadline)
     }
 
     public static func exportDocument(packageURL: URL, format: String, output: URL) async throws {

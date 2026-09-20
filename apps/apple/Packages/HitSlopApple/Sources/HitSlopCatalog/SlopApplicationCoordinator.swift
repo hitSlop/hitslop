@@ -41,7 +41,7 @@ import SwiftUI
             $0.documentClient = native.client
             $0.accountClient = presentsWindows ? accountServices.client : .empty
         }
-        if presentsWindows { store.send(.account(.start)) }
+        // Account UI and authentication listeners are deferred; Firebase startup stays active.
         native.onOpened = { [weak self] id, controller in self?.connect(id, controller: controller) }
         native.onFocused = { [weak self] in self?.updateFocus() }
         observation = observe { [weak self] in
@@ -105,6 +105,10 @@ import SwiftUI
 
     public func openDocument(_ url: URL) {
         guard store.quitPhase == .running else { return }
+        guard (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
+            store.send(.externalFailure("Document packages cannot be symlinks."))
+            return
+        }
         let canonical = url.standardizedFileURL.resolvingSymlinksInPath()
         if DocumentFactory.isManagedTemplatePackage(canonical, templatesRoot: catalogServices.templatesURL) {
             showCatalog()
@@ -172,6 +176,8 @@ import SwiftUI
             focus: { [self] id in await focus(id) },
             perform: { [self] id, command in try await perform(id, command: command) },
             prepareToQuit: { [self] id in try await prepareToQuit(id) },
+            finishQuit: { [self] id in try await finishQuit(id) },
+            cancelQuit: { [self] id in await cancelQuit(id) },
             finishAssetRefreshes: { await SlopDocumentWindowController.finishAssetRefreshesForTermination() },
             replyToQuit: { allowed in await MainActor.run { NSApp.reply(toApplicationShouldTerminate: allowed) } }
         )
@@ -196,6 +202,8 @@ import SwiftUI
         HitSlopFirebase.log("document_opened")
         return controller.documentTitle
     }
+    private func finishQuit(_ id: UUID) async throws { try await controller(id).session.finish() }
+    private func cancelQuit(_ id: UUID) async { await controllers[id]?.cancelPreparedClose() }
     private func prepareToQuit(_ id: UUID) async throws { try await controller(id).prepareToClose() }
     private func focus(_ id: UUID) { if presentsWindows { controllers[id]?.revealFromDock(); NSApp.activate(ignoringOtherApps: true) }; onFocused?() }
     private func perform(_ id: UUID, command: DocumentCommand) async throws -> URL? {
@@ -213,7 +221,6 @@ private extension SlopDocumentCommand {
         case .exportPNG: .exportPNG
         case .exportPDF: .exportPDF
         case .duplicate: .duplicate
-        case .share: .share
         case .reveal: .reveal
         case .copyPath: .copyPath
         case .openEditor(let url): .openEditor(url)
@@ -229,7 +236,6 @@ private extension DocumentCommand {
         case .exportPNG: .exportPNG
         case .exportPDF: .exportPDF
         case .duplicate: .duplicate
-        case .share: .share
         case .reveal: .reveal
         case .copyPath: .copyPath
         case .openEditor(let url): .openEditor(url)

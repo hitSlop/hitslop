@@ -5,9 +5,9 @@ import HitSlopRuntime
 
 /// Filesystem work is isolated from the main actor and yields during large enumerations.
 actor CatalogScanner {
-    func local(at root: URL) async throws -> LocalTemplateSnapshot {
+    func local(at root: URL, makeImmutable: Bool = true) async throws -> LocalTemplateSnapshot {
         try Task.checkCancellation()
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        if makeImmutable { try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true) }
         let children = try FileManager.default.contentsOfDirectory(
             at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]
         ).sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
@@ -26,7 +26,7 @@ actor CatalogScanner {
                 let values = try? child.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
                 let bytes = try await byteCount(child)
                 try Task.checkCancellation()
-                try? SlopDuplicator.makeImmutable(child)
+                if makeImmutable { try? SlopDuplicator.makeImmutable(child) }
                 result.templates.append(LocalTemplate(
                     packageURL: child, iconURL: package.iconURL, previewURL: package.previewURL,
                     manifest: package.manifest, packageBytes: bytes,
@@ -45,6 +45,7 @@ actor CatalogScanner {
         var entries: [CatalogEntry] = []
         for original in urls {
             try Task.checkCancellation()
+            guard (try? original.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else { continue }
             let url = original.standardizedFileURL.resolvingSymlinksInPath()
             guard url.pathExtension.lowercased() == "slop", seen.insert(url).inserted,
                   FileManager.default.fileExists(atPath: url.path),

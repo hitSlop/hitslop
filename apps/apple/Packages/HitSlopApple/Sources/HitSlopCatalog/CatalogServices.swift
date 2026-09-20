@@ -48,12 +48,23 @@ import HitSlopRuntime
         return CatalogSnapshot(entries: templates.map(hostedEntry))
     }
 
-    private func local() -> AsyncStream<CatalogSnapshot> {
+    private func local() async -> AsyncStream<CatalogSnapshot> {
+        let bundledRoot = Bundle.main.resourceURL?.appendingPathComponent("StarterTemplates")
+        let bundled: LocalTemplateSnapshot
+        if let bundledRoot, FileManager.default.fileExists(atPath: bundledRoot.path) {
+            do { bundled = try await scanner.local(at: bundledRoot, makeImmutable: false) }
+            catch { bundled = LocalTemplateSnapshot(issues: ["Could not load built-in templates: \(error.localizedDescription)"]) }
+        } else { bundled = LocalTemplateSnapshot() }
         let store = LocalTemplateStore(templatesURL: templatesURL)
         localStore = store
         return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
             let token = store.$snapshot.sink { snapshot in
-                continuation.yield(CatalogSnapshot(entries: snapshot.templates.map(Self.localEntry), issues: snapshot.issues))
+                let starters = bundled.templates.map { template in
+                    var entry = Self.localEntry(template)
+                    entry.isBundled = true
+                    return entry
+                }
+                continuation.yield(CatalogSnapshot(entries: starters + snapshot.templates.map(Self.localEntry), issues: bundled.issues + snapshot.issues))
             }
             let lifetime = LocalSubscription(store: store, token: token)
             continuation.onTermination = { _ in Task { @MainActor in lifetime.cancel() } }
@@ -118,7 +129,7 @@ import HitSlopRuntime
     }
 
     static func localEntry(_ template: LocalTemplate) -> CatalogEntry {
-        var entry = CatalogEntry(id: "local:\(template.manifest.slug)", source: .local(template.packageURL), title: template.manifest.title)
+        var entry = CatalogEntry(id: "local:\(template.packageURL.path)", source: .local(template.packageURL), title: template.manifest.title)
         apply(template.manifest, to: &entry)
         entry.iconURLs = [template.iconURL, template.previewURL]
         entry.previewURLs = [template.previewURL, template.iconURL]

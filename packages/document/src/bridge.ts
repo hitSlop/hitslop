@@ -1,8 +1,9 @@
 import type { ByteStore, Stored } from "./storage.ts";
 const encode = (bytes: Uint8Array) => {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
+  const chunks: string[] = [];
+  for (let offset = 0; offset < bytes.length; offset += 16_384)
+    chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + 16_384)));
+  return btoa(chunks.join(""));
 };
 const decode = (text: string) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
 export function hostCall(args: Record<string, unknown>): Promise<any> {

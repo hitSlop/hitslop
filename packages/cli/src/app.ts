@@ -24,13 +24,9 @@ const document = {
   required: true,
   description: "Path to a .slop document",
 } as const;
-const retry = [
-  { name: "id", type: "string", description: "Printed request ID; supply with --epoch" },
-  { name: "epoch", type: "string", description: "Printed session epoch; supply with --id" },
-] as const;
 const retrySection = {
   title: "Retries",
-  body: "Supply --id and --epoch together with exactly the same operation, only when retrying a printed retry identity. After session expiry, inspect state before expressing new intent.",
+  body: "Mutations are never automatically replayed. After an unknown outcome, run slop get before issuing another edit. get flushes pending edits before returning.",
 };
 
 async function forward(
@@ -38,8 +34,6 @@ async function forward(
   target: string,
   flags: Record<string, string | boolean | undefined>,
 ) {
-  if ((flags.id === undefined) !== (flags.epoch === undefined))
-    throw new Error("Provide --id and --epoch together, or omit both");
   const argv = Object.entries(flags).flatMap(([name, value]) =>
     typeof value === "string" ? [`--${name}`, value] : [],
   );
@@ -50,13 +44,47 @@ async function forward(
   } else await (await import("./documents")).runDocumentCommand(command, target, argv);
 }
 
+function themeCommand(command: "get" | "set" | "reset") {
+  return defineCommand(command, { description: `${command} theme overrides` }, (sub) => {
+    const configured = sub
+      .args(document)
+      .flags(
+        ...(command === "set"
+          ? [
+              {
+                name: "values",
+                type: "string" as const,
+                required: true as const,
+                description: "Theme token values as JSON",
+              },
+            ]
+          : []),
+        ...(command === "reset"
+          ? [
+              {
+                name: "token",
+                type: "string" as const,
+                description: "Token to reset; omit to reset all",
+              },
+            ]
+          : []),
+      );
+    return configured.action(async ({ args, flags }) => {
+      const rest = Object.entries(flags).flatMap(([key, value]) =>
+        typeof value === "string" ? [`--${key}`, value] : [],
+      );
+      await (await import("./native")).runNative(["theme", command, args.document, ...rest]);
+    });
+  });
+}
+
 export const app = new Crust("slop", {
   description: "Author hitSlop mini apps and work with local documents",
   version: cliVersion,
   sections: [
     {
       title: "Document workflow",
-      body: "In this checkout, invoke commands with bun slop. Read manifest.json first; only hitslop-v1 is accepted. Inspect schema before editing. Built and registered runtime masters are immutable: create a writable copy before editing. Native macOS commands route to the live session or acquire exclusive ownership when closed.",
+      body: "Run bunx @hitslop/cli or install globally with bun install -g @hitslop/cli. Read manifest.json first; only hitslop-v1 is accepted. Inspect schema before editing. Built and registered runtime masters are immutable: create a writable copy before editing. Native macOS commands route to the live session or acquire exclusive ownership when closed.",
     },
   ],
 })
@@ -66,6 +94,24 @@ export const app = new Crust("slop", {
     defineCommand("init", { description: "Create a checklist authoring project" }, (c) =>
       c.args(source).action(async ({ args }) => {
         await (await import("./authoring")).runAuthoring("init", args.source);
+      }),
+    ),
+  )
+  .add(
+    defineCommand("check", { description: "Check Svelte and TypeScript authoring source" }, (c) =>
+      c.args(source).action(async ({ args }) => {
+        const { createRequire } = await import("node:module");
+        const require = createRequire(import.meta.url);
+        const child = Bun.spawn(
+          [
+            process.execPath,
+            require.resolve("svelte-check/bin/svelte-check"),
+            "--workspace",
+            args.source,
+          ],
+          { stdout: "inherit", stderr: "inherit" },
+        );
+        if (await child.exited) throw new Error("Authoring checks failed");
       }),
     ),
   )
@@ -120,10 +166,12 @@ export const app = new Crust("slop", {
       (c) =>
         c
           .args(document)
-          .flags(
-            { name: "op", type: "string", required: true, description: "Operation object as JSON" },
-            ...retry,
-          )
+          .flags({
+            name: "op",
+            type: "string",
+            required: true,
+            description: "Operation object as JSON",
+          })
           .action(({ args, flags }) => forward("apply", args.document, flags)),
     ),
   )
@@ -134,15 +182,12 @@ export const app = new Crust("slop", {
       (c) =>
         c
           .args(document)
-          .flags(
-            {
-              name: "ops",
-              type: "string",
-              required: true,
-              description: "Array of operations as JSON",
-            },
-            ...retry,
-          )
+          .flags({
+            name: "ops",
+            type: "string",
+            required: true,
+            description: "Array of operations as JSON",
+          })
           .action(({ args, flags }) => forward("batch", args.document, flags)),
     ),
   )
@@ -150,11 +195,7 @@ export const app = new Crust("slop", {
     defineCommand(
       "compact",
       { description: "Checkpoint document storage", sections: [retrySection] },
-      (c) =>
-        c
-          .args(document)
-          .flags(...retry)
-          .action(({ args, flags }) => forward("compact", args.document, flags)),
+      (c) => c.args(document).action(({ args, flags }) => forward("compact", args.document, flags)),
     ),
   )
   .add(
@@ -188,6 +229,11 @@ export const app = new Crust("slop", {
             },
           )
           .action(({ args, flags }) => forward("export", args.document, flags)),
+    ),
+  )
+  .add(
+    defineCommand("theme", { description: "Inspect and override declared theme tokens" }, (c) =>
+      c.add(themeCommand("get")).add(themeCommand("set")).add(themeCommand("reset")),
     ),
   )
   .extend(skill({ name: skillName, extras: skillExtras, autoUpdate: false }));

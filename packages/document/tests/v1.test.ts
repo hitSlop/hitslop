@@ -122,7 +122,7 @@ test("async callbacks and reentrant live writes never accept a transaction", asy
   expect(d.current.amount).toBe(123);
   await d.close();
 });
-test("transaction retry after commit/reply loss is applied once", async () => {
+test("get after commit/reply loss persists the original transaction once", async () => {
   const io = new MemoryStore(),
     d = await Document.open(schema, io, initial),
     session = new Session(d, "epoch");
@@ -148,7 +148,7 @@ test("transaction retry after commit/reply loss is applied once", async () => {
     ],
   };
   expect((await session.handle(request)).ok).toBe(false);
-  expect((await session.handle(request)).ok).toBe(true);
+  expect((await session.handle({ ...request, method: "get" })).ok).toBe(true);
   expect(d.current.rows).toHaveLength(1);
   await session.close();
   const r = await Document.open(schema, io, initial);

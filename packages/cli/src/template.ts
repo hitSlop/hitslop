@@ -1,8 +1,9 @@
 import { cp, chmod, lstat, mkdir, mkdtemp, readFile, rename, rm, stat } from "node:fs/promises";
 import { join, resolve, dirname, basename } from "node:path";
 import { tmpdir } from "node:os";
-import { nativeOverride } from "./native";
-import { buildProject, buildRuntime, repository, runtimeDirectory } from "./build";
+import identity from "@hitslop/document/identity";
+import { findNative } from "./native";
+import { buildProject } from "./build";
 
 async function run(command: string[]) {
   const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
@@ -14,31 +15,27 @@ async function run(command: string[]) {
   if (code) throw new Error(`${command[0]} failed: ${error || output}`);
 }
 
-/** Runtime first, then native renderer. No template build runs inside Swift compilation. */
+/** User builds use the installed app, never a compiler or checkout. */
 export async function prepareRenderer() {
   if (process.platform !== "darwin")
+    throw new Error("Native template artwork requires hitSlop.app on macOS.");
+  const helper = await findNative();
+  const check = Bun.spawn([helper, "runtime-info"], { stdout: "pipe", stderr: "pipe" });
+  const [output, code] = await Promise.all([new Response(check.stdout).text(), check.exited, new Response(check.stderr).text()]);
+  let actual;
+  try {
+    actual = JSON.parse(output);
+  } catch {}
+  if (
+    code ||
+    actual?.sdkVersion !== identity.sdkVersion ||
+    actual?.loroVersion !== identity.loroVersion ||
+    actual?.protocolVersion !== identity.protocolVersion
+  )
     throw new Error(
-      "Template preview generation requires the macOS native renderer; use slop dev for disposable browser previews.",
+      `Install hitSlop.app matching CLI ${identity.sdkVersion}; the native runtime is incompatible.`,
     );
-  await buildRuntime();
-  const resources = join(
-    repository,
-    "apps/apple/Packages/HitSlopApple/Sources/HitSlopWasm/Resources/runtime",
-  );
-  await rm(resources, { recursive: true, force: true });
-  await cp(runtimeDirectory, resources, { recursive: true });
-  const override = await nativeOverride();
-  if (override) return override;
-  console.error("Preparing native preview renderer…");
-  await run([
-    "/usr/bin/swift",
-    "build",
-    "--package-path",
-    join(repository, "apps/apple/Packages/HitSlopApple"),
-    "--product",
-    "hitslop-native",
-  ]);
-  return join(repository, "apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native");
+  return helper;
 }
 
 /** Publish only a completed artifact. Rendering uses disposable native snapshots. */

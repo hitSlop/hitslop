@@ -93,7 +93,7 @@ try {
         "--op",
         JSON.stringify({ type: "text.replace", path: ["title"], value: "Native acknowledged" }),
       ],
-      { stdout: "pipe", stderr: "pipe" },
+      { stdout: "pipe", stderr: "pipe", env: { ...process.env, HITSLOP_NATIVE_CLI: binary } },
     );
     const [out, error, code] = await Promise.all([
       new Response(child.stdout).text(),

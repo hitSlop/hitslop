@@ -10,7 +10,9 @@ import HitSlopWasm
   static let configuration = CommandConfiguration(
     commandName: "hitslop-native", abstract: "Read, edit, open, and export hitSlop documents.",
     subcommands: [
-      StorageProbe.self, Screenshot.self, Export.self, OpenDev.self, Get.self, Schema.self, Apply.self, Batch.self, Compact.self, Create.self, Open.self,
+      RuntimeInfo.self, Theme.self, StorageProbe.self, Screenshot.self, Export.self, OpenDev.self,
+      Get.self, Schema.self,
+      Apply.self, Batch.self, Compact.self, Create.self, Open.self,
     ])
 }
 
@@ -42,29 +44,26 @@ struct Export: AsyncParsableCommand {
   @Option(transform: URL.init(fileURLWithPath:)) var output: URL
   @MainActor func run() async throws {
     initializeNativeApplication()
-    try await SlopRenderer.exportDocument(packageURL: package, format: format.rawValue, output: output)
+    try await SlopRenderer.exportDocument(
+      packageURL: package, format: format.rawValue, output: output)
     print(output.path)
   }
 }
 struct DocumentArguments: ParsableArguments {
   @Argument(transform: URL.init(fileURLWithPath:)) var package: URL
 }
-struct RetryOptions: ParsableArguments {
-  @Option(help: "Original mutation request ID; requires --epoch.") var id: String?
-  @Option(help: "Original session epoch; requires --id.") var epoch: String?
-  func validate() throws {
-    guard (id == nil) == (epoch == nil) else { throw ValidationError("Provide --id and --epoch together, or omit both") }
-  }
-}
 @MainActor private func initializeNativeApplication() {
   _ = NSApplication.shared
   NSApp.setActivationPolicy(.prohibited)
 }
-@MainActor private func printDocument(_ method: String, _ arguments: DocumentArguments, retry: RetryOptions? = nil, operation: String? = nil, operations: String? = nil) async throws {
+@MainActor private func printDocument(
+  _ method: String, _ arguments: DocumentArguments, operation: String? = nil,
+  operations: String? = nil
+) async throws {
   if method != "schema" { initializeNativeApplication() }
-  let result = try await DocumentCommand.run(method: method, url: arguments.package,
-    operation: operation.map { Data($0.utf8) }, operations: operations.map { Data($0.utf8) },
-    id: retry?.id, epoch: retry?.epoch)
+  let result = try await DocumentCommand.run(
+    method: method, url: arguments.package,
+    operation: operation.map { Data($0.utf8) }, operations: operations.map { Data($0.utf8) })
   print(String(decoding: result, as: UTF8.self))
 }
 struct Get: AsyncParsableCommand {
@@ -77,33 +76,21 @@ struct Schema: AsyncParsableCommand {
 }
 struct Apply: AsyncParsableCommand {
   @OptionGroup var document: DocumentArguments
-  @OptionGroup var retry: RetryOptions
   @Option var op: String
-  @MainActor func run() async throws { try await printDocument("apply", document, retry: retry, operation: op) }
+  @MainActor func run() async throws { try await printDocument("apply", document, operation: op) }
 }
 struct Batch: AsyncParsableCommand {
   @OptionGroup var document: DocumentArguments
-  @OptionGroup var retry: RetryOptions
   @Option var ops: String
-  @MainActor func run() async throws { try await printDocument("batch", document, retry: retry, operations: ops) }
+  @MainActor func run() async throws { try await printDocument("batch", document, operations: ops) }
 }
 struct Compact: AsyncParsableCommand {
   @OptionGroup var document: DocumentArguments
-  @OptionGroup var retry: RetryOptions
-  @MainActor func run() async throws { try await printDocument("compact", document, retry: retry) }
+  @MainActor func run() async throws { try await printDocument("compact", document) }
 }
 struct Create: AsyncParsableCommand {
-  @Option(name: .customLong("from"), transform: URL.init(fileURLWithPath:)) var source: URL?
-  @Option(transform: URL.init(fileURLWithPath:)) var catalogEntry: URL?
+  @Option(name: .customLong("from"), transform: URL.init(fileURLWithPath:)) var source: URL
   @Option(transform: URL.init(fileURLWithPath:)) var output: URL
-  struct Entry: Decodable {
-    let publisherKeyID: String
-    let slug: String
-    let release: Int
-    let artifactKey: String
-    let artifactSha256: String
-    let catalogURL: URL
-  }
   @MainActor func run() async throws {
     let output =
       self.output.pathExtension.lowercased() == "slop"
@@ -111,36 +98,13 @@ struct Create: AsyncParsableCommand {
     let templatesRoot =
       ProcessInfo.processInfo.environment["HITSLOP_TEMPLATES_ROOT"].map { URL(fileURLWithPath: $0) }
       ?? DocumentFactory.defaultTemplatesRoot
-    guard (source == nil) != (catalogEntry == nil) else {
-      throw ValidationError("Provide --from or --catalog-entry")
-    }
     guard !DocumentFactory.isManagedTemplatePackage(output),
       !DocumentFactory.isManagedTemplatePackage(output, templatesRoot: templatesRoot)
     else { throw ValidationError("A document cannot be created in the template cache") }
     try FileManager.default.createDirectory(
       at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
-    if let source {
-      try DocumentFactory(catalogURL: URL(string: "https://api.hitslop.com")!).create(
-        fromLocalPackage: source, at: output)
-    } else if let catalogEntry {
-      let entry = try JSONDecoder().decode(Entry.self, from: Data(contentsOf: catalogEntry))
-      guard
-        entry.publisherKeyID.range(of: "^[a-zA-Z0-9_-]{16,64}$", options: .regularExpression)
-          != nil,
-        entry.slug.range(of: "^[a-z0-9]+(?:-[a-z0-9]+)*$", options: .regularExpression) != nil,
-        entry.artifactSha256.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
-        entry.release > 0, ["http", "https"].contains(entry.catalogURL.scheme ?? ""),
-        entry.artifactKey == "artifacts/sha256/\(entry.artifactSha256).slop.zip"
-      else { throw ValidationError("Invalid catalog entry") }
-      _ = try await DocumentFactory(catalogURL: entry.catalogURL, templatesRoot: templatesRoot)
-        .create(
-          from: SlopRemoteTemplate(
-            publisherKeyID: entry.publisherKeyID, slug: entry.slug, release: entry.release,
-            artifactKey: entry.artifactKey, artifactSha256: entry.artifactSha256
-          ), at: output)
-      try? await SlopCloudAPI(origin: entry.catalogURL).recordCreation(
-        templateId: "\(entry.publisherKeyID)_\(entry.slug)")
-    }
+    try DocumentFactory(catalogURL: URL(string: "https://api.hitslop.com")!).create(
+      fromLocalPackage: source, at: output)
     await SlopPreviewWriter.installExistingPreviewAsync(for: output)
     print(output.path)
   }
@@ -181,16 +145,62 @@ struct OpenDev: AsyncParsableCommand {
 }
 
 struct StorageProbe: ParsableCommand {
-  static let configuration = CommandConfiguration(shouldDisplay:false)
-  @Argument var root:String
-  @Argument var phase:String
-  @Argument var marker:String
-  @Argument var payload:String
+  static let configuration = CommandConfiguration(shouldDisplay: false)
+  @Argument var root: String
+  @Argument var phase: String
+  @Argument var marker: String
+  @Argument var payload: String
   func run() throws {
     #if DEBUG
-    try DebugStorageProbe.run([root,phase,marker,payload])
+      try DebugStorageProbe.run([root, phase, marker, payload])
     #else
-    throw ValidationError("Debug-only probe")
+      throw ValidationError("Debug-only probe")
     #endif
+  }
+}
+
+struct RuntimeInfo: AsyncParsableCommand {
+  static let configuration = CommandConfiguration(commandName: "runtime-info")
+  @MainActor func run() async throws {
+    print(String(decoding: try WasmSession.runtimeIdentityData(), as: UTF8.self))
+  }
+}
+struct Theme: AsyncParsableCommand {
+  static let configuration = CommandConfiguration(subcommands: [
+    ThemeGet.self, ThemeSet.self, ThemeReset.self,
+  ])
+}
+struct ThemeGet: AsyncParsableCommand {
+  static let configuration = CommandConfiguration(commandName: "get")
+  @Argument(transform: URL.init(fileURLWithPath:)) var document: URL
+  @MainActor func run() async throws {
+    initializeNativeApplication()
+    print(
+      String(
+        decoding: try await DocumentCommand.run(method: "theme.get", url: document), as: UTF8.self))
+  }
+}
+struct ThemeSet: AsyncParsableCommand {
+  static let configuration = CommandConfiguration(commandName: "set")
+  @Argument(transform: URL.init(fileURLWithPath:)) var document: URL
+  @Option var values: String
+  @MainActor func run() async throws {
+    initializeNativeApplication()
+    print(
+      String(
+        decoding: try await DocumentCommand.run(
+          method: "theme.set", url: document, themeValues: Data(values.utf8)), as: UTF8.self))
+  }
+}
+struct ThemeReset: AsyncParsableCommand {
+  static let configuration = CommandConfiguration(commandName: "reset")
+  @Argument(transform: URL.init(fileURLWithPath:)) var document: URL
+  @Option var token: String?
+  @MainActor func run() async throws {
+    initializeNativeApplication()
+    print(
+      String(
+        decoding: try await DocumentCommand.run(
+          method: "theme.reset", url: document, themeToken: token), as: UTF8.self))
   }
 }

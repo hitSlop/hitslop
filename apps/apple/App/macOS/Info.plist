@@ -2,10 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSCameraUsageDescription</key>
-	<string>Allow this mini app to use your camera when you request it.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Allow this mini app to use your microphone when you request it.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -32,42 +28,17 @@
 	<string>$(HITSLOP_CATALOG_URL)</string>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-	<key>NSUbiquitousContainers</key>
-	<dict>
-		<key>iCloud.com.hitslop.app</key>
-		<dict>
-			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
-			<true/>
-			<key>NSUbiquitousContainerName</key>
-			<string>hitSlop</string>
-			<key>NSUbiquitousContainerSupportedFolderLevels</key>
-			<string>Any</string>
-		</dict>
-	</dict>
 	<key>SUFeedURL</key>
 	<string>https://github.com/hitSlop/hitslop/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>OHq/9CpeUKhI0BZFhSerL8wE/hzhhm/x4VO2qnB3RHw=</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.25557365307-ubvs10436jajqrinceqh107p84ihemjh</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>hitslop</string>
-			</array>
-		</dict>
-	</array>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleTypeExtensions</key>
-			<array><string>slop</string></array>
+			<array>
+				<string>slop</string>
+			</array>
 			<key>CFBundleTypeName</key>
 			<string>hitSlop Document</string>
 			<key>CFBundleTypeRole</key>
@@ -77,7 +48,9 @@
 			<key>LSTypeIsPackage</key>
 			<true/>
 			<key>LSItemContentTypes</key>
-			<array><string>com.hitslop.slop</string></array>
+			<array>
+				<string>com.hitslop.slop</string>
+			</array>
 		</dict>
 	</array>
 	<key>UTExportedTypeDeclarations</key>
@@ -95,7 +68,9 @@
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
-				<array><string>slop</string></array>
+				<array>
+					<string>slop</string>
+				</array>
 			</dict>
 		</dict>
 	</array>

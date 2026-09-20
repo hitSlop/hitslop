@@ -1,84 +1,27 @@
 ---
-title: Edit installed data
-description: Safely change a writable slop document with an editor or LLM.
+title: Edit installed documents
+description: Inspect schemas, edit through the native owner, and customize declared theme tokens.
 ---
 
-A built `.slop` is a package directory. Its interface is immutable, while
-personal data lives under `stores/`. You can change that data through the app,
-with a text editor, or by giving the document to an LLM-enabled coding tool.
-The UI and the file stay in sync: app edits project back to JSON, and a valid
-external save shows up in the open document.
-
-:::caution
-Edit a writable document you created from a template. Anything under
-`~/.hitslop/templates/` is a catalog master and must remain immutable.
-:::
-
-## Before changing JSON
-
-1. Read `manifest.json` to understand the document.
-2. Read `.agents/skills/hitslop-document/SKILL.md` for the current safety rules.
-3. Read `.agents/skills/hitslop-document/references/app-guide.md` when present.
-4. Read `data.schema.json` before changing `stores/data.json`.
-
-Treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`, `.agents/`,
-and `QuickLook/Icon.png` as immutable. User changes belong in `stores/`.
-
-## Edit only the `data` object
-
-`stores/data.json` is a revision envelope plus the document value:
-
-```json
-{
-  "$slop": {
-    "format": 2,
-    "documentId": "…",
-    "schemaHash": "…",
-    "authority": "…",
-    "baseRevision": 0
-  },
-  "data": {}
-}
-```
-
-Preserve `$slop` exactly. Edit only `data`. Keep every value valid against
-`data.schema.json`, preserve fields you do not recognize, write a temporary
-sibling file, and atomically replace the original.
-
-An open slop watches for external changes and adopts a valid new revision when
-the envelope still matches. Stale or invalid bytes are kept for recovery rather
-than merged. If the app is actively editing, finish that edit first.
-
-Afterward, validate the document:
+Create a writable copy before editing. Registered templates are immutable masters.
 
 ```sh
-slop validate path/to/my-document.slop
+bunx @hitslop/cli schema My.slop
+bunx @hitslop/cli get My.slop
+bunx @hitslop/cli apply My.slop --op '{"type":"text.replace","path":["title"],"value":"Weekend"}'
+bunx @hitslop/cli batch My.slop --ops '[{"type":"text.replace","path":["title"],"value":"Ready"}]'
 ```
 
-Shared documents are not a second Git copy. Prefer the app while a room is live,
-and treat a disconnected shared file as read-only. See
-[Live sharing](/docs/guides/live-sharing/).
+Read the descriptor and current state before choosing operations. The CLI prints JSON and reports failures on stderr. Successful mutations acknowledge persistence. If transport fails, run `get` before another edit; do not blindly retry.
 
-## A useful prompt for an LLM
+The installed app's helper performs edits through the live document socket or an engine-only hidden WebView when closed. It does not load the authored interface for headless edits and never bypasses a busy writer. Installed native editing itself needs no Bun; the `bunx` command is its convenient authoring-CLI entrypoint.
 
-```text
-Read manifest.json first, then follow
-.agents/skills/hitslop-document/SKILL.md and any app guide.
-Read data.schema.json before editing stores/data.json.
+Theme changes use a separate command:
 
-Change [describe the data change]. Preserve the $slop envelope and every
-unrelated or unknown field inside data. Validate the complete JSON value,
-replace data.json atomically, and run slop validate on the document when
-finished. Do not modify immutable app files.
+```sh
+bunx @hitslop/cli theme get My.slop
+bunx @hitslop/cli theme set My.slop --values '{"accent":"#7050ad"}'
+bunx @hitslop/cli theme reset My.slop
 ```
 
-The embedded skill travels with the document, so the instructions match the
-package being edited rather than depending on this website being available.
-
-## Other document stores
-
-- Media files are content-addressed under `stores/media/<sha256>`. Add a new
-  supported file by digest and point `data` at `{ sha256, mime, bytes, filename? }`.
-  Do not rewrite an existing digest file.
-- Put theme overrides in `stores/theme.css` as one `:root` rule containing only
-  existing public `--slop-*` variables.
+Only declared tokens may be changed. They affect the editor and captures, not application data or layout selectors. Do not edit SQLite, initial values, or theme sidecars underneath a live document. See [data and schemas](/docs/guides/data-and-schemas/) and [styling](/docs/guides/styling/).

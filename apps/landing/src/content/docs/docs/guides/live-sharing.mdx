@@ -1,54 +1,7 @@
 ---
-title: Live sharing
-description: Keep a slop local, then invite others to edit the same document in real time.
+title: Sharing is deferred
 ---
 
-A slop is a file on your Mac until you share it. Sharing does not change the
-app you authored. The host opens the same document store locally or in a room.
+Live collaboration is not included in this release. Export PNG or PDF to share a result.
 
-## Share from the Mac app
-
-1. Open a writable document.
-2. Choose **Share** from the native toolbar or File menu.
-3. Send the invite to the people who should edit with you.
-
-hitSlop uploads an immutable copy of the app plus the current JSON seed, then
-hands the live document to a shared room. People who join get that app and the
-latest snapshot. They do not receive your local catalog or other files.
-
-Keep working in the same window. Checks, typing, and rearranges show up for
-everyone who is connected.
-
-## What authors do
-
-Nothing extra. `createDocument`, schema-derived `fields`, store verbs, and
-`{@attach document.text(…)}` are the same API on a local file and a shared
-room. Do not add a second sync layer or write your own presence protocol.
-
-Disable editing when `document.canWrite` is false. A shared document is
-read-only while disconnected, signed out, or after the owner revokes access.
-It does not fall back to a private local original.
-
-## While you are live
-
-- Connected guests apply the same commands and see the same snapshots.
-- Text uses last-write-wins at the string. Identity lists keep their item ids.
-- Attachments upload before the document reference is published.
-- Theme overrides in `stores/theme.css` stay on the local copy.
-
-If the network drops, finish nothing against a hidden local fork. Reconnect to
-keep editing, or export / duplicate if you need a private copy.
-
-## External editors and LLMs
-
-A local writable document still projects `stores/data.json` for an editor or
-coding agent. Follow [Edit installed data](/docs/guides/edit-installed-data/)
-and preserve the `$slop` envelope.
-
-A shared room is not a Git merge. Prefer the app or a connected guest for live
-edits. Treat a disconnected shared file as read-only.
-
-## Ownership
-
-The owner can rotate or disable invitations and remove members. Removal closes
-existing connections and blocks rejoining with the old invite.
+Future collaboration will exchange Loro updates between separate replicas, with Swift owning credentials and transport. Local SQLite remains the offline cache. The old JSON command/snapshot rooms are not a supported backend.

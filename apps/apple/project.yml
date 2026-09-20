@@ -44,6 +44,9 @@ targets:
       - package: Sparkle
         product: Sparkle
     postCompileScripts:
+      - name: Embed starter templates
+        basedOnDependencyAnalysis: false
+        script: '"${SRCROOT}/../../scripts/embed-starter-templates.sh" "${TARGET_BUILD_DIR}/${WRAPPER_NAME}"'
       - name: Embed hitslop-native
         basedOnDependencyAnalysis: false
         script: |

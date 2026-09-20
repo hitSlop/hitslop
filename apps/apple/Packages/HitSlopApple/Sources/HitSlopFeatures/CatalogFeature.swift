@@ -5,8 +5,8 @@ public enum CatalogFilter: Hashable, Sendable {
     case all, myTemplates, recents, category(String)
     public var title: String {
         switch self {
-        case .all: "All Slops"
-        case .myTemplates: "Mine"
+        case .all: "Templates"
+        case .myTemplates: "My Templates"
         case .recents: "Recents"
         case .category(let id): id == "developer-tools" ? "Developer Tools" : id.capitalized
         }
@@ -27,6 +27,7 @@ public struct CatalogEntry: Equatable, Identifiable, Sendable {
     public var id: String
     public var source: Source
     public var title: String
+    public var isBundled = false
     public var description = ""
     public var categories: [String] = []
     public var authorName: String?
@@ -82,6 +83,7 @@ public extension DependencyValues {
 
 @Reducer public struct CatalogFeature: Sendable {
     @ObservableState public struct State: Equatable {
+        public var hostedEnabled = false
         public var query = ""
         public var searchTerm = ""
         public var filter: CatalogFilter = .all
@@ -99,7 +101,7 @@ public extension DependencyValues {
         public var isQuitting = false
         public var subscription = 0
         public var recentsGeneration = 0
-        public init() {}
+        public init(hostedEnabled: Bool = false) { self.hostedEnabled = hostedEnabled }
         public var visibleEntries: [CatalogEntry] {
             let items: [CatalogEntry]
             switch filter {
@@ -212,7 +214,7 @@ public extension DependencyValues {
     }
     private func subscribe(_ state: inout State) -> Effect<Action> {
         state.subscription += 1
-        guard state.filter.isHosted else { state.isLoading = false; return .cancel(id: CancelID.hosted) }
+        guard state.hostedEnabled, state.filter.isHosted else { state.isLoading = false; return .cancel(id: CancelID.hosted) }
         state.isLoading = true
         let generation = state.subscription, category = state.filter.category, sort = state.sort
         return .run { send in

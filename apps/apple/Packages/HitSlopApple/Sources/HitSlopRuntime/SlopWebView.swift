@@ -6,20 +6,26 @@ import WebKit
 @MainActor public protocol SlopRuntimeSessionDelegate: AnyObject {
   func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession)
   func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize
+  func runtimeSessionRecovered(_ session: SlopRuntimeSession)
   func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue)
   func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
   func runtimeSession(_ session: SlopRuntimeSession, saveStatus: WasmSaveStatus)
 }
 extension SlopRuntimeSessionDelegate {
   public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {}
-  public func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws -> CGSize { throw SlopPackageError.invalid("Dynamic resizing unavailable") }
+  public func runtimeSessionRecovered(_ session: SlopRuntimeSession) {}
+  public func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo size: CGSize) throws
+    -> CGSize
+  { throw SlopPackageError.invalid("Dynamic resizing unavailable") }
   public func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue) {}
   public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
   public func runtimeSession(_ session: SlopRuntimeSession, saveStatus: WasmSaveStatus) {}
 }
 public struct SlopRuntimeTeardownError: LocalizedError {
   public let underlying: Error
-  public var errorDescription: String? { "Runtime teardown failed: \(underlying.localizedDescription)" }
+  public var errorDescription: String? {
+    "Runtime teardown failed: \(underlying.localizedDescription)"
+  }
 }
 @MainActor public final class SlopRuntimeSession {
   public let package: SlopPackage
@@ -28,32 +34,62 @@ public struct SlopRuntimeTeardownError: LocalizedError {
   public var webView: WKWebView { engine.webView }
   public var isReady: Bool { engine.isReady }
   public weak var delegate: (any SlopRuntimeSessionDelegate)?
-  public init(packageURL:URL,renderTargetsEnabled:Bool = false,purpose:SlopRuntimePurpose = .interactive) throws {
+  public init(
+    packageURL: URL, renderTargetsEnabled: Bool = false, purpose: SlopRuntimePurpose = .interactive
+  ) throws {
     try SlopLocalDocument.requireLocal(packageURL)
-    package = try SlopPackage(rootURL:packageURL)
+    package = try SlopPackage(rootURL: packageURL)
     self.purpose = purpose
-    engine = try WasmSession(package:package)
-    engine.onResize = { [weak self] size in guard let self, let delegate = self.delegate else { throw SlopPackageError.invalid("No window") };return try delegate.runtimeSession(self,resizeContentTo:size) }
-    engine.onReady = { [weak self] in guard let self else { return }; self.delegate?.runtimeSessionDidBecomeReady(self) }
-    engine.onStatus = { [weak self] status in guard let self else { return };self.delegate?.runtimeSession(self,saveStatus:status) }
-    engine.onIssue = { [weak self] message, operation in guard let self else { return }; self.delegate?.runtimeSession(self,didReport:SlopRuntimeIssue(source:operation ? .document : .unhandled,message:message)) }
-    engine.onError = { [weak self] message in guard let self else { return };self.delegate?.runtimeSession(self,didFail:SlopPackageError.invalid(message)) }
+    engine = try WasmSession(package: package)
+    engine.onResize = { [weak self] size in
+      guard let self, let delegate = self.delegate else {
+        throw SlopPackageError.invalid("No window")
+      }
+      return try delegate.runtimeSession(self, resizeContentTo: size)
+    }
+    engine.onReady = { [weak self] in
+      guard let self else { return }
+      self.delegate?.runtimeSessionDidBecomeReady(self)
+    }
+    engine.onStatus = { [weak self] status in
+      guard let self else { return }
+      self.delegate?.runtimeSession(self, saveStatus: status)
+    }
+    engine.onRecovered = { [weak self] in
+      guard let self else { return }
+      self.delegate?.runtimeSessionRecovered(self)
+    }
+    engine.onIssue = { [weak self] message, operation in
+      guard let self else { return }
+      self.delegate?.runtimeSession(
+        self,
+        didReport: SlopRuntimeIssue(source: operation ? .document : .unhandled, message: message))
+    }
+    engine.onError = { [weak self] message in
+      guard let self else { return }
+      self.delegate?.runtimeSession(self, didFail: SlopPackageError.invalid(message))
+    }
     if renderTargetsEnabled {
-      webView.configuration.userContentController.addUserScript(WKUserScript(source:"document.documentElement.setAttribute('data-slop-renderer','true')",injectionTime:.atDocumentStart,forMainFrameOnly:true))
+      webView.configuration.userContentController.addUserScript(
+        WKUserScript(
+          source: "document.documentElement.setAttribute('data-slop-renderer','true')",
+          injectionTime: .atDocumentStart, forMainFrameOnly: true))
     }
   }
-  public static func open(packageURL:URL,renderTargetsEnabled:Bool = false,purpose:SlopRuntimePurpose = .interactive) async throws -> SlopRuntimeSession {
+  public static func open(
+    packageURL: URL, renderTargetsEnabled: Bool = false, purpose: SlopRuntimePurpose = .interactive
+  ) async throws -> SlopRuntimeSession {
     try Task.checkCancellation()
-    return try SlopRuntimeSession(packageURL:packageURL,renderTargetsEnabled:renderTargetsEnabled,purpose:purpose)
+    return try SlopRuntimeSession(
+      packageURL: packageURL, renderTargetsEnabled: renderTargetsEnabled, purpose: purpose)
   }
   public func load() { engine.load() }
-  public func waitUntilReady(timeout:Duration = .seconds(15)) async throws { try await engine.waitUntilReady(timeout:timeout) }
+  public func waitUntilReady(timeout: Duration = .seconds(15)) async throws {
+    try await engine.waitUntilReady(timeout: timeout)
+  }
   public func flush() async throws { try await engine.flush() }
   public func finish() async throws { try await engine.close() }
   public func closeAndWait() async throws { try await engine.close() }
   public func close() { Task { try? await closeAndWait() } }
-  public func reload() {
-    // Never navigate a live replica away with pending edits. Retry persistence instead.
-    Task { do { try await flush() } catch { delegate?.runtimeSession(self,didFail:error) } }
-  }
+  public func reopenSavedDocument() async throws { try await engine.reopenSavedDocument() }
 }

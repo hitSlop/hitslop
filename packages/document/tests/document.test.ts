@@ -94,7 +94,7 @@ test("writer lock and schema compatibility are enforced", () =>
     const recovered = await SQLiteStore.open(root);
     await recovered.close();
   }));
-test("lost storage reply and command retry do not duplicate an insertion", () =>
+test("lost storage reply followed by get flushes identical bytes without replaying intent", () =>
   fixture(async (root) => {
     const io = await SQLiteStore.open(root);
     let lost = true;
@@ -118,24 +118,8 @@ test("lost storage reply and command retry do not duplicate an insertion", () =>
       op: { type: "insert" as const, path: ["tasks"], value: { text: "Once", done: false } },
     };
     expect((await session.handle(request)).ok).toBe(false);
-    expect((await session.handle(request)).ok).toBe(true);
-    expect((await session.handle(request)).ok).toBe(true);
-    expect(
-      (
-        await session.handle(
-          Object.fromEntries(Object.entries(request).reverse()) as typeof request,
-        )
-      ).ok,
-    ).toBe(true);
+    expect((await session.handle({ ...request, method: "get" })).ok).toBe(true);
     expect((await session.handle({ ...request, epoch: "old" })).ok).toBe(false);
-    expect(
-      (
-        await session.handle({
-          ...request,
-          op: { ...request.op, value: { text: "Different", done: false } },
-        })
-      ).ok,
-    ).toBe(false);
     await session.close();
     const r = await Document.open(schema, await SQLiteStore.open(root), initial);
     expect(r.current.tasks).toHaveLength(1);

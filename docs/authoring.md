@@ -8,8 +8,8 @@ The frozen v1 DSL supports string/number/boolean/enum registers, optional scalar
 
 `bun slop dev examples/slops/quick-checklist` creates a disposable browser preview; refresh resets state. Re-run dev after editing source. `bun slop build SOURCE` emits SOURCE/dist/SLUG.slop. `bun slop register SOURCE` installs a complete local immutable master, backing up a previous master outside the template catalog before replacing it. Preview uses the same engine and no disk-backed state server.
 
-Use Vanilla Extract style() for owned UI; each mini app keeps its own visual identity. See Quick Checklist and Small Expenses for working examples. Their schemas intentionally remain small.
+Use plain CSS with defineTheme tokens for owned UI; each mini app keeps its own visual identity. See Quick Checklist and Small Expenses for working examples. Their schemas intentionally remain small.
 
-Start a new source project with `bun slop init /path/to/new-source`. The local scaffold points at this checkout’s document package; run `bun install` in it before authoring outside the workspace.
+Start a new source project anywhere with `bunx @hitslop/cli init /path/to/new-source`. Run `bun install` in it, then `bun run check`, `bun run dev`, and `bun run build`. Published SDK dependencies are pinned to the CLI release. Bun is the only authoring runtime; native capture requires the matching installed Mac app.
 
 Wrap editors in `<Slop {document}>` with optional inline `exportView` and `icon` snippets. These share the same document and mount only during capture. See [capture](capture.md). Build/register generate native previews on macOS; `slop dev` needs no native helper.

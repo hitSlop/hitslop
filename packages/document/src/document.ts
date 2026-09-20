@@ -19,6 +19,7 @@ export class Document<N extends ObjectNode> extends Commands {
   private generation = "0";
   private logRows = 0;
   private logBytes = 0;
+  private checkpointBytes = 0;
   private drafts = new Set<() => void>();
   private queue: Promise<unknown> = Promise.resolve();
   private listeners = new Set<() => void>();
@@ -26,6 +27,7 @@ export class Document<N extends ObjectNode> extends Commands {
   private timer?: ReturnType<typeof setTimeout>;
   private closed = false;
   private closing = false;
+  private preparingClose?: Promise<void>;
   private snapshot!: Value<N>;
   status: SaveStatus = "saved";
   error: string | null = null;
@@ -64,6 +66,7 @@ export class Document<N extends ObjectNode> extends Commands {
     try {
       const stored = await storage.load();
       doc.generation = stored.generation;
+      doc.checkpointBytes = stored.checkpoint?.length ?? 0;
       doc.logRows = stored.updates.length;
       doc.logBytes = stored.updates.reduce((n, b) => n + b.length, 0);
       if (stored.schemaKey !== null && stored.schemaKey !== doc.key)
@@ -81,11 +84,9 @@ export class Document<N extends ObjectNode> extends Commands {
         validate(definition.descriptor.root, initial);
         fill(doc.engine.getMap("data"), definition.descriptor.root, initial);
         doc.engine.commit();
-        doc.generation = await storage.checkpoint(
-          doc.generation,
-          doc.engine.export({ mode: "snapshot" }),
-          doc.key,
-        );
+        const snapshot = doc.engine.export({ mode: "snapshot" });
+        doc.generation = await storage.checkpoint(doc.generation, snapshot, doc.key);
+        doc.checkpointBytes = snapshot.length;
       }
       doc.snapshot = project(definition.descriptor.root, doc.engine.getMap("data")) as Value<N>;
       doc.stop = doc.engine.subscribeLocalUpdates((bytes) => {
@@ -232,33 +233,25 @@ export class Document<N extends ObjectNode> extends Commands {
         try {
           while (this.pending.length) {
             const updates = this.pending.slice();
+            const bytes = updates.reduce((n, b) => n + b.length, 0);
+            if (
+              this.logRows + updates.length >= 256 ||
+              this.logBytes + bytes >= 4 * 1024 * 1024 ||
+              this.checkpointBytes + this.logBytes + bytes > 32 * 1024 * 1024
+            ) {
+              await this.writeCheckpoint();
+              continue;
+            }
             try {
               this.generation = await this.storage.append(this.generation, updates);
             } catch (error) {
               // A commit can succeed before its reply is lost. Retrying Loro bytes is idempotent.
-              const disk = await this.storage.load();
-              this.generation = disk.generation;
+              await this.reloadStorageMetadata();
               throw error;
             }
             this.pending.splice(0, updates.length);
             this.logRows += updates.length;
             this.logBytes += updates.reduce((n, b) => n + b.length, 0);
-          }
-          if (this.logRows >= 256 || this.logBytes >= 4 * 1024 * 1024) {
-            const count = this.pending.length;
-            try {
-              this.generation = await this.storage.checkpoint(
-                this.generation,
-                this.engine.export({ mode: "snapshot" }),
-                this.key,
-              );
-            } catch (error) {
-              this.generation = (await this.storage.load()).generation;
-              throw error;
-            }
-            this.pending.splice(0, count);
-            this.logRows = 0;
-            this.logBytes = 0;
           }
           this.status = this.pending.length ? "saving" : "saved";
           this.error = null;
@@ -278,20 +271,9 @@ export class Document<N extends ObjectNode> extends Commands {
     const task = this.queue
       .catch(() => {})
       .then(async () => {
-        // Snapshot captures all current edits, including any made while waiting.
-        this.engine.commit();
-        const count = this.pending.length;
         try {
-          this.generation = await this.storage.checkpoint(
-            this.generation,
-            this.engine.export({ mode: "snapshot" }),
-            this.key,
-          );
-          this.pending.splice(0, count);
-          this.logRows = 0;
-          this.logBytes = 0;
+          await this.writeCheckpoint();
         } catch (error) {
-          this.generation = (await this.storage.load()).generation;
           this.status = "save-failed";
           this.error = String(error);
           this.notify();
@@ -301,16 +283,52 @@ export class Document<N extends ObjectNode> extends Commands {
     this.queue = task;
     await task;
   }
-  async close() {
-    if (this.closed) return;
-    for (const draft of this.drafts) draft();
-    this.closing = true;
+  private async reloadStorageMetadata() {
+    const disk = await this.storage.load();
+    this.generation = disk.generation;
+    this.checkpointBytes = disk.checkpoint?.length ?? 0;
+    this.logRows = disk.updates.length;
+    this.logBytes = disk.updates.reduce((n, b) => n + b.length, 0);
+  }
+  private async writeCheckpoint() {
+    this.engine.commit();
+    const count = this.pending.length;
+    const snapshot = this.engine.export({ mode: "snapshot" });
+    if (snapshot.length > 32 * 1024 * 1024)
+      throw new Error("Document exceeds the 32 MiB storage limit");
     try {
-      await this.flush();
+      this.generation = await this.storage.checkpoint(this.generation, snapshot, this.key);
     } catch (error) {
-      this.closing = false;
+      await this.reloadStorageMetadata();
       throw error;
     }
+    this.pending.splice(0, count);
+    this.checkpointBytes = snapshot.length;
+    this.logRows = 0;
+    this.logBytes = 0;
+  }
+  prepareClose(): Promise<void> {
+    if (this.closed) return Promise.resolve();
+    if (this.preparingClose) return this.preparingClose;
+    for (const draft of this.drafts) draft();
+    this.closing = true;
+    this.preparingClose = this.flush().catch((error) => {
+      this.closing = false;
+      this.preparingClose = undefined;
+      throw error;
+    });
+    return this.preparingClose;
+  }
+  cancelClose() {
+    if (!this.closed) {
+      this.closing = false;
+      this.preparingClose = undefined;
+    }
+  }
+  async close() {
+    if (this.closed) return;
+    await this.prepareClose();
+    if (this.closed) return;
     this.closed = true;
     this.notify();
     this.stop?.();

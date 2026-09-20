@@ -21,11 +21,10 @@ hitSlop apps use **Bits UI** (`bits-ui`) as the standard primitive layer for int
 
 ## Styling Architecture: Data Attributes & CSS Tokens
 
-Implement owned elements with exported Vanilla Extract `style()` classes;
-attach them directly to Bits UI primitives. Put state selectors such as
-`&[data-state="checked"]` in that class's `selectors` block. The CSS snippets
-below illustrate attribute vocabulary, not a prescription for unscoped global
-styles. See [vanilla-extract.md](vanilla-extract.md) for the authoring pattern.
+Style owned elements with app-prefixed classes in plain CSS. Keep data-attribute
+states and descendant selectors beside their base rules. Portal content needs
+its own class because it mounts outside the trigger's ancestor tree.
+See [css.md](css.md) for the authoring pattern.
 
 Bits UI components expose semantic HTML attributes (such as `data-state="open|closed"`, `data-orientation="vertical|horizontal"`, `data-disabled`, `data-selected`).
 

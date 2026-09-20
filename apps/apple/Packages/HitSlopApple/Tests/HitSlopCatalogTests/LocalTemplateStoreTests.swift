@@ -71,3 +71,15 @@ private func makeIconPNG() throws -> Data {
     let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 512, pixelsHigh: 512, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
     return bitmap.representation(using: .png, properties: [:])!
 }
+
+@Test @MainActor func templateIdentityIncludesItsSource() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: root) }
+    for source in ["built-in", "registered"] { _ = try writeTemplate(named: "same-slug", in: root.appendingPathComponent(source)) }
+    let scanner = CatalogScanner()
+    let builtIn = try await scanner.local(at: root.appendingPathComponent("built-in"), makeImmutable: false)
+    let local = try await scanner.local(at: root.appendingPathComponent("registered"))
+    let first = CatalogServices.localEntry(try #require(builtIn.templates.first))
+    let second = CatalogServices.localEntry(try #require(local.templates.first))
+    #expect(first.id != second.id)
+}

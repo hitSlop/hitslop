@@ -62,3 +62,6 @@ _vibe/
 /apps/apple/Packages/HitSlopApple/Sources/HitSlopWasm/Resources/
 
 **/.crust/
+
+# Generated, shipped in the CLI tarball
+/packages/cli/runtime/

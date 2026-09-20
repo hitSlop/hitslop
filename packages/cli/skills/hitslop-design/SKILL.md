@@ -54,16 +54,14 @@ and PDF behavior.
   (`--slop-surface`, `--slop-accent`, `--slop-ink`). This ensures each slop retains its
   authentic physical personality (Paper, Instrument, Skin) while remaining effortless
   to restyle or re-theme at runtime.
-- In new Svelte projects, keep structural styles in Vanilla Extract `.css.ts`
-  files and define public tokens in root `theme.ts` via `defineTheme` from
-  `@hitslop/runtime/theme`. Use its typed variable references in Vanilla Extract;
-  the builder generates `assets/theme.css`. Never maintain both defaults files.
-- Use exported `style()` classes for owned elements and import them into Svelte.
-  Keep pseudo states, Bits UI data-attribute selectors, and media/container
-  queries with the element's base style. Reserve `globalStyle()` for document
-  defaults and necessary descendants anchored to a scoped parent. Read
-  [references/vanilla-extract.md](references/vanilla-extract.md) when authoring or
-  reorganizing styles; do not translate a whole stylesheet into global selectors.
+- Keep structural styles in plain `styles.css`, imported by `main.ts`. Define public
+  tokens in `theme.ts` using `defineTheme` from `@hitslop/document/theme`.
+  The builder emits `assets/theme.css`; use `var(--slop-TOKEN)` in CSS.
+- Group base rules, states, descendants, and responsive rules together. Use
+  app-prefixed classes, including explicit classes on Bits UI portal content.
+  Read [references/css.md](references/css.md) for the authoring pattern.
+- Owners change declared tokens through `slop theme set/reset`. Overrides live in
+  `state/theme.json`; never write arbitrary CSS or `stores/theme.css`.
 - Mark editing-only UI with `data-slop-export="hide"`; keep exportable content
   in normal flow.
 - Make each slop purpose-specific. Shared SDK patterns must not make unrelated
@@ -71,11 +69,10 @@ and PDF behavior.
 
 ## Review efficiently
 
-In the hitSlop repository, prefer `bun run slops:review <slug>` for fixed-size
-editor, narrow, export, and icon previews with repeatable fixtures and a review
-packet. Read [references/review-workbench.md](references/review-workbench.md).
-Batch inspection and corrections; verify later changes with the evidence they
-need rather than repeating every visual capture for an invisible code change.
+Use `bun run dev` for disposable browser preview. Review at the manifest size
+and a narrow width, with menus open and keyboard focus visible. Build with the
+matching Mac app to verify export and icon artwork. Read
+[references/review-workbench.md](references/review-workbench.md) for a short pass.
 
 ## Check the real task
 

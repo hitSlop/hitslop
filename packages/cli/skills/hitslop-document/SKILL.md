@@ -7,6 +7,13 @@ Use slop schema PATH and slop get PATH, then slop apply PATH --op JSON or slop b
 Paths identify list rows with {"id":"$id from get"}. Never use array indexes as identity.
 Keep manifest.json, app.html, assets/, state.schema.json and initial.json immutable.
 Never edit state/document.sqlite or invent stores/data.json. The CLI routes to the live host or acquires exclusive ownership when closed.
-A failed transport can have an unknown outcome. Retry only the printed request ID and epoch; after expiry inspect state before forming fresh intent.
+A failed transport can have an unknown outcome. Run slop get before issuing another edit; never automatically replay a mutation.
 
-For mutation retries supply both --id and --epoch with the same operation. Use get to inspect state. Native export captures the live selected view when open and the initial view when closed; export output must be outside the source package.
+get flushes pending edits and returns persisted state; a save failure returns an error. Native export captures the live selected view when open and the initial view when closed; export output must be outside the source package.
+
+Use `slop theme get PATH` to inspect public token defaults and overrides.
+Change declared tokens with `slop theme set PATH --values '{"accent":"#123456"}'`;
+reset one with `slop theme reset PATH --token accent`, or omit the token to reset
+all. These commands preserve the writer lock and update the open view. Never
+edit assets/theme.css or add stores/theme.css. After an uncertain result inspect
+`theme get` before another change. PNG/PDF exports include the effective theme.

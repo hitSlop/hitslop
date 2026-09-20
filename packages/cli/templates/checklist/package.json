@@ -3,9 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@hitslop/document": "file:__HITSLOP_DOCUMENT__",
+    "@hitslop/document": "1.0.0",
     "svelte": "5.57.1",
-    "bits-ui": "^2.19.2",
-    "@vanilla-extract/css": "^1.21.2"
+    "bits-ui": "^2.19.2"
   }
 }

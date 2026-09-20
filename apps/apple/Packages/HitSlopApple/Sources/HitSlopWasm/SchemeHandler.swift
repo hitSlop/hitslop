@@ -1,4 +1,5 @@
 import Foundation
+import HitSlopCore
 import WebKit
 
 final class SchemeHandler: NSObject, WKURLSchemeHandler {
@@ -16,7 +17,7 @@ final class SchemeHandler: NSObject, WKURLSchemeHandler {
         throw failure("Unknown resource origin")
       }
       let isRuntime = url.path.hasPrefix("/__runtime__/")
-      let base = (isRuntime ? runtime : root).resolvingSymlinksInPath()
+      let base = (isRuntime ? runtime : root).standardizedFileURL
       let relative =
         isRuntime
         ? String(url.path.dropFirst("/__runtime__/".count))
@@ -28,21 +29,26 @@ final class SchemeHandler: NSObject, WKURLSchemeHandler {
       {
         throw failure("Resource not exposed")
       }
-      let file = base.appendingPathComponent(relative).standardizedFileURL.resolvingSymlinksInPath()
+      let file = base.appendingPathComponent(relative).standardizedFileURL
       guard file.path.hasPrefix(base.path + "/") else { throw failure("Resource outside package") }
       let data: Data
       if headless && relative == "app.html" {
-        data = Data("<html><head><script type=\"module\" src=\"/__runtime__/headless.js\"></script></head><body></body></html>".utf8)
+        data = Data(
+          "<html><head><script type=\"module\" src=\"/__runtime__/headless.js\"></script></head><body></body></html>"
+            .utf8)
       } else {
-        guard !headless || isRuntime || ["state.schema.json", "initial.json"].contains(relative) else { throw failure("App resources unavailable to headless engine") }
-        data = try Data(contentsOf: file)
+        guard !headless || isRuntime || ["state.schema.json", "initial.json", "assets/theme.json"].contains(relative)
+        else { throw failure("App resources unavailable to headless engine") }
+        data = try SlopFile.read(file, within: base)
       }
       let mime =
         [
           "html": "text/html; charset=utf-8", "js": "text/javascript", "wasm": "application/wasm",
           "json": "application/json", "css": "text/css",
-          "png":"image/png", "jpg":"image/jpeg", "jpeg":"image/jpeg", "svg":"image/svg+xml", "webp":"image/webp", "gif":"image/gif",
-          "woff":"font/woff", "woff2":"font/woff2", "ttf":"font/ttf", "mp3":"audio/mpeg", "mp4":"video/mp4",
+          "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "svg": "image/svg+xml",
+          "webp": "image/webp", "gif": "image/gif",
+          "woff": "font/woff", "woff2": "font/woff2", "ttf": "font/ttf", "mp3": "audio/mpeg",
+          "mp4": "video/mp4",
         ][file.pathExtension] ?? "application/octet-stream"
       let headers = [
         "Content-Type": mime, "Cache-Control": "no-store",

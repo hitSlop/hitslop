@@ -1,7 +1,6 @@
 {
   "name": "@hitslop/schema",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -11,5 +10,15 @@
   },
   "dependencies": {
     "typebox": "^1.3.32"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "generated"
+  ],
+  "engines": {
+    "bun": ">=1.4.2"
   }
 }

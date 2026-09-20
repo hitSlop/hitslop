@@ -2,7 +2,11 @@ import * as T from "typebox";
 export const protocolVersion = 1;
 const text = T.String({ maxLength: 4096 });
 const bytes = T.String({ maxLength: 48 * 1024 * 1024 });
+export const ThemeValuesSchema = T.Record(T.String({pattern:"^[a-zA-Z][a-zA-Z0-9-]*$"}),T.String({minLength:1,maxLength:4096}));
 export const BridgeMethods = {
+  "theme.load": T.Object({method:T.Literal("theme.load")}),
+  "theme.save": T.Object({method:T.Literal("theme.save"),values:ThemeValuesSchema}),
+  runtimeRecovered: T.Object({method:T.Literal("runtimeRecovered")}),
   "window.resize": T.Object({ method: T.Literal("window.resize"), width:T.Integer({minimum:240,maximum:4096}), height:T.Integer({minimum:180,maximum:4096}) }),
   config: T.Object({ method: T.Literal("config") }),
   ready: T.Object({ method: T.Literal("ready") }),

@@ -2,7 +2,7 @@ import ComposableArchitecture
 import Foundation
 
 public enum DocumentCommand: Equatable, Sendable {
-    case pin(Bool), exportPNG, exportPDF, duplicate, share, reveal, copyPath, openEditor(URL), retry, close
+    case pin(Bool), exportPNG, exportPDF, duplicate, reveal, copyPath, openEditor(URL), retry, close
 }
 
 @DependencyClient
@@ -12,6 +12,8 @@ public struct DocumentClient: Sendable {
     /// Returns the new URL for duplication. Close returns only after native teardown.
     public var perform: @Sendable (UUID, DocumentCommand) async throws -> URL?
     public var prepareToQuit: @Sendable (UUID) async throws -> Void
+    public var finishQuit: @Sendable (UUID) async throws -> Void
+    public var cancelQuit: @Sendable (UUID) async -> Void
     public var finishAssetRefreshes: @Sendable () async -> Void
     public var replyToQuit: @Sendable (Bool) async -> Void
 
@@ -22,6 +24,8 @@ extension DocumentClient: DependencyKey {
         focus: { _ in preconditionFailure("Install DocumentClient at the application root") },
         perform: { _, _ in preconditionFailure("Install DocumentClient at the application root") },
         prepareToQuit: { _ in preconditionFailure("Install DocumentClient at the application root") },
+        finishQuit: { _ in preconditionFailure("Install DocumentClient at the application root") },
+        cancelQuit: { _ in preconditionFailure("Install DocumentClient at the application root") },
         finishAssetRefreshes: { preconditionFailure("Install DocumentClient at the application root") },
         replyToQuit: { _ in preconditionFailure("Install DocumentClient at the application root") }
     )

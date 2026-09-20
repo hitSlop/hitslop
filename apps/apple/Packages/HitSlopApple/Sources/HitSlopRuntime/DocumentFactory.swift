@@ -28,6 +28,8 @@ import HitSlopCore
     nonisolated public static func isManagedTemplatePackage(_ url: URL, templatesRoot: URL = defaultTemplatesRoot) -> Bool {
         let candidate = url.standardizedFileURL.resolvingSymlinksInPath().pathComponents
         let root = templatesRoot.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        if let bundled = Bundle.main.resourceURL?.appendingPathComponent("StarterTemplates").standardizedFileURL.resolvingSymlinksInPath().pathComponents,
+           candidate.count > bundled.count, zip(bundled, candidate).allSatisfy({ $0.caseInsensitiveCompare($1) == .orderedSame }) { return true }
         guard candidate.count > root.count else { return false }
         return zip(root, candidate).allSatisfy { $0.caseInsensitiveCompare($1) == .orderedSame }
     }

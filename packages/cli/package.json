@@ -1,7 +1,6 @@
 {
   "name": "@hitslop/cli",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
   "bin": {
     "slop": "src/cli.ts"
@@ -10,7 +9,24 @@
     "@crustjs/core": "0.3.3",
     "@crustjs/extensions": "0.3.3",
     "@crustjs/skills": "0.3.3",
-    "@hitslop/document": "workspace:*",
-    "@hitslop/schema": "workspace:*"
+    "@hitslop/document": "1.0.0",
+    "@hitslop/schema": "1.0.0",
+    "esbuild": "^0.28.2",
+    "svelte": "5.57.1",
+    "typescript": "5.9.2",
+    "svelte-check": "^4.7.6"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "templates",
+    "skills",
+    ".crust/root/skills",
+    "runtime"
+  ],
+  "engines": {
+    "bun": ">=1.4.2"
   }
 }

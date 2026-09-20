@@ -2,121 +2,270 @@ import Darwin
 import Foundation
 import HitSlopCore
 
-/// Bounded newline JSON, one request per connection, private per-user socket directory.
+/// Bounded nonblocking newline JSON. Socket state is confined to one I/O queue.
 final class SocketServer: @unchecked Sendable {
   let path: String
-  private var listener: Int32 = -1
-  private let guardLock = NSLock()
+  private let queue = DispatchQueue(label: "hitslop.socket")
+  private let source: DispatchSourceRead
+  private var clients: [Int32: Connection] = [:]
   private var stopped = false
-  private let handle: @MainActor @Sendable ([String: Any], NativeCommandDeadline, @escaping @MainActor @Sendable ([String: Any]) -> Void) -> Void
-  init(handle: @escaping @MainActor @Sendable ([String: Any], NativeCommandDeadline, @escaping @MainActor @Sendable ([String: Any]) -> Void) -> Void) throws {
+  private let handle:
+    @MainActor @Sendable (
+      [String: Any], NativeCommandDeadline, @escaping @MainActor @Sendable ([String: Any]) -> Void
+    ) -> Void
+
+  init(
+    handle:
+      @escaping @MainActor @Sendable (
+        [String: Any], NativeCommandDeadline, @escaping @MainActor @Sendable ([String: Any]) -> Void
+      ) -> Void
+  ) throws {
     self.handle = handle
-    let dir = "/tmp/hitslop-v1-\(getuid())"
-    if mkdir(dir, 0o700) != 0 && errno != EEXIST { throw failure("Cannot create socket directory") }
+    let directory = "/tmp/hitslop-v1-\(getuid())"
+    if mkdir(directory, 0o700) != 0 && errno != EEXIST {
+      throw failure("Cannot create socket directory")
+    }
     var info = stat()
-    guard lstat(dir, &info) == 0, info.st_uid == getuid(), (info.st_mode & S_IFMT) == S_IFDIR else {
+    guard lstat(directory, &info) == 0, info.st_uid == getuid(), info.st_mode & S_IFMT == S_IFDIR
+    else {
       throw failure("Unsafe socket directory")
     }
-    chmod(dir, 0o700)
-    path = dir + "/" + UUID().uuidString + ".sock"
-    listener = socket(AF_UNIX, SOCK_STREAM, 0)
-    guard listener >= 0 else { throw failure("Cannot create socket") }
+    guard chmod(directory, 0o700) == 0 else { throw failure("Cannot protect socket directory") }
+    path = directory + "/" + UUID().uuidString + ".sock"
+    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+    guard fd >= 0 else { throw failure("Cannot create socket") }
+    _ = fcntl(fd, F_SETFD, FD_CLOEXEC)
     var address = sockaddr_un()
     address.sun_family = sa_family_t(AF_UNIX)
     let bytes = Array(path.utf8CString)
-    withUnsafeMutableBytes(of: &address.sun_path) { raw in
-      raw.copyBytes(from: bytes.map { UInt8(bitPattern: $0) })
+    withUnsafeMutableBytes(of: &address.sun_path) {
+      $0.copyBytes(from: bytes.map { UInt8(bitPattern: $0) })
     }
-    let result = withUnsafePointer(to: &address) { ptr in
-      ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-        Darwin.bind(listener, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+    let bound = withUnsafePointer(to: &address) { pointer in
+      pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+        Darwin.bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
       }
     }
-    guard result == 0, listen(listener, 16) == 0 else {
-      Darwin.close(listener)
-      throw failure("Cannot bind socket")
+    guard bound == 0, listen(fd, 16) == 0, fcntl(fd, F_SETFL, O_NONBLOCK) == 0 else {
+      Darwin.close(fd)
+      unlink(path)
+      throw failure("Cannot listen on socket")
     }
     chmod(path, 0o600)
-    let fd = listener
-    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-      while let self, !self.isStopped {
-        let client = accept(fd, nil, nil)
-        if client < 0 { break }
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in self?.serve(client) }
-      }
-    }
+    source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
+    source.setCancelHandler { Darwin.close(fd) }
+    source.setEventHandler { [weak self] in self?.acceptClients(fd) }
+    source.resume()
   }
-  private var isStopped: Bool {
-    guardLock.lock()
-    defer { guardLock.unlock() }
-    return stopped
-  }
-  func stop() {
-    guardLock.lock()
-    defer { guardLock.unlock() }
-    guard !stopped else { return }
-    stopped = true
-    shutdown(listener, SHUT_RDWR)
-    Darwin.close(listener)
+
+  deinit {
+    source.cancel()
     unlink(path)
   }
-  deinit { stop() }
-  private func serve(_ fd: Int32) {
-    defer { Darwin.close(fd) }
-    var timeout = timeval(tv_sec: 10, tv_usec: 0)
-    var noPipe: Int32 = 1
-    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
-    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
-    setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noPipe, socklen_t(MemoryLayout<Int32>.size))
-    var data = Data()
-    var buffer = [UInt8](repeating: 0, count: 4096)
-    while data.count <= 1_048_576 {
-      let count = read(fd, &buffer, buffer.count)
-      if count <= 0 { return }
-      data.append(contentsOf: buffer.prefix(count))
-      if let end = data.firstIndex(of: 10) {
-        guard end <= 1_048_576 else { return }
-        let requestData = Data(data.prefix(upTo:end))
-        let semaphore = DispatchSemaphore(value:0)
-        let response = SocketResponse()
-        let deadline = NativeCommandDeadline()
-        DispatchQueue.main.async { [weak self] in
-          guard let self, !self.isStopped else { semaphore.signal();return }
-          guard let request = try? JSONSerialization.jsonObject(with:requestData) as? [String:Any],
-                PlatformContract.valid(request, against: socketRequestSchema) else {
-            response.set(try? JSONSerialization.data(withJSONObject: ["ok": false, "error": "Invalid socket request"]))
-            semaphore.signal(); return
-          }
-          self.handle(request, deadline) { reply in
-            let valid = PlatformContract.valid(reply, against: socketReplySchema)
-            var data = valid ? try? JSONSerialization.data(withJSONObject:reply) : nil
-            if data == nil || data!.count > 16*1024*1024 {
-              data = try? JSONSerialization.data(withJSONObject: ["ok": false, "error": "Invalid or oversized socket response", "retryable": true])
-            }
-            response.set(data)
-            semaphore.signal()
-          }
-        }
-        guard semaphore.wait(timeout:.now()+30) == .success, var reply = response.get() else { return }
-        reply.append(10)
-        reply.withUnsafeBytes { bytes in
-          var offset = 0
-          while offset < bytes.count {
-            let count = Darwin.write(
-              fd, bytes.baseAddress!.advanced(by: offset), bytes.count - offset)
-            if count <= 0 { break }
-            offset += count
-          }
-        }
+
+  func stop() {
+    queue.async { [self] in
+      guard !stopped else { return }
+      stopped = true
+      source.cancel()
+      for client in Array(clients.values) { client.close() }
+      clients.removeAll()
+      unlink(path)
+    }
+  }
+
+  private func acceptClients(_ listener: Int32) {
+    guard !stopped else { return }
+    while true {
+      let fd = accept(listener, nil, nil)
+      if fd < 0 {
+        if errno == EINTR { continue }
         return
       }
+      guard clients.count < 16, fcntl(fd, F_SETFL, O_NONBLOCK) == 0 else {
+        Darwin.close(fd)
+        continue
+      }
+      _ = fcntl(fd, F_SETFD, FD_CLOEXEC)
+      var noPipe: Int32 = 1
+      setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noPipe, socklen_t(MemoryLayout<Int32>.size))
+      let token = UUID()
+      let client = Connection(
+        token: token, fd: fd, queue: queue,
+        request: { [weak self] bytes in
+          self?.dispatch(bytes, fd: fd, token: token)
+        }, finished: { [weak self] in self?.clients.removeValue(forKey: fd) })
+      clients[fd] = client
+      client.start()
+    }
+  }
+
+  private func dispatch(_ bytes: Data, fd: Int32, token: UUID) {
+    let deadline = NativeCommandDeadline()
+    let handler = handle
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      let active = await withCheckedContinuation { continuation in
+        self.queue.async { [self] in
+          continuation.resume(returning: !stopped && clients[fd]?.token == token)
+        }
+      }
+      guard active else { return }
+      guard let request = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+        PlatformContract.valid(request, against: socketRequestSchema)
+      else {
+        self.respond(["ok": false, "error": "Invalid socket request"], fd: fd, token: token)
+        return
+      }
+      // A queued request may expire while MainActor is busy; never start it late.
+      do { try deadline.check() } catch {
+        self.respond(
+          ["ok": false, "error": "Command timed out before dispatch"], fd: fd, token: token)
+        return
+      }
+      handler(request, deadline) { [weak self] reply in self?.respond(reply, fd: fd, token: token) }
+    }
+  }
+
+  @MainActor private func respond(_ reply: [String: Any], fd: Int32, token: UUID) {
+    var bytes =
+      PlatformContract.valid(reply, against: socketReplySchema)
+      ? try? JSONSerialization.data(withJSONObject: reply) : nil
+    if bytes == nil || bytes!.count > 16 * 1024 * 1024 {
+      bytes = Data(
+        #"{"ok":false,"error":"Invalid or oversized response. Outcome unknown; run slop get before another edit."}"#
+          .utf8)
+    }
+    let data = bytes!
+    queue.async { [weak self] in
+      guard let self, !self.stopped, self.clients[fd]?.token == token else { return }
+      self.clients[fd]?.send(data)
     }
   }
 }
 
-private final class SocketResponse: @unchecked Sendable {
-  private let lock = NSLock()
-  private var data: Data?
-  func set(_ data:Data?) { lock.lock();defer { lock.unlock() };self.data = data }
-  func get() -> Data? { lock.lock();defer { lock.unlock() };return data }
+private final class Connection: @unchecked Sendable {
+  let token: UUID
+  private let fd: Int32
+  private let queue: DispatchQueue
+  private let reader: DispatchSourceRead
+  private var writer: DispatchSourceWrite?
+  private var timer: DispatchWorkItem?
+  private var input = Data()
+  private var output = Data()
+  private var offset = 0
+  private var dispatched = false
+  private var closed = false
+  private let request: (Data) -> Void
+  private let finished: () -> Void
+
+  init(
+    token: UUID, fd: Int32, queue: DispatchQueue, request: @escaping (Data) -> Void,
+    finished: @escaping () -> Void
+  ) {
+    self.token = token
+    self.fd = fd
+    self.queue = queue
+    self.request = request
+    self.finished = finished
+    reader = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
+    reader.setCancelHandler { Darwin.close(fd) }
+    reader.setEventHandler { [weak self] in self?.readRequest() }
+  }
+
+  deinit {
+    timer?.cancel()
+    writer?.cancel()
+    reader.cancel()
+  }
+
+  func start() {
+    reader.resume()
+    expire(after: 10)
+  }
+
+  private func expire(after seconds: Int) {
+    timer?.cancel()
+    let timeout = DispatchWorkItem { [weak self] in self?.close() }
+    timer = timeout
+    queue.asyncAfter(deadline: .now() + .seconds(seconds), execute: timeout)
+  }
+
+  private func readRequest() {
+    guard !closed else { return }
+    var buffer = [UInt8](repeating: 0, count: 8192)
+    while true {
+      let count = Darwin.read(fd, &buffer, buffer.count)
+      if count < 0 {
+        if errno == EINTR { continue }
+        if errno == EAGAIN || errno == EWOULDBLOCK { return }
+        close()
+        return
+      }
+      if count == 0 {
+        close()
+        return
+      }
+      guard !dispatched else {
+        close()
+        return
+      }
+      input.append(contentsOf: buffer.prefix(count))
+      if let end = input.firstIndex(of: 10) {
+        guard end <= 1_048_576 else {
+          close()
+          return
+        }
+        dispatched = true
+        expire(after: 30)
+        request(Data(input.prefix(upTo: end)))
+        input.removeAll()
+        return
+      }
+      if input.count > 1_048_576 {
+        close()
+        return
+      }
+    }
+  }
+
+  func send(_ data: Data) {
+    guard !closed, writer == nil else { return }
+    output = data
+    output.append(10)
+    let source = DispatchSource.makeWriteSource(fileDescriptor: fd, queue: queue)
+    writer = source
+    source.setEventHandler { [weak self] in self?.writeReply() }
+    source.resume()
+  }
+
+  private func writeReply() {
+    guard !closed else { return }
+    while offset < output.count {
+      let count = output.withUnsafeBytes {
+        Darwin.write(fd, $0.baseAddress!.advanced(by: offset), $0.count - offset)
+      }
+      if count < 0 {
+        if errno == EINTR { continue }
+        if errno == EAGAIN || errno == EWOULDBLOCK { return }
+        close()
+        return
+      }
+      guard count > 0 else {
+        close()
+        return
+      }
+      offset += count
+    }
+    close()
+  }
+
+  func close() {
+    guard !closed else { return }
+    closed = true
+    timer?.cancel()
+    writer?.cancel()
+    reader.cancel()
+    finished()
+  }
 }

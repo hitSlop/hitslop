@@ -1,7 +1,6 @@
 {
   "name": "@hitslop/document",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/schema.ts",
@@ -9,10 +8,20 @@
     "./svelte": "./src/store.svelte.ts",
     "./host": "./src/host.ts",
     "./theme": "./src/theme.ts",
-    "./capture": "./src/capture.ts"
+    "./capture": "./src/capture.ts",
+    "./identity": "./src/runtime-identity.json"
   },
   "dependencies": {
     "loro-crdt": "1.16.1",
     "svelte": "5.57.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "bun": ">=1.4.2"
   }
 }

@@ -17,6 +17,7 @@ Example.slop/
     document.sqlite             format 1, checkpoint and updates
     writer.lock                 permanent OS lock inode
     host.lock                   live native discovery
+    theme.json                  optional declared-token overrides
 ```
 
 The host supplies runtime/index.js and Loro resources through `slop://app/__runtime__/`; they are never bundled into the document. Author sources, editable stylesheets, node_modules, caches, state and stores never belong in templates. Embedded guidance is useful but optional when opening.
@@ -24,3 +25,5 @@ The host supplies runtime/index.js and Loro resources through `slop://app/__runt
 A build or registered master is immutable. Copy it to a user-selected path before opening. Initial values seed only a new database. Schema changes require new documents. Old packages and databases are rejected, not imported or upgraded.
 
 The existing native host retains frameless slop windows, the hover toolbar, masks, PNG skins, resizability and transparent backgrounds.
+
+`assets/theme.css` and `assets/theme.json` contain immutable token defaults. `assets/runtime.json` records the SDK/Loro identity checked by the native host. Theme overrides are host presentation metadata, never a document projection.
