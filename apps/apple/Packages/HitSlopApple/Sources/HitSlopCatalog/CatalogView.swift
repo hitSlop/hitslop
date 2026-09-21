@@ -8,17 +8,16 @@ import SwiftUI
 
 public struct CatalogView: View {
     @Bindable var store: StoreOf<CatalogFeature>
-    let account: StoreOf<AccountFeature>
     @FocusState private var searchFocused: Bool
     @Environment(\.scenePhase) private var scenePhase
 
-    public init(store: StoreOf<CatalogFeature>, account: StoreOf<AccountFeature>) {
-        self.store = store; self.account = account
+    public init(store: StoreOf<CatalogFeature>) {
+        self.store = store
     }
 
     public var body: some View {
         NavigationSplitView {
-            CatalogSidebarFeatureView(store: store, account: account)
+            CatalogSidebarFeatureView(store: store)
             .navigationSplitViewColumnWidth(min: 168, ideal: 184, max: 204)
         } content: {
             CatalogResultsFeatureView(store: store, searchFocused: $searchFocused)
@@ -45,10 +44,8 @@ public struct CatalogView: View {
 
 private struct CatalogSidebarFeatureView: View {
     let store: StoreOf<CatalogFeature>
-    let account: StoreOf<AccountFeature>
-    private let categories = ["productivity", "utilities", "finance", "media", "games", "developer-tools", "education", "business", "personal", "other"]
     var body: some View {
-        CatalogSidebar(filter: store.filter, categories: categories, localCount: store.local.count, recentCount: store.recents.count, account: account) {
+        CatalogSidebar(filter: store.filter, categories: store.categories, recentCount: store.recents.count) {
             store.send(.filterChanged($0))
         }
     }
@@ -62,10 +59,7 @@ private struct CatalogResultsFeatureView: View {
             title: store.filter.title, entries: store.visibleEntries,
             selectedID: $store.selectedID.sending(\.selected),
             query: $store.query.sending(\.queryChanged), searchFocused: searchFocused,
-            errorMessage: store.filter.isHosted ? store.hostedIssues.first : nil,
             localIssues: store.filter != .recents ? store.localIssues : [],
-            sort: $store.sort.sending(\.sortChanged), showsSort: store.hostedEnabled && store.filter.isHosted,
-            isLoading: store.isLoading && store.hostedEnabled,
             onRefresh: { store.send(.refreshSources) }
         )
     }
@@ -83,10 +77,7 @@ private struct CatalogDetailFeatureView: View {
 private struct CatalogSidebar: View {
     let filter: CatalogFilter
     let categories: [String]
-    let localCount: Int
     let recentCount: Int
-    let account: StoreOf<AccountFeature>
-    @State private var showsAccount = false
     let select: (CatalogFilter) -> Void
 
     var body: some View {
@@ -102,6 +93,9 @@ private struct CatalogSidebar: View {
                 VStack(alignment: .leading, spacing: 3) {
                     SidebarButton(title: "Templates", emoji: catalogFilterEmoji(.all), selected: filter == .all) { select(.all) }
                     SidebarButton(title: "Recents", emoji: catalogFilterEmoji(.recents), count: recentCount, selected: filter == .recents) { select(.recents) }
+                    ForEach(categories, id: \.self) { category in
+                        SidebarButton(title: categoryLabel(category), emoji: categoryEmoji(category), selected: filter == .category(category)) { select(.category(category)) }
+                    }
 
                 }
                 .padding(.horizontal, 8).padding(.bottom, 18)
@@ -198,17 +192,13 @@ private struct CatalogRail: View {
     @Binding var selectedID: String?
     @Binding var query: String
     var searchFocused: FocusState<Bool>.Binding
-    let errorMessage: String?
     let localIssues: [String]
-    @Binding var sort: CatalogSort
-    let showsSort: Bool
-    let isLoading: Bool
     let onRefresh: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             CatalogSearchBar(query: $query, focused: searchFocused)
-            VStack(alignment: .leading, spacing: showsSort ? 9 : 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(title).font(.headline.weight(.semibold))
                     Spacer()
@@ -218,34 +208,18 @@ private struct CatalogRail: View {
                     }
                     .buttonStyle(.plain)
                     .help("Refresh")
-                    .disabled(isLoading)
                     .accessibilityLabel("Refresh catalog")
-                }
-                if showsSort {
-                    Picker("Catalog order", selection: $sort) {
-                        ForEach(CatalogSort.allCases) { option in Text(option.title).tag(option) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .accessibilityLabel("Catalog order")
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
 
-            if errorMessage != nil {
-                Label("Online catalog unavailable", systemImage: "wifi.exclamationmark")
-                    .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.bottom, 8)
-                    .help(errorMessage ?? "")
-            }
             if !localIssues.isEmpty {
                 Label("\(localIssues.count) local template \(localIssues.count == 1 ? "needs" : "need") attention", systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.bottom, 8)
                     .help(localIssues.joined(separator: "\n"))
             }
 
-            if entries.isEmpty && isLoading {
-                ProgressView("Loading slops…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if entries.isEmpty {
+            if entries.isEmpty {
                 ContentUnavailableView("Nothing here", systemImage: "sparkles.rectangle.stack", description: Text("Try another search or category."))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -307,7 +281,7 @@ private struct CatalogRow: View {
     }
 
     private var sourceLabel: String {
-        entry.isRecent ? "LOCAL DOCUMENT" : entry.isBundled ? "BUILT-IN" : entry.isLocal ? "READY LOCALLY" : "CATALOG"
+        entry.isRecent ? "LOCAL DOCUMENT" : entry.isBundled ? "BUILT-IN" : "INSTALLED"
     }
 }
 
@@ -395,10 +369,8 @@ private struct CatalogDetail: View {
     private func primaryTitle(for entry: CatalogEntry) -> String { entry.isRecent ? "Open" : "Create" }
     private func primaryIcon(for entry: CatalogEntry) -> String { entry.isRecent ? "arrow.up.forward.app" : "sparkles" }
     private func facts(for entry: CatalogEntry) -> [CatalogFact] {
-        var result = [CatalogFact(icon: "externaldrive", title: "Source", value: entry.isRecent ? "Local document" : entry.isBundled ? "Included with hitSlop" : entry.isLocal ? "Installed locally" : "Online catalog")]
+        var result = [CatalogFact(icon: "externaldrive", title: "Source", value: entry.isRecent ? "Local document" : entry.isBundled ? "Included with hitSlop" : "Installed locally")]
         if entry.isRecent, let date = entry.createdAt { result.append(CatalogFact(icon: "calendar", title: "Created", value: date.formatted(date: .abbreviated, time: .omitted))) }
-        if let release = entry.releaseNumber { result.append(CatalogFact(icon: "shippingbox", title: "Release", value: "Release \(release)")) }
-        if let count = entry.creationCount { result.append(CatalogFact(icon: "doc.on.doc", title: "Creations", value: "\(count)")) }
         if let size = entry.initialSize { result.append(CatalogFact(icon: "rectangle", title: "Initial size", value: size)) }
         if entry.packageBytes > 0 { result.append(CatalogFact(icon: "doc", title: "Package size", value: ByteCountFormatter.string(fromByteCount: entry.packageBytes, countStyle: .file))) }
         if let date = entry.updatedAt { result.append(CatalogFact(icon: "clock", title: "Updated", value: date.formatted(date: .abbreviated, time: .shortened))) }
@@ -502,9 +474,8 @@ private struct CatalogImageView: View {
 }
 
 @MainActor private func loadCatalogImage(_ url: URL) async -> NSImage? {
-    if url.isFileURL { return NSImage(contentsOf: url) }
-    guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
-    return NSImage(data: data)
+    guard url.isFileURL else { return nil }
+    return NSImage(contentsOf: url)
 }
 
 private func brandImage(named name: String) -> NSImage? {
@@ -519,7 +490,6 @@ func catalogFilterEmoji(_ filter: CatalogFilter) -> String {
     switch filter {
     case .all: "🧃"
     case .recents: "🔥"
-    case .myTemplates: "🏡"
     case .category(let category): categoryEmoji(category)
     }
 }

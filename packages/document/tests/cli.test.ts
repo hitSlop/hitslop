@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, readdir } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineDocument, s } from "../src/schema";
+import identity from "../src/runtime-identity.json";
 const schema = defineDocument({ title: s.text() });
 test("native CLI rejects old runtimes and malformed commands before mutation", async () => {
   if (process.platform !== "darwin") return;
@@ -38,8 +39,17 @@ test("native CLI rejects old runtimes and malformed commands before mutation", a
     expect((await cli("apply", "--op", '{"type":"text.replace","path":["title"],"value":"bad"}', "--id", "alone")).error).toContain("Unknown");
     expect((await cli("get", "--request-id", "old-name")).error).toContain("Unknown");
     expect(await readdir(root)).not.toContain("state");
+    expect((await cli("get")).error).toContain("Missing runtime requirements");
+    expect(await readdir(root)).not.toContain("state");
+    const { runtimeRevision, ...provenance } = identity;
+    await writeFile(join(root, "assets/runtime.json"), JSON.stringify({...provenance,minRuntimeRevision:runtimeRevision}));
     expect((await cli("get")).code).toBe(0);
     const before = await readFile(join(root, "state/document.sqlite"));
+    const requirements = await readFile(join(root, "assets/runtime.json"));
+    await writeFile(join(root, "assets/runtime.json"), JSON.stringify({...provenance,runtimeContract:99,minRuntimeRevision:1}));
+    expect((await cli("get")).error).toContain("requires runtime contract 99");
+    expect(await readFile(join(root, "state/document.sqlite"))).toEqual(before);
+    await writeFile(join(root, "assets/runtime.json"), requirements);
     expect((await cli("apply", "--op", "null")).code).not.toBe(0);
     expect((await cli("batch", "--ops", "null")).code).not.toBe(0);
     const changed = defineDocument({ title: s.text(), extra: s.string() });
@@ -49,4 +59,4 @@ test("native CLI rejects old runtimes and malformed commands before mutation", a
   } finally {
     await rm(parent, { recursive: true, force: true });
   }
-}, 30000);
+}, 60000);

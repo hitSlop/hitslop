@@ -103,7 +103,7 @@ struct Create: AsyncParsableCommand {
     else { throw ValidationError("A document cannot be created in the template cache") }
     try FileManager.default.createDirectory(
       at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try DocumentFactory(catalogURL: URL(string: "https://api.hitslop.com")!).create(
+    try DocumentFactory().create(
       fromLocalPackage: source, at: output)
     await SlopPreviewWriter.installExistingPreviewAsync(for: output)
     print(output.path)
@@ -162,7 +162,7 @@ struct StorageProbe: ParsableCommand {
 struct RuntimeInfo: AsyncParsableCommand {
   static let configuration = CommandConfiguration(commandName: "runtime-info")
   @MainActor func run() async throws {
-    print(String(decoding: try WasmSession.runtimeIdentityData(), as: UTF8.self))
+    print(String(decoding: try WasmSession.runtimeCapabilitiesData(), as: UTF8.self))
   }
 }
 struct Theme: AsyncParsableCommand {

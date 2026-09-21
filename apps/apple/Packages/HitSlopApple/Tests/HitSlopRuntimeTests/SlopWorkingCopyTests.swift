@@ -7,7 +7,7 @@ import Testing
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-template-boundary-\(UUID().uuidString)", isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     let templates = root.appendingPathComponent("templates", isDirectory: true)
-    let factory = DocumentFactory(catalogURL: URL(string: "https://api.hitslop.com")!, templatesRoot: templates)
+    let factory = DocumentFactory(templatesRoot: templates)
 
     #expect(factory.isManagedTemplatePackage(templates.appendingPathComponent("soma-amp.slop")))
     #expect(factory.isManagedTemplatePackage(templates.appendingPathComponent("cache/publisher/soma-amp/1.slop")))

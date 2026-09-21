@@ -1,6 +1,6 @@
 # Releasing
 
-The active contract is `hitslop-v1`, SQLite format 1, and the pinned SDK/Loro release shared by the app and native CLI. There is no migration or backward compatibility. Current workspace packages are private; historical npm/publishing gates are not release instructions for v1.
+The active contract is `hitslop-v1`, SQLite format 1, and the pinned SDK/Loro release shared by the app and native CLI. There is no legacy-format migration. Shipped v1 documents retain supported runtime contracts; see [versioning](versioning.md). Current workspace packages are private; historical npm/publishing gates are not release instructions for v1.
 
 ## Local gate
 
@@ -29,3 +29,5 @@ scripts/package-macos-release.sh
 ```
 
 The desktop release is Apple silicon, macOS 14 or newer. App version/build values live in `apps/apple/project.yml`. Packaging signs the native helper and resource bundles alongside the app. Developer ID, notarization, App Store Connect, provisioning, and Sparkle private keys remain outside Git. Release from the exact tested commit; publishing hosted services and npm packages remains deferred.
+
+Before publication, run `bun scripts/v1/runtime-release.ts` after compatibility checks. Commit the release hash ledger and preserve the emitted `generated/v1/runtime-releases/<contract>-<revision>/` directory with the published app artifacts. Never overwrite a published revision. Restore historical release directories before compatibility tests after a revision bump.

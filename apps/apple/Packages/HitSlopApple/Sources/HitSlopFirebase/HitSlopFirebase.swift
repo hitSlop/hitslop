@@ -1,32 +1,12 @@
 import FirebaseAnalytics
-import FirebaseAppCheck
 import FirebaseCore
 import FirebaseCrashlytics
 import Foundation
+import HitSlopCore
 
 public enum HitSlopFirebase {
-    /// Opt in from the Xcode scheme. A Debug build alone must not reroute traffic.
-    public static var usesEmulators: Bool {
-        #if DEBUG
-        ProcessInfo.processInfo.environment["HITSLOP_USE_FIREBASE_EMULATORS"] == "1"
-        #else
-        false
-        #endif
-    }
-
     public static func configure() {
         guard FirebaseApp.allApps?.isEmpty != false else { return }
-        #if DEBUG
-        if usesEmulators {
-            AppCheck.setAppCheckProviderFactory(LocalEmulatorAppCheckProviderFactory())
-        } else {
-            AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
-        }
-        #elseif os(macOS)
-        AppCheck.setAppCheckProviderFactory(DeviceCheckProviderFactory())
-        #else
-        AppCheck.setAppCheckProviderFactory(AppAttestProviderFactory())
-        #endif
         FirebaseApp.configure()
         #if DEBUG
         let telemetryEnabled = false
@@ -37,27 +17,23 @@ public enum HitSlopFirebase {
         Analytics.setAnalyticsCollectionEnabled(telemetryEnabled)
     }
 
-    public static func log(_ name: String, parameters: [String: Any]? = nil) {
+    @MainActor public static let telemetry = SlopTelemetry { event in
+        #if !DEBUG
         guard FirebaseApp.app() != nil else { return }
-        Analytics.logEvent(name, parameters: parameters)
-    }
-
-    public static func record(_ error: Error) {
-        guard FirebaseApp.app() != nil else { return }
-        Crashlytics.crashlytics().record(error: error)
-    }
-}
-
-#if DEBUG
-private final class LocalEmulatorAppCheckProvider: NSObject, AppCheckProvider {
-    func getToken(completion handler: @escaping (AppCheckToken?, Error?) -> Void) {
-        handler(AppCheckToken(token: "local-emulator", expirationDate: .distantFuture), nil)
-    }
-}
-
-private final class LocalEmulatorAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
-    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
-        LocalEmulatorAppCheckProvider()
+        switch event {
+        case .launched: Analytics.logEvent("app_launched", parameters: nil)
+        case .opened: Analytics.logEvent("document_opened", parameters: nil)
+        case .duplicated: Analytics.logEvent("document_duplicated", parameters: nil)
+        case .created(let source):
+            Analytics.logEvent("document_created", parameters: ["source": source.rawValue])
+        case .exported(let format):
+            Analytics.logEvent("document_exported", parameters: ["format": format.rawValue])
+        case .failed(let operation):
+            // Do not forward Error/userInfo: these can contain file paths and authored data.
+            Crashlytics.crashlytics().record(error: NSError(
+                domain: "com.hitslop.operation", code: 1,
+                userInfo: [NSLocalizedDescriptionKey: operation.rawValue]))
+        }
+        #endif
     }
 }
-#endif

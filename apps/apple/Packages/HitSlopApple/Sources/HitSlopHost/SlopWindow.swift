@@ -206,6 +206,8 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   public var onOpenDocument: ((URL) -> Void)?
   public var onCommand: ((SlopDocumentCommand) -> Void)?
   public var onRuntimeReady: (() -> Void)?
+  public var telemetry: SlopTelemetry = .disabled
+  private var reportedSaveFailure = false
   public var onRuntimeFailure: ((String) -> Void)?
   private let opened: SlopOpenedDocument
   private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?,
@@ -289,6 +291,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     return frame.size
   }
   public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {
+    telemetry.send(.failed(.renderer))
     if let onRuntimeFailure {
       onRuntimeFailure(error.localizedDescription)
     } else {
@@ -303,6 +306,10 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     showDocumentAttention()
   }
   public func runtimeSession(_ session: SlopRuntimeSession, saveStatus: WasmSaveStatus) {
+    if saveStatus.status == "save-failed", !reportedSaveFailure {
+      reportedSaveFailure = true
+      telemetry.send(.failed(.save))
+    } else if saveStatus.status == "saved" { reportedSaveFailure = false }
     window?.isDocumentEdited = saveStatus.status != "saved"
     if let message = saveStatus.error {
       attentionMessage = message
@@ -501,8 +508,8 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
       }
       return destination
 
-    case .exportPNG: export(.png)
-    case .exportPDF: export(.pdf)
+    case .exportPNG: try await export(.png)
+    case .exportPDF: try await export(.pdf)
     case .reveal: reveal()
     case .copyPath: copyPath()
     case .openEditor(let app): try await openInEditor(app)
@@ -531,38 +538,23 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     window?.makeKeyAndOrderFront(nil)
   }
 
-  private func duplicate() {
-    guard let window else { return }
+  private func export(_ format: SlopTelemetryEvent.ExportFormat) async throws {
     let panel = NSSavePanel()
-    panel.allowedContentTypes = [.slop]
-    panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + " copy.slop"
-    panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]
-    panel.beginSheetModal(for: window) { [weak self] response in
-      guard response == .OK, let self, let target = panel.url else { return }
-      Task {
-        do {
-          try await self.session.flush()
-          let source = self.session.package.rootURL
-          let copy = try await SlopPreparation.run {
-            try SlopDuplicator.duplicate(from: source, to: target)
-          }
-          self.onOpenDocument?(copy)
-        } catch { self.present("Could not duplicate", error) }
-      }
-    }
+    panel.allowedContentTypes = [format == .png ? .png : .pdf]
+    panel.nameFieldStringValue = packageURL.deletingPathExtension().lastPathComponent + "." + format.rawValue
+    let output = panel.runModal() == .OK ? panel.url : nil
+    try await exportDocument(format: format, to: output)
   }
-  private enum ExportKind { case png, pdf }
-  private func export(_ kind: ExportKind) {
-    let panel = NSSavePanel()
-    panel.allowedContentTypes = [kind == .png ? .png : .pdf]
-    panel.nameFieldStringValue =
-      packageURL.deletingPathExtension().lastPathComponent + (kind == .png ? ".png" : ".pdf")
-    guard panel.runModal() == .OK, let url = panel.url else { return }
-    Task {
-      do {
-        try await SlopRenderer.exportDocument(
-          session: session, format: kind == .png ? "png" : "pdf", output: url)
-      } catch { present("Export failed", error) }
+
+  /// A cancelled picker has no output and emits no success event.
+  func exportDocument(format: SlopTelemetryEvent.ExportFormat, to output: URL?) async throws {
+    guard let output else { return }
+    do {
+      try await SlopRenderer.exportDocument(session: session, format: format.rawValue, output: output)
+      telemetry.send(.exported(format))
+    } catch {
+      telemetry.send(.failed(.export))
+      throw error
     }
   }
   private func reveal() { NSWorkspace.shared.activateFileViewerSelecting([packageURL]) }

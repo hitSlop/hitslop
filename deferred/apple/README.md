@@ -4,4 +4,4 @@ These files are outside all active Swift targets. They reference retired command
 
 The shipped document engine is Loro JS/WASM in HitSlopWasm. Do not restore JavaScriptCore, JSON room seeds, mutable theme stores, or the old generated bridge contract. Future collaboration must use Loro updates and the boundaries in [sharing-later.md](../../docs/sharing-later.md).
 
-Firebase and OpenAPI client scaffolding remain in the active client by design; account, hosted catalog, publishing, and sharing UI remain deferred.
+Firebase Analytics/Crashlytics remain active. OpenAPI/Registry, Firebase Auth/App Check, account, hosted catalog, archive handling, publishing, and sharing are deferred. The local-release directory preserves the removed client integration and tests.

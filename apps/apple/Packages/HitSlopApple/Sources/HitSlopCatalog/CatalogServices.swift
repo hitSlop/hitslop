@@ -7,49 +7,38 @@ import HitSlopHost
 import HitSlopRuntime
 
 @MainActor final class CatalogServices {
-    let catalogURL: URL
     let templatesURL: URL
+    private let telemetry: SlopTelemetry
+    private let bundledRoot: URL?
+    private let chooseDestination: (String) async -> URL?
+    private let recordRecent: (URL) -> Void
     private let scanner = CatalogScanner()
     private weak var localStore: LocalTemplateStore?
-    private var hostedTemplates: [String: SlopCatalogTemplate] = [:]
-    init(catalogURL: URL, templatesURL: URL) { self.catalogURL = catalogURL; self.templatesURL = templatesURL }
+    init(
+        templatesURL: URL,
+        bundledRoot: URL? = Bundle.main.resourceURL?.appendingPathComponent("StarterTemplates"),
+        telemetry: SlopTelemetry = .disabled,
+        chooseDestination: @escaping (String) async -> URL? = CatalogServices.chooseDestination,
+        recordRecent: @escaping (URL) -> Void = { NSDocumentController.shared.noteNewRecentDocumentURL($0) }
+    ) {
+        self.templatesURL = templatesURL; self.bundledRoot = bundledRoot
+        self.telemetry = telemetry; self.chooseDestination = chooseDestination; self.recordRecent = recordRecent
+    }
 
     var client: CatalogClient {
         CatalogClient(
-            hosted: { [self] category, sort in await hosted(category: category, sort: sort) },
             local: { [self] in await local() },
             refreshLocal: { [self] in await localStore?.refresh() },
             recents: { [self] in await recents() },
-            create: { [self] entry in try await create(entry) }
+            create: { [self] entry in
+                do { return try await create(entry) }
+                catch let error as CancellationError { throw error }
+                catch { await telemetry.send(.failed(.create)); throw error }
+            }
         )
     }
 
-    private func hosted(category: String?, sort: CatalogSort) -> AsyncStream<CatalogSnapshot> {
-        AsyncStream { continuation in
-            continuation.yield(CatalogSnapshot())
-            continuation.finish()
-        }
-    }
-
-    private func fetchHosted(category: String?, sort: CatalogSort) async throws -> CatalogSnapshot {
-        var templates = try await SlopCloudAPI(origin: catalogURL).catalog()
-        try Task.checkCancellation()
-        if let category { templates = templates.filter { $0.categories.contains { $0.rawValue == category } } }
-        templates.sort {
-            if sort == .popular {
-                if $0.creationCount != $1.creationCount { return $0.creationCount > $1.creationCount }
-            } else if $0.release.publishedAt != $1.release.publishedAt {
-                return $0.release.publishedAt > $1.release.publishedAt
-            }
-            return $0.id < $1.id
-        }
-        try Task.checkCancellation()
-        hostedTemplates = Dictionary(templates.map { (Self.creationKey($0), $0) }, uniquingKeysWith: { _, new in new })
-        return CatalogSnapshot(entries: templates.map(hostedEntry))
-    }
-
     private func local() async -> AsyncStream<CatalogSnapshot> {
-        let bundledRoot = Bundle.main.resourceURL?.appendingPathComponent("StarterTemplates")
         let bundled: LocalTemplateSnapshot
         if let bundledRoot, FileManager.default.fileExists(atPath: bundledRoot.path) {
             do { bundled = try await scanner.local(at: bundledRoot, makeImmutable: false) }
@@ -77,55 +66,25 @@ import HitSlopRuntime
     }
 
     private func create(_ entry: CatalogEntry) async throws -> URL? {
-        let template: SlopCatalogTemplate?
-        let slug: String
-        switch entry.source {
-        case .hosted(let id):
-            guard let value = hostedTemplates[id] else { throw SlopPackageError.invalid("The selected template is no longer available. Refresh the catalog and try again.") }
-            template = value; slug = value.slug
-        case .local(let url):
-            template = nil
-            slug = try await SlopPreparation.run { try SlopPackage(rootURL: url).manifest.slug }
-        case .recent: return nil
-        }
+        guard case .local(let source) = entry.source else { return nil }
+        let slug = try await SlopPreparation.run { try SlopPackage(rootURL: source).manifest.slug }
+        guard let url = await chooseDestination(slug) else { return nil }
+        let factory = DocumentFactory(templatesRoot: templatesURL)
+        try await factory.createLocal(from: source, at: url)
+        await SlopPreviewWriter.installExistingPreviewAsync(for: url)
+        telemetry.send(.created(entry.isBundled ? .bundled : .installed))
+        recordRecent(url)
+        return url.standardizedFileURL.resolvingSymlinksInPath()
+    }
+
+    private static func chooseDestination(_ slug: String) async -> URL? {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.slop]; panel.canCreateDirectories = true
         panel.directoryURL = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]; panel.nameFieldStringValue = "\(slug).slop"
         let response = await withCheckedContinuation { continuation in
             panel.begin { continuation.resume(returning: $0) }
         }
-        guard response == .OK, let url = panel.url else { return nil }
-        let factory = DocumentFactory(catalogURL: catalogURL, templatesRoot: templatesURL)
-        if let template {
-            _ = try await factory.create(from: template.remoteTemplate(), at: url)
-            await SlopPreviewWriter.installExistingPreviewAsync(for: url)
-            try? await SlopCloudAPI(origin: catalogURL).recordCreation(templateId: template.id)
-        } else if case .local(let source) = entry.source {
-            try await factory.createLocal(from: source, at: url)
-            await SlopPreviewWriter.installExistingPreviewAsync(for: url)
-        }
-        NSDocumentController.shared.noteNewRecentDocumentURL(url)
-        return url.standardizedFileURL.resolvingSymlinksInPath()
-    }
-
-    private static func creationKey(_ template: SlopCatalogTemplate) -> String { "\(template.id)@\(template.release.number)" }
-
-    private func hostedEntry(_ template: SlopCatalogTemplate) -> CatalogEntry {
-        var entry = CatalogEntry(id: "hosted:\(template.id)", source: .hosted(Self.creationKey(template)), title: template.title)
-        entry.description = template.description
-        let known = Set(SlopCategory.allCases.map(\.rawValue))
-        var seen = Set<String>()
-        entry.categories = template.categories.map { known.contains($0.rawValue) ? $0.rawValue : "other" }.filter { seen.insert($0).inserted }
-        entry.authorName = template.author.name
-        entry.authorURL = template.author.url.flatMap(URL.init(string:))
-        entry.packageBytes = Int64(template.download.bytes)
-        entry.releaseNumber = template.release.number
-        entry.creationCount = template.creationCount
-        if let preview = URL(string: template.preview.url), let icon = URL(string: template.icon.url) {
-            entry.iconURLs = [icon, preview]
-            entry.previewURLs = [preview, icon]
-        }
-        return entry
+        return response == .OK ? panel.url : nil
     }
 
     static func localEntry(_ template: LocalTemplate) -> CatalogEntry {

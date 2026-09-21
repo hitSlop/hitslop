@@ -60,7 +60,7 @@ test("native forwarding preserves JSON, paths, flags and exit status", async () 
     );
     const json = '{ "type": "text.replace", "value": "hello \\"world\\"" }';
     const args = ["apply", "a file.slop", "--op", json];
-    const result = await run(args, { HITSLOP_NATIVE_CLI: helper, HITSLOP_TEST_BUN_ENGINE: "0" });
+    const result = await run(args, { HITSLOP_NATIVE_CLI: helper });
     expect(result.code).toBe(23);
     expect(JSON.parse(result.stdout)).toEqual(args);
   } finally {

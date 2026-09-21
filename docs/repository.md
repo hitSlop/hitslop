@@ -5,7 +5,7 @@
 | Path | Responsibility |
 | --- | --- |
 | `apps/apple` | Thin macOS target plus project/release configuration |
-| `apps/apple/Packages/HitSlopApple` | Shared Swift Core, Runtime, Registry, Host, Catalog, and native CLI |
+| `apps/apple/Packages/HitSlopApple` | Shared Swift Core, Runtime, Host, local Catalog, telemetry, and native CLI |
 | `packages/document` | Shared Loro runtime, typed document handles, Svelte and capture adapters |
 | `packages/schema` | TypeBox platform contracts and generated native validation |
 | `packages/cli` | Authoring, disposable preview, template capture/registration, native command forwarding |

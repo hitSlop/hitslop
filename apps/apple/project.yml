@@ -89,11 +89,6 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         OTHER_LDFLAGS: $(inherited) -ObjC
         SKIP_INSTALL: NO
-      configs:
-        Debug:
-          HITSLOP_CATALOG_URL: https://api.hitslop.com
-        Release:
-          HITSLOP_CATALOG_URL: https://api.hitslop.com
 schemes:
   hitSlop-macOS:
     build:

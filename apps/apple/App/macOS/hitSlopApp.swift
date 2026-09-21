@@ -33,12 +33,11 @@ private struct UpdateSettingsView: View {
 }
 
 @MainActor final class HitSlopAppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
-    private lazy var coordinator = SlopApplicationCoordinator(catalogURL: catalogURL, templatesURL: ProcessInfo.processInfo.environment["HITSLOP_TEMPLATES_ROOT"].map { URL(fileURLWithPath: $0) } ?? DocumentFactory.defaultTemplatesRoot)
+    private lazy var coordinator = SlopApplicationCoordinator(templatesURL: ProcessInfo.processInfo.environment["HITSLOP_TEMPLATES_ROOT"].map { URL(fileURLWithPath: $0) } ?? DocumentFactory.defaultTemplatesRoot)
     private var recentMenu: NSMenu?
     private var settingsWindow: NSWindow?
     private let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     var updater: SPUUpdater { updaterController.updater }
-    private var catalogURL: URL { URL(string: ProcessInfo.processInfo.environment["HITSLOP_CATALOG_URL"] ?? Bundle.main.object(forInfoDictionaryKey: "CatalogURL") as? String ?? "https://api.hitslop.com")! }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         HitSlopFirebase.configure()
@@ -47,6 +46,7 @@ private struct UpdateSettingsView: View {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         installMenus()
+        HitSlopFirebase.telemetry.send(.launched)
         let urls = CommandLine.arguments.dropFirst().filter { $0.hasSuffix(".slop") }.map(URL.init(fileURLWithPath:))
         if urls.isEmpty { showCatalog() } else { urls.forEach(openDocument) }
     }

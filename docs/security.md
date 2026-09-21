@@ -14,6 +14,6 @@ One permanent state/writer.lock inode owns each local package. Never unlink it o
 
 Close and quit prepare every document before releasing ownership. Failed saves retain pending edits and the writer lease. Renderer recovery replaces the WebView under the same lease and restores saved state; unsaved renderer memory cannot be recovered. Export stages output outside the package and publishes by atomic rename before its deadline.
 
-Firebase startup, Analytics, Crashlytics, and App Check remain enabled in Release. Document data stays local; account UI, hosted loading, public publishing, rooms, media import, iCloud, and synced folders are deferred. See sharing-later.md for the future boundary.
+Firebase startup, Analytics, and Crashlytics remain enabled in Release and collection is disabled in Debug. Auth and App Check are deferred. Product events use fixed source/format values; nonfatal reports use fixed operation categories, never document paths, titles, contents, or authored error strings. Document data stays local; account UI, hosted loading, public publishing, rooms, media import, iCloud, and synced folders are deferred. See sharing-later.md for the future boundary.
 
 Theme commands share the document writer lease. `state/theme.json` is a bounded (64 KiB) map of token values, read through the bridge rather than the resource scheme. JavaScript validates declared token names and CSS values; native code validates envelopes, isolation, and size. Arbitrary override stylesheets are unsupported.

@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { LoroDoc, type LoroMap, type ContainerID } from "loro-crdt";
 import { Document } from "../src/document";
 import { defineDocument, s } from "../src/schema";
-import { MemoryStore } from "./helpers";
+import { MemoryStore } from "../src/memory";
+import { copyStore } from "./helpers";
 const schema = defineDocument({
   title: s.text(),
   tasks: s.list(s.object({ text: s.text(), done: s.boolean() })),
@@ -19,7 +20,7 @@ async function pair() {
   const ia = new MemoryStore(),
     a = await Document.open(schema, ia, initial),
     ib = new MemoryStore();
-  ib.stored = structuredClone(ia.stored);
+  await copyStore(ia, ib);
   const b = await Document.open(schema, ib, initial);
   return { a, b, ia, ib };
 }

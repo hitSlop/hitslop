@@ -7,7 +7,7 @@ test("explicit native helper overrides fail without falling back or retrying", a
   const root = await mkdtemp(join(tmpdir(), "hsl-native-discovery-"));
   const run = async (helper: string) => {
     const child = Bun.spawn([process.execPath, "packages/cli/src/cli.ts", "get", "example.slop"], {
-      env: { ...process.env, HITSLOP_NATIVE_CLI: helper, HITSLOP_TEST_BUN_ENGINE: "0" },
+      env: { ...process.env, HITSLOP_NATIVE_CLI: helper },
       stdout: "pipe", stderr: "pipe",
     });
     return { code: await child.exited, error: await new Response(child.stderr).text() };

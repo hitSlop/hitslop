@@ -2,6 +2,7 @@ import { cp, chmod, lstat, mkdir, mkdtemp, readFile, rename, rm, stat } from "no
 import { join, resolve, dirname, basename } from "node:path";
 import { tmpdir } from "node:os";
 import identity from "@hitslop/document/identity";
+import { supportsRuntime } from "./runtime-capabilities";
 import { findNative } from "./native";
 import { buildProject } from "./build";
 
@@ -28,12 +29,10 @@ export async function prepareRenderer() {
   } catch {}
   if (
     code ||
-    actual?.sdkVersion !== identity.sdkVersion ||
-    actual?.loroVersion !== identity.loroVersion ||
-    actual?.protocolVersion !== identity.protocolVersion
+    !supportsRuntime(actual, identity.runtimeContract, identity.runtimeRevision)
   )
     throw new Error(
-      `Install hitSlop.app matching CLI ${identity.sdkVersion}; the native runtime is incompatible.`,
+      `Update hitSlop.app: CLI ${identity.sdkVersion} requires runtime contract ${identity.runtimeContract}, revision ${identity.runtimeRevision} or newer.`,
     );
   return helper;
 }

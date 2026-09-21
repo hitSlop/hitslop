@@ -7,51 +7,20 @@ private let documentID = UUID(uuidString: "00000000-0000-0000-0000-000000000001"
 private let documentURL = URL(fileURLWithPath: "/tmp/example.slop")
 private struct Failure: LocalizedError { var errorDescription: String? { "Save failed" } }
 
-@Test @MainActor func searchDebouncesAndSortKeepsTheSearch() async {
-    let clock = TestClock()
-    var initial = CatalogFeature.State(hostedEnabled: true)
-    initial.hosted = [CatalogEntry(id: "a", source: .hosted("a"), title: "Counter"), CatalogEntry(id: "b", source: .hosted("b"), title: "Notes")]
-    let store = TestStore(initialState: initial) { CatalogFeature() } withDependencies: {
-        $0.continuousClock = clock
-        $0.catalogClient.hosted = { _, _ in .finished }
-    }
-    await store.send(.queryChanged("cou")) { $0.query = "cou" }
-    await clock.advance(by: .milliseconds(100))
-    await store.send(.queryChanged("counter")) { $0.query = "counter" }
-    await clock.advance(by: .milliseconds(180))
-    await store.receive(\.searchDebounced) { $0.searchTerm = "counter"; $0.selectedID = "a" }
-    await store.send(.sortChanged(.new)) { $0.sort = .new; $0.subscription = 1; $0.isLoading = true }
-    #expect(store.state.query == "counter")
-    #expect(store.state.visibleEntries.map(\.id) == ["a"])
-    await store.finish()
-}
 
-@Test @MainActor func changingSourceCancelsSearchAndOldSnapshotsCannotReplaceResults() async {
-    let clock = TestClock()
-    var initial = CatalogFeature.State(hostedEnabled: true)
-    initial.local = [CatalogEntry(id: "local", source: .local(documentURL), title: "Notes")]
-    let store = TestStore(initialState: initial) { CatalogFeature() } withDependencies: { $0.continuousClock = clock }
-    await store.send(.queryChanged("Notes")) { $0.query = "Notes" }
-    await store.send(.filterChanged(.myTemplates)) {
-        $0.filter = .myTemplates; $0.searchTerm = "notes"; $0.selectedID = "local"; $0.subscription = 1
-    }
-    await clock.advance(by: .seconds(1))
-    await store.send(.hostedReceived(0, CatalogSnapshot(entries: [CatalogEntry(id: "stale", source: .hosted("stale"), title: "Stale")])))
-    await store.finish()
-}
 
 @Test @MainActor func catalogSelectionFollowsSnapshotRemoval() async {
-    let entry = CatalogEntry(id: "a", source: .hosted("a"), title: "Counter")
-    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() }
-    await store.send(.hostedReceived(0, CatalogSnapshot(entries: [entry]))) { $0.hosted = [entry]; $0.selectedID = "a" }
-    await store.send(.hostedReceived(0, CatalogSnapshot())) { $0.hosted = []; $0.selectedID = nil }
+    let entry = CatalogEntry(id: "a", source: .local(documentURL), title: "Counter")
+    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() }
+    await store.send(.localReceived(CatalogSnapshot(entries: [entry]))) { $0.local = [entry]; $0.selectedID = "a" }
+    await store.send(.localReceived(CatalogSnapshot())) { $0.local = []; $0.selectedID = nil }
 }
 
 @Test @MainActor func cancelledCreationIsNotAnError() async {
     let entry = CatalogEntry(id: "a", source: .local(documentURL), title: "Counter")
     let calls = LockIsolated(0)
     let gate = AsyncStream<Void>.makeStream()
-    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() } withDependencies: {
+    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
         $0.catalogClient.recents = { [] }
         $0.catalogClient.create = { _ in
             calls.withValue { $0 += 1 }
@@ -70,7 +39,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 
 @Test @MainActor func failedCreationCanBeRetried() async {
     let entry = CatalogEntry(id: "a", source: .local(documentURL), title: "Counter")
-    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() } withDependencies: {
+    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
         $0.catalogClient.create = { _ in throw Failure() }
     }
     await store.send(.primaryAction(entry)) { $0.creating = entry }
@@ -80,7 +49,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     await store.receive(\.creationFailed) { $0.creating = nil; $0.alert = .operationFailure("Save failed", title: "Could not create slop") }
 }
 
-@Test @MainActor func repeatedOpenDuringDownloadUsesOneOperation() async {
+@Test @MainActor func repeatedOpenDuringPreparationUsesOneOperation() async {
     let gate = AsyncStream<String>.makeStream()
     let calls = LockIsolated(0)
     let store = TestStore(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
@@ -290,55 +259,11 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     #expect(store.state.documents[id: documentID]?.alert == nil)
 }
 
-@Test @MainActor func categoryChangeClearsOldEntriesAndTerminatesTheOldSubscription() async {
-    let old = AsyncStream<CatalogSnapshot>.makeStream()
-    let next = AsyncStream<CatalogSnapshot>.makeStream()
-    let terminated = LockIsolated(false)
-    let requests = LockIsolated<[String?]>([])
-    old.continuation.onTermination = { _ in terminated.setValue(true) }
-    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() } withDependencies: {
-        $0.catalogClient.hosted = { category, _ in
-            requests.withValue { $0.append(category) }
-            return category == nil ? old.stream : next.stream
-        }
-        $0.catalogClient.local = { .finished }
-        $0.catalogClient.recents = { [] }
-    }
-    await store.send(.start) { $0.isStarted = true; $0.isLoading = true; $0.subscription = 1; $0.recentsGeneration = 1 }
-    await store.receive(\.recentsReceived)
-    let entry = CatalogEntry(id: "old", source: .hosted("old"), title: "Old category")
-    old.continuation.yield(CatalogSnapshot(entries: [entry], issues: ["Old issue"]))
-    await store.receive(\.hostedReceived) { $0.hosted = [entry]; $0.hostedIssues = ["Old issue"]; $0.selectedID = "old"; $0.isLoading = false }
-    await store.send(.filterChanged(.category("games"))) {
-        $0.filter = .category("games"); $0.hosted = []; $0.hostedIssues = []; $0.selectedID = nil
-        $0.subscription = 2; $0.isLoading = true
-    }
-    await store.send(.filterChanged(.category("games")))
-    await store.send(.sortChanged(.popular))
-    await store.send(.hostedReceived(1, CatalogSnapshot(entries: [entry])))
-    next.continuation.yield(CatalogSnapshot())
-    await store.receive(\.hostedReceived) { $0.isLoading = false }
-    next.continuation.finish()
-    await store.finish()
-    #expect(terminated.value)
-    #expect(requests.value == [nil, "games"])
-}
 
-@Test @MainActor func clearingSearchImmediatelyRestoresResultsAndCancelsDebounce() async {
-    let clock = TestClock()
-    var state = CatalogFeature.State(hostedEnabled: true)
-    state.hosted = [CatalogEntry(id: "a", source: .hosted("a"), title: "Counter")]
-    state.query = "missing"; state.searchTerm = "missing"
-    let store = TestStore(initialState: state) { CatalogFeature() } withDependencies: { $0.continuousClock = clock }
-    await store.send(.queryChanged("another")) { $0.query = "another" }
-    await store.send(.queryChanged("")) { $0.query = ""; $0.searchTerm = ""; $0.selectedID = "a" }
-    await clock.advance(by: .seconds(1))
-    await store.finish()
-}
 
 @Test @MainActor func olderRecentsCannotUndoClearOrRefresh() async {
     let gate = AsyncStream<Void>.makeStream()
-    var state = CatalogFeature.State(hostedEnabled: true); state.recentsGeneration = 4
+    var state = CatalogFeature.State(); state.recentsGeneration = 4
     let store = TestStore(initialState: state) { CatalogFeature() } withDependencies: {
         $0.catalogClient.recents = { for await _ in gate.stream { break }; return [] }
     }
@@ -352,23 +277,20 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 @Test @MainActor func refreshingSourcesRetainsTheLocalSubscription() async {
     let local = AsyncStream<CatalogSnapshot>.makeStream()
     let localCalls = LockIsolated(0)
-    let hostedCalls = LockIsolated(0)
     let refreshCalls = LockIsolated(0)
-    let store = TestStore(initialState: CatalogFeature.State(hostedEnabled: true)) { CatalogFeature() } withDependencies: {
-        $0.catalogClient.hosted = { _, _ in hostedCalls.withValue { $0 += 1 }; return .finished }
+    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
         $0.catalogClient.local = { localCalls.withValue { $0 += 1 }; return local.stream }
         $0.catalogClient.refreshLocal = { refreshCalls.withValue { $0 += 1 } }
         $0.catalogClient.recents = { [] }
     }
-    await store.send(.start) { $0.isStarted = true; $0.isLoading = true; $0.subscription = 1; $0.recentsGeneration = 1 }
+    await store.send(.start) { $0.isStarted = true; $0.recentsGeneration = 1 }
     await store.receive(\.recentsReceived)
     await store.send(.start)
-    await store.send(.refreshSources) { $0.recentsGeneration = 2; $0.subscription = 2 }
+    await store.send(.refreshSources) { $0.recentsGeneration = 2 }
     await store.receive(\.recentsReceived)
     local.continuation.finish()
     await store.finish()
     #expect(localCalls.value == 1)
-    #expect(hostedCalls.value == 2)
     #expect(refreshCalls.value == 1)
 }
 
@@ -476,19 +398,6 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     await store.send(.alert(.dismiss)) { $0.alert = nil }
 }
 
-@Test @MainActor func localReleaseNeverStartsHostedDiscovery() async {
-    let calls = LockIsolated(0)
-    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
-        $0.catalogClient.hosted = { _, _ in calls.withValue { $0 += 1 }; return .finished }
-        $0.catalogClient.local = { .finished }
-        $0.catalogClient.recents = { [] }
-    }
-    await store.send(.start) { $0.isStarted = true; $0.subscription = 1; $0.recentsGeneration = 1 }
-    await store.receive(\.recentsReceived)
-    #expect(calls.value == 0)
-    #expect(!store.state.isLoading)
-    await store.finish()
-}
 
 @Test @MainActor func multiDocumentQuitFailureCancelsEveryPreparationWithoutFinishing() async {
     let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
@@ -519,4 +428,40 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     }
     await store.finish()
     #expect(events.value == ["prepare:\(documentID)", "prepare:\(secondID)", "cancel:\(documentID)", "cancel:\(secondID)", "reply:false"])
+}
+
+@Test @MainActor func categoriesFollowLocalManifestsAndRemovedCategoryReturnsToTemplates() async {
+    var bundled = CatalogEntry(id: "bundled", source: .local(documentURL), title: "Bundled")
+    bundled.isBundled = true; bundled.categories = ["personal", "productivity"]
+    var installed = CatalogEntry(id: "installed", source: .local(documentURL), title: "Installed")
+    installed.categories = ["finance", "personal"]
+    let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() }
+    await store.send(.localReceived(CatalogSnapshot(entries: [bundled, installed]))) {
+        $0.local = [bundled, installed]; $0.selectedID = "bundled"
+    }
+    #expect(store.state.categories == ["productivity", "finance", "personal"])
+    await store.send(.filterChanged(.category("finance"))) { $0.filter = .category("finance"); $0.selectedID = "installed" }
+    #expect(store.state.visibleEntries == [installed])
+    await store.send(.localReceived(CatalogSnapshot(entries: [bundled]))) {
+        $0.local = [bundled]; $0.filter = .all; $0.selectedID = "bundled"
+    }
+    #expect(store.state.categories == ["productivity", "personal"])
+}
+
+@Test @MainActor func localSearchImmediatelyFiltersAndKeepsCategorySelectionConsistent() async {
+    var checklist = CatalogEntry(id: "checklist", source: .local(documentURL), title: "Checklist")
+    checklist.categories = ["personal", "productivity"]
+    var expenses = CatalogEntry(id: "expenses", source: .local(documentURL), title: "Small Expenses")
+    expenses.categories = ["productivity"]
+    var initial = CatalogFeature.State()
+    initial.local = [checklist, expenses]; initial.selectedID = checklist.id
+    let store = TestStore(initialState: initial) { CatalogFeature() }
+    await store.send(.queryChanged("  EXPENSES  ")) { $0.query = "  EXPENSES  "; $0.selectedID = expenses.id }
+    #expect(store.state.visibleEntries == [expenses])
+    await store.send(.filterChanged(.category("personal"))) { $0.filter = .category("personal"); $0.selectedID = nil }
+    #expect(store.state.visibleEntries.isEmpty)
+    await store.send(.queryChanged("")) { $0.query = ""; $0.selectedID = checklist.id }
+    #expect(store.state.visibleEntries == [checklist])
+    await store.send(.filterChanged(.all)) { $0.filter = .all }
+    #expect(store.state.visibleEntries == [checklist, expenses])
 }

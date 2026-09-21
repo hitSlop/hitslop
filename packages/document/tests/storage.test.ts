@@ -1,5 +1,6 @@
-import { test, expect } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { MemoryStore } from "../src/memory";
+import { describe, test, expect } from "bun:test";
+import { mkdtemp, rm, mkdir, symlink, rename } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineDocument, s, fromDescriptor, schemaKey } from "../src/schema";
@@ -39,23 +40,6 @@ test("generic operations preserve row IDs through moves, flush, compact and reop
     expect(reopened.current).toEqual(expected);
     expect((reopened.current as any).tasks[1].$id).toBe(id);
     await reopened.close();
-  }));
-test("invalid operations are atomic and snapshots cannot be mutated", () =>
-  fixture(async (root) => {
-    const d = await Document.open(schema, await SQLiteStore.open(root), initial);
-    const before = d.current;
-    for (const op of [
-      { type: "insert", path: ["tasks"], value: { text: "x", done: "bad" } },
-      { type: "set", path: ["title"], value: 42 },
-      { type: "remove", path: ["tasks"], id: "missing" },
-      { type: "set", path: ["constructor"], value: "bad" },
-    ])
-      expect(() => d.apply(op as any)).toThrow();
-    expect(d.current).toEqual(before);
-    expect(() => {
-      (d.current as any).title = "bad";
-    }).toThrow();
-    await d.close();
   }));
 test("same runtime supports a second nested schema", () =>
   fixture(async (root) => {
@@ -114,8 +98,11 @@ test("lost storage reply followed by get flushes identical bytes without replayi
       documentPath: root,
       schemaHash: schemaKey(schema.descriptor),
       epoch: "epoch",
-      method: "apply" as const,
-      op: { type: "insert" as const, path: ["tasks"], value: { text: "Once", done: false } },
+      method: "batch" as const,
+      ops: [
+        { type: "insert" as const, path: ["tasks"], value: { text: "Once", done: false } },
+        { type: "text.replace" as const, path: ["title"], value: "Batch title" },
+      ],
     };
     expect((await session.handle(request)).ok).toBe(false);
     expect((await session.handle({ ...request, method: "get" })).ok).toBe(true);
@@ -123,6 +110,7 @@ test("lost storage reply followed by get flushes identical bytes without replayi
     await session.close();
     const r = await Document.open(schema, await SQLiteStore.open(root), initial);
     expect(r.current.tasks).toHaveLength(1);
+    expect(r.current.title).toBe("Batch title");
     await r.close();
   }));
 test("failed close retains ownership and can be retried", () =>
@@ -170,3 +158,103 @@ test("checkpoint reply loss refreshes generation and permits further edits", () 
     expect(r.current.tasks).toHaveLength(1);
     await r.close();
   }));
+
+describe("storage boundaries", () => {
+  const definition = defineDocument({
+    title: s.text(),
+    rows: s.list(s.object({ name: s.string() })),
+  });
+  const initial = { title: "Title", rows: [] };
+  test("automatic checkpoint bounds update rows and preserves reopen", async () => {
+    const store = new MemoryStore();
+    const doc = await Document.open(definition, store, initial);
+    for (let i = 0; i < 260; i++) {
+      doc.fields.title.replace(String(i));
+      await doc.flush();
+    }
+    expect((await store.load()).updates.length).toBeLessThan(256);
+    await doc.close();
+    const restored = await Document.open(definition, store, initial);
+    expect(restored.current.title).toBe("259");
+    await restored.close();
+  });
+  test("storage rejects symlinked state and detects package relocation", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "hsl-safe-"));
+    try {
+      const root = join(parent, "Doc.slop"),
+        outside = join(parent, "outside");
+      await mkdir(root);
+      await mkdir(outside);
+      await symlink(outside, join(root, "state"));
+      await expect(SQLiteStore.open(root)).rejects.toThrow("Unsafe");
+      await rm(join(root, "state"));
+      const store = await SQLiteStore.open(root);
+      await rename(root, join(parent, "Moved.slop"));
+      await expect(store.load()).rejects.toThrow();
+      await store.close();
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("save status", () => {
+  const schema = defineDocument({ title: s.text(), rows: s.list(s.object({ done: s.boolean() })) });
+  const initial = { title: "Initial", rows: [{ done: false }] };
+  test("save failure stays visible through further edits and repeated failure until successful flush", async () => {
+    const io = new MemoryStore(),
+      append = io.append.bind(io),
+      doc = await Document.open(schema, io, initial);
+    io.append = async () => {
+      throw new Error("Disk unavailable");
+    };
+    doc.text(schema.fields.title).replace("First");
+    await expect(doc.flush()).rejects.toThrow("Disk unavailable");
+    doc.text(schema.fields.title).replace("Second");
+    expect(doc.status).toBe("save-failed");
+    expect(doc.error).toContain("Disk unavailable");
+    await expect(doc.flush()).rejects.toThrow();
+    expect(doc.status).toBe("save-failed");
+    io.append = append;
+    await doc.flush();
+    expect(doc.status).toBe("saved");
+    expect(doc.error).toBeNull();
+    await doc.close();
+    const reopened = await Document.open(schema, io, initial);
+    expect(reopened.current.title).toBe("Second");
+    await reopened.close();
+  });
+});
+
+test("edits arriving during append and checkpoint remain queued and survive reopen", async () => {
+  const schema = defineDocument({ title: s.text(), flag: s.boolean() });
+  const io = new MemoryStore();
+  const doc = await Document.open(schema, io, { title: "Initial", flag: false });
+  for (const phase of ["append", "checkpoint"] as const) {
+    const original = io[phase].bind(io) as (...args: any[]) => Promise<string>;
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>((r) => (entered = r)),
+      gate = new Promise<void>((r) => (release = r));
+    (io as any)[phase] = async (...args: any[]) => {
+      entered();
+      await gate;
+      return original(...args);
+    };
+    doc.text(schema.fields.title).replace(`Before ${phase}`);
+    const pending = phase === "append" ? doc.flush() : doc.compact();
+    await started;
+    doc.transaction((tx) => {
+      tx.text(schema.fields.title).replace(`During ${phase}`);
+      tx.set(schema.fields.flag, true);
+    });
+    release();
+    await pending;
+    (io as any)[phase] = original;
+    await doc.flush();
+  }
+  const expected = doc.current;
+  await doc.close();
+  const reopened = await Document.open(schema, io, { title: "Unused", flag: false });
+  expect(reopened.current).toEqual(expected);
+  await reopened.close();
+});

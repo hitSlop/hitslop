@@ -4,7 +4,6 @@ import Testing
 @Test func sidebarFiltersUseFunEmojisInsteadOfSymbols() {
     #expect(catalogFilterEmoji(.all) == "🧃")
     #expect(catalogFilterEmoji(.recents) == "🔥")
-    #expect(catalogFilterEmoji(.myTemplates) == "🏡")
 }
 
 @Test func categoryEmojisCoverTheCatalogSidebar() {

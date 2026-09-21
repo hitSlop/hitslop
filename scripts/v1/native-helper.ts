@@ -1,6 +1,7 @@
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import identity from "../../packages/document/src/runtime-identity.json";
 import { strict as assert } from "node:assert";
 
 const folder = await mkdtemp(join(tmpdir(), "hitslop-relocated-helper-"));
@@ -38,7 +39,7 @@ try {
   }
   // A broken relocated resource must fail even while valid checkout resources exist.
   const bundle = join(helpers, "HitSlopApple_HitSlopWasm.bundle");
-  const runtime = [join(bundle, "runtime/headless.js"), join(bundle, "Contents/Resources/runtime/headless.js")];
+  const runtime = [join(bundle, `runtimes/${identity.runtimeContract}/headless.js`), join(bundle, `Contents/Resources/runtimes/${identity.runtimeContract}/headless.js`)];
   const headless = (await Promise.all(runtime.map(async path => await Bun.file(path).exists() ? path : undefined))).find(Boolean);
   assert.ok(headless, "Missing embedded runtime");
   await writeFile(headless, "webkit.messageHandlers.storage.postMessage({method:'failed',error:'Relocated runtime marker'});");

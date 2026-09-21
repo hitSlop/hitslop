@@ -24,8 +24,8 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
-	<key>CatalogURL</key>
-	<string>$(HITSLOP_CATALOG_URL)</string>
+	<key>NSApplicationCrashOnExceptions</key>
+	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>SUFeedURL</key>

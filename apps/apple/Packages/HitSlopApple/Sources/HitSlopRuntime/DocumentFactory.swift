@@ -2,11 +2,9 @@ import Foundation
 import HitSlopCore
 
 @MainActor public struct DocumentFactory: Sendable {
-    public let catalogURL: URL
     public let templatesRoot: URL
 
-    public init(catalogURL: URL, templatesRoot: URL = DocumentFactory.defaultTemplatesRoot) {
-        self.catalogURL = catalogURL
+    public init(templatesRoot: URL = DocumentFactory.defaultTemplatesRoot) {
         self.templatesRoot = templatesRoot
     }
 
@@ -32,29 +30,6 @@ import HitSlopCore
            candidate.count > bundled.count, zip(bundled, candidate).allSatisfy({ $0.caseInsensitiveCompare($1) == .orderedSame }) { return true }
         guard candidate.count > root.count else { return false }
         return zip(root, candidate).allSatisfy { $0.caseInsensitiveCompare($1) == .orderedSame }
-    }
-
-    @discardableResult public func create(from template: SlopRemoteTemplate, at destination: URL) async throws -> Bool {
-        let cached = templatesRoot.appendingPathComponent("cache/\(template.publisherKeyID)/\(template.slug)/\(template.release).slop", isDirectory: true)
-        var downloaded = false
-        let needsDownload = try await SlopPreparation.run { (try? SlopPackage(rootURL: cached)) == nil }
-        if needsDownload {
-            let data = try await SlopCloudAPI(origin: catalogURL).artifact(template.artifactKey)
-            try await SlopPreparation.run {
-                try FileManager.default.createDirectory(at: cached.deletingLastPathComponent(), withIntermediateDirectories: true)
-                let archive = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
-                try data.write(to: archive, options: .atomic)
-                defer { try? FileManager.default.removeItem(at: archive) }
-                try SlopArchive.extract(archive, to: cached, expectedSHA256: template.artifactSha256)
-            }
-            downloaded = true
-        }
-        try await SlopPreparation.run {
-            try SlopPackage(rootURL: cached).validateAsTemplate()
-            try SlopDuplicator.makeImmutable(cached)
-            try SlopDuplicator.duplicate(from: cached, to: destination)
-        }
-        return downloaded
     }
 
     nonisolated public func create(fromLocalPackage packageURL: URL, at destination: URL) throws {

@@ -10,7 +10,6 @@ import SwiftUI
 /// The macOS composition root. Stores own decisions; services own native resources.
 @MainActor public final class SlopApplicationCoordinator {
     let store: StoreOf<AppFeature>
-    private let accountServices: AccountServices
     private let presentsWindows: Bool
     private let alerts = NativeAlertPresenter()
     private let native: NativeDocumentServices
@@ -18,30 +17,25 @@ import SwiftUI
     private var catalogWindow: NSWindowController?
     private var observation: ObserveToken?
     private var documentObservations: [UUID: ObserveToken] = [:]
-    private var invitationPanel: NSPanel?
 
     // NotificationCenter removal is thread-safe; registration and all callbacks stay on MainActor.
     nonisolated(unsafe) private var notifications: [NSObjectProtocol] = []
     private var previousDocumentCount = 0
 
-    public convenience init(catalogURL: URL, templatesURL: URL = DocumentFactory.defaultTemplatesRoot) {
-        self.init(catalogURL: catalogURL, templatesURL: templatesURL, presentsWindows: true)
+    public convenience init(templatesURL: URL = DocumentFactory.defaultTemplatesRoot) {
+        self.init(templatesURL: templatesURL, presentsWindows: true)
     }
 
     /// Native integration tests use hidden windows and avoid modifying the user's recents.
-    init(catalogURL: URL, templatesURL: URL, presentsWindows: Bool) {
-        let accountServices = AccountServices()
-        self.accountServices = accountServices
+    init(templatesURL: URL, presentsWindows: Bool) {
         self.presentsWindows = presentsWindows
-        let native = NativeDocumentServices(templatesURL: templatesURL, presentsWindows: presentsWindows)
-        let catalogServices = CatalogServices(catalogURL: catalogURL, templatesURL: templatesURL)
+        let native = NativeDocumentServices(templatesURL: templatesURL, presentsWindows: presentsWindows, telemetry: presentsWindows ? HitSlopFirebase.telemetry : .disabled)
+        let catalogServices = CatalogServices(templatesURL: templatesURL, telemetry: presentsWindows ? HitSlopFirebase.telemetry : .disabled)
         self.native = native; self.catalogServices = catalogServices
         store = Store(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
             $0.catalogClient = presentsWindows ? catalogServices.client : .empty
             $0.documentClient = native.client
-            $0.accountClient = presentsWindows ? accountServices.client : .empty
         }
-        // Account UI and authentication listeners are deferred; Firebase startup stays active.
         native.onOpened = { [weak self] id, controller in self?.connect(id, controller: controller) }
         native.onFocused = { [weak self] in self?.updateFocus() }
         observation = observe { [weak self] in
@@ -64,18 +58,6 @@ import SwiftUI
 
     deinit { for token in notifications { NotificationCenter.default.removeObserver(token) } }
 
-    public var accountSettings: some View { AccountSettingsView(store: store.scope(state: \.account, action: \.account)) }
-    public func handleAuthenticationURL(_ url: URL) -> Bool { accountServices.handle(url) }
-    public func handleSharingURL(_ url: URL) -> Bool {
-        guard url.scheme == "hitslop" else { return false }
-        store.send(.externalFailure("Document sharing is not available in this local release."))
-        return true
-    }
-
-    private var cloudAPI: SlopCloudAPI {
-        SlopCloudAPI(origin: catalogServices.catalogURL) { [accountServices] in try await accountServices.idToken() }
-    }
-
     public var hasOpenDocuments: Bool { !store.documents.isEmpty }
     public var documentControllers: [SlopDocumentWindowController] { Array(native.controllers.values) }
     public var canPerformDocumentCommands: Bool {
@@ -93,7 +75,7 @@ import SwiftUI
     public func showCatalog() {
         guard presentsWindows, store.quitPhase == .running else { return }
         if catalogWindow == nil {
-            let host = NSHostingController(rootView: CatalogView(store: store.scope(state: \.catalog, action: \.catalog), account: store.scope(state: \.account, action: \.account)))
+            let host = NSHostingController(rootView: CatalogView(store: store.scope(state: \.catalog, action: \.catalog)))
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 720), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
             window.title = ""; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true; window.isReleasedWhenClosed = false
             window.minSize = NSSize(width: 900, height: 600); window.contentViewController = host; window.center()
@@ -166,13 +148,18 @@ import SwiftUI
 @MainActor private final class NativeDocumentServices {
     private let templatesURL: URL
     private let presentsWindows: Bool
-    init(templatesURL: URL, presentsWindows: Bool) { self.templatesURL = templatesURL; self.presentsWindows = presentsWindows }
+    private let telemetry: SlopTelemetry
+    init(templatesURL: URL, presentsWindows: Bool, telemetry: SlopTelemetry) { self.templatesURL = templatesURL; self.presentsWindows = presentsWindows; self.telemetry = telemetry }
     var controllers: [UUID: SlopDocumentWindowController] = [:]
     var onOpened: ((UUID, SlopDocumentWindowController) -> Void)?
     var onFocused: (() -> Void)?
     var client: DocumentClient {
         DocumentClient(
-            open: { [self] id, url in try await open(id, url: url) },
+            open: { [self] id, url in
+                do { return try await open(id, url: url) }
+                catch let error as CancellationError { throw error }
+                catch { await telemetry.send(.failed(.open)); throw error }
+            },
             focus: { [self] id in await focus(id) },
             perform: { [self] id, command in try await perform(id, command: command) },
             prepareToQuit: { [self] id in try await prepareToQuit(id) },
@@ -192,6 +179,7 @@ import SwiftUI
         }
         try Task.checkCancellation()
         let controller = try await SlopDocumentWindowController.open(packageURL: url)
+        controller.telemetry = telemetry
         controllers[id] = controller
         onOpened?(id, controller)
         if presentsWindows {
@@ -199,7 +187,7 @@ import SwiftUI
             NSDocumentController.shared.noteNewRecentDocumentURL(url); NSApp.activate(ignoringOtherApps: true)
         }
         onFocused?()
-        HitSlopFirebase.log("document_opened")
+        telemetry.send(.opened)
         return controller.documentTitle
     }
     private func finishQuit(_ id: UUID) async throws { try await controller(id).session.finish() }
@@ -209,6 +197,7 @@ import SwiftUI
     private func perform(_ id: UUID, command: DocumentCommand) async throws -> URL? {
         let controller = try controller(id)
         let result = try await controller.perform(command.nativeCommand)
+        if command == .duplicate, result != nil { telemetry.send(.duplicated) }
         if command == .close { controllers.removeValue(forKey: id) }
         return result
     }

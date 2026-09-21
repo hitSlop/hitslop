@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import identity from "@hitslop/document/identity";
 export const cliRoot = fileURLToPath(new URL("../", import.meta.url));
-export const runtimeDirectory = join(cliRoot, "runtime");
+export const runtimeDirectory = join(cliRoot, "runtimes", String(identity.runtimeContract));
 const adapters = new Set(["document.ts", "handles.ts", "bind-text.ts", "capture.ts"]);
 export const runtimePlugin: Plugin = {
   name: "host-runtime",
@@ -133,7 +133,16 @@ export async function buildProjectInBun(source: string, destination?: string) {
     await writeFile(join(stage, "initial.json"), JSON.stringify(initial, null, 2));
     await writeFile(join(stage, "assets/theme.css"), theme.css);
     await writeFile(join(stage, "assets/theme.json"), JSON.stringify(theme.defaults));
-    await writeFile(join(stage, "assets/runtime.json"), JSON.stringify(identity));
+    await writeFile(
+      join(stage, "assets/runtime.json"),
+      JSON.stringify({
+        runtimeContract: identity.runtimeContract,
+        minRuntimeRevision: identity.runtimeRevision,
+        sdkVersion: identity.sdkVersion,
+        loroVersion: identity.loroVersion,
+        protocolVersion: identity.protocolVersion,
+      }),
+    );
     await writeFile(
       join(stage, "app.html"),
       '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>hitSlop</title><link rel="stylesheet" href="/assets/theme.css"><link rel="stylesheet" href="/assets/main.css"></head><body><script type="module" src="/assets/main.js"></script></body></html>',

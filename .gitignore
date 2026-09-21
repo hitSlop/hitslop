@@ -65,3 +65,6 @@ _vibe/
 
 # Generated, shipped in the CLI tarball
 /packages/cli/runtime/
+/packages/cli/runtimes/
+
+/packages/cli/runtimes.building/

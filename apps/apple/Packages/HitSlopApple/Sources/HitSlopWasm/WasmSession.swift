@@ -40,38 +40,24 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   private var closeTask: Task<Void, Error>?
   private var openingError: String?
   private var waiters: [UUID: CheckedContinuation<Void, Error>] = [:]
-  public var webViewResources: URL {
-    Bundle.module.url(forResource: "runtime", withExtension: nil)!
+  public let webViewResources: URL
+
+  public convenience init(package: SlopPackage, headless: Bool = false) throws {
+    try self.init(package: package, headless: headless, catalog: RuntimeCatalog.bundled())
   }
 
-  public init(package: SlopPackage, headless: Bool = false) throws {
+  init(package: SlopPackage, headless: Bool, catalog: RuntimeCatalog) throws {
     self.package = package
     self.headless = headless
-    let identityURL = package.rootURL.appendingPathComponent("assets/runtime.json")
-    if FileManager.default.fileExists(atPath: identityURL.path) {
-      let supplied =
-        try JSONSerialization.jsonObject(
-          with: SlopFile.read(identityURL, within: package.rootURL, maximumBytes: 4096))
-        as? NSDictionary
-      let installed =
-        try JSONSerialization.jsonObject(with: Self.runtimeIdentityData()) as? NSDictionary
-      guard let supplied, supplied == installed else {
-        throw failure(
-          "This slop requires a matching hitSlop SDK/runtime. Update hitSlop.app and rebuild with its matching CLI version."
-        )
-      }
-    }
+    // Resolve before Storage acquires ownership or creates a database.
+    webViewResources = try catalog.resolve(package: package)
     storage = try Storage(root: package.rootURL)
     super.init()
     makeWebView()
   }
 
-  public static func runtimeIdentityData() throws -> Data {
-    guard
-      let url = Bundle.module.url(
-        forResource: "identity", withExtension: "json", subdirectory: "runtime")
-    else { throw failure("Missing native runtime identity") }
-    return try Data(contentsOf: url)
+  public static func runtimeCapabilitiesData() throws -> Data {
+    try RuntimeCatalog.bundled().capabilitiesData()
   }
   public func reloadInterface() async throws {
     guard isReady, !closed, !closing, !capturing, !rendererDead else {

@@ -24,7 +24,7 @@
     "templates",
     "skills",
     ".crust/root/skills",
-    "runtime"
+    "runtimes"
   ],
   "engines": {
     "bun": ">=1.4.2"

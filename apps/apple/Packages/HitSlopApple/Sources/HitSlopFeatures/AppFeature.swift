@@ -6,7 +6,6 @@ import HitSlopCore
     public enum QuitPhase: Equatable, Sendable { case running, waiting, preparing, finished }
     @ObservableState public struct State: Equatable {
         public var catalog = CatalogFeature.State()
-        public var account = AccountFeature.State()
         public var documents: IdentifiedArrayOf<DocumentFeature.State> = []
         public var activeDocumentID: UUID?
         public var quitPhase: QuitPhase = .running
@@ -14,7 +13,6 @@ import HitSlopCore
         public init() {}
     }
     public enum Action {
-        case account(AccountFeature.Action)
         case catalog(CatalogFeature.Action)
         case documents(IdentifiedActionOf<DocumentFeature>)
         /// Caller resolves symlinks before dispatching; the reducer performs no filesystem access.
@@ -28,7 +26,6 @@ import HitSlopCore
     @Dependency(\.uuid) var uuid
     public init() {}
     public var body: some ReducerOf<Self> {
-        Scope(state: \.account, action: \.account) { AccountFeature() }
         Scope(state: \.catalog, action: \.catalog) { CatalogFeature() }
         Reduce { state, action in
             var effect: Effect<Action> = .none
@@ -69,7 +66,7 @@ import HitSlopCore
             case .quitFailed(let message): return cancelQuit(&state, message: message)
             case .externalFailure(let message): state.alert = .operationFailure(message)
             case .alert: break
-            case .account, .catalog, .documents: break
+            case .catalog, .documents: break
             }
             return .merge(effect, advanceQuit(&state))
         }

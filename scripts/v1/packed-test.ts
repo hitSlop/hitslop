@@ -119,9 +119,14 @@ try {
     stdout: "pipe",
     stderr: "pipe",
   });
+  const previewOutput = new Response(preview.stdout).text();
+  const previewError = new Response(preview.stderr).text();
+  let previewExited = false;
+  void preview.exited.then(() => { previewExited = true; });
   try {
     let ok = false;
-    for (let i = 0; i < 1200; i++) {
+    const deadline = Date.now() + 180_000;
+    while (Date.now() < deadline && !previewExited) {
       try {
         const r = await fetch("http://localhost:5197/");
         if (r.ok) {
@@ -134,8 +139,15 @@ try {
     }
     if (!ok) {
       preview.kill("SIGINT");
-      throw new Error("Packed preview failed: " + (await new Response(preview.stderr).text()));
+      throw new Error("Packed preview failed: " + (await previewError) + (await previewOutput));
     }
+    const runtime = await fetch("http://localhost:5197/__runtime__/identity.json");
+    assert.equal(runtime.status, 200);
+    const identity = JSON.parse(await readFile(join(root, "node_modules/@hitslop/document/src/runtime-identity.json"), "utf8"));
+    assert.deepEqual(await runtime.json(), identity);
+    const wasm = await fetch("http://localhost:5197/__runtime__/loro/loro_wasm_bg.wasm");
+    assert.equal(wasm.status, 200);
+    assert.equal(Buffer.from(await wasm.arrayBuffer()).subarray(0,4).toString("hex"), "0061736d");
   } finally {
     preview.kill("SIGINT");
     await preview.exited;

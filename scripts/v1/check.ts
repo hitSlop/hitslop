@@ -1,4 +1,15 @@
-export {};
+import {
+  verifyProvenance,
+  verifyCopies,
+  verifyReleasedIdentities,
+  verifyCurrentRuntime,
+  runtimeDestinations,
+} from "./runtime-artifacts";
+await verifyProvenance();
+const runtimes = await verifyCopies(runtimeDestinations);
+verifyCurrentRuntime(runtimes);
+await verifyReleasedIdentities(runtimes);
+await import("./compatibility-check");
 const env = { ...process.env, PATH: "/opt/homebrew/bin:/usr/bin:/bin:" + process.env.PATH };
 async function run(cmd: string[]) {
   const p = Bun.spawn(cmd, { stdout: "inherit", stderr: "inherit", env });

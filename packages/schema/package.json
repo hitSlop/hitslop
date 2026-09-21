@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./manifest": "./src/manifest.ts",
+    "./runtime": "./src/runtime.ts",
     "./bridge": "./src/bridge.ts",
     "./validation": "./src/validation.ts"
   },
