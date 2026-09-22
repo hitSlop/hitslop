@@ -15,9 +15,7 @@
     "packages/document/**/*.ts",
     "packages/cli/src/**/*.ts",
     "packages/schema/src/**/*.ts",
-    "scripts/v1/**/*.ts",
-    "examples/slops/quick-checklist/**/*",
-    "examples/slops/small-expenses/**/*"
+    "scripts/v1/**/*.ts"
   ],
   "exclude": [
     "**/dist/**"

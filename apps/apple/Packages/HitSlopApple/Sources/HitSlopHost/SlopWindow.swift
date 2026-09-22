@@ -218,23 +218,66 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   private var attentionIsSaveFailure = false
   private var attentionMessage: String?
   private var commandsEnabled = true
+  private(set) var openingProgress: SlopOpeningProgress?
+  private(set) var isLoading = false
+  private var presentationRequested = false
+  public private(set) var isContentReady = false
+  private var loadingTask: Task<Void, Never>?
+  private weak var loadingWebView: NSView?
+  private let startupStarted: ContinuousClock.Instant
+  private lazy var availableEditors = installedEditors()
 
   public convenience init(packageURL: URL) throws {
-    try self.init(opened: SlopOpenedDocument(presentedURL: packageURL))
+    let started = ContinuousClock.now
+    try self.init(opened: SlopOpenedDocument(presentedURL: packageURL), started: started)
   }
 
-  public static func open(packageURL: URL) async throws -> SlopDocumentWindowController {
-    let opened = try await SlopOpenedDocument.open(presentedURL: packageURL)
+  private static var preparingProgress: [URL: SlopOpeningProgress] = [:]
+
+  public static func focusOpeningDocument(at url: URL) {
+    preparingProgress[url.standardizedFileURL]?.focus()
+  }
+
+  public static func open(packageURL: URL, presentsWindow: Bool = false) async throws -> SlopDocumentWindowController {
+    let started = ContinuousClock.now
+    let progress = presentsWindow ? SlopOpeningProgress() : nil
+    let key = packageURL.standardizedFileURL
+    if let progress { preparingProgress[key] = progress }
+    defer { if preparingProgress[key] === progress { preparingProgress[key] = nil } }
+    let preparation = Task { @MainActor in
+      let opened = try await SlopOpenedDocument.open(presentedURL: packageURL)
+      do {
+        try Task.checkCancellation()
+        return try SlopDocumentWindowController(opened: opened, started: started)
+      } catch {
+        try await opened.session.closeAndWait()
+        throw error
+      }
+    }
+    progress?.onCancel = { preparation.cancel() }
     do {
-      try Task.checkCancellation()
-      return try SlopDocumentWindowController(opened: opened)
+      let controller = try await withTaskCancellationHandler {
+        try await preparation.value
+      } onCancel: { preparation.cancel() }
+      if Task.isCancelled || preparation.isCancelled {
+        try await controller.session.finish()
+        controller.closePrepared = true
+        controller.window?.close()
+        throw CancellationError()
+      }
+      if presentsWindow {
+        controller.openingProgress = progress
+        controller.showWindow(nil)
+      }
+      return controller
     } catch {
-      try await opened.session.closeAndWait()
+      progress?.finish()
       throw error
     }
   }
 
-  private init(opened: SlopOpenedDocument) throws {
+  private init(opened: SlopOpenedDocument, started: ContinuousClock.Instant) throws {
+    startupStarted = started
     self.opened = opened
     self.packageURL = opened.presentedURL
     session = opened.session
@@ -272,13 +315,124 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     setupToolbar()
     SlopDocumentAssetRefreshQueue.invalidate(self.packageURL)
     SlopPreviewWriter.installExistingPreview(for: session.package)
+    startLoading()
+    recordStartup("native-prepared")
     session.load()
   }
   required init?(coder: NSCoder) { nil }
 
-  public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {
-    if let onRuntimeReady { onRuntimeReady() } else { updateRuntimeFailure(nil) }
+  deinit {
+    loadingTask?.cancel()
+    Task { @MainActor [progress = openingProgress] in progress?.finish() }
   }
+
+  public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {
+    recordStartup("runtime-ready")
+    // The bridge is ready before WebKit has necessarily painted. The loading
+    // task owns the visual handoff and the coordinator's ready notification.
+  }
+
+  private func recordStartup(_ stage: String) {
+    #if DEBUG
+    if ProcessInfo.processInfo.environment["HITSLOP_STARTUP_TIMINGS"] == "1" {
+      print("[hitSlop startup] \(stage) \(startupStarted.duration(to: .now))")
+    }
+    #endif
+  }
+
+  private func startLoading() {
+    stopLoading()
+    isContentReady = false
+    isLoading = true
+    window?.orderOut(nil)
+    toolbar?.orderOut(nil)
+    loadingWebView = session.webView
+    session.webView.setAccessibilityHidden(true)
+    toolbarHost?.rootView = toolbarView()
+    if presentationRequested { showOpeningProgress() }
+    loadingTask = Task { @MainActor [weak self, session, weak view = session.webView] in
+      do {
+        try await session.waitUntilReady()
+        try Task.checkCancellation()
+        guard let view, session.isReady else { return }
+        // Poll from native so cancelling an open does not retain a WebView in a
+        // long-lived JavaScript font promise. Layout starts newly mounted fonts.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(15))
+        while try await view.evaluateJavaScript(
+          "document.body.getBoundingClientRect(); document.fonts.status === 'loaded'") as? Bool != true {
+          try Task.checkCancellation()
+          guard ContinuousClock.now < deadline else {
+            throw SlopPackageError.invalid("Document fonts did not become ready")
+          }
+          try await Task.sleep(for: .milliseconds(16))
+        }
+        try Task.checkCancellation()
+        _ = try await view.callAsyncJavaScript("""
+          await new Promise(resolve => {
+            // Occluded/minimized WebViews may suspend animation frames.
+            const timeout = setTimeout(resolve, 250);
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+              clearTimeout(timeout); resolve();
+            }));
+          });
+          return true;
+          """, arguments: [:], in: nil, contentWorld: .page)
+        try Task.checkCancellation()
+        guard let self, self.isLoading else { return }
+        self.isContentReady = true
+        self.finishLoading()
+        if self.presentationRequested { self.revealReadyWindow() }
+        if let onRuntimeReady = self.onRuntimeReady { onRuntimeReady() }
+        else { self.updateRuntimeFailure(nil) }
+      } catch is CancellationError {
+      } catch {
+        guard !Task.isCancelled else { return }
+        self?.runtimeSession(session, didFail: error)
+      }
+    }
+  }
+
+  private func finishLoading() {
+    isLoading = false
+    openingProgress?.finish()
+    openingProgress = nil
+    if let view = loadingWebView { view.setAccessibilityHidden(false) }
+    loadingWebView = nil
+    toolbarHost?.rootView = toolbarView()
+  }
+
+  private func stopLoading() {
+    loadingTask?.cancel()
+    loadingTask = nil
+    finishLoading()
+  }
+
+  public override func showWindow(_ sender: Any?) {
+    presentationRequested = true
+    if isContentReady || presentedRuntimeError != nil { revealReadyWindow() }
+    else { showOpeningProgress() }
+  }
+
+  private func showOpeningProgress() {
+    if openingProgress == nil { openingProgress = SlopOpeningProgress() }
+    openingProgress?.onCancel = { [weak self] in
+      self?.loadingTask?.cancel()
+      self?.request(.close)
+    }
+    openingProgress?.focus()
+  }
+
+  private func revealReadyWindow() {
+    super.showWindow(nil)
+    window?.deminiaturize(nil)
+    window?.makeKeyAndOrderFront(nil)
+    if isContentReady {
+      window?.makeFirstResponder(session.webView)
+      recordStartup("content-visible")
+    }
+  }
+
+  func waitForPresentation() async { await loadingTask?.value }
   public func runtimeSession(_ session: SlopRuntimeSession, resizeContentTo requested: CGSize)
     throws -> CGSize
   {
@@ -291,6 +445,8 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     return frame.size
   }
   public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {
+    isContentReady = false
+    stopLoading()
     telemetry.send(.failed(.renderer))
     if let onRuntimeFailure {
       onRuntimeFailure(error.localizedDescription)
@@ -405,14 +561,14 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   private func toolbarView() -> SlopToolbar {
     SlopToolbar(
       drag: { [weak self] event in self?.dragWindow(with: event) }, pinned: isPinned,
-      commandsEnabled: commandsEnabled, close: { [weak self] in self?.request(.close) },
+      commandsEnabled: commandsEnabled && isContentReady, close: { [weak self] in self?.request(.close) },
       minimize: { [weak self] in self?.miniaturizeFromToolbar() },
       pin: { [weak self] in self?.request(.pin(!(self?.isPinned ?? false))) },
       duplicate: { [weak self] in self?.request(.duplicate) },
       png: { [weak self] in self?.request(.exportPNG) },
       pdf: { [weak self] in self?.request(.exportPDF) },
       reveal: { [weak self] in self?.request(.reveal) },
-      copyPath: { [weak self] in self?.request(.copyPath) }, editors: installedEditors(),
+      copyPath: { [weak self] in self?.request(.copyPath) }, editors: availableEditors,
       openEditor: { [weak self] url in self?.request(.openEditor(url)) })
   }
   private func dragWindow(with event: NSEvent) {
@@ -427,7 +583,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   }
   private func showToolbar() {
     hideWork?.cancel()
-    guard let panel = toolbar, let window, !window.isMiniaturized else { return }
+    guard let panel = toolbar, let window, window.isVisible, !window.isMiniaturized else { return }
     let frame = window.frame
     var x = frame.midX - panel.frame.width / 2
     var y = frame.maxY + 8
@@ -450,20 +606,15 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     hideWork = work
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.65, execute: work)
   }
-  private func togglePin() {
-    window?.level = isPinned ? .normal : .floating
-    toolbarHost?.rootView = toolbarView()
-  }
   public var isPinned: Bool { window?.level == .floating }
   public var documentTitle: String { window?.title ?? session.package.manifest.title }
   public var dockMenuImage: NSImage {
     slopDockMenuImage(iconURL: session.package.iconURL, fallbackURL: packageURL)
   }
-  public func owns(_ candidate: NSWindow?) -> Bool { candidate === window || candidate === toolbar }
-  public func togglePinFromMenu() { request(.pin(!isPinned)) }
-  public func duplicateFromMenu() { request(.duplicate) }
-  public func exportPNGFromMenu() { request(.exportPNG) }
-  public func exportPDFFromMenu() { request(.exportPDF) }
+  public func owns(_ candidate: NSWindow?) -> Bool {
+    guard let candidate else { return false }
+    return candidate === window || candidate === toolbar || candidate === openingProgress?.panel
+  }
   public func updatePresentation(pinned: Bool, commandsEnabled: Bool, runtimeError: String?) {
     updateRuntimeFailure(runtimeError)
     guard isPinned != pinned || self.commandsEnabled != commandsEnabled else { return }
@@ -472,6 +623,12 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     toolbarHost?.rootView = toolbarView()
   }
   private func request(_ command: SlopDocumentCommand) {
+    if !isContentReady {
+      switch command {
+      case .exportPNG, .exportPDF, .duplicate: return
+      default: break
+      }
+    }
     if let onCommand {
       onCommand(command)
       return
@@ -514,16 +671,22 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     case .copyPath: copyPath()
     case .openEditor(let app): try await openInEditor(app)
     case .retry:
-      try await session.reopenSavedDocument()
+      if session.isReady && !session.engine.rendererDead {
+        try await session.engine.reloadInterface()
+      } else {
+        try await session.reopenSavedDocument()
+      }
       if let content = window?.contentView {
         session.webView.frame = content.bounds
         session.webView.autoresizingMask = [.width, .height]
         content.addSubview(session.webView, positioned: .below, relativeTo: failedOverlay)
       }
       updateRuntimeFailure(nil)
+      startLoading()
     case .close:
       try await prepareToClose()
       do { try await session.finish() } catch {
+        if isLoading { startLoading() }
         onCloseCancelled?()
         throw error
       }
@@ -532,11 +695,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     }
     return nil
   }
-  public func revealFromDock() {
-    showWindow(nil)
-    window?.deminiaturize(nil)
-    window?.makeKeyAndOrderFront(nil)
-  }
+  public func revealFromDock() { showWindow(nil) }
 
   private func export(_ format: SlopTelemetryEvent.ExportFormat) async throws {
     let panel = NSSavePanel()
@@ -549,7 +708,11 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   /// A cancelled picker has no output and emits no success event.
   func exportDocument(format: SlopTelemetryEvent.ExportFormat, to output: URL?) async throws {
     guard let output else { return }
+    await waitForPresentation()
     do {
+      guard isContentReady, session.isReady, presentedRuntimeError == nil else {
+        throw SlopPackageError.invalid("The document is not ready to export")
+      }
       try await SlopRenderer.exportDocument(session: session, format: format.rawValue, output: output)
       telemetry.send(.exported(format))
     } catch {
@@ -583,6 +746,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     failedOverlay?.removeFromSuperview()
     failedOverlay = nil
     guard let message, let content = window?.contentView else { return }
+    stopLoading()
     if session.engine.rendererDead, let panel = documentAttention {
       window?.endSheet(panel)
       panel.orderOut(nil)
@@ -595,6 +759,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     overlay.autoresizingMask = [.width, .height]
     content.addSubview(overlay)
     failedOverlay = overlay
+    if presentationRequested { revealReadyWindow() }
   }
   public func windowDidMove(_ notification: Notification) {
     if toolbar?.isVisible == true { showToolbar() }
@@ -606,6 +771,8 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     super.close()
   }
   public func prepareToClose() async throws {
+    loadingTask?.cancel()
+    openingProgress?.finish()
     if session.engine.rendererDead || !session.isReady { return }
     window?.makeFirstResponder(nil)
     do {
@@ -615,6 +782,9 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
       await cancelPreparedClose()
       throw error
     }
+    // Nothing was editable during startup; closing an unfinished open does
+    // not need to launch another WebView to refresh artwork.
+    guard isContentReady else { return }
     do {
       let snapshot = try await SlopRenderSnapshot.prepare(packageURL: session.package.rootURL)
       SlopDocumentAssetRefreshQueue.schedule(snapshot: snapshot, presentedURL: packageURL)
@@ -624,6 +794,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   }
   public func cancelPreparedClose() async {
     await session.engine.cancelClose()
+    if isLoading { startLoading() }
     onCloseCancelled?()
   }
   public static func finishAssetRefreshesForTermination() async {
@@ -645,6 +816,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
         closePrepared = true
         sender.close()
       } catch {
+        if isLoading { startLoading() }
         onCloseCancelled?()
         present("Changes could not be saved", error)
       }
@@ -659,6 +831,8 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     toolbar?.orderOut(nil)
   }
   public func windowWillClose(_ notification: Notification) {
+    isContentReady = false
+    stopLoading()
     documentAttention?.close()
     documentAttention = nil
     toolbar?.orderOut(nil)

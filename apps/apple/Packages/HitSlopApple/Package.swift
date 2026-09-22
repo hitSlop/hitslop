@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
   name: "HitSlopApple",
-  platforms: [.macOS(.v14), .iOS(.v17)],
+  platforms: [.macOS(.v14)],
   products: [
     .library(name: "HitSlopCore", targets: ["HitSlopCore"]),
     .library(name: "HitSlopFirebase", targets: ["HitSlopFirebase"]),
@@ -47,7 +47,7 @@ let package = Package(
     .target(
       name: "HitSlopHost",
       dependencies: ["HitSlopCore", "HitSlopRuntime", "HitSlopWasm"],
-      linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit")]
+      linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("WebKit"), .linkedLibrary("z")]
     ),
     .target(
       name: "HitSlopFeatures",

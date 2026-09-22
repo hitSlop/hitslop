@@ -17,7 +17,7 @@ page sizing/transparency and fills `<Slop>`'s root and its mount ancestors.
 Framework-neutral apps mark their root `data-hitslop-root`. No manual transparent
 page reset is needed. Standard opaque windows retain authored layout.
 
-The host sets `data-slop-presentation` (`standard`, `transparent`, `skin`),
+The native host sets `data-slop-presentation` (`standard`, `transparent`, `skin`),
 `data-slop-shape` for built-in shapes, `data-slop-resizable` when enabled, and
 `--slop-width`/`--slop-height` for initial dimensions. Use fluid CSS for live size.
 These low-specificity layout rules are disabled during capture.
@@ -37,7 +37,8 @@ the application behind a hole, not merely that a DOM element ignores them.
 
 ## Static output
 
-Prefer an optional `Export.svelte` wrapped in `ExportTarget` from `@hitslop/svelte`.
+Use an optional inline `exportView` snippet inside `<Slop {document}>` from
+`@hitslop/document/svelte`. Separate components are optional.
 Pass the current data and selected view; share presentation and theme components.
 Use normal flow rather than viewport heights or scrolling panels. This view also
 supplies the catalog and Quick Look preview (captured at the export object’s
@@ -51,8 +52,8 @@ stable geometry are awaited; asynchronous charts can use `capture.onPrepare`.
 
 ## Icon
 
-Use optional `IconTarget` around `Icon.svelte`. It owns renderer-only mounting and
-a transparent 512×512 surface. Pass progress or other saved data if useful; keep
+Use an optional inline `icon` snippet in the same `<Slop>` wrapper. It mounts
+only for capture on a transparent 512×512 surface. Pass progress or other saved data if useful; keep
 a strong silhouette, safe margins, and no essential small text. It refreshes
 Finder metadata on close; the published `QuickLook/Icon.png` remains immutable.
-Preview icon and export modes in the disposable gallery before native checks.
+Build and inspect the generated QuickLook images, then verify native exports.

@@ -33,7 +33,7 @@ import WebKit
         for index in 0..<count {
           let root = folder.appendingPathComponent("\(rows)-\(count)-\(index).slop")
           try FileManager.default.copyItem(
-            at: URL(fileURLWithPath:String(#filePath.components(separatedBy:"/apps/apple/")[0])+"/generated/v1/templates/Checklist.slop"), to: root)
+            at: URL(fileURLWithPath:String(#filePath.components(separatedBy:"/apps/apple/")[0])+"/generated/v1/templates/quick-checklist.slop"), to: root)
           try JSONSerialization.data(withJSONObject: [
             "title": "Measurement",
             "tasks": (0..<rows).map { ["text": "Task \($0)", "done": false, "archived": false] as [String: Any] },

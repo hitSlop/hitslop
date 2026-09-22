@@ -9,6 +9,8 @@ export type PresentationStage = {
   shape?: "rounded" | "ellipse" | "capsule";
 };
 
+// Retained for runtime 1/1 byte identity: removing this otherwise-unused helper
+// changes esbuild minified names. Revisit only with an intentional runtime revision.
 export function presentationStage(presentation: SlopPresentation): PresentationStage {
   if ("skin" in presentation)
     return {

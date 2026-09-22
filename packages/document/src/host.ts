@@ -6,13 +6,29 @@ export async function mountDocument(App: Component) {
   const native = Boolean((globalThis as any).webkit?.messageHandlers?.storage);
   try {
     const url = new URL("/__runtime__/index.js", location.href).href;
-    const runtime: typeof import("./runtime-entry") = await import(url);
-    if (runtime.runtimeVersion !== "hitslop-v1")
-      throw new Error("Installed document runtime mismatch");
-    await runtime.initialize();
-    const config = native
-      ? await runtime.hostCall({ method: "config" })
-      : { epoch: crypto.randomUUID() };
+    // Start WASM as soon as its module loads, while the descriptor and initial
+    // values are still being read. Every rejection is observed by Promise.all.
+    const [{ runtime, config, theme }, descriptor, initial] = await Promise.all([
+      (async () => {
+        const runtime: typeof import("./runtime-entry") = await import(url);
+        if (runtime.runtimeVersion !== "hitslop-v1")
+          throw new Error("Installed document runtime mismatch");
+        const [, config, theme] = await Promise.all([
+          runtime.initialize(),
+          native ? runtime.hostCall({ method: "config" }) : { epoch: crypto.randomUUID() },
+          runtime.openTheme(native),
+        ]);
+        return { runtime, config, theme };
+      })(),
+      fetch("/state.schema.json").then((r) => {
+        if (!r.ok) throw new Error("Missing document descriptor");
+        return r.json();
+      }),
+      fetch("/initial.json").then((r) => {
+        if (!r.ok) throw new Error("Missing initial values");
+        return r.json();
+      }),
+    ]);
     if (native)
       (globalThis as any).slop = Object.freeze({
         window: {
@@ -21,20 +37,13 @@ export async function mountDocument(App: Component) {
         },
       });
     if (config.presentation) runtime.installPresentationStage(config.presentation);
-    const descriptor = await fetch("/state.schema.json").then((r) => {
-      if (!r.ok) throw new Error("Missing document descriptor");
-      return r.json();
-    });
-    const initial = await fetch("/initial.json").then((r) => {
-      if (!r.ok) throw new Error("Missing initial values");
-      return r.json();
-    });
+    // Open state only after every prerequisite succeeds.
     const doc = await runtime.Document.open(
       fromDescriptor(descriptor),
       native ? new runtime.HostStore() : new runtime.MemoryStore(),
       initial,
     );
-    const session = new runtime.Session(doc, config.epoch, await runtime.openTheme(native));
+    const session = new runtime.Session(doc, config.epoch, theme);
     let app = mount(App, { target: document.body, context: new Map([[documentContext, doc]]) });
     await tick();
     const capture = runtime.captureController();

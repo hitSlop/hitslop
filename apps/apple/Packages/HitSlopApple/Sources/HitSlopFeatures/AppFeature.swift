@@ -17,7 +17,7 @@ import HitSlopCore
         case documents(IdentifiedActionOf<DocumentFeature>)
         /// Caller resolves symlinks before dispatching; the reducer performs no filesystem access.
         case openDocument(URL)
-        case openFinished(UUID, String), openFailed(UUID, String)
+        case openFinished(UUID, String), openFailed(UUID, String), openCancelled(UUID)
         case focused(UUID?)
         case quitRequested, quitFinished, quitFailed(String), externalFailure(String)
         case alert(PresentationAction<ErrorAlertAction>)
@@ -41,6 +41,8 @@ import HitSlopCore
                 state.documents[id: id]?.isOpening = false
                 state.documents[id: id]?.title = title
                 effect = .send(.catalog(.refreshRecents))
+            case .openCancelled(let id):
+                state.documents.remove(id: id)
             case .openFailed(let id, let message):
                 guard state.documents.remove(id: id) != nil else { return .none }
                 state.alert = .operationFailure(message)
@@ -75,7 +77,6 @@ import HitSlopCore
     }
     private func open(_ url: URL, state: inout State) -> Effect<Action> {
         if let existing = state.documents.first(where: { $0.url == url }) {
-            guard !existing.isOpening else { return .none }
             let id = existing.id
             return .run { _ in await client.focus(id) }
         }
@@ -85,6 +86,7 @@ import HitSlopCore
         state.documents.append(document)
         return .run { send in
             do { await send(.openFinished(id, try await client.open(id, url))) }
+            catch is CancellationError { await send(.openCancelled(id)) }
             catch { await send(.openFailed(id, error.localizedDescription)) }
         }
     }

@@ -1,0 +1,69 @@
+# Development
+
+## Set up the checkout
+
+Use the Bun version in root `package.json` (currently 1.4.2), Xcode, and XcodeGen on macOS. The shipped app supports Apple silicon on macOS 14 or newer.
+
+```sh
+bun install --frozen-lockfile
+bun install --cwd apps/landing --frozen-lockfile
+bun run build
+bun run check
+bun run test
+bun run swift:test
+```
+
+`build` generates platform contracts and host/CLI runtime resources, builds agent skills, compiles the native helper, then builds and captures every active template. Run it before native tests. It does not update the runtime release ledger or historical fixtures.
+
+To work on the app, generate `apps/apple/hitSlop.xcodeproj` with `xcodegen generate --spec apps/apple/project.yml` and open it in Xcode. `bun run apple:build` builds and verifies a disposable development app under `generated/v1/app`.
+
+## Workspace responsibilities
+
+| Area | Responsibility |
+| --- | --- |
+| `apps/apple` | macOS entry point, project configuration, signing, and Sparkle |
+| `apps/apple/Packages/HitSlopApple` | Core, Wasm engine integration, Runtime, Host, TCA Features, Catalog, telemetry, and NativeCLI |
+| `packages/document` | Loro document SDK, typed handles, Svelte, themes, and capture |
+| `packages/schema` | TypeBox platform manifest, runtime, bridge, and socket contracts |
+| `packages/cli` | Scaffolding, checks, disposable preview, builds, registration, skills, and native forwarding |
+| `examples/slops` | Active authored templates and the bundled selection |
+| `apps/landing` | Website and public author documentation; independently locked dependencies |
+| `scripts/v1` | Current build, verification, packaging, and release tooling |
+| `deferred` | Historical code and future-feature scaffolding, excluded from active builds |
+
+The three npm packages are publishable. The repository root, examples workspace, and landing application are private. TypeScript belongs in packages; Apple implementation belongs in the app-local Swift package.
+
+## Add a template
+
+Add one authored project directly under `examples/slops/`, including `manifest.json`, `schema.ts`, `initial.ts`, `theme.ts`, `main.ts`, `App.svelte`, `styles.css`, and `tsconfig.json`. Use the current examples and [authoring guide](authoring.md). The examples workspace supplies shared dependencies; add a project package manifest if it needs its own dependencies.
+
+Discovery scans immediate project directories with manifests. Hidden directories, `archive`, `dist`, and `node_modules` are excluded. Invalid manifests and duplicate slugs fail. Each project must pass its own Svelte/TypeScript check. A typical `tsconfig.json` extends `../../../tsconfig.v1.json`, includes local TypeScript/Svelte files, and excludes `dist` and `node_modules`.
+
+`bun run build` produces `generated/v1/templates/<slug>.slop` for every discovered project. Add its slug to `examples/slops/bundled.json` only when it should ship with the Mac app. This list is the sole bundled selection; duplicate or unknown selections fail. The generated inventory connects the build to app embedding and release verification. Rebuild after changing sources or selection.
+
+Embedding replaces the entire generated StarterTemplates directory, so deselected templates disappear from the next app build. It never edits a user's installed templates or documents. The native catalog already discovers any valid local template and derives categories from its manifest.
+
+Quick Checklist and Small Expenses are current examples and deliberate fixtures for mutation/storage tests, not a limit on collection size. New templates need no edits to build loops. App-specific tests can remain schema-specific; generic release checks cannot assume fields such as `title`.
+
+## Focused checks
+
+- `bun run hygiene`: repository skills, generated-source checks, and tracked-artifact rules.
+- `bun run schema:check`: generated contract drift; change TypeBox source and regenerate rather than editing generated files.
+- `bun run check`: runtime provenance/compatibility, generated contracts, skills, package types, and discovered template types.
+- `bun run test`: active document, schema, and CLI tests.
+- `bun run swift:test`: native tests with current presentation fixtures.
+- `bun run test:storage` and `bun run test:native-crash`: commit-phase and native-process crash probes.
+- `bun run packages:pack` and `bun run test:packed`: exact npm artifact consumer verification.
+- `bun run landing:check` and `bun run landing:build`: public documentation and site validation.
+
+`bun run test:local` is the complete macOS gate; see [releasing](releasing.md). Direct `swift test --package-path apps/apple/Packages/HitSlopApple` is useful for focused work but explicitly skips presentation fixtures when their environment is absent.
+
+`bun run presentation:fixtures` prints generated standard, ellipse, and washer package paths. Open writable copies in the development app to inspect layout, toolbar dragging, focus, native clipping, and desktop click-through. These are test fixtures, not catalog entries. Automated tests verify dedicated exports ignore native masks and icons preserve transparency.
+
+`bun run bench:windows` runs the opt-in window matrix. Startup diagnostics and their opt-in test are described in the [runtime reference](../reference/runtime.md#opening-and-recovery). Performance measurements are not CI latency thresholds.
+
+## Change discipline
+
+Read AGENTS and the template manifest first. Preserve contributor changes already in the worktree. Keep generated artifacts separate from authored source and inspect generated changes after building. Never alter historical compatibility fixtures or release hashes to make a check pass.
+
+The Bun SQLite and flock adapters are crash/format fixtures; production ownership and persistence stay in Swift. They are not fallback document engines. Local ignored `archive/`, `examples/archive/`, `_docs/`, and `_vibe/` material is not part of active contracts. Restore an old project only after updating its source to v1; there is no legacy document migration.

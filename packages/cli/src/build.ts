@@ -28,22 +28,22 @@ export const runtimePlugin: Plugin = {
   },
 };
 export async function buildProject(source: string, destination?: string) {
+  source = resolve(source);
+  const output = destination
+    ? resolve(destination)
+    : join(
+        source,
+        "dist",
+        parseManifest(JSON.parse(await readFile(join(source, "manifest.json"), "utf8"))).slug +
+          ".slop",
+      );
   const child = Bun.spawn(
-    [
-      process.execPath,
-      join(cliRoot, "src/build-worker.ts"),
-      resolve(source),
-      ...(destination ? [resolve(destination)] : []),
-    ],
-    { cwd: cliRoot, stdout: "pipe", stderr: "pipe" },
+    [process.execPath, join(cliRoot, "src/build-worker.ts"), source, output],
+    { cwd: cliRoot, stdout: "inherit", stderr: "pipe" },
   );
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(child.stdout).text(),
-    new Response(child.stderr).text(),
-    child.exited,
-  ]);
+  const [stderr, code] = await Promise.all([new Response(child.stderr).text(), child.exited]);
   if (code) throw new Error(stderr || "Authoring build failed");
-  return stdout.trim().split("\n").at(-1)!;
+  return output;
 }
 export async function buildProjectInBun(source: string, destination?: string) {
   source = resolve(source);

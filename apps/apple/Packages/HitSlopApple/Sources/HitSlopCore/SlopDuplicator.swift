@@ -69,18 +69,6 @@ public enum SlopDuplicator {
     }
   }
 
-  public static func nextDuplicateURL(for sourceURL: URL) -> URL {
-    let directory = sourceURL.deletingLastPathComponent()
-    let base = sourceURL.deletingPathExtension().lastPathComponent
-    for number in 1...10_000 {
-      let suffix = number == 1 ? " copy" : " copy \(number)"
-      let candidate = directory.appendingPathComponent(base + suffix).appendingPathExtension("slop")
-      if !FileManager.default.fileExists(atPath: candidate.path) { return candidate }
-    }
-    return directory.appendingPathComponent(base + " copy \(UUID().uuidString)")
-      .appendingPathExtension("slop")
-  }
-
   public static func makeWritable(_ root: URL) throws {
     try setWriteBits(root, adding: true)
   }

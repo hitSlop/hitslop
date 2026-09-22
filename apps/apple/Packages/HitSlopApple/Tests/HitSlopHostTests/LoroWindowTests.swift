@@ -11,13 +11,14 @@ import Testing
 extension LoroClientTests {
   @Test @MainActor func bundledExamplesRenderInNativeWindows() async throws {
     _ = NSApplication.shared
-    for name in ["Checklist", "Expenses"] {
+    for name in ["quick-checklist", "small-expenses"] {
       let root = try fixture(name)
       defer { try? FileManager.default.removeItem(at: root) }
       let controller = try await SlopDocumentWindowController.open(packageURL: root)
       try await controller.session.waitUntilReady()
       #expect(controller.window?.styleMask.contains(.titled) == false)
       controller.showWindow(nil)
+      await controller.waitForPresentation()
       let panel = try #require(
         NSApp.windows.first { $0 !== controller.window && controller.owns($0) })
       let entered = try #require(

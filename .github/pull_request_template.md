@@ -4,7 +4,7 @@
 
 ## How was it verified?
 
-- [ ] `bun run release:check`
+- [ ] `bun run test:local`
 - [ ] Visual changes include screenshots
 - [ ] Manifest/schema changes include regenerated artifacts
 - [ ] No secrets, local documents, or private paths are included

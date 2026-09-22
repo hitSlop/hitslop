@@ -34,12 +34,13 @@ async function run(args: string[], cwd: string, overrides: Record<string, string
   await symlink(process.execPath, join(bin, "bun"));
   const noNode = { PATH: bin + ":/usr/bin:/bin:/usr/sbin:/sbin" };
 try {
-  const tarballs = Object.fromEntries(
-    ["cli", "document", "schema"].map((name) => [
-      `@hitslop/${name}`,
-      resolve(`generated/v1/npm/hitslop-${name}-1.0.0.tgz`),
-    ]),
-  );
+  const tarballs: Record<string, string> = {};
+  const versions: Record<string, string> = {};
+  for (const name of ["cli", "document", "schema"]) {
+    const metadata = JSON.parse(await readFile(join(repository, "packages", name, "package.json"), "utf8"));
+    versions[name] = metadata.version;
+    tarballs[metadata.name] = resolve(`generated/v1/npm/hitslop-${name}-${metadata.version}.tgz`);
+  }
   await writeFile(
     join(root, "package.json"),
     JSON.stringify({
@@ -57,7 +58,7 @@ try {
     noNode,
   );
   const metadata = JSON.parse(await readFile(join(project, "package.json"), "utf8"));
-  assert.equal(metadata.dependencies["@hitslop/document"], "1.0.0");
+  assert.equal(metadata.dependencies["@hitslop/document"], versions.document);
   metadata.overrides = tarballs;
   await writeFile(join(project, "package.json"), JSON.stringify(metadata));
   await run([process.execPath, "install"], project, noNode);

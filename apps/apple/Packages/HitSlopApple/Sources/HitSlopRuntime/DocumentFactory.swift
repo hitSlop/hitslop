@@ -9,12 +9,7 @@ import HitSlopCore
     }
 
     nonisolated public static var defaultTemplatesRoot: URL {
-        #if os(macOS)
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hitslop/templates", isDirectory: true)
-        #else
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("hitSlop/templates", isDirectory: true)
-        #endif
     }
 
     public func isManagedTemplatePackage(_ url: URL) -> Bool {

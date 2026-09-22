@@ -7,7 +7,7 @@ import Testing
   func fixture() throws -> URL {
     let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
-    try FileManager.default.copyItem(atPath: repository + "/generated/v1/templates/Checklist.slop", toPath: root.path)
+    try FileManager.default.copyItem(atPath: repository + "/generated/v1/templates/quick-checklist.slop", toPath: root.path)
     return root
   }
 

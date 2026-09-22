@@ -159,7 +159,8 @@ struct SlopDocumentAssets: Sendable {
             let data = try SlopPreviewImage.png(from: image)
             session.webView.frame = originalFrame
             try await restore(session.webView, token: token)
-            return data
+            WebViewBackground.set(background, on: session.webView)
+            return try await SlopPNG.optimized(data)
         } catch {
             session.webView.frame = originalFrame
             try? await restore(session.webView, token: token)
@@ -259,7 +260,8 @@ struct SlopDocumentAssets: Sendable {
             }
             session.webView.frame = originalFrame
             try await restore(session.webView, token: token)
-            return data
+            WebViewBackground.set(background, on: session.webView)
+            return output == .pdf ? data : try await SlopPNG.optimized(data)
         } catch {
             session.webView.frame = originalFrame
             try? await restore(session.webView, token: token)

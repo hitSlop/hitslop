@@ -82,8 +82,8 @@
 
   <div class="theme-file">
     <span class="status-dot" aria-hidden="true"></span>
-    <code>Saved theme overrides</code>
-    <span>Your override stays with this file</span>
+    <code>Theme preview</code>
+    <span>Try a palette above</span>
   </div>
   <p class="sr-only" aria-live="polite">{active.label} theme selected.</p>
 </div>
@@ -98,10 +98,10 @@
   .preset-bar small { color: var(--theme-muted); font-size: .57rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
   .preset-bar strong { font-size: .86rem; }
   .presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
-  .presets button { min-width: 0; min-height: 48px; padding: 7px; display: grid; grid-template-columns: repeat(3, 12px); align-items: center; justify-content: center; gap: 3px; border: 1px solid transparent; border-radius: 9px; color: var(--theme-ink); background: transparent; cursor: pointer; }
+  .presets button { min-width: 0; min-height: 48px; padding: 7px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 3px; border: 1px solid transparent; border-radius: 9px; color: var(--theme-ink); background: transparent; cursor: pointer; }
   .presets button[aria-pressed="true"] { border-color: color-mix(in oklch, var(--theme-ink), transparent 60%); background: color-mix(in oklch, var(--theme-paper), var(--theme-ink) 6%); box-shadow: 0 3px 0 color-mix(in oklch, var(--theme-ink), transparent 80%); }
   .presets button > span { width: 12px; height: 12px; border: 1px solid oklch(30% .02 260 / .18); border-radius: 50%; }
-  .presets b { grid-column: 1 / -1; overflow: hidden; font-size: .55rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+  .presets b { flex-basis: 100%; overflow: hidden; font-size: .55rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
   .preview-stage { min-height: 500px; padding: clamp(28px, 6vw, 54px); display: grid; place-items: center; background: var(--theme-surface); transition: background-color 240ms cubic-bezier(.22,1,.36,1); }
   .checklist { position: relative; width: min(100%, 430px); padding: 34px 30px 25px; border: 1px solid var(--theme-rule); border-radius: 6px; background: var(--theme-paper); box-shadow: 9px 11px 0 color-mix(in oklch, var(--theme-ink), transparent 82%), 0 24px 44px color-mix(in oklch, var(--theme-ink), transparent 83%); transform: rotate(-.65deg); transition: color 240ms cubic-bezier(.22,1,.36,1), background-color 240ms cubic-bezier(.22,1,.36,1), border-color 240ms cubic-bezier(.22,1,.36,1), box-shadow 240ms cubic-bezier(.22,1,.36,1); }
   .binding { position: absolute; top: -8px; left: 16%; right: 16%; display: flex; justify-content: space-between; }

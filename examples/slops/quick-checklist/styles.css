@@ -502,6 +502,8 @@ html[data-slop-capture="static"] [data-slop-export="hide"] {
 }
 
 html[data-slop-capture="static"] .checklist-shell {
+  /* WebKit's vector PDF path paints the layered gradients black. */
+  background: var(--slop-surface);
   height: auto;
   min-height: 100vh;
   overflow: visible;

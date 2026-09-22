@@ -16,7 +16,7 @@ bun run build
 
 Build validates the manifest and initial values, compiles Svelte and plain CSS, emits the schema and theme defaults, and uses the installed Mac app to capture native artwork. Output goes to `dist/SLUG.slop`. It contains no source, dependencies, caches, or personal document state. A failed build must not replace an existing successful output, and a build must never overwrite a writable document.
 
-The CLI and Mac app must supply matching SDK/Loro versions. An incompatibility is an update instruction, not a reason to compile Swift or install another document engine.
+The project SDK and CLI identities must match. Native capture requires a Mac app supporting the requested runtime contract and minimum revision. An incompatibility is an update instruction, not a reason to compile Swift or install another document engine.
 
 ## Register a local template
 
@@ -28,7 +28,7 @@ Registration builds and installs an immutable master in `~/.hitslop/templates`. 
 
 ## Share a template or a document
 
-For a reusable app, distribute the freshly built `.slop` template. A `.slop` is a directory package; zip it when transferring through a service that does not preserve directory bundles. The recipient needs the matching Mac app.
+For a reusable app, distribute the freshly built `.slop` template. A `.slop` is a directory package; zip it when transferring through a service that does not preserve directory bundles. The recipient needs a Mac app supporting the template’s runtime contract and minimum revision. Unpack the download first, then place the complete `.slop` template in `~/.hitslop/templates`. Refresh the Mac catalog and choose **Create** to make a writable copy.
 
 For a filled document, save and close it before copying or zipping the complete package. Its `state/` contains the actual private document and theme overrides. Inspect that content before sharing a writable copy; distributing source or a clean template does not include it. Keep active documents outside synced folders.
 
@@ -38,7 +38,7 @@ For read-only output, export PNG or PDF:
 bunx @hitslop/cli export My.slop --format pdf --output My.pdf
 ```
 
-See [icons and exports](/docs/guides/icons-and-exports/) for layouts and live-versus-closed capture behavior. Public template publishing, hosted discovery, and live collaboration are deferred; file distribution and image/PDF exports work locally today.
+See [icons and exports](/docs/guides/icons-and-exports/) for layouts and live-versus-closed capture behavior. Live collaboration is [coming soon](/docs/guides/live-sharing/). Public template publishing and hosted discovery remain future work; file distribution and image/PDF exports work locally today.
 
 ## Release your source
 

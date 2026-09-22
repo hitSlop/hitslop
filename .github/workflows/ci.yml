@@ -18,15 +18,6 @@ jobs:
         with:
           bun-version: "1.4.2"
       - run: bun install --frozen-lockfile
-      - run: bun run build
-      - run: bun run check
-      - run: bun run swift:build
-      - run: bun run test
-      - run: bun run swift:test
-      - run: bun run test:native-helper
-      - run: bun run test:storage
-      - run: bun run packages:pack
-      - run: bun run test:packed
+      - run: bun install --cwd apps/landing --frozen-lockfile
       - run: brew install xcodegen
-      - run: bun run apple:build
-      - run: bun run test:native-crash
+      - run: bun run test:local

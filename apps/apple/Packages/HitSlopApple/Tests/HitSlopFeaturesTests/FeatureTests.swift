@@ -52,9 +52,11 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 @Test @MainActor func repeatedOpenDuringPreparationUsesOneOperation() async {
     let gate = AsyncStream<String>.makeStream()
     let calls = LockIsolated(0)
+    let focusCalls = LockIsolated(0)
     let store = TestStore(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
         $0.catalogClient.recents = { [] }
         $0.uuid = .constant(documentID)
+        $0.documentClient.focus = { _ in focusCalls.withValue { $0 += 1 } }
         $0.documentClient.open = { _, _ in
             calls.withValue { $0 += 1 }
             for await title in gate.stream { return title }
@@ -69,6 +71,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     await store.receive(\.catalog.recentsReceived)
     #expect(calls.value == 1)
     await store.finish()
+    #expect(focusCalls.value == 1)
 }
 
 @Test @MainActor func openingAnExistingDocumentFocusesIt() async {
@@ -464,4 +467,17 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     #expect(store.state.visibleEntries == [checklist])
     await store.send(.filterChanged(.all)) { $0.filter = .all }
     #expect(store.state.visibleEntries == [checklist, expenses])
+}
+
+@Test @MainActor func cancelledDocumentOpenRemovesPendingDocumentWithoutError() async {
+    let store = TestStore(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
+        $0.uuid = .constant(documentID)
+        $0.documentClient.open = { _, _ in throw CancellationError() }
+    }
+    await store.send(.openDocument(documentURL)) {
+        $0.documents = [DocumentFeature.State(id: documentID, url: documentURL)]
+    }
+    await store.receive(\.openCancelled) { $0.documents = [] }
+    #expect(store.state.alert == nil)
+    await store.finish()
 }

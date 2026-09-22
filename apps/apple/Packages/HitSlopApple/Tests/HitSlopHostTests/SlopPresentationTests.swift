@@ -3,8 +3,10 @@ import Foundation
 import Testing
 import HitSlopHost
 
-@Test @MainActor func presentationFixturesExportWithoutNativeMaskAndRenderSquareIcons() async throws {
-    guard let source = ProcessInfo.processInfo.environment["HITSLOP_PRESENTATION_FIXTURES"] else { return }
+@Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_PRESENTATION_FIXTURES"] != nil,
+              "Run bun run swift:test to build presentation fixtures"))
+@MainActor func presentationFixturesExportWithoutNativeMaskAndRenderSquareIcons() async throws {
+    let source = try #require(ProcessInfo.processInfo.environment["HITSLOP_PRESENTATION_FIXTURES"])
     let paths = try JSONDecoder().decode([String: String].self, from: Data(source.utf8))
     #expect(Set(paths.keys) == Set(["standard", "ellipse", "washer"]))
     for path in paths.values {

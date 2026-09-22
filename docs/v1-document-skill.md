@@ -1,1 +1,0 @@
-../packages/cli/skills/hitslop-document/SKILL.md

@@ -6,13 +6,14 @@ description: Define a slop's identity, discovery metadata, initial window, and n
 Read `manifest.json` first. It is the package contract for a slop: its identity,
 author, catalog metadata, and initial native window. The manifest is immutable in
 a built template or document, so make changes in the source project and rebuild.
-Data and media stores are created by the app and are not declared here.
+Writable state is managed by the document runtime; media import is deferred.
 
 ## Start with a complete manifest
 
 ```json title="manifest.json"
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "Your Name",
     "url": "https://example.com"
@@ -35,7 +36,8 @@ Data and media stores are created by the app and are not declared here.
 | Field | Rule |
 | --- | --- |
 | `$schema` | Must be `https://api.hitslop.com/schemas/v1/manifest.schema.json`. |
-| `author.name` | Required, 1–80 characters with at least one non-space character. This attribution travels with the signed artifact. |
+| `runtime` | Required, exactly `hitslop-v1`. |
+| `author.name` | Required, 1–80 characters with at least one non-space character. This attribution travels with the template. |
 | `author.url` | Optional HTTP or HTTPS URL, up to 2,048 characters. |
 | `slug` | 2–64 lowercase letters or numbers in kebab case, such as `tiny-counter`. |
 | `title` | Required, 1–80 characters. |
@@ -64,7 +66,7 @@ For a transparent window, the host supplies the page sizing and transparency
 reset. Draw the visible surface in your app. `<Slop>` (or a framework-neutral
 `data-hitslop-root` element) and its mount ancestors fill the viewport.
 
-The host derives `data-slop-presentation` as `standard`, `transparent`, or `skin`
+The native host derives `data-slop-presentation` as `standard`, `transparent`, or `skin`
 and exposes initial dimensions through `--slop-width` and `--slop-height`.
 Opaque standard windows keep their authored layout rules.
 
@@ -78,9 +80,8 @@ keeps the result on the visible screen; the manifest remains the next launch's
 initial size.
 
 ```ts
-import { slop } from "@hitslop/runtime";
-
-await slop.window.resize({ width: 560, height: 680 });
+// The native host installs this global; it is unavailable in browser preview.
+await (globalThis as any).slop.window.resize({ width: 560, height: 680 });
 ```
 
 Use the native toolbar handle to move the window. There is no guest window-drag

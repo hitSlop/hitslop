@@ -12,7 +12,7 @@ try {
   for (const name of ["hitslop-native", "HitSlopApple_HitSlopRuntime.bundle", "HitSlopApple_HitSlopWasm.bundle"])
     await cp(join(build, name), join(helpers, name), { recursive: true });
   const document = join(folder, "List.slop");
-  await cp("generated/v1/templates/Checklist.slop", document, { recursive: true });
+  await cp("generated/v1/templates/quick-checklist.slop", document, { recursive: true });
   const run = async (args: string[], success = true) => {
     const child = Bun.spawn([join(helpers, "hitslop-native"), ...args], {
       cwd: folder,

@@ -1,3 +1,4 @@
+import { checkCompatibility } from "./compatibility-check";
 import {
   verifyProvenance,
   verifyCopies,
@@ -5,11 +6,12 @@ import {
   verifyCurrentRuntime,
   runtimeDestinations,
 } from "./runtime-artifacts";
+import { discoverTemplates } from "./templates";
 await verifyProvenance();
 const runtimes = await verifyCopies(runtimeDestinations);
 verifyCurrentRuntime(runtimes);
 await verifyReleasedIdentities(runtimes);
-await import("./compatibility-check");
+await checkCompatibility();
 const env = { ...process.env, PATH: "/opt/homebrew/bin:/usr/bin:/bin:" + process.env.PATH };
 async function run(cmd: string[]) {
   const p = Bun.spawn(cmd, { stdout: "inherit", stderr: "inherit", env });
@@ -18,12 +20,12 @@ async function run(cmd: string[]) {
 await run([process.execPath, "scripts/v1/generate.ts", "--check"]);
 await run([process.execPath, "scripts/v1/skills.ts", "--check"]);
 await run([process.execPath, "node_modules/typescript/bin/tsc", "-p", "tsconfig.v1.json"]);
-for (const name of ["quick-checklist", "small-expenses"])
+for (const { source } of await discoverTemplates())
   await run([
     process.execPath,
     "node_modules/svelte-check/bin/svelte-check",
     "--workspace",
-    `examples/slops/${name}`,
+    source,
     "--tsconfig",
     "tsconfig.json",
   ]);

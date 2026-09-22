@@ -33,6 +33,7 @@ jobs:
         with:
           bun-version: "1.4.2"
       - run: bun install --frozen-lockfile
+      - run: bun install --cwd apps/landing --frozen-lockfile
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Validate tagged commit

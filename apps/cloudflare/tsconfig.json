@@ -1,8 +1,0 @@
-{
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "types": ["bun", "@cloudflare/workers-types"],
-    "lib": ["ES2023"]
-  },
-  "include": ["src", "tests"]
-}

@@ -10,7 +10,7 @@ import Testing
 
 // One parent suite keeps shared AppKit/WebView integration tests serialized.
 @Suite(.serialized) struct LoroClientTests {
-  func fixture(_ name: String = "Checklist") throws -> URL {
+  func fixture(_ name: String = "quick-checklist") throws -> URL {
     let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(
       UUID().uuidString + ".slop")

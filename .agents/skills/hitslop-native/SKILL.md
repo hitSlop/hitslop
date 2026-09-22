@@ -9,7 +9,7 @@ Preserve the real macOS client and its existing target graph: Core, Runtime, Hos
 
 Generate TypeBox platform contracts with bun run schema:generate. Run bun run build to generate runtime resources, compile the native helper, and then capture template artwork. One writer owns state/writer.lock; never unlink it. host.lock is discovery only. Package paths must be local, isolated and free of symlinks. A failed connection never authorizes a competing writer.
 
-Normal close/export commits local drafts and flushes. Failed close retains ownership. Destroy WebViews after successful close. Native owns save/error/retry UI. PNG/PDF export and automatic Quick Look/Finder icon refresh remain active; media import, remote catalog cutover, OpenAPI/Registry, accounts/Auth/App Check, archive sharing and collaboration are deferred. Bundled slops and ~/.hitslop/templates supply manifest-derived categories; Recents opens local documents. See docs/architecture.md, docs/storage.md and docs/capture.md.
+Normal close/export commits local drafts and flushes. Failed close retains ownership. Destroy WebViews after successful close. Native owns save/error/retry UI. PNG/PDF export and automatic Quick Look/Finder icon refresh remain active; media import, remote catalog cutover, OpenAPI/Registry, accounts/Auth/App Check, archive sharing and collaboration are deferred. Bundled slops and ~/.hitslop/templates supply manifest-derived categories; Recents opens local documents. See docs/reference/runtime.md and docs/guides/authoring.md.
 
 Run bun run swift:test for actual WKWebView, live/closed CLI, failed-save/close, and export coverage. bun run bench:windows measures the current SDK; do not reuse Mirror-era results as current evidence.
 

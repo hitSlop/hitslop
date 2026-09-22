@@ -1,3 +1,4 @@
+import { builtTemplates } from "./templates";
 import {
   verifyCopies,
   verifyCurrentRuntime,
@@ -48,7 +49,10 @@ try {
     .map((value) => value.identity)
     .sort((a, b) => a.runtimeContract - b.runtimeContract);
   assert.deepEqual(capabilities, { current: identities.at(-1), runtimes: identities });
-  for (const slug of ["quick-checklist", "small-expenses"]) {
+  const selected = (await builtTemplates()).templates.filter((t) => t.bundled).map((t) => t.slug);
+  const starters = join(app, "Contents/Resources/StarterTemplates");
+  assert.deepEqual((await readdir(starters)).sort(), selected.map((slug) => slug + ".slop").sort());
+  for (const slug of selected) {
     const source = join(app, "Contents/Resources/StarterTemplates", slug + ".slop");
     const entries = await readdir(source);
     assert.ok(!entries.includes("state") && !entries.includes("stores"));
@@ -60,19 +64,35 @@ try {
     await run(["create", "--from", source, "--output", document]);
     const initial = JSON.parse(await run(["get", document]));
     assert.ok(initial && typeof initial === "object");
-    await run([
-      "apply",
-      document,
-      "--op",
-      JSON.stringify({ type: "text.replace", path: ["title"], value: "Installed helper verified" }),
-    ]);
-    assert.equal(JSON.parse(await run(["get", document])).title, "Installed helper verified");
+    assert.ok(JSON.parse(await run(["schema", document])));
+    assert.deepEqual(JSON.parse(await run(["get", document])), initial);
     for (const format of ["png", "pdf"]) {
       const output = join(folder, slug + "." + format);
       await run(["export", document, "--format", format, "--output", output]);
       assert.ok((await readFile(output)).length > 100);
     }
   }
+  // Mutation semantics use a deliberate fixture, independent of bundled selection
+  // and of the fields provided by any newly authored template.
+  const mutation = join(folder, "mutation.slop");
+  await run([
+    "create",
+    "--from",
+    resolve("generated/v1/templates/quick-checklist.slop"),
+    "--output",
+    mutation,
+  ]);
+  await run([
+    "apply",
+    mutation,
+    "--op",
+    JSON.stringify({
+      type: "text.replace",
+      path: ["title"],
+      value: "Installed helper verified",
+    }),
+  ]);
+  assert.equal(JSON.parse(await run(["get", mutation])).title, "Installed helper verified");
   console.log(
     "PASS packaged starters, matching runtimes, installed editing and export without Bun/Node",
   );

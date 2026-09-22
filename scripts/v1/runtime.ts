@@ -63,15 +63,8 @@ export async function buildRuntime() {
       await rm(destination, { recursive: true, force: true });
       await rename(ready, destination);
     }
-    // Remove only superseded generated trees, never document packages.
-    for (const obsolete of [
-      "packages/cli/runtime",
-      "generated/v1/runtime",
-      "apps/apple/Packages/HitSlopApple/Sources/HitSlopWasm/Resources/runtime",
-    ])
-      await rm(join(repository, obsolete), { recursive: true, force: true });
   } finally {
     await rm(stage, { recursive: true, force: true });
   }
 }
-await buildRuntime();
+if (import.meta.main) await buildRuntime();

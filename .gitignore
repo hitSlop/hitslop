@@ -52,6 +52,7 @@ _vibe/
 
 # Historical source stays local and is excluded from the open-source tree.
 /archive/
+/deferred/
 /examples/archive/
 /Prototypes/
 

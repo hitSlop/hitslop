@@ -55,8 +55,7 @@ essential text or controls.
 
 ## Evidence on Hand
 
-The active examples and local `_vibe/` references. Focus Timer is the first
-design pilot: a tactile tomato desk timer at 440 × 440. On September 10, 2026,
-the user approved the working design as “EXACTLY the right vision” and requested
-local registration for native testing. Use it as evidence for clarity and
-expressiveness; its tomato styling belongs to this timer alone.
+Quick Checklist and Small Expenses are current examples; additional templates
+are welcome. Their individual visual identities belong to those objects alone.
+Use current working examples and local `_vibe/` references as evidence for
+clarity and expressiveness, not as a collection-wide skin.

@@ -102,16 +102,6 @@ private struct CatalogSidebar: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                if let docs = CatalogLinks.authoringDocs {
-                    Link(destination: docs) {
-                        Label("Make your own slop", systemImage: "sparkles")
-                            .font(.callout.weight(.semibold))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12).frame(height: 38)
-                            .foregroundStyle(.white)
-                            .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 9))
-                    }.buttonStyle(.plain)
-                }
                 HStack(spacing: 9) {
                     BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
                     BrandLink(name: "discord", label: "Discord", destination: CatalogLinks.discord)

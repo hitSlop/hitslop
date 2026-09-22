@@ -3,6 +3,8 @@ title: Edit installed documents
 description: Inspect schemas, edit through the native owner, and customize declared theme tokens.
 ---
 
+Document commands read and edit the live Loro document, which the native app persists in SQLite. `apply` and `batch` accept JSON operations; `get` returns a read-only JSON snapshot. There is no editable `data.json` file.
+
 Create a writable copy before editing. Registered templates are immutable masters.
 
 ```sh
@@ -16,7 +18,7 @@ Read the descriptor and current state before choosing operations. The CLI prints
 
 The installed app's helper performs edits through the live document socket or an engine-only hidden WebView when closed. It does not load the authored interface for headless edits and never bypasses a busy writer. Installed native editing itself needs no Bun; the `bunx` command is its convenient authoring-CLI entrypoint.
 
-Theme changes use a separate command:
+Theme changes use a separate command and persist in `state/theme.json`, outside the Loro data in SQLite:
 
 ```sh
 bunx @hitslop/cli theme get My.slop

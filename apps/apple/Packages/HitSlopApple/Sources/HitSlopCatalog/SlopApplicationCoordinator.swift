@@ -62,7 +62,7 @@ import SwiftUI
     public var documentControllers: [SlopDocumentWindowController] { Array(native.controllers.values) }
     public var canPerformDocumentCommands: Bool {
         guard let id = activeID else { return false }
-        return store.documents[id: id]?.acceptsCommands == true
+        return store.documents[id: id]?.acceptsCommands == true && native.controllers[id]?.isContentReady == true
     }
     public var isActiveDocumentPinned: Bool { activeID.flatMap { store.documents[id: $0]?.isPinned } ?? false }
     private var activeID: UUID? {
@@ -127,7 +127,10 @@ import SwiftUI
     }
     private func connect(_ id: UUID, controller: SlopDocumentWindowController) {
         controller.onCommand = { [weak self] command in self?.send(.command(command.featureCommand), to: id) }
-        controller.onRuntimeReady = { [weak self] in self?.send(.runtimeReady, to: id) }
+        controller.onRuntimeReady = { [weak self] in
+            self?.catalogWindow?.window?.orderOut(nil)
+            self?.send(.runtimeReady, to: id)
+        }
         controller.onRuntimeFailure = { [weak self] message in self?.send(.runtimeFailed(message), to: id) }
         controller.onClose = { [weak self] in self?.documentObservations.removeValue(forKey: id) }
         if let document = store.scope(state: \.documents[id: id], action: \.documents[id: id]) {
@@ -140,7 +143,6 @@ import SwiftUI
                 }
             }
         }
-        catalogWindow?.window?.orderOut(nil)
     }
 
 }
@@ -151,6 +153,7 @@ import SwiftUI
     private let telemetry: SlopTelemetry
     init(templatesURL: URL, presentsWindows: Bool, telemetry: SlopTelemetry) { self.templatesURL = templatesURL; self.presentsWindows = presentsWindows; self.telemetry = telemetry }
     var controllers: [UUID: SlopDocumentWindowController] = [:]
+    private var preparingURLs: [UUID: URL] = [:]
     var onOpened: ((UUID, SlopDocumentWindowController) -> Void)?
     var onFocused: (() -> Void)?
     var client: DocumentClient {
@@ -178,12 +181,13 @@ import SwiftUI
             throw SlopPackageError.invalid("Create a document from this template before opening it.")
         }
         try Task.checkCancellation()
-        let controller = try await SlopDocumentWindowController.open(packageURL: url)
+        preparingURLs[id] = url
+        defer { preparingURLs[id] = nil }
+        let controller = try await SlopDocumentWindowController.open(packageURL: url, presentsWindow: presentsWindows)
         controller.telemetry = telemetry
         controllers[id] = controller
         onOpened?(id, controller)
         if presentsWindows {
-            controller.showWindow(nil); controller.window?.makeKeyAndOrderFront(nil)
             NSDocumentController.shared.noteNewRecentDocumentURL(url); NSApp.activate(ignoringOtherApps: true)
         }
         onFocused?()
@@ -193,7 +197,14 @@ import SwiftUI
     private func finishQuit(_ id: UUID) async throws { try await controller(id).session.finish() }
     private func cancelQuit(_ id: UUID) async { await controllers[id]?.cancelPreparedClose() }
     private func prepareToQuit(_ id: UUID) async throws { try await controller(id).prepareToClose() }
-    private func focus(_ id: UUID) { if presentsWindows { controllers[id]?.revealFromDock(); NSApp.activate(ignoringOtherApps: true) }; onFocused?() }
+    private func focus(_ id: UUID) {
+        if presentsWindows {
+            if let controller = controllers[id] { controller.revealFromDock() }
+            else if let url = preparingURLs[id] { SlopDocumentWindowController.focusOpeningDocument(at: url) }
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        onFocused?()
+    }
     private func perform(_ id: UUID, command: DocumentCommand) async throws -> URL? {
         let controller = try controller(id)
         let result = try await controller.perform(command.nativeCommand)

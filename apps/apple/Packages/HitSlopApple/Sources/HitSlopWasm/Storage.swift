@@ -3,14 +3,6 @@ import Foundation
 import HitSlopCore
 import SQLite3
 
-func canonicalURL(_ url: URL) throws -> URL {
-  guard let pointer = Darwin.realpath(url.path, nil) else {
-    throw failure("Cannot resolve document path")
-  }
-  defer { free(pointer) }
-  return URL(fileURLWithPath: String(cString: pointer))
-}
-
 func failure(_ message: String) -> NSError {
   NSError(domain: "hitSlop", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
 }

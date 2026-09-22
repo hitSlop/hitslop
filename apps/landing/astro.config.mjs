@@ -32,7 +32,7 @@ export default defineConfig({
             { label: "Style an app", slug: "docs/guides/styling" },
             { label: "Icons, previews, and exports", slug: "docs/guides/icons-and-exports" },
             { label: "PNG window skins", slug: "docs/guides/png-window-skins" },
-            { label: "Data and media", slug: "docs/guides/data-and-schemas" },
+            { label: "Data and schemas", slug: "docs/guides/data-and-schemas" },
             { label: "Build and share", slug: "docs/guides/build-and-share" },
           ],
         },
@@ -40,7 +40,7 @@ export default defineConfig({
           label: "Work with a document",
           items: [
             { label: "Edit installed data", slug: "docs/guides/edit-installed-data" },
-            { label: "Live sharing", slug: "docs/guides/live-sharing" },
+            { label: "Collaboration (coming soon)", slug: "docs/guides/live-sharing" },
             { label: "How .slop files work", slug: "docs/concepts/how-slop-files-work" },
           ],
         },

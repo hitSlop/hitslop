@@ -68,7 +68,7 @@ try {
   // The real host owns a WebView and socket; acknowledge through CLI, then kill it.
   const root = join(folder, "Host.slop");
   await cp(
-    "generated/v1/templates/Checklist.slop",
+    "generated/v1/templates/quick-checklist.slop",
     root,
     { recursive: true },
   );

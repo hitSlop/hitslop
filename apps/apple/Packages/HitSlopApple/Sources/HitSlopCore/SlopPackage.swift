@@ -225,14 +225,6 @@ public struct SlopPackage: Sendable {
     return root.appendingPathComponent(relativePath).standardizedFileURL
   }
 
-  public func assetURL(path: String) throws -> URL {
-    let relative = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    guard relative.hasPrefix("assets/") else {
-      throw SlopPackageError.invalid("resource is not guest-readable: \(path)")
-    }
-    return try Self.containedURL(root: rootURL, relativePath: relative)
-  }
-
   private static func validateManifest(_ data: Data) throws {
     guard String(data: data, encoding: .utf8) != nil else {
       throw SlopPackageError.invalid("manifest.json must be UTF-8")

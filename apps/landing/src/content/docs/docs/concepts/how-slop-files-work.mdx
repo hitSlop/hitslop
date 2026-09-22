@@ -34,7 +34,7 @@ My.slop/
   .agents/skills/hitslop-document/
 ```
 
-`assets/theme.css` and `assets/theme.json` are immutable build output from `theme.ts`. `runtime.json` identifies the required SDK/Loro release. The authored bundle does not contain its own document engine. The host supplies that pinned runtime.
+`assets/theme.css` and `assets/theme.json` are immutable build output from `theme.ts`. `runtime.json` declares the required runtime contract and minimum revision. SDK/Loro versions record provenance, not opening gates. The authored bundle does not contain its own document engine. The host supplies that pinned runtime.
 
 ## A writable copy adds state
 
@@ -50,7 +50,7 @@ Loro in the WebView owns the live document. Swift persists opaque checkpoints an
 
 The permanent `writer.lock` is the OS ownership lock: never unlink it. `host.lock` is discovery JSON, not ownership. CLI commands route to the live owner's socket or acquire the writer lock and use an engine-only hidden WebView. Headless editing never loads authored `app.html`.
 
-Owner changes go into `state/theme.json`, a separate, bounded token object. It contains overrides, not another copy of the authored theme defaults. Use theme commands rather than editing files underneath a running owner. Duplicating a document preserves its saved content and overrides while creating fresh ownership files.
+Owner changes go into `state/theme.json`, a separate, bounded token object. It contains overrides, not another copy of the authored theme defaults, and does not pass through Loro or live in SQLite. Direct file edits are not watched. See [theme files and commands](/docs/guides/styling/#let-owners-override-tokens). Use theme commands rather than editing files underneath a running owner. Duplicating a document preserves its saved content and overrides while creating fresh ownership files.
 
 ## Masters and copies
 

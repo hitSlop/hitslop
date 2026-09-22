@@ -108,3 +108,28 @@ test("native template assets are complete before replacing a registered master",
     await rm(root, { recursive: true, force: true });
   }
 }, 90000);
+
+test("build paths and fresh source evaluation do not depend on authored stdout", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".v1-build-test-"));
+  try {
+    const source = join(root, "source with spaces");
+    await cp("packages/cli/templates/checklist", source, { recursive: true });
+    const initialPath = join(source, "initial.ts");
+    const original = await readFile(initialPath, "utf8");
+    await writeFile(initialPath, original + '\nconsole.log("authored output is not a path");\n');
+    const defaultOutput = await buildProject(source);
+    expect(defaultOutput).toBe(join(source, "dist", "quick-checklist.slop"));
+    const first = JSON.parse(await readFile(join(defaultOutput, "initial.json"), "utf8"));
+    await writeFile(
+      initialPath,
+      `console.log("another log"); export default ${JSON.stringify({ ...first, title: "Fresh evaluation" })};`,
+    );
+    const explicitOutput = join(root, "output with spaces.slop");
+    expect(await buildProject(source, explicitOutput)).toBe(explicitOutput);
+    expect(JSON.parse(await readFile(join(explicitOutput, "initial.json"), "utf8")).title).toBe(
+      "Fresh evaluation",
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);

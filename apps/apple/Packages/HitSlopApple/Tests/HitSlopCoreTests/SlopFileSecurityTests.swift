@@ -23,14 +23,3 @@ import Testing
     #expect(throws: SlopPackageError.self) { _ = try SlopFile.read(root.deletingLastPathComponent().appendingPathComponent("outside"), within: root) }
     #expect(try Data(contentsOf: target) == Data("safe".utf8))
 }
-
-@Test func JSONBoundsHandleEscapesDepthAndExactSize() throws {
-    let valid = Data(#"{"value":"[\"{}]"}"#.utf8)
-    try SlopJSONLimits.check(valid, maximumBytes: valid.count)
-    #expect(throws: SlopLimitError.self) { try SlopJSONLimits.check(valid, maximumBytes: valid.count - 1) }
-    try SlopJSONLimits.check(Data((String(repeating: "[", count: 64) + "0" + String(repeating: "]", count: 64)).utf8))
-    #expect(throws: SlopLimitError.self) {
-        try SlopJSONLimits.check(Data((String(repeating: "[", count: 65) + "0" + String(repeating: "]", count: 65)).utf8))
-    }
-    #expect(throws: SlopLimitError.self) { try SlopJSONLimits.checkObject(["text": String(repeating: "x", count: 1000)], maximumBytes: 100) }
-}
