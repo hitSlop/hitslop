@@ -13,13 +13,46 @@ purpose. Share standards of clarity and familiar interaction behavior; let each
 object choose its own palette, typography, composition, and material. Paper,
 Instrument, and Skin are starting points, not a required retro or physical look.
 
-If the project provides `_vibe/`, inspect it for visual direction. Treat those
-images as inspiration only; do not copy them into source or runtime packages.
+The guidance below is self-contained; reference images are not required. If the
+project provides `_vibe/`, use it as optional inspiration. Never copy those
+images into generated projects or runtime packages.
+
+## Give the object its own character
+
+Choose an expression that makes the job feel natural: an orderly paper record,
+a precise desktop instrument, a cheerful pocket companion, or a quiet modern
+tool. Let that choice shape the whole composition, not just its accent color.
+The checklist supplied by `slop init` is a working starting point; adapt its
+layout, typography, palette, and controls to the requested object.
+
+- Give typography a job: editorial headings for reading, aligned tabular figures
+  for accounting, a prominent numeric display for timing. Keep essential labels
+  readable even when the display type is playful.
+- Choose a deliberate surface and palette: warm paper with fine ink rules,
+  saturated molded plastic with a recessed display, or dark glass with crisp
+  readouts. Keep highlights, borders, shadows, and corner shapes consistent with
+  the chosen material. Quiet, flat treatments can have just as much identity.
+- Build recognition through proportions and composition: the long strip of a
+  ticket, the rhythm of a ledger, or the display-and-controls grouping of an
+  instrument. Use an unusual silhouette only when it helps the object.
+- Make controls feel responsive through visible pressed, selected, and focused
+  states. Depth and brief motion should explain operation; decorative knobs,
+  fake window chrome, and unreadable display effects add no useful character.
+- Implement the expression with plain CSS, declared theme tokens, and styled
+  Bits UI primitives. Use spacing, rules, gradients, borders, and restrained
+  shadows before reaching for image skins; reserve PNG skins for meaningful
+  silhouettes as described in the presentation reference.
+
+Related slops share interaction quality, not a universal shell. A recipe, timer,
+and budget tool should remain distinguishable even with their titles removed.
+Follow the user's visual direction and preserve an existing object's identity
+when refining it.
 
 ## Decide before styling
 
 1. State the single job in one sentence.
-2. Choose a dominant object family: Paper, Instrument, or Skin.
+2. Choose a visual direction suited to the job; Paper, Instrument, and Skin are
+   useful starting points, not a required taxonomy.
 3. Identify the primary action/readout and persistent state.
 4. Decide whether the window is standard/resizable, transparent, or PNG-skinned.
 5. Define what live editing, static capture, and icon must show.

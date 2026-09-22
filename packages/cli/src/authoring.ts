@@ -43,7 +43,7 @@ export async function runAuthoring(
     await cp(join(cliRoot, "skills"), join(destination, ".agents/skills"), { recursive: true });
     await writeFile(
       join(destination, "AGENTS.md"),
-      "Read manifest.json and .agents/skills/hitslop-authoring/SKILL.md first. Use plain CSS, defineTheme tokens, and typed document handles. Run bun run check and bun run build.\n",
+      "Read manifest.json, .agents/skills/hitslop-authoring/SKILL.md, and .agents/skills/hitslop-design/SKILL.md first. Choose a visual direction suited to the slop's purpose; the checklist is a functional starting point whose layout and appearance should be adapted to the task. Use plain CSS, defineTheme tokens, and typed document handles. Run bun run check and bun run build.\n",
     );
     console.log(
       `Created ${destination}. Install its dependencies with bun install, then slop dev ${destination}.`,
