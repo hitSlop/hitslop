@@ -48,7 +48,11 @@ private struct UpdateSettingsView: View {
         installMenus()
         HitSlopFirebase.telemetry.send(.launched)
         let urls = CommandLine.arguments.dropFirst().filter { $0.hasSuffix(".slop") }.map(URL.init(fileURLWithPath:))
-        if urls.isEmpty { showCatalog() } else { urls.forEach(openDocument) }
+        if urls.isEmpty {
+            showCatalog()
+            // A launch that opens documents warms WebKit itself.
+            SlopRuntimeSession.prewarm()
+        } else { urls.forEach(openDocument) }
     }
     func application(_ application: NSApplication, open urls: [URL]) { urls.filter { $0.isFileURL && $0.pathExtension.lowercased() == "slop" }.forEach(openDocument) }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

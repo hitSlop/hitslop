@@ -34,13 +34,18 @@ public struct SlopRuntimeTeardownError: LocalizedError {
   public var webView: WKWebView { engine.webView }
   public var isReady: Bool { engine.isReady }
   public weak var delegate: (any SlopRuntimeSessionDelegate)?
-  public init(
+  public convenience init(
     packageURL: URL, renderTargetsEnabled: Bool = false, purpose: SlopRuntimePurpose = .interactive
   ) throws {
     try SlopLocalDocument.requireLocal(packageURL)
-    package = try SlopPackage(rootURL: packageURL)
+    let engine = try WasmSession(package: SlopPackage(rootURL: packageURL))
+    self.init(engine: engine, renderTargetsEnabled: renderTargetsEnabled, purpose: purpose)
+  }
+  private init(engine: WasmSession, renderTargetsEnabled: Bool, purpose: SlopRuntimePurpose) {
+    self.engine = engine
+    package = engine.package
     self.purpose = purpose
-    engine = try WasmSession(package: package)
+    engine.allowsFileSelection = purpose == .interactive
     engine.onResize = { [weak self] size in
       guard let self, let delegate = self.delegate else {
         throw SlopPackageError.invalid("No window")
@@ -79,9 +84,9 @@ public struct SlopRuntimeTeardownError: LocalizedError {
   public static func open(
     packageURL: URL, renderTargetsEnabled: Bool = false, purpose: SlopRuntimePurpose = .interactive
   ) async throws -> SlopRuntimeSession {
-    try Task.checkCancellation()
-    return try SlopRuntimeSession(
-      packageURL: packageURL, renderTargetsEnabled: renderTargetsEnabled, purpose: purpose)
+    let engine = try await WasmSession.open(packageURL: packageURL)
+    return SlopRuntimeSession(
+      engine: engine, renderTargetsEnabled: renderTargetsEnabled, purpose: purpose)
   }
   public func load() { engine.load() }
   public func waitUntilReady(timeout: Duration = .seconds(15)) async throws {
@@ -92,4 +97,6 @@ public struct SlopRuntimeTeardownError: LocalizedError {
   public func closeAndWait() async throws { try await engine.close() }
   public func close() { Task { try? await closeAndWait() } }
   public func reopenSavedDocument() async throws { try await engine.reopenSavedDocument() }
+  /// Warms WebKit and the bundled runtime once so the first open avoids cold startup.
+  public static func prewarm() { RuntimePrewarm.start() }
 }

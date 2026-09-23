@@ -27,17 +27,81 @@ Preview state is disposable: refresh resets it and source changes require restar
 import { defineDocument, s } from "@hitslop/document";
 export default defineDocument({
   title: s.text(),
-  items: s.list(s.object({ text: s.text(), done: s.boolean() })),
+  tasks: s.list(s.object({ text: s.text(), done: s.boolean(), lane: s.enum(["todo", "doing", "done"]) })),
+  checkins: s.list(s.string()),
+  cells: s.record(s.object({ raw: s.string(), style: s.optional(s.object({ bold: s.boolean() })) })),
+  cups: s.counter(),
+  outline: s.tree(s.object({ label: s.text() })),
+  bpm: s.integer({ min: 40, max: 240 }),
 });
 ```
 
-Supply explicit initial values without `$id`. The frozen v1 DSL supports text, finite number/string/boolean/enum registers, optional scalar registers, objects, and movable object lists. The generated descriptor is not JSON Schema. Numbers have no implicit money/integer semantics. Schema changes require new documents.
+Choose each field by how concurrent edits should merge:
 
-Components call `useDocument(schema)`. Read immutable `doc.current`; write through handles such as `doc.fields.title.replace(text)` and `doc.fields.items.item(id).done.set(true)`. Insert returns `$id` identity, preserved through moves and reopen. Key UI rows and selection by that identity, never by index.
+| Builder | Use for | Merge behavior |
+| --- | --- | --- |
+| `s.string({maxLength?})`, `s.number({min?,max?})`, `s.integer({min?,max?})`, `s.boolean()`, `s.enum([...])` | Settings, labels, amounts, states | Last writer wins |
+| `s.text()` | Anything a person types | Character edits merge |
+| `s.richtext({ bold: "after", link: "none" })` | Styled text; marks are declared with their expansion | Characters and marks merge |
+| `s.object({...})` | Fixed groups of fields | Per field |
+| `s.list(s.object({...}))` | Rows with identity: tasks, cards, entries | Insert, remove and move keep `$id` |
+| `s.list(scalar)` | Plain sequences: dates, tags, a pixel grid | Positional insert, set, remove, move |
+| `s.record(value)` | Values keyed by a string: spreadsheet cells, per-day entries | Per key; concurrent creation of one key merges |
+| `s.counter()` | Tallies that several people may bump | Increments add up |
+| `s.tree(s.object({...}))` | Outlines and nested hierarchies | Moves never create cycles |
+| `s.optional(node)` | A value that may be absent | Created lazily; concurrent creation merges |
 
-`doc.transaction(tx => ...)` is synchronous and atomic. It stages a fork and accepts one delta; a rejected operation poisons the whole transaction even if caught. Do not await or write through the original document inside the callback. `await doc.flush()` is the durability barrier.
+Model moves between groups as a flat list with an enum or ID field (kanban lanes, Eisenhower quadrants), and real hierarchy with `s.tree`. Never store coordinates or fixed-size tuples as lists. Keep transient view state such as selection, hover, open panels and card flips in component `$state`; persist it only when a person expects it after reopening or through `slop get`. Supply explicit initial values without `$id`; tree initial values nest `children`. The descriptor is data, not JSON Schema, and schema changes require new documents.
 
-Use `bindText` for editable text. IME drafts remain local until committed. Text uses whole-value LoroText replacement, not a rich-text/concurrent-caret editor; local composition can supersede incoming text. The host autosaves and flushes before close/export, presenting retry on failed saves. Never edit SQLite or add a JSON reconciliation writer.
+Components call `useDocument(schema)`, which returns `{ current, status, error, fields, at, change, flush }`. Read only from the immutable `doc.current`; write only through handles:
+
+```ts
+const doc = useDocument(schema);
+doc.at(task).done.set(!task.done);            // handle for any object from current
+doc.fields.tasks.insert({ text: "", done: false, lane: "todo" }, { after: task.$id });
+doc.fields.cells.put("A1", { raw: "1" });
+doc.fields.cups.increment();
+doc.change(tx => { for (const t of finished) tx.at(t).lane.set("done"); }, { message: "File finished" });
+```
+
+`doc.at(value)` accepts the root, a row, a nested object, a record or its object entry, or a tree node from `doc.current`, and returns that node's typed handle. Use the original snapshot object, not a clone. `fields.x.item(id)` and `entry(key)` remain for IDs held elsewhere. Key UI rows and selection by `$id`, never by index. Unchanged rows keep object identity across edits.
+
+Initialize absent optional composites with `set`, and absent record entries with `put`. This includes row lists and trees. Once present, identity-bearing lists and trees must be edited with `insert`, `remove`, and `move`; assigning a containing object cannot replace them either. Clear an optional field or delete a record entry explicitly before recreating it with new identities. Scalar lists use an empty list instead of optionality.
+
+`doc.change(tx => ...)` is one synchronous, all-or-nothing commit; its optional message is kept in document history. A rejected operation poisons the whole change even if caught. Inside the callback, `doc.current` still shows the state before the change; write through `tx.fields` or `tx.at`, never through `doc`. `await doc.flush()` is the durability barrier. Writes outside `change` commit individually.
+
+Use `bindText` for plain text inputs. Typing becomes Unicode-safe text splices; composition drafts are rebased against intervening text changes and selection is adjusted when the input updates. This is a plain-text binding, not a collaborative rich-text editor. Use `bindValue` for range, number, select, checkbox and text inputs bound to scalars: range drags preview on `input` and commit once on `change`, starting normal autosave. For your own gestures, call `handle.preview(value)` (or `list.preview(index, value)`) while dragging and `set` when done; pending previews commit at flush, close and export and never enter history on their own. The host autosaves and flushes before close/export, presenting retry on failed saves. Never edit SQLite or add a JSON reconciliation writer.
+
+## Attachments and HTTPS
+
+In interactive native windows, standard `<input type="file">` controls open a
+document-attached file picker. Cancellation leaves the document unchanged.
+Background rendering and headless commands never present file pickers. Validate
+the selected file in authored code before storing it.
+
+Import `attachments` from `@hitslop/document/attachments`. Save a browser File with
+`await attachments.import(file, { commit(ref) { doc.change(tx => { /* update typed fields */ }); } })`.
+The synchronous commit runs after durable blob storage; the promise also waits for
+the document write. Every failure rejects the promise. A commit that throws, or limit
+refusals, reject with `OperationRejectedError` and are final (the stored blob stays
+unreferenced); disk failures stay queued for native retry. References contain `id`, `name`, `mimeType`, and `byteLength`.
+Model them with ordinary scalar/object schema fields. Never put binary/base64
+payloads in Loro. Validate app-specific formats before importing.
+
+`attachments.read(id, { type: ref.mimeType })` returns a typed Blob; revoke any object URLs you create.
+`attachments.list()` returns stored IDs and sizes, including unused blobs.
+The native owner manages `state/attachments/`, deduplicated by SHA-256, with limits
+of 10 MiB per file, 100 MiB and 256 unique files per document. Removing a reference
+does not delete bytes; garbage collection is deferred. Filenames and MIME types
+are descriptive metadata in the document, never filesystem paths.
+
+Close/export/reload/duplication flush accepted imports. Disk failures remain in
+native retry. Preview uses disposable memory storage with identical limits.
+Templates contain no imported attachments.
+
+Slops may fetch HTTPS data and play HTTPS media without manifest declarations.
+Images may use HTTPS, data or blob URLs. CORS remains enforced; remote scripts
+and JavaScript eval stay blocked. Bundle executable code locally.
 
 ## Design and styling
 

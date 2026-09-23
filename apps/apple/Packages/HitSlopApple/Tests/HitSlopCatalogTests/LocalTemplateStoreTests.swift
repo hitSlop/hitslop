@@ -119,16 +119,17 @@ private func makeIconPNG() throws -> Data {
     let services = CatalogServices(templatesURL: templates, bundledRoot: nil,
         telemetry: SlopTelemetry { events.append($0) },
         chooseDestination: { _ in destination }, recordRecent: { recent = $0 })
-    #expect(try await services.client.create(entry) == nil)
+    #expect(try await services.client.chooseDestination(entry) == nil)
     #expect(events.isEmpty && recent == nil)
     destination = root.appendingPathComponent("created.slop")
-    #expect(try await services.client.create(entry) == destination?.standardizedFileURL.resolvingSymlinksInPath())
+    let chosen = try #require(try await services.client.chooseDestination(entry))
+    #expect(try await services.client.create(entry, chosen) == destination?.standardizedFileURL.resolvingSymlinksInPath())
     #expect(events == [.created(.installed)])
     #expect(recent == destination)
     #expect(try Data(contentsOf: source.appendingPathComponent("initial.json")) == before)
     #expect(!FileManager.default.fileExists(atPath: source.appendingPathComponent("state").path))
     // Existing destinations fail without emitting another creation.
-    await #expect(throws: (any Error).self) { _ = try await services.client.create(entry) }
+    await #expect(throws: (any Error).self) { _ = try await services.client.create(entry, chosen) }
     #expect(events == [.created(.installed), .failed(.create)])
 }
 

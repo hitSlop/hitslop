@@ -22,7 +22,7 @@ test("handles retain identity across moves and reject a remote deletion and docu
   rows.move(id, { after: other.id });
   row.done.set(true);
   row.note.set("Keep");
-  expect(doc.current.rows[1]).toEqual({ $id: id, name: "A", done: true, note: "Keep" });
+  expect<unknown>(doc.current.rows[1]).toEqual({ $id: id, name: "A", done: true, note: "Keep" });
   row.note.clear();
   await doc.flush();
   const peerIO = new MemoryStore();
@@ -59,7 +59,7 @@ test("insert IDs work immediately on the staging fork and results escape only af
     return id;
   });
   expect(publications).toBe(1);
-  expect(doc.current.rows[0]).toEqual({ $id: id, name: "Edited before commit", done: true });
+  expect<unknown>(doc.current.rows[0]).toEqual({ $id: id, name: "Edited before commit", done: true });
   expect(() => escaped.done.set(false)).toThrow("callback has ended");
   stop();
   await doc.flush();
@@ -201,7 +201,7 @@ describe("schema and transactions", () => {
     d.set(schema.fields.settings.enabled, true);
     await d.close();
     const r = await Document.open(schema, io, initial);
-    expect(r.current).toEqual({
+    expect<unknown>(r.current).toEqual({
       ...initial,
       note: "optional",
       amount: 456,
@@ -226,8 +226,16 @@ describe("schema and transactions", () => {
     expect(() =>
       d.insert(schema.fields.rows, { name: "n", done: false, extra: true } as any),
     ).toThrow();
-    expect(() => defineDocument({ bad: s.optional(s.text() as any) })).toThrow();
-    expect(() => defineDocument({ bad: s.list(s.string() as any) })).toThrow();
+    for (const bad of [
+      () => s.optional(s.optional(s.string()) as any),
+      () => s.list(s.text() as any),
+      () => s.optional(s.list(s.string())),
+      () => s.record(s.optional(s.string()) as any),
+      () => s.tree(s.object({ children: s.string() })),
+      () => s.integer({ min: 0.5 }),
+      () => s.number({ min: 2, max: 1 }),
+    ])
+      expect(() => defineDocument({ bad: bad() })).toThrow();
     expect(d.current).toEqual(before);
     await d.close();
   });

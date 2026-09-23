@@ -10,7 +10,7 @@ import HitSlopWasm
   static let configuration = CommandConfiguration(
     commandName: "hitslop-native", abstract: "Read, edit, open, and export hitSlop documents.",
     subcommands: [
-      RuntimeInfo.self, Theme.self, StorageProbe.self, Screenshot.self, Export.self, OpenDev.self,
+      RuntimeInfo.self, Theme.self, Attachments.self, StorageProbe.self, Screenshot.self, Export.self, OpenDev.self,
       Get.self, Schema.self,
       Apply.self, Batch.self, Compact.self, Create.self, Open.self,
     ])

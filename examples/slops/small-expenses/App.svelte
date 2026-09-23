@@ -29,7 +29,7 @@
     await tick();
     merchantInputs.get(id)?.focus();
   }
-  function settle() { doc.transaction(tx=>{for(const id of selectedIDs)tx.fields.items.item(id).settled.set(true)});selected=[]; }
+  function settle() { doc.change(tx=>{for(const id of selectedIDs)tx.fields.items.item(id).settled.set(true)},{message:"Settle expenses"});selected=[]; }
 </script>
 <Slop document={doc}>
 <main class="expenses-paper">
@@ -54,12 +54,12 @@
       <li class="expenses-row" data-row-id={row.$id}>
         <Checkbox.Root class="expenses-check" aria-label={`Select ${row.merchant}`} checked={selectedIDs.includes(row.$id)} onCheckedChange={checked=>selected=checked?[...selectedIDs,row.$id]:selectedIDs.filter(id=>id!==row.$id)}>{#if selectedIDs.includes(row.$id)}✓{/if}</Checkbox.Root>
         <div>
-          <input class="expenses-merchant" aria-label="Merchant text" use:bindText={items.item(row.$id).merchant} use:merchantInput={row.$id} />
+          <input class="expenses-merchant" aria-label="Merchant text" use:bindText={doc.at(row).merchant} use:merchantInput={row.$id} />
           {#if row.note}<p class="expenses-note">{row.note}</p>{/if}
           <div class="expenses-actions">
             <button class="expenses-small" disabled={index===0} aria-label="Move expense up" onclick={()=>items.move(row.$id,{before:doc.current.items[index-1]!.$id})}>↑</button>
             <button class="expenses-small" disabled={index===doc.current.items.length-1} aria-label="Move expense down" onclick={()=>items.move(row.$id,{after:doc.current.items[index+1]!.$id})}>↓</button>
-            {#if row.note!==undefined}<button class="expenses-small" onclick={()=>items.item(row.$id).note.clear()}>Clear note</button>{/if}
+            {#if row.note!==undefined}<button class="expenses-small" onclick={()=>doc.at(row).note.clear()}>Clear note</button>{/if}
             <button class="expenses-small" onclick={()=>items.remove(row.$id)}>Remove</button>
           </div>
         </div>

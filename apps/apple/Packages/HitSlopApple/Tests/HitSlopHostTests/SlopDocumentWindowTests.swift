@@ -28,10 +28,31 @@ import Testing
     #expect(window.styleMask.contains(.resizable))
     #expect(window.validateMenuItem(NSMenuItem(title: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")))
     #expect(window.representedURL?.standardizedFileURL == root.standardizedFileURL)
-    #expect(window.miniwindowTitle == "Miniwindow Fixture")
+    #expect(window.title == "fixture.slop")
+    #expect(window.miniwindowTitle == "fixture.slop")
     #expect(window.miniwindowImage != nil)
-    #expect(controller.documentTitle == "Miniwindow Fixture")
+    #expect(controller.documentTitle == "fixture.slop")
     #expect(controller.dockMenuImage.size == NSSize(width: 16, height: 16))
+}
+
+@Test func toolbarFitsDocumentAndVisibleScreen() {
+    let screen = NSRect(x: 100, y: 50, width: 1000, height: 800)
+    for width: CGFloat in [240, 480, 640] {
+        let document = NSRect(x: 300, y: 200, width: width, height: 300)
+        let toolbar = slopToolbarFrame(document: document, visible: screen)
+        #expect(toolbar.width == min(max(width, 360), 560))
+        #expect(toolbar.height == 44)
+        #expect(toolbar.midX == document.midX)
+        #expect(toolbar.minY == document.maxY + 8)
+    }
+    let edge = slopToolbarFrame(document: NSRect(x: 990, y: 600, width: 240, height: 250), visible: screen)
+    #expect(screen.contains(edge))
+    #expect(edge.maxX == screen.maxX - 8)
+    #expect(edge.maxY == screen.maxY - 10)
+    let narrow = NSRect(x: -300, y: 0, width: 320, height: 600)
+    let toolbar = slopToolbarFrame(document: NSRect(x: -300, y: 200, width: 240, height: 200), visible: narrow)
+    #expect(toolbar.width == 304)
+    #expect(narrow.contains(toolbar))
 }
 
 @Test @MainActor func nonResizableDocumentWindowStillMiniaturizes() throws {

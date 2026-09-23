@@ -3,6 +3,9 @@ import Foundation
 
 /// One permanent lock inode is shared by editing and closed-document snapshots.
 public final class DocumentWriterLock {
+  public struct Busy: LocalizedError {
+    public var errorDescription: String? { "Document has a live writer; retry through its socket" }
+  }
   private var fd: Int32 = -1
 
   public init(root: URL) throws {
@@ -15,19 +18,13 @@ public final class DocumentWriterLock {
       let code = errno
       close()
       if code == EWOULDBLOCK || code == EAGAIN {
-        throw NSError(
-          domain: "HitSlopWriter", code: 2,
-          userInfo: [
-            NSLocalizedDescriptionKey: "Document has a live writer; retry through its socket"
-          ])
+        throw Busy()
       }
       throw failure("Cannot acquire writer lock")
     }
   }
 
-  public static func isBusy(_ error: Error) -> Bool {
-    (error as NSError).domain == "HitSlopWriter" && (error as NSError).code == 2
-  }
+  public static func isBusy(_ error: Error) -> Bool { error is Busy }
 
   public func close() {
     if fd >= 0 {

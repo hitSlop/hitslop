@@ -22,7 +22,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     let gate = AsyncStream<Void>.makeStream()
     let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
         $0.catalogClient.recents = { [] }
-        $0.catalogClient.create = { _ in
+        $0.catalogClient.chooseDestination = { _ in
             calls.withValue { $0 += 1 }
             for await _ in gate.stream { break }
             return nil
@@ -31,6 +31,7 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     await store.send(.primaryAction(entry)) { $0.creating = entry }
     await store.send(.primaryAction(entry))
     gate.continuation.yield(())
+    await store.receive(\.destinationChosen)
     await store.receive(\.creationFinished) { $0.creating = nil; $0.recentsGeneration = 1 }
     await store.receive(\.recentsReceived)
     #expect(calls.value == 1)
@@ -40,13 +41,18 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
 @Test @MainActor func failedCreationCanBeRetried() async {
     let entry = CatalogEntry(id: "a", source: .local(documentURL), title: "Counter")
     let store = TestStore(initialState: CatalogFeature.State()) { CatalogFeature() } withDependencies: {
-        $0.catalogClient.create = { _ in throw Failure() }
+        $0.catalogClient.chooseDestination = { _ in documentURL }
+        $0.catalogClient.create = { _, _ in throw Failure() }
     }
-    await store.send(.primaryAction(entry)) { $0.creating = entry }
-    await store.receive(\.creationFailed) { $0.creating = nil; $0.alert = .operationFailure("Save failed", title: "Could not create slop") }
-    await store.send(.alert(.dismiss)) { $0.alert = nil }
-    await store.send(.primaryAction(entry)) { $0.creating = entry }
-    await store.receive(\.creationFailed) { $0.creating = nil; $0.alert = .operationFailure("Save failed", title: "Could not create slop") }
+    for _ in 0..<2 {
+        await store.send(.primaryAction(entry)) { $0.creating = entry }
+        await store.receive(\.destinationChosen) { $0.isCopying = true }
+        await store.receive(\.creationFailed) {
+            $0.creating = nil; $0.isCopying = false
+            $0.alert = .operationFailure("Save failed", title: "Could not create slop")
+        }
+        await store.send(.alert(.dismiss)) { $0.alert = nil }
+    }
 }
 
 @Test @MainActor func repeatedOpenDuringPreparationUsesOneOperation() async {
@@ -151,9 +157,10 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
     let replies = LockIsolated<[Bool]>([])
     let store = TestStore(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
         $0.uuid = .constant(documentID)
-        $0.catalogClient.create = { _ in
+        $0.catalogClient.chooseDestination = { _ in documentURL }
+        $0.catalogClient.create = { _, url in
             for await _ in creation.stream { break }
-            return documentURL
+            return url
         }
         $0.catalogClient.recents = { [] }
         $0.documentClient.open = { _, _ in
@@ -170,11 +177,13 @@ private struct Failure: LocalizedError { var errorDescription: String? { "Save f
         $0.documentClient.replyToQuit = { result in replies.withValue { $0.append(result) } }
     }
     await store.send(.catalog(.primaryAction(entry))) { $0.catalog.creating = entry }
+    await store.receive(\.catalog.destinationChosen) { $0.catalog.isCopying = true }
     await store.send(.quitRequested) { $0.quitPhase = .waiting; $0.catalog.isQuitting = true }
     await store.send(.openDocument(URL(fileURLWithPath: "/tmp/rejected.slop")))
     creation.continuation.yield(())
     await store.receive(\.catalog.creationFinished) {
         $0.catalog.creating = nil
+        $0.catalog.isCopying = false
         $0.catalog.recentsGeneration = 1
         var document = DocumentFeature.State(id: documentID, url: documentURL)
         document.isQuitting = true

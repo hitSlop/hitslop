@@ -5,6 +5,8 @@ description: Design or refine hitSlop mini apps and documents with a purpose-led
 
 # hitSlop design
 
+Do not display “Saved,” “Saving…,” or routine persistence indicators inside authored slops. The native host owns save-failure and retry UI. Use task-specific feedback for explicit operations, such as “Importing skin…” or “Skin applied.”
+
 Read `manifest.json` first and design at its exact initial dimensions. A slop
 is one complete digital object, not a small website.
 

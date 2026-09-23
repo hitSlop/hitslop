@@ -1,5 +1,5 @@
 import * as T from "typebox";
-import {ThemeValuesSchema} from "./bridge";
+import {ThemeValuesSchema, AttachmentIDSchema, AttachmentBytesSchema} from "./bridge";
 
 const identity = T.String({ minLength: 1, maxLength: 128 });
 const path = T.String({ minLength: 1, maxLength: 4096 });
@@ -11,6 +11,9 @@ const mutation = { ...base, epoch: identity };
 // Operation contents belong to the shared document runtime, never native schemas.
 const operation = T.Object({}, { additionalProperties: true });
 export const SocketRequestSchema = T.Union([
+  T.Object({...base,method:T.Literal("attachments.list")},{additionalProperties:false}),
+  T.Object({...base,method:T.Literal("attachments.read"),attachmentID:AttachmentIDSchema},{additionalProperties:false}),
+  T.Object({...mutation,method:T.Literal("attachments.put"),bytes:AttachmentBytesSchema},{additionalProperties:false}),
   T.Object({...base,method:T.Literal("theme.get")},{additionalProperties:false}),
   T.Object({...mutation,method:T.Literal("theme.set"),values:ThemeValuesSchema},{additionalProperties:false}),
   T.Object({...mutation,method:T.Literal("theme.reset"),token:T.Optional(T.String({minLength:1,maxLength:128}))},{additionalProperties:false}),
@@ -27,6 +30,8 @@ export const SocketReplySchema = T.Object({
   schema: T.Optional(T.Unknown()),
   output: T.Optional(path),
   error: T.Optional(T.String()),
+  /** Every code except "failed" means the request was not applied. Absent or "failed": outcome unknown. */
+  code: T.Optional(T.Enum(["rejected", "session_changed", "closing", "unavailable", "failed"])),
 }, { additionalProperties: false });
 export const SocketDiscoverySchema = T.Object({
   socket: path, epoch: identity, pid: T.Integer({ minimum: 1 }), documentPath: path,

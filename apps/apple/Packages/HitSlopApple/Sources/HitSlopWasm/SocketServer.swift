@@ -112,15 +112,18 @@ final class SocketServer: @unchecked Sendable {
       }
       guard active else { return }
       guard let request = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+        bytes.count <= 1_048_576 || request["method"] as? String == "attachments.put",
         PlatformContract.valid(request, against: socketRequestSchema)
       else {
-        self.respond(["ok": false, "error": "Invalid socket request"], fd: fd, token: token)
+        self.respond(
+          ["ok": false, "error": "Invalid socket request", "code": "rejected"], fd: fd, token: token)
         return
       }
       // A queued request may expire while MainActor is busy; never start it late.
       do { try deadline.check() } catch {
         self.respond(
-          ["ok": false, "error": "Command timed out before dispatch"], fd: fd, token: token)
+          ["ok": false, "error": "Command timed out before dispatch", "code": "unavailable"],
+          fd: fd, token: token)
         return
       }
       handler(request, deadline) { [weak self] reply in self?.respond(reply, fd: fd, token: token) }
@@ -212,7 +215,7 @@ private final class Connection: @unchecked Sendable {
       }
       input.append(contentsOf: buffer.prefix(count))
       if let end = input.firstIndex(of: 10) {
-        guard end <= 1_048_576 else {
+        guard end <= 16 * 1024 * 1024 else {
           close()
           return
         }
@@ -222,7 +225,7 @@ private final class Connection: @unchecked Sendable {
         input.removeAll()
         return
       }
-      if input.count > 1_048_576 {
+      if input.count > 16 * 1024 * 1024 {
         close()
         return
       }

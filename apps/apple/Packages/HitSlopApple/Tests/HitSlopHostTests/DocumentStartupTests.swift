@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import HitSlopCore
+import HitSlopRuntime
 import Testing
 @testable import HitSlopHost
 
@@ -8,6 +9,11 @@ extension LoroClientTests {
   @Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_STARTUP_BENCH"] == "1"))
   @MainActor func documentStartupTimings() async throws {
     _ = NSApplication.shared
+    if ProcessInfo.processInfo.environment["HITSLOP_STARTUP_PREWARM"] == "1" {
+      // Mirrors a catalog launch: WebKit warms while the user picks a document.
+      SlopRuntimeSession.prewarm()
+      try await Task.sleep(for: .seconds(2))
+    }
     for name in ["quick-checklist", "small-expenses"] {
       for sample in 0..<3 {
         let root = try fixture(name)
@@ -24,6 +30,64 @@ extension LoroClientTests {
         // Keep this benchmark focused on opening, without background preview refreshes.
         try await controller.session.finish()
         controller.close()
+      }
+    }
+  }
+
+  @Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_STARTUP_BENCH"] == "1"))
+  @MainActor func savedDocumentStartupTimings() async throws {
+    _ = NSApplication.shared
+    let environment = ProcessInfo.processInfo.environment
+    let prewarm = environment["HITSLOP_STARTUP_PREWARM"] == "1"
+    if prewarm {
+      SlopRuntimeSession.prewarm()
+      try await Task.sleep(for: .seconds(2))
+    }
+    if environment["HITSLOP_STARTUP_FOREGROUND"] == "1" {
+      NSApp.activate(ignoringOtherApps: true)
+    }
+    let samples = max(1, Int(environment["HITSLOP_STARTUP_SAMPLES"] ?? "10") ?? 10)
+    var names = ["quick-checklist", "small-expenses", "large-checklist"]
+    var skinSource: String?
+    if let fixtures = environment["HITSLOP_PRESENTATION_FIXTURES"] {
+      skinSource = try JSONDecoder().decode([String: String].self, from: Data(fixtures.utf8))["washer"]
+      if skinSource != nil { names.append("washer") }
+    }
+    if let name = environment["HITSLOP_STARTUP_CASE"] { names = names.filter { $0 == name } }
+    #expect(!names.isEmpty)
+    for name in names {
+      let root: URL
+      if name == "washer", let skinSource {
+        root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
+        try FileManager.default.copyItem(atPath: skinSource, toPath: root.path)
+      } else { root = try fixture(name == "large-checklist" ? "quick-checklist" : name) }
+      defer { try? FileManager.default.removeItem(at: root) }
+      var operations: [[String: Any]] = name == "washer"
+        ? [["type": "set", "path": ["count"], "value": 7]]
+        : [["type": "text.replace", "path": ["title"], "value": "Saved opening benchmark"]]
+      if name == "large-checklist" {
+        operations += (0..<1000).map { index in
+          ["type": "insert", "path": ["tasks"],
+           "value": ["text": "Saved task \(index)", "done": false, "archived": false]]
+        }
+      }
+      // Seed in a separate helper process so preparing saved bytes cannot warm this WebKit.
+      let json = String(decoding: try JSONSerialization.data(withJSONObject: operations), as: UTF8.self)
+      let seeded = try await cli(["batch", root.path, "--ops", json])
+      try #require(seeded.0 == 0, "\(seeded.2)")
+      for sample in 0..<samples {
+        let start = ContinuousClock.now
+        let controller = try await SlopDocumentWindowController.open(packageURL: root, presentsWindow: true)
+        let progress = controller.openingProgress
+        let prepared = start.duration(to: .now)
+        try await controller.session.waitUntilReady()
+        let ready = start.duration(to: .now)
+        await controller.waitForPresentation()
+        let visible = start.duration(to: .now)
+        #expect(controller.isContentReady)
+        print("[saved startup benchmark] \(name) sample=\(sample) prewarm=\(prewarm) prepared=\(prepared) ready=\(ready) visible=\(visible) progress=\(progress?.wasShown ?? false)")
+        try await controller.session.finish()
+        _ = try await controller.perform(.close)
       }
     }
   }
@@ -181,7 +245,7 @@ extension LoroClientTests {
   for _ in 0..<500 where slow.panel == nil {
     try await Task.sleep(for: .milliseconds(10))
   }
-  #expect(start.duration(to: .now) >= .milliseconds(300))
+  #expect(start.duration(to: .now) >= .seconds(1))
   #expect(fast.panel == nil)
   #expect(slow.panel?.isVisible == true)
   var cancelled = false

@@ -14,3 +14,8 @@ Use typed handles or the native CLI; `flush()` acknowledges persistence.
 state/theme.json contains bounded declared-token overrides. Use theme commands,
 not arbitrary CSS. Close before moving documents; synced folders are unsupported.
 Shipped v1 runtime contracts remain supported; pre-v1 formats are not migrated.
+
+Optional `state/attachments/<sha256>` files hold opaque imported bytes. Only the
+host attachment API/CLI writes them, under existing ownership. References belong
+to Loro; templates remain free of mutable state. Duplicate/export snapshots copy
+attachments. Close/export flush accepted imports before proceeding.

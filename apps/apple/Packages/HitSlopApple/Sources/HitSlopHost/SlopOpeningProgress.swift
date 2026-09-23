@@ -3,13 +3,14 @@ import AppKit
 /// Native feedback for a slow open. Never renders document content.
 @MainActor final class SlopOpeningProgress: NSObject {
   private(set) var panel: NSPanel?
+  private(set) var wasShown = false
   private var timer: Task<Void, Never>?
   private var finished = false
   var onCancel: (() -> Void)?
 
-  override init() {
+  init(started: ContinuousClock.Instant = .now) {
     super.init()
-    let deadline = ContinuousClock.now.advanced(by: .milliseconds(300))
+    let deadline = started.advanced(by: .seconds(1))
     timer = Task { @MainActor [weak self] in
       do { try await Task.sleep(until: deadline, clock: .continuous) } catch { return }
       self?.show()
@@ -35,6 +36,7 @@ import AppKit
     cancel.keyEquivalent = "\u{1b}"
     for view in [spinner, label, cancel] { panel.contentView?.addSubview(view) }
     panel.center()
+    wasShown = true
     self.panel = panel
     panel.makeKeyAndOrderFront(nil)
   }

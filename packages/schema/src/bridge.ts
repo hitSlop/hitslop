@@ -2,8 +2,13 @@ import * as T from "typebox";
 export const protocolVersion = 1;
 const text = T.String({ maxLength: 4096 });
 const bytes = T.String({ maxLength: 48 * 1024 * 1024 });
+export const AttachmentIDSchema = T.String({ pattern: "^[a-f0-9]{64}$", minLength: 64, maxLength: 64 });
+export const AttachmentBytesSchema = T.String({ maxLength: 13981016 });
 export const ThemeValuesSchema = T.Record(T.String({pattern:"^[a-zA-Z][a-zA-Z0-9-]*$"}),T.String({minLength:1,maxLength:4096}));
 export const BridgeMethods = {
+  "attachments.put": T.Object({ method: T.Literal("attachments.put"), bytes: AttachmentBytesSchema }),
+  "attachments.read": T.Object({ method: T.Literal("attachments.read"), attachmentID: AttachmentIDSchema }),
+  "attachments.list": T.Object({ method: T.Literal("attachments.list") }),
   "theme.load": T.Object({method:T.Literal("theme.load")}),
   "theme.save": T.Object({method:T.Literal("theme.save"),values:ThemeValuesSchema}),
   runtimeRecovered: T.Object({method:T.Literal("runtimeRecovered")}),

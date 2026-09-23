@@ -37,6 +37,15 @@ public enum SlopDuplicator {
         try backup(sourceDB, to: state.appendingPathComponent("document.sqlite"))
       }
       try makeWritable(destination)
+      let attachments = try SlopAttachments.list(in: source.rootURL)
+      if !attachments.isEmpty {
+        try fileManager.createDirectory(at: destination.appendingPathComponent("state"), withIntermediateDirectories: true)
+        // This destination was exclusively created above and is not yet published.
+        for attachment in attachments {
+          let bytes = try SlopAttachments.read(attachment["id"] as! String, in: source.rootURL)
+          _ = try SlopAttachments.put(bytes, in: destination)
+        }
+      }
       _ = try SlopPackage(rootURL: destination)
       return destination
     } catch {

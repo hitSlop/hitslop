@@ -3,6 +3,54 @@
     {
       "type": "object",
       "required": [
+        "method",
+        "bytes"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "attachments.put"
+        },
+        "bytes": {
+          "type": "string",
+          "maxLength": 13981016
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "method",
+        "attachmentID"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "attachments.read"
+        },
+        "attachmentID": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "method"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "const": "attachments.list"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
         "method"
       ],
       "properties": {

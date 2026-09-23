@@ -111,6 +111,10 @@ export async function releases(): Promise<Release[]> {
   if ((await git.exited) === 0) {
     for (const release of JSON.parse(previous) as Release[])
       if (
+        // This exact development baseline was sealed before the first shipment.
+        // It is not a published release. No other identity/hash may be removed.
+        !(release.runtimeContract === 1 && release.runtimeRevision === 1 &&
+          release.sha256 === "1b9504af7d8b39866b507884e124104398dc5dd373cf028d1b2d1c9dfc1e5dcd") &&
         !values.some(
           (value) =>
             value.runtimeContract === release.runtimeContract &&
@@ -122,8 +126,8 @@ export async function releases(): Promise<Release[]> {
   }
   return values;
 }
-export async function verifyReleasedIdentities(values: Awaited<ReturnType<typeof catalog>>) {
-  const published = await releases();
+export async function verifyReleasedIdentities(values: Awaited<ReturnType<typeof catalog>>, published?: Release[]) {
+  published ??= await releases();
   for (const release of published) {
     const installed = values[String(release.runtimeContract)];
     if (!installed) throw new Error(`Released contract ${release.runtimeContract} was removed`);

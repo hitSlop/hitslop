@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import HitSlopCore
 
 public enum CatalogFilter: Hashable, Sendable {
     case all, recents, category(String)
@@ -31,7 +32,15 @@ public struct CatalogEntry: Equatable, Identifiable, Sendable {
     public var initialSize: String?
     public init(id: String, source: Source, title: String) { self.id = id; self.source = source; self.title = title }
     public var isRecent: Bool { if case .recent = source { true } else { false } }
-    public var searchableText: String { ([title, description, authorName ?? ""] + categories).joined(separator: " ").localizedLowercase }
+    public var documentIdentity: SlopDocumentIdentity? {
+        guard case .recent(let url) = source else { return nil }
+        return SlopDocumentIdentity(url: url)
+    }
+    public var displayTitle: String { documentIdentity?.filename ?? title }
+    public var searchableText: String {
+        ([title, description, authorName ?? "", documentIdentity?.path ?? "", documentIdentity?.folderPath ?? ""] + categories)
+            .joined(separator: " ").localizedLowercase
+    }
 }
 
 public struct CatalogSnapshot: Equatable, Sendable {
@@ -46,7 +55,9 @@ public struct CatalogClient: Sendable {
     public var refreshLocal: @Sendable () async -> Void
     public var recents: @Sendable () async -> [CatalogEntry] = { [] }
     /// Returns nil when the destination picker is cancelled.
-    public var create: @Sendable (CatalogEntry) async throws -> URL?
+    public var chooseDestination: @Sendable (CatalogEntry) async throws -> URL?
+    /// Copies the template to the chosen destination and returns the new document.
+    public var create: @Sendable (CatalogEntry, URL) async throws -> URL
 
 }
 extension CatalogClient: DependencyKey {
@@ -54,13 +65,14 @@ extension CatalogClient: DependencyKey {
         local: { preconditionFailure("Install CatalogClient at the application root") },
         refreshLocal: { preconditionFailure("Install CatalogClient at the application root") },
         recents: { preconditionFailure("Install CatalogClient at the application root") },
-        create: { _ in preconditionFailure("Install CatalogClient at the application root") }
+        chooseDestination: { _ in preconditionFailure("Install CatalogClient at the application root") },
+        create: { _, _ in preconditionFailure("Install CatalogClient at the application root") }
     )
     public static let testValue = Self()
     /// Explicit fixture for native integration tests that do not display a catalog.
     public static let empty = Self(
         local: { .finished }, refreshLocal: {},
-        recents: { [] }, create: { _ in nil }
+        recents: { [] }, chooseDestination: { _ in nil }, create: { _, url in url }
     )
 }
 public extension DependencyValues {
@@ -77,6 +89,8 @@ public extension DependencyValues {
         public var localIssues: [String] = []
         public var isStarted = false
         public var creating: CatalogEntry?
+        /// True only while the template is copied, never while the save panel is open.
+        public var isCopying = false
         @Presents public var alert: AlertState<ErrorAlertAction>?
         public var isQuitting = false
         public var recentsGeneration = 0
@@ -105,7 +119,7 @@ public extension DependencyValues {
         case start, refreshRecents, refreshSources
         case queryChanged(String), filterChanged(CatalogFilter), selected(String?)
         case localReceived(CatalogSnapshot), recentsReceived(Int, [CatalogEntry])
-        case primaryAction(CatalogEntry), creationFinished(URL?), creationFailed(String)
+        case primaryAction(CatalogEntry), destinationChosen(URL?), creationFinished(URL?), creationFailed(String)
         case alert(PresentationAction<ErrorAlertAction>)
         case openDocument(URL)
     }
@@ -150,13 +164,20 @@ public extension DependencyValues {
                 if case .recent(let url) = entry.source { return .send(.openDocument(url)) }
                 state.creating = entry
                 return .run { send in
-                    do { await send(.creationFinished(try await client.create(entry))) }
+                    do { await send(.destinationChosen(try await client.chooseDestination(entry))) }
+                    catch { await send(.creationFailed(error.localizedDescription)) }
+                }
+            case .destinationChosen(let url):
+                guard let url, let entry = state.creating else { return .send(.creationFinished(nil)) }
+                state.isCopying = true
+                return .run { send in
+                    do { await send(.creationFinished(try await client.create(entry, url))) }
                     catch { await send(.creationFailed(error.localizedDescription)) }
                 }
             case .creationFinished:
-                state.creating = nil
+                state.creating = nil; state.isCopying = false
                 return recents(&state)
-            case .creationFailed(let message): state.creating = nil; state.alert = .operationFailure(message, title: "Could not create slop"); return .none
+            case .creationFailed(let message): state.creating = nil; state.isCopying = false; state.alert = .operationFailure(message, title: "Could not create slop"); return .none
             case .alert: return .none
             case .openDocument: return .none
             }

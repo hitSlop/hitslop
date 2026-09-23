@@ -17,16 +17,15 @@ extension LoroClientTests {
       let controller = try await SlopDocumentWindowController.open(packageURL: root)
       try await controller.session.waitUntilReady()
       #expect(controller.window?.styleMask.contains(.titled) == false)
+      #expect(!NSApp.windows.contains { $0 !== controller.window && controller.owns($0) })
       controller.showWindow(nil)
       await controller.waitForPresentation()
+      // Hover follows the sampled pointer, so drive it with a point over the document.
+      let frame = try #require(controller.window?.frame)
+      controller.refreshToolbarHover(
+        point: NSPoint(x: frame.midX, y: frame.midY), front: controller.window!.windowNumber)
       let panel = try #require(
         NSApp.windows.first { $0 !== controller.window && controller.owns($0) })
-      let entered = try #require(
-        NSEvent.enterExitEvent(
-          with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
-          windowNumber: controller.window!.windowNumber, context: nil, eventNumber: 1,
-          trackingNumber: 1, userData: nil))
-      controller.window?.contentView?.mouseEntered(with: entered)
       #expect(panel.isVisible)
       panel.orderOut(nil)
       #expect(try await controller.session.webView.evaluateJavaScript("document.body.innerText.trim().length > 0") as? Bool == true)

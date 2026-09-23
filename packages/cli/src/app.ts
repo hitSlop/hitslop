@@ -90,6 +90,17 @@ export const app = new Crust("slop", {
 })
   .extend(help())
   .extend(version())
+  .add(defineCommand("attachments", { description: "Import, inspect, and export document attachments" }, c => c
+    .add(defineCommand("list", { description: "List attachment IDs and sizes" }, c => c.args(document).action(async ({ args }) => {
+      await (await import("./native")).runNative(["attachments", "list", args.document]);
+    })))
+    .add(defineCommand("import", { description: "Save a file and print its reference as JSON" }, c => c.args(document, { name: "file", type: "string", required: true }).action(async ({ args }) => {
+      await (await import("./native")).runNative(["attachments", "import", args.document, args.file]);
+    })))
+    .add(defineCommand("export", { description: "Export an attachment without overwriting an existing file" }, c => c.args(document, { name: "id", type: "string", required: true }).flags({ name: "output", type: "string", required: true }).action(async ({ args, flags }) => {
+      await (await import("./native")).runNative(["attachments", "export", args.document, args.id, "--output", flags.output]);
+    })))
+  ))
   .add(
     defineCommand("init", { description: "Create a checklist authoring project" }, (c) =>
       c.args(source).action(async ({ args }) => {

@@ -1,11 +1,14 @@
-import { initialize, Document, Session, HostStore, hostCall, fromDescriptor, openTheme } from "./index.js";
+import { initialize, Document, Session, HostStore, hostCall, fromDescriptor, openTheme, configureAttachments } from "./index.js";
 try {
-  await initialize();
-  const config = await hostCall({ method: "config" });
-  const descriptor = await fetch("/state.schema.json").then((r) => r.json());
-  const initial = await fetch("/initial.json").then((r) => r.json());
+  const [, config, descriptor, initial, theme] = await Promise.all([
+    initialize(),
+    hostCall({ method: "config" }),
+    fetch("/state.schema.json").then((r) => r.json()),
+    fetch("/initial.json").then((r) => r.json()),
+    openTheme(true),
+  ]);
   const doc = await Document.open(fromDescriptor(descriptor), new HostStore(), initial);
-  const session = new Session(doc, config.epoch, await openTheme(true));
+  const session = new Session(doc, config.epoch, theme, configureAttachments(doc, true));
   globalThis.__slop = {
     request: (request) => session.handle(request),
     prepareClose: () => session.prepareClose(),

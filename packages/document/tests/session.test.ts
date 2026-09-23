@@ -19,6 +19,11 @@ test("hello returns only lifetime identity and stale sessions fail", async () =>
   const rejected = await session.handle({ ...base, method: "compact", epoch: "old" });
   expect(rejected.ok).toBe(false);
   expect(rejected.error).toContain("Session changed");
+  expect(rejected.code).toBe("session_changed");
+  const invalid = await session.handle({
+    ...base, method: "apply", epoch: "current", op: { type: "set", path: ["missing"], value: 1 } as any,
+  });
+  expect(invalid).toMatchObject({ ok: false, code: "rejected" });
   await session.close();
 });
 test("session identity remains stable across repeated edits", async () => {

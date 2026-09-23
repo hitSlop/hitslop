@@ -15,6 +15,7 @@ public enum SlopPackageError: LocalizedError {
 public struct SlopPackage: Sendable {
   public let rootURL: URL
   public let manifestData: Data
+  private var validatedSkin: (url: URL, image: CGImage)?
   public let manifest: SlopManifest
 
   public init(rootURL: URL) throws {
@@ -101,7 +102,7 @@ public struct SlopPackage: Sendable {
     try validateSchemaMetadata()
     try validateDocumentSkill()
     try validateQuickLook()
-    _ = try skinURL()
+    validatedSkin = try skin()
   }
 
   public var entryURL: URL { rootURL.appendingPathComponent("app.html") }
@@ -117,7 +118,11 @@ public struct SlopPackage: Sendable {
   public var isResizable: Bool { isSkinned ? false : manifest.presentation.resizable ?? true }
   public var shape: Shape { manifest.presentation.shape ?? .rounded }
 
-  public func skinURL() throws -> URL? {
+  public func skinURL() throws -> URL? { try skin()?.url }
+
+  /// Validates and decodes the window skin once for callers that also need its pixels.
+  public func skin() throws -> (url: URL, image: CGImage)? {
+    if let validatedSkin { return validatedSkin }
     guard let path = manifest.presentation.skin else { return nil }
     let url = try Self.containedURL(root: rootURL, relativePath: path)
     let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
@@ -147,7 +152,7 @@ public struct SlopPackage: Sendable {
     guard ![.none, .noneSkipFirst, .noneSkipLast].contains(image.alphaInfo) else {
       throw SlopPackageError.invalid("window skin must contain alpha")
     }
-    return url
+    return (url, image)
   }
 
   public func validateAsTemplate(requirePreview: Bool = false) throws {
@@ -245,6 +250,10 @@ public struct SlopPackage: Sendable {
       at: stateURL, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey])
     {
       let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+      if url.lastPathComponent == "attachments" {
+        _ = try SlopAttachments.list(in: rootURL)
+        continue
+      }
       guard allowed.contains(url.lastPathComponent), values.isRegularFile == true,
         values.isSymbolicLink != true
       else {

@@ -6,12 +6,15 @@ struct RuntimeCatalog {
   let root: URL
   let identities: [[String: Any]]
 
-  static func bundled() throws -> RuntimeCatalog {
+  /// Bundled runtimes are immutable for the life of the process.
+  nonisolated(unsafe) private static let cached = Result { () throws -> RuntimeCatalog in
     guard let root = Bundle.module.url(forResource: "runtimes", withExtension: nil) else {
       throw failure("Missing bundled runtimes")
     }
     return try RuntimeCatalog(root: root)
   }
+
+  static func bundled() throws -> RuntimeCatalog { try cached.get() }
 
   init(root: URL) throws {
     self.root = root
@@ -38,6 +41,11 @@ struct RuntimeCatalog {
     }
     guard !entries.isEmpty else { throw failure("No bundled runtime contracts") }
     identities = entries.sorted { ($0["runtimeContract"] as! Int) < ($1["runtimeContract"] as! Int) }
+  }
+
+  /// The newest bundled contract, used where no package selects one.
+  var currentRuntime: URL {
+    root.appendingPathComponent(String(identities.last!["runtimeContract"] as! Int), isDirectory: true)
   }
 
   func capabilitiesData() throws -> Data {

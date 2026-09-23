@@ -41,6 +41,15 @@ extension LoroClientTests {
       _ = try await DocumentCommand.run(
         method: "theme.set", url: root, themeValues: Data("{\"unknown\":\"red\"}".utf8))
     }
+    do {
+      _ = try await DocumentCommand.run(
+        method: "apply", url: root,
+        operation: Data(#"{"type":"set","path":["missing"],"value":1}"#.utf8))
+      Issue.record("Invalid operation was accepted")
+    } catch {
+      // A coded rejection is known not to have applied; only unknown outcomes ask for slop get.
+      #expect(error.localizedDescription.hasSuffix("Not applied."))
+    }
     try await controller.session.engine.reloadInterface()
     #expect(controller.session.engine.epoch == epoch)
     let state = try await DocumentCommand.run(method: "get", url: root)
@@ -60,6 +69,8 @@ extension LoroClientTests {
     #expect(!String(decoding: reset, as: UTF8.self).contains("#123456"))
   }
 
+  #if DEBUG
+  // These cases require fault-injection hooks that are absent from production builds.
   @Test @MainActor func committedWriteSurvivesRendererDeathBeforeAcknowledgement() async throws {
     _ = NSApplication.shared
     let root = try fixture()
@@ -153,6 +164,7 @@ extension LoroClientTests {
       String(decoding: try await DocumentCommand.run(method: "get", url: root), as: UTF8.self)
         .contains("Recovered edit"))
   }
+  #endif
 }
 
 extension LoroClientTests {

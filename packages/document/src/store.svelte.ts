@@ -1,9 +1,26 @@
-import type { Document } from "./document.ts";
+import type { CommitOptions, Document, Scope } from "./document.ts";
+import type { At, Handle } from "./handles";
 import type { Definition, ObjectNode, Value } from "./schema.ts";
 import { schemaKey } from "./schema.ts";
 import { getContext, onDestroy } from "svelte";
 export const documentContext = Symbol("hitslop.document");
-export function useDocument<N extends ObjectNode>(definition: Definition<N>) {
+/** Handle for any object from `current`: the root, a row, a nested object, a record entry or a tree node. */
+export type { At } from "./handles";
+export type DocumentScope<N extends ObjectNode> = Scope<N>;
+export type SlopDocument<N extends ObjectNode> = {
+  /** Immutable snapshot. Unchanged rows keep their identity across edits. */
+  readonly current: Value<N>;
+  readonly status: Document<N>["status"];
+  readonly error: string | null;
+  /** Typed write handles; each call is its own commit. */
+  readonly fields: Handle<N>;
+  readonly at: At;
+  /** One synchronous, all-or-nothing commit. */
+  change<R>(callback: (tx: DocumentScope<N>) => R, options?: Pick<CommitOptions, "message">): R;
+  /** Durability barrier: commits drafts and previews, then waits for storage. */
+  flush(): Promise<void>;
+};
+export function useDocument<N extends ObjectNode>(definition: Definition<N>): SlopDocument<N> {
   const doc = getContext<Document<N>>(documentContext);
   if (!doc || doc.key !== schemaKey(definition.descriptor))
     throw new Error("Host document/schema mismatch");
@@ -28,18 +45,14 @@ export function useDocument<N extends ObjectNode>(definition: Definition<N>) {
       return error;
     },
     fields: doc.fields,
-    set: doc.set.bind(doc),
-    clear: doc.clear.bind(doc),
-    text: doc.text.bind(doc),
-    transaction: doc.transaction.bind(doc),
-    insert: doc.insert.bind(doc),
-    remove: doc.remove.bind(doc),
-    move: doc.move.bind(doc),
-    flush: doc.flush.bind(doc),
+    at: (value) => doc.at(value),
+    change: (callback, options) => doc.change(callback, { message: options?.message }),
+    flush: () => doc.flush(),
   };
 }
 
 export { bindText } from "./bind-text";
+export { bindValue } from "./bind-value";
 export { default as Slop } from "./Slop.svelte";
 export { useSlop } from "./slop-context";
-export type { Handle, TextHandle, InsertResult } from "./handles";
+export type { Handle, TextHandle, RichTextHandle, ScalarHandle, InsertResult } from "./handles";

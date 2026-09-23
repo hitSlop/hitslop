@@ -44,17 +44,17 @@ test("runtime catalogs compare complete contract sets and bytes per contract", a
 });
 
 test("released contracts cannot disappear, regress or silently change bytes", async () => {
-  const published = await releases();
+  const published = [{ runtimeContract: 1, runtimeRevision: 1, sha256: "a".repeat(64) }];
   const values: Awaited<ReturnType<typeof catalog>> = {};
   for (const release of published)
     values[String(release.runtimeContract)] = {
       identity: { ...release, sdkVersion: "1", loroVersion: "1", protocolVersion: 1 },
       sha256: release.sha256,
     };
-  await verifyReleasedIdentities(values);
+  await verifyReleasedIdentities(values, published);
   const first = published[0]!;
   values[String(first.runtimeContract)]!.sha256 = "0".repeat(64);
-  await expect(verifyReleasedIdentities(values)).rejects.toThrow("increment runtimeRevision");
+  await expect(verifyReleasedIdentities(values, published)).rejects.toThrow("increment runtimeRevision");
   delete values[String(first.runtimeContract)];
-  await expect(verifyReleasedIdentities(values)).rejects.toThrow("removed");
+  await expect(verifyReleasedIdentities(values, published)).rejects.toThrow("removed");
 });

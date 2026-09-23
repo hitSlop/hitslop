@@ -31,10 +31,10 @@
     {#each doc.current.tasks as task, index (task.$id)}
       <li class="slop-row" data-task-id={task.$id}>
         <Checkbox.Root class="slop-check" aria-label={`Complete ${task.text}`} checked={task.done}
-          onCheckedChange={(value) => tasks.item(task.$id).done.set(value)}>
+          onCheckedChange={(value) => doc.at(task).done.set(value)}>
           {#if task.done}<span aria-hidden="true">✓</span>{/if}
         </Checkbox.Root>
-        <input class="slop-text" data-done={task.done} aria-label="Task text" use:bindText={tasks.item(task.$id).text} use:taskInput={task.$id} />
+        <input class="slop-text" data-done={task.done} aria-label="Task text" use:bindText={doc.at(task).text} use:taskInput={task.$id} />
         <div class="slop-actions" data-slop-export="hide">
           <button class="slop-small" aria-label="Move task up" disabled={index === 0} onclick={() => tasks.move(task.$id, { before: doc.current.tasks[index - 1]!.$id })}>↑</button>
           <button class="slop-small" aria-label="Move task down" disabled={index === doc.current.tasks.length - 1} onclick={() => tasks.move(task.$id, { after: doc.current.tasks[index + 1]!.$id })}>↓</button>

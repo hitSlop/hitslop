@@ -37,7 +37,7 @@ the application behind a hole, not merely that a DOM element ignores them.
 
 ## Static output
 
-Use an optional inline `exportView` snippet inside `<Slop {document}>` from
+Use an optional inline `exportView` snippet inside `<Slop document={doc}>` from
 `@hitslop/document/svelte`. Separate components are optional.
 Pass the current data and selected view; share presentation and theme components.
 Use normal flow rather than viewport heights or scrolling panels. This view also

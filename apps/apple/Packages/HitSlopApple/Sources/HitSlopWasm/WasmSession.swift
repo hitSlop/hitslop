@@ -8,9 +8,12 @@ public struct WasmSaveStatus: Sendable {
   public let error: String?
 }
 
+/// Storage replies contain only JSON values and move from the storage queue to main once.
+private struct StorageReply: @unchecked Sendable { let value: [String: Any] }
+
 /// A package lease outlives its renderer. Only JS interprets the stored Loro bytes.
 @MainActor
-public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNavigationDelegate {
+public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNavigationDelegate, WKUIDelegate {
   private var liveWebView: WKWebView?
   public var webView: WKWebView {
     guard let liveWebView else { preconditionFailure("Document WebView has been destroyed") }
@@ -23,6 +26,10 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   public var onResize: ((CGSize) throws -> CGSize)?
   public var onExport: ((String, URL, NativeCommandDeadline) async throws -> Void)?
   public var capturing = false
+  public var allowsFileSelection = true {
+    didSet { if !allowsFileSelection { filePicker.cancel() } }
+  }
+  var filePicker = DocumentFilePicker()
   public var onRecovered: (() -> Void)?
   public var onReady: (() -> Void)?
   public var onStatus: ((WasmSaveStatus) -> Void)?
@@ -46,14 +53,49 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     try self.init(package: package, headless: headless, catalog: RuntimeCatalog.bundled())
   }
 
-  init(package: SlopPackage, headless: Bool, catalog: RuntimeCatalog) throws {
-    self.package = package
+  private struct Prepared: Sendable {
+    let package: SlopPackage
+    let runtime: URL
+    let storage: Storage
+
+    init(package: SlopPackage, catalog: RuntimeCatalog) throws {
+      self.package = package
+      // Refuse unsupported runtimes before acquiring ownership or creating state.
+      runtime = try catalog.resolve(package: package)
+      storage = try Storage(root: package.rootURL)
+    }
+  }
+
+  convenience init(package: SlopPackage, headless: Bool, catalog: RuntimeCatalog) throws {
+    try self.init(prepared: Prepared(package: package, catalog: catalog), headless: headless)
+  }
+
+  private init(prepared: Prepared, headless: Bool) {
+    package = prepared.package
+    webViewResources = prepared.runtime
+    storage = prepared.storage
     self.headless = headless
-    // Resolve before Storage acquires ownership or creates a database.
-    webViewResources = try catalog.resolve(package: package)
-    storage = try Storage(root: package.rootURL)
+    if !headless { RuntimePrewarm.finish() }
     super.init()
     makeWebView()
+  }
+
+  public static func open(packageURL: URL, headless: Bool = false) async throws -> WasmSession {
+    let prepared = try await SlopPreparation.run {
+      try SlopLocalDocument.requireLocal(packageURL)
+      return try Prepared(package: SlopPackage(rootURL: packageURL), catalog: RuntimeCatalog.bundled())
+    }
+    if Task.isCancelled {
+      // No renderer has used storage yet. Release the lease before reporting cancellation.
+      await withCheckedContinuation { continuation in
+        prepared.storage.queue.async {
+          prepared.storage.close()
+          continuation.resume()
+        }
+      }
+      throw CancellationError()
+    }
+    return WasmSession(prepared: prepared, headless: headless)
   }
 
   public static func runtimeCapabilitiesData() throws -> Data {
@@ -63,6 +105,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     guard isReady, !closed, !closing, !capturing, !rendererDead else {
       throw failure("Document interface unavailable")
     }
+    filePicker.cancel()
     _ = try await webView.callAsyncJavaScript(
       "await globalThis.__slop.reloadInterface(); return true", arguments: [:], in: nil,
       contentWorld: .page)
@@ -89,6 +132,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
       configuration: configuration)
     WebViewBackground.set(!package.usesTransparentBackground, on: view)
     view.navigationDelegate = self
+    view.uiDelegate = self
     liveWebView = view
   }
 
@@ -166,7 +210,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
         if !headless && server == nil {
           server = try SocketServer { [weak self] request, deadline, reply in
             guard let self else {
-              reply(["ok": false, "error": "Document closed"])
+              reply(["ok": false, "error": "Document closed", "code": "unavailable"])
               return
             }
             Task { reply(await self.request(request, deadline: deadline)) }
@@ -204,29 +248,31 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
       replyHandler([:], nil)
     default:
       #if DEBUG
-        if failWritesForTesting && ["append", "checkpoint"].contains(method) {
+        if failWritesForTesting && ["append", "checkpoint", "attachments.put"].contains(method) {
           replyHandler(nil, "Injected save failure")
           return
         }
       #endif
       storage.queue.async { [storage, weak self] in
-        let result: Result<Data, Error> = Result {
+        let result: Result<StorageReply, Error> = Result {
           guard let request = try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
           else {
             throw failure("Invalid storage envelope")
           }
-          return try JSONSerialization.data(withJSONObject: storage.call(request))
+          return StorageReply(value: try storage.call(request))
         }
         DispatchQueue.main.async { [weak self] in
           #if DEBUG
-            if ["append", "checkpoint"].contains(method),
+            if ["append", "checkpoint", "attachments.put"].contains(method),
               self?.storageReplyForTesting?(method) == true
             {
               replyHandler(nil, "Injected lost storage acknowledgement")
               return
             }
           #endif
-          do { replyHandler(try JSONSerialization.jsonObject(with: result.get()), nil) } catch {
+          do { replyHandler(try result.get().value, nil) } catch let error as SlopRejection {
+            replyHandler(["rejected": error.localizedDescription], nil)
+          } catch {
             replyHandler(nil, error.localizedDescription)
           }
         }
@@ -238,11 +284,16 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     _ request: [String: Any], deadline: NativeCommandDeadline = NativeCommandDeadline()
   ) async -> [String: Any] {
     guard PlatformContract.valid(request, against: socketRequestSchema) else {
-      return ["ok": false, "error": "Invalid socket request"]
+      return ["ok": false, "error": "Invalid socket request", "code": "rejected"]
     }
     guard isReady, !closed, !closing, !capturing, !rendererDead,
       request["documentPath"] as? String == package.rootURL.path
-    else { return ["ok": false, "epoch": epoch, "error": "Document unavailable or path mismatch"] }
+    else {
+      return [
+        "ok": false, "epoch": epoch, "error": "Document unavailable or path mismatch",
+        "code": "unavailable",
+      ]
+    }
     do {
       try deadline.check()
       if request["method"] as? String == "export" {
@@ -269,6 +320,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   public func prepareClose() async throws {
     guard !closed else { return }
     guard !capturing else { throw failure("Document is exporting; try again when it finishes") }
+    filePicker.cancel()
     closing = true
     do {
       if isReady && !rendererDead {
@@ -348,6 +400,8 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   }
 
   private func destroyWebView() {
+    filePicker.cancel()
+    liveWebView?.uiDelegate = nil
     liveWebView?.stopLoading()
     liveWebView?.configuration.userContentController.removeScriptMessageHandler(
       forName: "storage", contentWorld: .page)
@@ -370,12 +424,28 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   }
 
   public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+    filePicker.cancel()
     rendererDead = true
     isReady = false
     stopDiscovery()
     failOpening(
       "The document renderer stopped. Reopen the saved document to continue. Unsaved edits could not be recovered."
     )
+  }
+
+  public func webView(
+    _ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters,
+    initiatedByFrame frame: WKFrameInfo,
+    completionHandler: @escaping @MainActor ([URL]?) -> Void
+  ) {
+    guard webView === liveWebView, allowsFileSelection, !headless, !capturing,
+      isReady, !closing, !closed, !rendererDead,
+      frame.isMainFrame, frame.securityOrigin.protocol == "slop",
+      frame.securityOrigin.host == "app", let window = webView.window,
+      window.isVisible
+    else { completionHandler(nil); return }
+    filePicker.present(in: window, multiple: parameters.allowsMultipleSelection,
+      directories: parameters.allowsDirectories, completion: completionHandler)
   }
 
   public func webView(

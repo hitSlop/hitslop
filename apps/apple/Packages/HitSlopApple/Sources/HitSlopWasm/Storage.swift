@@ -135,6 +135,18 @@ final class Storage: @unchecked Sendable {
   func call(_ args: [String: Any]) throws -> [String: Any] {
     try checkLocation()
     let method = args["method"] as? String ?? ""
+    if method == "attachments.list" { return ["files": try SlopAttachments.list(in: root)] }
+    if method == "attachments.read" {
+      guard let id = args["attachmentID"] as? String else { throw failure("Missing attachment ID") }
+      return ["bytes": try SlopAttachments.read(id, in: root).base64EncodedString()]
+    }
+    if method == "attachments.put" {
+      guard ownership != nil, let encoded = args["bytes"] as? String,
+        encoded.utf8.count <= 13981016, let data = Data(base64Encoded: encoded) else {
+        throw failure("Invalid attachment bytes")
+      }
+      return try SlopAttachments.put(data, in: root)
+    }
     if method == "theme.load" || method == "theme.save" {
       let url = root.appendingPathComponent("state/theme.json")
       try safeFile(url, optional: true)

@@ -21,6 +21,99 @@
           },
           "method": {
             "type": "string",
+            "const": "attachments.list"
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "id",
+          "documentPath",
+          "method",
+          "attachmentID"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "documentPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "method": {
+            "type": "string",
+            "const": "attachments.read"
+          },
+          "attachmentID": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "minLength": 64,
+            "maxLength": 64
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "id",
+          "documentPath",
+          "epoch",
+          "method",
+          "bytes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "documentPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "epoch": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "method": {
+            "type": "string",
+            "const": "attachments.put"
+          },
+          "bytes": {
+            "type": "string",
+            "maxLength": 13981016
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "id",
+          "documentPath",
+          "method"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "documentPath": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "method": {
+            "type": "string",
             "const": "theme.get"
           }
         },
@@ -309,6 +402,15 @@
       },
       "error": {
         "type": "string"
+      },
+      "code": {
+        "enum": [
+          "rejected",
+          "session_changed",
+          "closing",
+          "unavailable",
+          "failed"
+        ]
       }
     },
     "additionalProperties": false

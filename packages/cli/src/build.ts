@@ -9,15 +9,15 @@ import { createRequire } from "node:module";
 import identity from "@hitslop/document/identity";
 export const cliRoot = fileURLToPath(new URL("../", import.meta.url));
 export const runtimeDirectory = join(cliRoot, "runtimes", String(identity.runtimeContract));
-const adapters = new Set(["document.ts", "handles.ts", "bind-text.ts", "capture.ts"]);
+const adapters = new Set(["document.ts", "handles.ts", "bind-text.ts", "bind-value.ts", "capture.ts"]);
 export const runtimePlugin: Plugin = {
   name: "host-runtime",
   setup(b) {
     b.onResolve({ filter: /^(loro-crdt|@hitslop\/document\/runtime)(\/.*)?$/ }, (args) => {
       throw new Error(`App code cannot import engine ${args.path}; use the document SDK`);
     });
-    b.onResolve({ filter: /^(\.\/|@hitslop\/document\/capture)/ }, (args) => {
-      if (args.path === "@hitslop/document/capture")
+    b.onResolve({ filter: /^(\.\/|@hitslop\/document\/(capture|attachments))/ }, (args) => {
+      if (["@hitslop/document/capture", "@hitslop/document/attachments"].includes(args.path))
         return { path: "/__runtime__/index.js", external: true };
       if (
         /\/(?:packages\/document|@hitslop\/document)\/src\//.test(args.importer) &&

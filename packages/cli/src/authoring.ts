@@ -81,7 +81,7 @@ export async function runAuthoring(
           headers: {
             "Cache-Control": "no-store",
             "Content-Security-Policy":
-              "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'",
+              "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https: blob:; media-src 'self' https: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self'",
           },
         });
       },

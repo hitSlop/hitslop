@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.v1.json",
   "include": [
     "quick-checklist/**/*",
-    "small-expenses/**/*"
+    "small-expenses/**/*",
+    "soma-amp/**/*"
   ]
 }

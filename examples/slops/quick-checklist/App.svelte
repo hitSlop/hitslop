@@ -13,13 +13,13 @@
   import RotateCcw from "@lucide/svelte/icons/rotate-ccw";
   import schema from "./schema";
 
-  const document = useDocument(schema);
+  const doc = useDocument(schema);
   let activeView = $state<"tasks" | "filed">("tasks");
   let draft = $state("");
   let composer = $state<HTMLInputElement>();
   let notice = $state("");
-  const visible = $derived(document.current.tasks.filter(task => !task.archived));
-  const filed = $derived(document.current.tasks.filter(task => task.archived));
+  const visible = $derived(doc.current.tasks.filter(task => !task.archived));
+  const filed = $derived(doc.current.tasks.filter(task => task.archived));
   const finished = $derived(visible.filter(task => task.done).length);
   const ratio = $derived(visible.length ? finished / visible.length * 100 : 0);
   const fill = new Tween(untrack(() => ratio), { duration: 280, easing: cubicOut });
@@ -38,22 +38,22 @@
 
   function addTask() {
     const text = draft.trim(); if (!text) return;
-    document.fields.tasks.insert({text, done:false, archived:false});
+    doc.fields.tasks.insert({text, done:false, archived:false});
     draft = ""; composer?.focus();
   }
   function move(id: string, direction: -1 | 1) {
     const index = visible.findIndex(task => task.$id === id);
     const neighbor = visible[index + direction]; if (!neighbor) return;
-    document.fields.tasks.move(id, direction === -1 ? {before:neighbor.$id} : {after:neighbor.$id});
+    doc.fields.tasks.move(id, direction === -1 ? {before:neighbor.$id} : {after:neighbor.$id});
   }
-  function remove(id: string) { document.fields.tasks.remove(id); notice = "Task removed."; composer?.focus(); }
+  function remove(id: string) { doc.fields.tasks.remove(id); notice = "Task removed."; composer?.focus(); }
   function fileFinished() {
-    const ids = visible.filter(task => task.done).map(task => task.$id);
-    document.transaction(tx => { for (const id of ids) tx.fields.tasks.item(id).archived.set(true); });
-    notice = `${ids.length} ${ids.length === 1 ? "task" : "tasks"} filed.`;
+    const done = visible.filter(task => task.done);
+    doc.change(tx => { for (const task of done) tx.at(task).archived.set(true); }, {message: "File finished tasks"});
+    notice = `${done.length} ${done.length === 1 ? "task" : "tasks"} filed.`;
   }
-  function restore(id: string) {
-    document.transaction(tx => { const task = tx.fields.tasks.item(id); task.archived.set(false); task.done.set(false); });
+  function restore(task: (typeof filed)[number]) {
+    doc.change(tx => { const row = tx.at(task); row.archived.set(false); row.done.set(false); });
     notice = "Task moved back to your list.";
   }
   function sizeToText(node: HTMLTextAreaElement, _value: string) {
@@ -73,7 +73,7 @@
 
 {/snippet}
 
-<Slop {document}>
+<Slop document={doc}>
 <main
   class="checklist-shell"
   data-slop-selection="none"
@@ -89,8 +89,8 @@
         class="checklist-title"
         aria-label="Checklist title"
         rows="1"
-        use:sizeToText={document.current.title}
-        use:bindText={document.fields.title}
+        use:sizeToText={doc.current.title}
+        use:bindText={doc.fields.title}
         placeholder="Name your list"
         data-slop-export="hide"
       ></textarea>
@@ -157,7 +157,7 @@
             >
               <Checkbox.Root
                 checked={task.done}
-                onCheckedChange={(checked) => document.fields.tasks.item(task.$id).done.set(checked)}
+                onCheckedChange={(checked) => doc.at(task).done.set(checked)}
                 aria-label={`Mark ${task.text || "untitled task"} ${task.done ? "incomplete" : "complete"}`}
               >
                 {#snippet children({ checked })}{#if checked}<Check
@@ -170,7 +170,7 @@
                 aria-label={`Task ${index + 1}`}
                 rows="1"
                 use:sizeToText={task.text}
-                use:bindText={document.fields.tasks.item(task.$id).text}
+                use:bindText={doc.at(task).text}
                 placeholder="Untitled task"
                 data-slop-export="hide"
                 onkeydown={(event) => {
@@ -224,7 +224,7 @@
           {#each filed as task (task.$id)}<div class="checklist-filed-row">
               <span>{task.text || "Untitled task"}</span><button
                 data-slop-export="hide"
-                onclick={() => restore(task.$id)}
+                onclick={() => restore(task)}
                 aria-label={`Restore ${task.text || "untitled task"}`}
                 ><RotateCcw size={16} /> Restore</button
               >
@@ -260,7 +260,7 @@
   <section class="checklist-paper" aria-label="Exported checklist">
     <div class="checklist-heading">
       <p class="checklist-eyebrow">{activeView === "filed" ? "Filed tasks" : "A little less on your mind."}</p>
-      <h1 class="checklist-title" style:white-space="pre-wrap" style:overflow-wrap="anywhere">{document.current.title || "Untitled list"}</h1>
+      <h1 class="checklist-title" style:white-space="pre-wrap" style:overflow-wrap="anywhere">{doc.current.title || "Untitled list"}</h1>
       <div class="checklist-progress"><span>{activeView === "filed" ? `${exported.length} filed` : `${exported.length - exportFinished} left to do`}</span><span>{exportFinished} / {exported.length} done</span></div>
       <div class="checklist-track"><div style:width={`${exported.length ? exportFinished / exported.length * 100 : 0}%`}></div></div>
     </div>

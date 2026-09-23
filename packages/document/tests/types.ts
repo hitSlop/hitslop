@@ -1,5 +1,6 @@
 import { defineDocument, s } from "../src/schema";
 import type { Document } from "../src/document";
+import type { SlopDocument } from "../src/store.svelte";
 const schema = defineDocument({
   title: s.text(),
   currency: s.enum(["CAD", "USD"]),
@@ -27,10 +28,10 @@ export function authoringTypes(doc: Document<typeof schema.fields.node>) {
   doc.set(schema.fields.tasks.item("id").done, "true");
   // @ts-expect-error Required values cannot be omitted
   doc.insert(schema.fields.tasks, { text: "Missing done" });
-  // @ts-expect-error Only scalar fields can be optional
   s.optional(s.text());
-  // @ts-expect-error Lists require objects
   s.list(s.string());
+  // @ts-expect-error Lists hold rows or scalars, not text
+  s.list(s.text());
 }
 
 export function handleTypes(doc: Document<typeof schema.fields.node>) {
@@ -60,4 +61,53 @@ export function handleTypes(doc: Document<typeof schema.fields.node>) {
   tasks.insert({ text: "missing values" });
   // @ts-expect-error Handle values are not readable snapshots
   tasks.item(id).done.value;
+}
+
+export function snapshotHandleTypes(doc: Document<typeof schema.fields.node>, ui: SlopDocument<typeof schema.fields.node>) {
+  const row = doc.current.tasks[0]!;
+  doc.at(row).text.replace("Emoji 😁");
+  doc.at(row).done.set(true);
+  doc.at(doc.current).currency.set("CAD");
+  ui.at(ui.current.tasks[0]!).done.set(false);
+  // @ts-expect-error Text is not a scalar, even though both project to strings.
+  doc.at(row).text.set("wrong API");
+  // @ts-expect-error Field names remain schema checked.
+  doc.at(row).dnoe.set(true);
+  // @ts-expect-error Boolean field requires a boolean.
+  doc.at(row).done.set("true");
+  // @ts-expect-error Enum variants remain checked.
+  doc.at(doc.current).currency.set("GBP");
+  // @ts-expect-error Plain objects have no snapshot provenance.
+  doc.at({ text: "new", done: false });
+  // @ts-expect-error The Svelte adapter preserves handle types.
+  ui.at(ui.current.tasks[0]!).amount.set("10");
+  doc.change(tx => {
+    tx.at(row).note.clear();
+    // @ts-expect-error Transaction handles are typed too.
+    tx.at(row).done.set(1);
+  });
+  ui.change(tx => {
+    // @ts-expect-error Svelte transactions preserve enum variants.
+    tx.at(ui.current).currency.set("GBP");
+  });
+}
+
+const nestedSchema = defineDocument({
+  detail: s.optional(s.object({ label: s.text(), code: s.string() })),
+  cells: s.record(s.object({ value: s.integer() })),
+  outline: s.tree(s.object({ title: s.text() })),
+});
+export function nestedSnapshotTypes(doc: Document<typeof nestedSchema.fields.node>) {
+  if (doc.current.detail) {
+    doc.at(doc.current.detail).label.replace("Title");
+    doc.at(doc.current.detail).code.set("ID");
+    doc.at(doc.current.detail).clear();
+    // @ts-expect-error Scalar strings keep scalar handles.
+    doc.at(doc.current.detail).code.replace("wrong");
+  }
+  doc.at(doc.current.cells).put("A1", { value: 1 });
+  doc.at(doc.current.cells.A1!).value.set(2);
+  doc.at(doc.current.outline[0]!.children[0]!).title.replace("Nested");
+  // @ts-expect-error Synthetic tree children are not stored fields.
+  doc.at(doc.current.outline[0]!).children;
 }

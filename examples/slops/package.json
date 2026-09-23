@@ -5,6 +5,8 @@
   "dependencies": {
     "@hitslop/document": "workspace:*",
     "bits-ui": "^2.19.2",
-    "svelte": "5.57.1"
+    "jszip": "3.10.1",
+    "svelte": "5.57.1",
+    "webamp": "2.3.1"
   }
 }

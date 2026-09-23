@@ -6,11 +6,12 @@ import HitSlopCore
 @MainActor public enum DocumentCommand {
   public static func run(
     method: String, url: URL, operation: Data? = nil, operations: Data? = nil,
-    themeValues: Data? = nil, themeToken: String? = nil
+    themeValues: Data? = nil, themeToken: String? = nil,
+    attachmentBytes: Data? = nil, attachmentID: String? = nil
   )
     async throws -> Data
   {
-    let mutation = ["apply", "batch", "compact", "theme.set", "theme.reset"].contains(method)
+    let mutation = ["apply", "batch", "compact", "theme.set", "theme.reset", "attachments.put"].contains(method)
     try SlopLocalDocument.requireLocal(url)
     let package = try SlopPackage(rootURL: url)
     let root = package.rootURL
@@ -30,6 +31,8 @@ import HitSlopCore
     if let themeToken { request["token"] = themeToken }
     if let operation { request["op"] = try JSONSerialization.jsonObject(with: operation) }
     if let operations { request["ops"] = try JSONSerialization.jsonObject(with: operations) }
+    if let attachmentBytes { request["bytes"] = attachmentBytes.base64EncodedString() }
+    if let attachmentID { request["attachmentID"] = attachmentID }
     // Validate before acquiring ownership or creating any document state.
     var validation = request
     if mutation { validation["epoch"] = "new-session" }
@@ -61,12 +64,12 @@ import HitSlopCore
       }
       let reply: [String: Any]
       do { reply = try await send(request, engine: engine, socket: socket) } catch {
-        throw failure(error.localizedDescription + (mutation ? retryHint(request) : ""))
+        throw failure(error.localizedDescription + (mutation ? retryHint(nil) : ""))
       }
       guard reply["ok"] as? Bool == true else {
         throw failure(
           (reply["error"] as? String ?? "Document operation failed")
-            + (mutation ? retryHint(request) : ""))
+            + (mutation ? retryHint(reply) : ""))
       }
       guard let state = reply["state"] else { throw failure("Missing document state in response") }
       let data = try JSONSerialization.data(
@@ -79,8 +82,13 @@ import HitSlopCore
     }
   }
 
-  private static func retryHint(_ request: [String: Any]) -> String {
-    "\nOutcome unknown. Run slop get before issuing another edit."
+  /// Coded refusals were never applied. Only transport loss or "failed" leaves the outcome unknown.
+  private static func retryHint(_ reply: [String: Any]?) -> String {
+    switch reply?["code"] as? String {
+    case "rejected", "unavailable": return "\nNot applied."
+    case "session_changed", "closing": return "\nNot applied. Run slop get before issuing another edit."
+    default: return "\nOutcome unknown. Run slop get before issuing another edit."
+    }
   }
 
   /// Discovery is consulted only after the caller observes a busy OS writer lock.
@@ -155,7 +163,11 @@ import HitSlopCore
 }
 enum SocketClient {
   static func call(path: String, request: Data) throws -> Data {
-    guard request.count <= 1_048_576 else { throw failure("Oversized socket request") }
+    guard request.count <= 16 * 1024 * 1024 else { throw failure("Oversized socket request") }
+    if request.count > 1_048_576 {
+      guard let value = try? JSONSerialization.jsonObject(with: request) as? [String: Any],
+        value["method"] as? String == "attachments.put" else { throw failure("Oversized socket request") }
+    }
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else { throw failure("Cannot create client socket") }
     defer { Darwin.close(fd) }

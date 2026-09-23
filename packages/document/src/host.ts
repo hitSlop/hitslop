@@ -11,6 +11,7 @@ export async function mountDocument(App: Component) {
     const [{ runtime, config, theme }, descriptor, initial] = await Promise.all([
       (async () => {
         const runtime: typeof import("./runtime-entry") = await import(url);
+        performance.mark("hitslop:runtime-imported");
         if (runtime.runtimeVersion !== "hitslop-v1")
           throw new Error("Installed document runtime mismatch");
         const [, config, theme] = await Promise.all([
@@ -36,6 +37,7 @@ export async function mountDocument(App: Component) {
             runtime.hostCall({ method: "window.resize", ...size }),
         },
       });
+    performance.mark("hitslop:prepared");
     if (config.presentation) runtime.installPresentationStage(config.presentation);
     // Open state only after every prerequisite succeeds.
     const doc = await runtime.Document.open(
@@ -43,9 +45,12 @@ export async function mountDocument(App: Component) {
       native ? new runtime.HostStore() : new runtime.MemoryStore(),
       initial,
     );
-    const session = new runtime.Session(doc, config.epoch, theme);
+    performance.mark("hitslop:document-open");
+    const attachments = runtime.configureAttachments(doc, native);
+    const session = new runtime.Session(doc, config.epoch, theme, attachments);
     let app = mount(App, { target: document.body, context: new Map([[documentContext, doc]]) });
     await tick();
+    performance.mark("hitslop:mounted");
     const capture = runtime.captureController();
     (globalThis as any).__slop = {
       reloadInterface: async () => {

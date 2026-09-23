@@ -30,8 +30,13 @@ import HitSlopRuntime
             local: { [self] in await local() },
             refreshLocal: { [self] in await localStore?.refresh() },
             recents: { [self] in await recents() },
-            create: { [self] entry in
-                do { return try await create(entry) }
+            chooseDestination: { [self] entry in
+                do { return try await destination(for: entry) }
+                catch let error as CancellationError { throw error }
+                catch { await telemetry.send(.failed(.create)); throw error }
+            },
+            create: { [self] entry, url in
+                do { return try await create(entry, at: url) }
                 catch let error as CancellationError { throw error }
                 catch { await telemetry.send(.failed(.create)); throw error }
             }
@@ -65,10 +70,14 @@ import HitSlopRuntime
         return (try? await scanner.recents(urls, templatesRoot: templatesURL)) ?? []
     }
 
-    private func create(_ entry: CatalogEntry) async throws -> URL? {
+    private func destination(for entry: CatalogEntry) async throws -> URL? {
         guard case .local(let source) = entry.source else { return nil }
         let slug = try await SlopPreparation.run { try SlopPackage(rootURL: source).manifest.slug }
-        guard let url = await chooseDestination(slug) else { return nil }
+        return await chooseDestination(slug)
+    }
+
+    private func create(_ entry: CatalogEntry, at url: URL) async throws -> URL {
+        guard case .local(let source) = entry.source else { throw CocoaError(.fileNoSuchFile) }
         let factory = DocumentFactory(templatesRoot: templatesURL)
         try await factory.createLocal(from: source, at: url)
         await SlopPreviewWriter.installExistingPreviewAsync(for: url)

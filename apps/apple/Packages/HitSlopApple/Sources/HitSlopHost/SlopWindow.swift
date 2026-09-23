@@ -82,38 +82,6 @@ private final class ShapedView: HoverView {
   }
 }
 
-@MainActor final class SlopToolbarDragHandleView: NSImageView {
-  var onDrag: (NSEvent) -> Void
-
-  init(onDrag: @escaping (NSEvent) -> Void) {
-    self.onDrag = onDrag
-    super.init(frame: .zero)
-    image = NSImage(
-      systemSymbolName: "circle.grid.3x3.fill", accessibilityDescription: "Drag window")?
-      .withSymbolConfiguration(.init(pointSize: 8, weight: .medium))
-    imageScaling = .scaleProportionallyDown
-    contentTintColor = .secondaryLabelColor
-    setAccessibilityElement(true)
-    setAccessibilityLabel("Drag window")
-  }
-
-  required init?(coder: NSCoder) { nil }
-  override func resetCursorRects() {
-    super.resetCursorRects()
-    addCursorRect(bounds, cursor: .openHand)
-  }
-  override func mouseDown(with event: NSEvent) { onDrag(event) }
-}
-
-private struct ToolbarDragHandle: NSViewRepresentable {
-  let onDrag: (NSEvent) -> Void
-
-  func makeNSView(context: Context) -> SlopToolbarDragHandleView {
-    SlopToolbarDragHandleView(onDrag: onDrag)
-  }
-  func updateNSView(_ view: SlopToolbarDragHandleView, context: Context) { view.onDrag = onDrag }
-}
-
 @MainActor enum SlopDocumentAssetRefreshQueue {
   private struct Job {
     let snapshot: SlopRenderSnapshot
@@ -210,8 +178,10 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   private var reportedSaveFailure = false
   public var onRuntimeFailure: ((String) -> Void)?
   private let opened: SlopOpenedDocument
-  private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?,
-    hideWork: DispatchWorkItem?
+  private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?
+  private var toolbarMenuTracking = false
+  private var toolbarInteracting = false
+  private var toolbarVisibility = SlopToolbarVisibility()
   private var failedOverlay: NSHostingView<FailureOverlay>?
   private var presentedRuntimeError: String?
   private var documentAttention: NSPanel?
@@ -240,7 +210,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
 
   public static func open(packageURL: URL, presentsWindow: Bool = false) async throws -> SlopDocumentWindowController {
     let started = ContinuousClock.now
-    let progress = presentsWindow ? SlopOpeningProgress() : nil
+    let progress = presentsWindow ? SlopOpeningProgress(started: started) : nil
     let key = packageURL.standardizedFileURL
     if let progress { preparingProgress[key] = progress }
     defer { if preparingProgress[key] === progress { preparingProgress[key] = nil } }
@@ -281,6 +251,9 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     self.opened = opened
     self.packageURL = opened.presentedURL
     session = opened.session
+    // Start WebKit before building native chrome; bridge messages arrive only
+    // after this initializer returns to the run loop.
+    session.load()
     SlopRenderer.installCLIExport(on: session)
     let windowMask = try SlopWindowMask(package: session.package)
     let spec = session.package.manifest.presentation
@@ -289,7 +262,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
       contentRect: NSRect(origin: .zero, size: size),
       styleMask: slopDocumentWindowStyleMask(resizable: session.package.isResizable),
       backing: .buffered, defer: false)
-    window.title = session.package.manifest.title
+    window.title = SlopDocumentIdentity(url: opened.presentedURL).filename
     window.minSize = NSSize(width: 240, height: 180)
     window.isOpaque = false
     window.backgroundColor = .clear
@@ -297,7 +270,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     window.isReleasedWhenClosed = false
     window.tabbingMode = .disallowed
     window.representedURL = opened.presentedURL
-    window.miniwindowTitle = session.package.manifest.title
+    window.miniwindowTitle = window.title
     window.miniwindowImage = NSImage(contentsOf: session.package.iconURL)
     if session.package.shape == .ellipse, spec.width == spec.height {
       window.contentAspectRatio = NSSize(width: 1, height: 1)
@@ -311,13 +284,19 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     super.init(window: window)
     window.delegate = self
     session.delegate = self
-    container.changed = { [weak self] in $0 ? self?.showToolbar() : self?.scheduleHide() }
-    setupToolbar()
+    container.changed = { [weak self] _ in self?.refreshToolbarHover() }
+    SlopToolbarPointerSampler.shared.add(self, window: window) { [weak self] point, front in
+      self?.refreshToolbarHover(point: point, front: front)
+    }
     SlopDocumentAssetRefreshQueue.invalidate(self.packageURL)
-    SlopPreviewWriter.installExistingPreview(for: session.package)
     startLoading()
     recordStartup("native-prepared")
-    session.load()
+    // Finder icon metadata is cosmetic; keep its disk writes off the opening path.
+    Task { @MainActor [weak self, package = session.package] in
+      await self?.waitForPresentation()
+      guard self?.isContentReady == true else { return }
+      SlopPreviewWriter.installExistingPreview(for: package)
+    }
   }
   required init?(coder: NSCoder) { nil }
 
@@ -328,6 +307,14 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
 
   public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {
     recordStartup("runtime-ready")
+    #if DEBUG
+    if ProcessInfo.processInfo.environment["HITSLOP_STARTUP_TIMINGS"] == "1" {
+      // Page-relative milliseconds for the hitslop:* marks recorded by mountDocument.
+      session.webView.evaluateJavaScript(
+        "JSON.stringify(performance.getEntriesByType('mark').map(e => [e.name, Math.round(e.startTime)]))"
+      ) { result, _ in print("[hitSlop startup] page \(result ?? "")") }
+    }
+    #endif
     // The bridge is ready before WebKit has necessarily painted. The loading
     // task owns the visual handoff and the coordinator's ready notification.
   }
@@ -354,29 +341,26 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
       do {
         try await session.waitUntilReady()
         try Task.checkCancellation()
-        guard let view, session.isReady else { return }
-        // Poll from native so cancelling an open does not retain a WebView in a
-        // long-lived JavaScript font promise. Layout starts newly mounted fonts.
+        guard view != nil, session.isReady else { return }
+        // Each call is bounded so cancelling an open never retains the WebView in a
+        // long-lived font promise. Layout starts newly mounted fonts.
         let deadline = ContinuousClock.now.advanced(by: .seconds(15))
-        while try await view.evaluateJavaScript(
-          "document.body.getBoundingClientRect(); document.fonts.status === 'loaded'") as? Bool != true {
+        while true {
+          guard let current = view else { return }
+          let loaded = try await current.callAsyncJavaScript("""
+            document.body.getBoundingClientRect();
+            await Promise.race([document.fonts.ready, new Promise(resolve => setTimeout(resolve, 250))]);
+            return document.fonts.status === 'loaded';
+            """, arguments: [:], in: nil, contentWorld: .page) as? Bool == true
           try Task.checkCancellation()
+          if loaded { break }
           guard ContinuousClock.now < deadline else {
             throw SlopPackageError.invalid("Document fonts did not become ready")
           }
-          try await Task.sleep(for: .milliseconds(16))
         }
-        try Task.checkCancellation()
-        _ = try await view.callAsyncJavaScript("""
-          await new Promise(resolve => {
-            // Occluded/minimized WebViews may suspend animation frames.
-            const timeout = setTimeout(resolve, 250);
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-              clearTimeout(timeout); resolve();
-            }));
-          });
-          return true;
-          """, arguments: [:], in: nil, contentWorld: .page)
+        // The runtime has mounted and fonts have settled. Let the visible window paint
+        // normally instead of waiting for animation frames in an ordered-out WebView.
+        self?.recordStartup("fonts-ready")
         try Task.checkCancellation()
         guard let self, self.isLoading else { return }
         self.isContentReady = true
@@ -409,12 +393,15 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
 
   public override func showWindow(_ sender: Any?) {
     presentationRequested = true
-    if isContentReady || presentedRuntimeError != nil { revealReadyWindow() }
-    else { showOpeningProgress() }
+    if isContentReady || presentedRuntimeError != nil {
+      openingProgress?.finish()
+      openingProgress = nil
+      revealReadyWindow()
+    } else { showOpeningProgress() }
   }
 
   private func showOpeningProgress() {
-    if openingProgress == nil { openingProgress = SlopOpeningProgress() }
+    if openingProgress == nil { openingProgress = SlopOpeningProgress(started: startupStarted) }
     openingProgress?.onCancel = { [weak self] in
       self?.loadingTask?.cancel()
       self?.request(.close)
@@ -533,8 +520,9 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   }
 
   private func setupToolbar() {
-    let panel = NSPanel(
-      contentRect: NSRect(x: 0, y: 0, width: 388, height: 44),
+    let frame = slopToolbarFrame(document: window?.frame ?? .zero, visible: window?.screen?.visibleFrame)
+    let panel = SlopToolbarPanel(
+      contentRect: frame,
       styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
     panel.isOpaque = false
     panel.backgroundColor = .clear
@@ -544,22 +532,34 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     panel.isReleasedWhenClosed = false
     panel.isExcludedFromWindowsMenu = true
     let tracking = HoverView(
-      frame: panel.contentView?.bounds ?? NSRect(x: 0, y: 0, width: 388, height: 44))
+      frame: panel.contentView?.bounds ?? NSRect(origin: .zero, size: frame.size))
     panel.contentView = tracking
     let host = NSHostingView(rootView: toolbarView())
     host.frame = tracking.bounds
     host.autoresizingMask = [.width, .height]
     tracking.addSubview(host)
-    tracking.changed = { [weak self] in
-      if $0 { self?.hideWork?.cancel() } else { self?.scheduleHide() }
+    tracking.changed = { [weak self] _ in
+      self?.refreshToolbarHover()
     }
     window?.addChildWindow(panel, ordered: .above)
     panel.orderOut(nil)
     toolbar = panel
     toolbarHost = host
+    panel.drag = { [weak self] in self?.dragWindow(with: $0) }
+    panel.interactionChanged = { [weak self] active in
+      self?.toolbarInteracting = active
+      self?.refreshToolbarHover()
+    }
   }
   private func toolbarView() -> SlopToolbar {
     SlopToolbar(
+      identity: SlopDocumentIdentity(url: packageURL),
+      menuTrackingChanged: { [weak self] tracking in
+        guard let self else { return }
+        guard !tracking || toolbar?.isVisible == true else { return }
+        toolbarMenuTracking = tracking
+        refreshToolbarHover()
+      },
       drag: { [weak self] event in self?.dragWindow(with: event) }, pinned: isPinned,
       commandsEnabled: commandsEnabled && isContentReady, close: { [weak self] in self?.request(.close) },
       minimize: { [weak self] in self?.miniaturizeFromToolbar() },
@@ -572,42 +572,52 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
       openEditor: { [weak self] url in self?.request(.openEditor(url)) })
   }
   private func dragWindow(with event: NSEvent) {
-    hideWork?.cancel()
     window?.performDrag(with: event)
     showToolbar()
   }
   private func miniaturizeFromToolbar() {
-    hideWork?.cancel()
     toolbar?.orderOut(nil)
     window?.miniaturize(nil)
   }
   private func showToolbar() {
-    hideWork?.cancel()
-    guard let panel = toolbar, let window, window.isVisible, !window.isMiniaturized else { return }
-    let frame = window.frame
-    var x = frame.midX - panel.frame.width / 2
-    var y = frame.maxY + 8
-    if let visible = window.screen?.visibleFrame {
-      x = min(max(x, visible.minX + 8), visible.maxX - panel.frame.width - 8)
-      if y + panel.frame.height > visible.maxY { y = frame.maxY - panel.frame.height - 10 }
-    }
-    panel.setFrameOrigin(NSPoint(x: x, y: y))
-    panel.orderFront(nil)
+    guard let window, window.isVisible, !window.isMiniaturized else { return }
+    if toolbar == nil { setupToolbar() }
+    guard let panel = toolbar else { return }
+    panel.setFrame(slopToolbarFrame(document: window.frame, visible: window.screen?.visibleFrame), display: true)
+    panel.orderFrontRegardless()
   }
-  private func scheduleHide() {
-    hideWork?.cancel()
-    let work = DispatchWorkItem { [weak self] in
-      guard let self else { return }
-      let point = NSEvent.mouseLocation
-      if self.window?.frame.contains(point) != true, self.toolbar?.frame.contains(point) != true {
-        self.toolbar?.orderOut(nil)
-      }
+
+  func refreshToolbarHover(point: NSPoint = NSEvent.mouseLocation, front: Int? = nil) {
+    guard let window else { return }
+    guard window.isVisible, !window.isMiniaturized, window.isOnActiveSpace, !NSApp.isHidden, !isLoading else {
+      toolbarVisibility = SlopToolbarVisibility()
+      toolbar?.orderOut(nil)
+      return
     }
-    hideWork = work
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.65, execute: work)
+    let front = front ?? NSWindow.windowNumber(at: point, belowWindowWithWindowNumber: 0)
+    let overDocument: Bool
+    if front == window.windowNumber, let shaped = window.contentView as? ShapedView {
+      let local = shaped.convert(window.convertPoint(fromScreen: point), from: nil)
+      overDocument = shaped.windowMask.contains(local, in: shaped.bounds)
+    } else { overDocument = false }
+    let toolbarFrame = toolbar?.frame ?? .zero
+    let overToolbar = (toolbar?.isVisible == true) && front == toolbar?.windowNumber
+    let gap = NSRect(x: max(window.frame.minX, toolbarFrame.minX), y: window.frame.maxY,
+                     width: max(0, min(window.frame.maxX, toolbarFrame.maxX) - max(window.frame.minX, toolbarFrame.minX)),
+                     height: max(0, toolbarFrame.minY - window.frame.maxY))
+    let nearToolbar = (toolbar?.isVisible == true) &&
+      (toolbarFrame.insetBy(dx: -4, dy: -4).contains(point) || gap.contains(point)) &&
+      (front == 0 || front == window.windowNumber || front == toolbar?.windowNumber)
+    let show = toolbarVisibility.shouldShow(
+      inside: overDocument || overToolbar || nearToolbar,
+      interacting: toolbarMenuTracking || toolbarInteracting,
+      visible: (toolbar?.isVisible == true), now: ProcessInfo.processInfo.systemUptime)
+    if show {
+      if !(toolbar?.isVisible == true) { showToolbar() }
+    } else { toolbar?.orderOut(nil) }
   }
   public var isPinned: Bool { window?.level == .floating }
-  public var documentTitle: String { window?.title ?? session.package.manifest.title }
+  public var documentTitle: String { window?.title ?? SlopDocumentIdentity(url: packageURL).filename }
   public var dockMenuImage: NSImage {
     slopDockMenuImage(iconURL: session.package.iconURL, fallbackURL: packageURL)
   }
@@ -827,10 +837,10 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     if toolbar?.isVisible == true { showToolbar() }
   }
   public func windowWillMiniaturize(_ notification: Notification) {
-    hideWork?.cancel()
     toolbar?.orderOut(nil)
   }
   public func windowWillClose(_ notification: Notification) {
+    SlopToolbarPointerSampler.shared.remove(self)
     isContentReady = false
     stopLoading()
     documentAttention?.close()
@@ -858,48 +868,6 @@ private struct FailureOverlay: View {
       Text(message).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
       Button("Reopen saved document", action: retry).buttonStyle(.borderedProminent)
     }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity).background(.regularMaterial)
-  }
-}
-
-private struct SlopToolbar: View {
-  let drag: (NSEvent) -> Void
-  let pinned: Bool, commandsEnabled: Bool, close: () -> Void, minimize: () -> Void, pin: () -> Void,
-    duplicate: () -> Void, png: () -> Void, pdf: () -> Void, reveal: () -> Void,
-    copyPath: () -> Void
-  let editors: [(String, URL)], openEditor: (URL) -> Void
-  var body: some View {
-    HStack(spacing: 3) {
-      ToolbarDragHandle(onDrag: drag).frame(width: 20, height: 25).help("Drag window")
-      Divider().frame(height: 16)
-      icon("xmark", "Close", close)
-      icon("minus", "Minimize", minimize)
-      icon(pinned ? "pin.fill" : "pin", pinned ? "Unpin" : "Always on Top", pin).disabled(
-        !commandsEnabled)
-      Divider().frame(height: 16)
-      Group {
-        icon("doc.on.doc", "Duplicate", duplicate)
-        Menu {
-          Button("Export PNG…", action: png)
-          Button("Export PDF…", action: pdf)
-        } label: {
-          Image(systemName: "arrow.down.doc").frame(width: 25, height: 25)
-        }.menuStyle(.borderlessButton).fixedSize().help("Export")
-        Menu {
-          ForEach(editors, id: \.1) { editor in Button(editor.0) { openEditor(editor.1) } }
-          if !editors.isEmpty { Divider() }
-          Button("Reveal in Finder", action: reveal)
-          Button("Copy Path", action: copyPath)
-        } label: {
-          Image(systemName: "arrow.up.forward.square").frame(width: 25, height: 25)
-        }.menuStyle(.borderlessButton).fixedSize().help("Open in")
-      }.disabled(!commandsEnabled)
-    }.padding(.horizontal, 9).padding(.vertical, 6).background(.ultraThinMaterial, in: Capsule())
-      .overlay(Capsule().stroke(.white.opacity(0.25))).padding(2)
-  }
-  private func icon(_ name: String, _ help: String, _ action: @escaping () -> Void) -> some View {
-    Button(action: action) {
-      Image(systemName: name).frame(width: 25, height: 25).contentShape(Rectangle())
-    }.buttonStyle(.plain).help(help)
   }
 }
 
