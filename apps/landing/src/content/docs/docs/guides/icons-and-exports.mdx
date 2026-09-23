@@ -10,10 +10,10 @@ The editor, Finder artwork, and exported document should feel like the same obje
 `<Slop>` accepts optional `icon` and `exportView` snippets:
 
 ```svelte
-<Slop document={doc}>
+<Slop>
   <main class="note-editor">
     <input aria-label="Title" use:bindText={doc.fields.title} />
-    <button data-slop-export="hide" onclick={addItem}>Add item</button>
+    <button onclick={addItem}>Add item</button>
   </main>
   {#snippet icon()}
     <div class="note-icon">{doc.current.tasks.length}</div>
@@ -27,13 +27,13 @@ The editor, Finder artwork, and exported document should feel like the same obje
 </Slop>
 ```
 
-Use your app's existing document facade; never open a second store for capture. Snippets mount lazily, so they should derive content from current state, not keep a private copy of it. A capture error is reported and the editor is restored.
+Use your app's existing document facade; never open a second store for capture. Snippets mount lazily, so they should derive content from current state, not keep a private copy of it. A rendering failure in an export or icon snippet rejects that capture without replacing the editor or reporting an application-render error. Capture restores the editor and clears the snippet's failure state; a later attempt renders it again. Editor rendering failures still use the native application-error recovery path.
 
 ## Design an icon at 512 × 512
 
-The native icon canvas is 512 × 512. Give the design breathing room; for example, a centered tile around 456 pixels wide. Prefer a recognizable silhouette and a few strong marks over tiny text or a screenshot of every control. The icon may summarize current content. Keep its theme tokens aligned with the editor.
+The native icon canvas is 512 × 512, and `<Slop>` centers the snippet in it. Give the design breathing room; for example, a tile around 456 pixels wide. Prefer a recognizable silhouette and a few strong marks over tiny text or a screenshot of every control. The icon may summarize current content. Keep its theme tokens aligned with the editor.
 
-Give the root of the icon snippet explicit, equal dimensions:
+The artwork can be rectangular or another shape; only the canvas must be square. Size the artwork to fit within the canvas, including its shadows. For example, a square tile can use:
 
 ```css
 .note-icon {

@@ -48,6 +48,49 @@ test("init creates a buildable v1 source and refuses to overwrite it", async () 
   }
 }, 60000);
 
+test("Slop and child components share the host document", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".v1-build-test-"));
+  const source = join(root, "source");
+  const renderer = join(process.cwd(), "apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native");
+  try {
+    await cp("examples/slops/quick-checklist", source, { recursive: true });
+    await writeFile(join(source, "Child.svelte"), `
+      <script lang="ts">
+        import {getContext} from "svelte";
+        import {documentContext, useDocument} from "@hitslop/document/svelte";
+        import schema from "./schema";
+        const doc = useDocument(schema);
+        if (doc.fields !== getContext(documentContext).fields) throw new Error("Child opened another document");
+      </script>
+      <h1>{doc.current.title}</h1>
+    `);
+    await writeFile(join(source, "App.svelte"), `
+      <script lang="ts">
+        import {mount} from "svelte";
+        import {Slop} from "@hitslop/document/svelte";
+        import Child from "./Child.svelte";
+        let missingHost = "";
+        try { mount(Slop, {target: document.createElement("div"), props: {children: () => {}}, context: new Map()}); }
+        catch (error) { missingHost = String(error); }
+        if (!missingHost.includes("Slop requires a host document"))
+          throw new Error("Missing host document was not diagnosed: " + missingHost);
+      </script>
+      <Slop>
+        <Child />
+        {#snippet exportView()}<Child />{/snippet}
+        {#snippet icon()}<Child />{/snippet}
+      </Slop>
+    `);
+    const output = await buildTemplate(source, renderer, join(root, "probe.slop"));
+    for (const name of ["Preview", "Icon"]) {
+      const png = await readFile(join(output, `QuickLook/${name}.png`));
+      expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 90000);
+
 test("native template assets are complete before replacing a registered master", async () => {
   const root = await mkdtemp(join(process.cwd(), ".v1-build-test-"));
   const renderer = join(
@@ -94,7 +137,7 @@ test("native template assets are complete before replacing a registered master",
         const document=useDocument(schema);
         function broken(){throw new Error("Authored icon failed");}
       </script>
-      <Slop {document}>
+      <Slop>
         <h1>{document.current.title}</h1>
         {#snippet icon()}<span>{broken()}</span>{/snippet}
       </Slop>

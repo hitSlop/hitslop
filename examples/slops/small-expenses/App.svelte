@@ -31,7 +31,7 @@
   }
   function settle() { doc.change(tx=>{for(const id of selectedIDs)tx.fields.items.item(id).settled.set(true)},{message:"Settle expenses"});selected=[]; }
 </script>
-<Slop document={doc}>
+<Slop>
 <main class="expenses-paper">
   <div class="expenses-eyebrow">Small expenses</div>
   <input class="expenses-title" aria-label="List title" use:bindText={title} />

@@ -97,8 +97,9 @@ and PDF behavior.
   Read [references/css.md](references/css.md) for the authoring pattern.
 - Owners change declared tokens through `slop theme set/reset`. Overrides live in
   `state/theme.json`; never write arbitrary CSS or `stores/theme.css`.
-- Mark editing-only UI with `data-slop-export="hide"`; keep exportable content
-  in normal flow.
+- Keep exportable content in normal flow. Without an `exportView`, mark
+  editing-only UI with `data-slop-export="hide"`; with one, the editor is never
+  captured.
 - Make each slop purpose-specific. Shared SDK patterns must not make unrelated
   objects look like one reskinned dashboard.
 

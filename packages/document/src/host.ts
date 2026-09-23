@@ -1,5 +1,5 @@
 import { mount, unmount, tick, type Component } from "svelte";
-import { documentContext } from "./store.svelte";
+import { documentContext } from "./document-context";
 import { fromDescriptor } from "./schema";
 /** App code mounts the view. The host owns the document implementation. */
 export async function mountDocument(App: Component) {
@@ -30,6 +30,11 @@ export async function mountDocument(App: Component) {
         return r.json();
       }),
     ]);
+    // The disposable preview derives the stage from the manifest, as the native host does.
+    if (!native) {
+      const manifest = await fetch("/manifest.json").then((r) => (r.ok ? r.json() : undefined));
+      if (manifest?.presentation) config.presentation = runtime.presentationStage(manifest.presentation);
+    }
     if (native)
       (globalThis as any).slop = Object.freeze({
         window: {
@@ -55,16 +60,16 @@ export async function mountDocument(App: Component) {
     (globalThis as any).__slop = {
       reloadInterface: async () => {
         await session.flush();
-        let failure: unknown;
+        let failure: { error: unknown } | undefined;
         const failed = (event: Event) => {
-          failure = (event as CustomEvent).detail;
+          failure = { error: (event as CustomEvent).detail };
         };
         document.addEventListener("hitslop:render-error", failed);
         try {
           await unmount(app);
           app = mount(App, { target: document.body, context: new Map([[documentContext, doc]]) });
           await tick();
-          if (failure !== undefined) throw failure;
+          if (failure) throw failure.error;
           if (native) await runtime.hostCall({ method: "runtimeRecovered" });
         } finally {
           document.removeEventListener("hitslop:render-error", failed);

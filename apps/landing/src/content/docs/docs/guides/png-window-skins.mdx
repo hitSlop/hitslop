@@ -37,10 +37,12 @@ at the skin's fixed size.
 
 ## Align the WebView to the skin
 
-The host makes the page transparent and viewport-sized. Wrap the app in `<Slop>`
+The host draws the PNG behind the page, supplies window sizing, and overrides
+ordinary `html`/`body` backgrounds with transparency. Avoid overriding that
+transparency with more-specific or `!important` page backgrounds. Wrap the app in `<Slop>`
 or mark a framework-neutral root with `data-hitslop-root`; its mount ancestors
-fill the viewport too. No sizing/transparency reset or duplicated pixel constants
-are needed. Align controls with opaque areas of the PNG using ordinary CSS.
+fill the window too. No sizing/transparency reset or duplicated pixel constants
+are needed; use `100%` or `--slop-width`/`--slop-height`. Align controls with opaque areas of the PNG using ordinary CSS.
 
 The native host exposes initial dimensions as `--slop-width` and `--slop-height`, and
 sets `data-slop-presentation="skin"`. These layout rules are disabled for capture.

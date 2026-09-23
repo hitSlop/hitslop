@@ -97,4 +97,4 @@ When using `Dialog.Portal`:
 - Mounts outside normal DOM flow into `<body>`.
 - Style the `[data-dialog-overlay]` with `position: fixed; inset: 0; backdrop-filter: blur(...);`.
 - Style `[data-dialog-content]` with `position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);`.
-- Mark both with `data-slop-export="hide"` to exclude them from print/export capture.
+- Portals are body children, so a dedicated `exportView` already excludes them. Without one, mark both with `data-slop-export="hide"`.

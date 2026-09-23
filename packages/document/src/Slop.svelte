@@ -1,25 +1,26 @@
 <script lang="ts">
-  import { onMount, setContext, untrack, type Snippet } from "svelte";
+  import { getContext, onMount, type Snippet } from "svelte";
   import { capture } from "./capture";
   import CaptureTarget from "./CaptureTarget.svelte";
-  import { slopContext, type SlopDocument } from "./slop-context";
+  import { documentContext } from "./document-context";
+  import type { Document } from "./document";
+  import type { ObjectNode } from "./schema";
 
-  let { document, children, exportView, icon }: {
-    document: SlopDocument;
+  let { children, exportView, icon }: {
     children: Snippet;
     exportView?: Snippet;
     icon?: Snippet;
   } = $props();
-  setContext(slopContext, untrack(() => document));
-  let renderError = $state<string>();
-  let renderFailure: unknown;
-  function assertRenderable() { if (renderFailure) throw renderFailure; }
+  const document = getContext<Document<ObjectNode>>(documentContext);
+  if (!document) throw new Error("Slop requires a host document; mount the app with mountDocument");
+  let renderFailure: { error: unknown } | undefined;
+  function assertRenderable() { if (renderFailure) throw renderFailure.error; }
+  const describe = (error: unknown) => error instanceof Error ? error.message : String(error);
   function reportRenderError(error: unknown) {
-    renderFailure = error;
+    renderFailure = { error };
     globalThis.document.dispatchEvent(new CustomEvent("hitslop:render-error", { detail: error }));
-    renderError = error instanceof Error ? error.message : String(error);
     const storage = (globalThis as any).webkit?.messageHandlers?.storage;
-    void storage?.postMessage({ method: "runtimeError", kind: "application", error: (error instanceof Error ? error.stack ?? renderError : renderError).slice(0, 4096) }).catch(() => {});
+    void storage?.postMessage({ method: "runtimeError", kind: "application", error: (error instanceof Error ? error.stack ?? error.message : String(error)).slice(0, 4096) }).catch(() => {});
   }
   onMount(() => capture.onPrepare(async () => {
     assertRenderable();
@@ -28,12 +29,13 @@
 </script>
 
 <svelte:boundary onerror={reportRenderError}>
-  <div data-hitslop-root style:height="100%" style:min-height="0">
+  <div data-hitslop-root>
     {@render children()}
   </div>
-  {#if exportView}<CaptureTarget kind="export" {assertRenderable}>{@render exportView()}</CaptureTarget>{/if}
-  {#if icon}<CaptureTarget kind="icon" {assertRenderable}>{@render icon()}</CaptureTarget>{/if}
-  {#snippet failed()}
-    <p role="alert">Could not render this document: {renderError}</p>
+  {#snippet failed(error)}
+    <p role="alert">Could not render this document: {describe(error)}</p>
   {/snippet}
 </svelte:boundary>
+<!-- Capture snippets fail only their capture, never the editor. -->
+{#if exportView}<CaptureTarget kind="export" {assertRenderable} content={exportView} />{/if}
+{#if icon}<CaptureTarget kind="icon" {assertRenderable} content={icon} />{/if}

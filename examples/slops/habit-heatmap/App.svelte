@@ -123,7 +123,7 @@
   </div>
 {/snippet}
 
-<Slop document={doc}>
+<Slop>
   <main class="habit-shell">
     <header class="habit-header">
       <div><p class="habit-eyebrow">Daily practice / 12 weeks</p><h1>Keep the thread</h1></div>
@@ -164,8 +164,8 @@
   </main>
   <Dialog.Root bind:open={dialogOpen}>
     <Dialog.Portal>
-      <Dialog.Overlay class="habit-overlay" data-slop-export="hide" />
-      <Dialog.Content onCloseAutoFocus={restoreEditorFocus} class="habit-dialog" data-slop-export="hide">
+      <Dialog.Overlay class="habit-overlay" />
+      <Dialog.Content onCloseAutoFocus={restoreEditorFocus} class="habit-dialog">
         <form onsubmit={event => { event.preventDefault(); save(); }}>
           <Dialog.Title>{editingID ? "Keep it yours" : "Start a small habit"}</Dialog.Title>
           <Dialog.Description class="habit-sr-only">Choose a name and color for this habit.</Dialog.Description>
@@ -184,8 +184,8 @@
         {/if}
         <AlertDialog.Root bind:open={removeOpen}>
           <AlertDialog.Portal>
-            <AlertDialog.Overlay class="habit-overlay habit-remove-overlay" data-slop-export="hide" />
-            <AlertDialog.Content class="habit-dialog habit-confirm" data-slop-export="hide"
+            <AlertDialog.Overlay class="habit-overlay habit-remove-overlay" />
+            <AlertDialog.Content class="habit-dialog habit-confirm"
               onCloseAutoFocus={event => { event.preventDefault(); if (dialogOpen) document.querySelector<HTMLElement>('.habit-remove')?.focus(); }}>
               <AlertDialog.Title>Remove {editingHabit?.name || "this habit"}?</AlertDialog.Title>
               <AlertDialog.Description>This removes the habit and all its check-in history.</AlertDialog.Description>

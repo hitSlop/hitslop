@@ -6,6 +6,7 @@
     "@hitslop/document": "workspace:*",
     "bits-ui": "^2.19.2",
     "jszip": "3.10.1",
+    "perfect-freehand": "1.2.3",
     "svelte": "5.57.1",
     "webamp": "2.3.1"
   }

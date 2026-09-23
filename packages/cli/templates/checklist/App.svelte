@@ -21,7 +21,7 @@
     taskInputs.get(id)?.focus();
   }
 </script>
-<Slop document={doc}>
+<Slop>
 <main class="slop-paper">
   <div class="slop-eyebrow">Little checklist</div>
   <input class="slop-title" aria-label="List title" use:bindText={title} />

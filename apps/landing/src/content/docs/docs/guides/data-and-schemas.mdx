@@ -58,7 +58,7 @@ The builder validates initial values and emits `state.schema.json` and `initial.
   import schema from "./schema";
   const doc = useDocument(schema);
 </script>
-<Slop document={doc}>
+<Slop>
   <input aria-label="Title" use:bindText={doc.fields.title} />
   <input type="range" min="0" max="500" use:bindValue={doc.fields.budget} />
   {#each doc.current.tasks as task (task.$id)}
@@ -71,6 +71,8 @@ The builder validates initial values and emits `state.schema.json` and `initial.
 `doc.current` is a read-only snapshot, and unchanged rows keep their object identity between edits. `doc.at(value)` returns the schema-typed write handle for the root, a row, a nested object, a record or its object entry, or a tree node taken directly from `doc.current`; do not pass clones. `bindText` turns typing into Unicode-safe text splices and rebases composition drafts against intervening edits. It is a plain-text binding, not a collaborative rich-text editor. `bindValue` binds range, number, select and checkbox inputs; range drags preview and commit once on release, starting normal autosave.
 
 Initialize absent optional composites with `set`, and record entries with `put`. Row lists and trees can be initialized this way when absent, but existing collections must use `insert`, `remove`, and `move`. Assigning a containing object cannot replace their identities. Clear/delete explicitly before recreating a collection. Scalar lists use an empty list instead of optionality.
+
+Child components can call `useDocument(schema)` for the same document; in long lists, pass rows and handles as props instead.
 
 ## Keep row identity stable
 

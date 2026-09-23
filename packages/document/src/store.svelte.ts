@@ -3,7 +3,8 @@ import type { At, Handle } from "./handles";
 import type { Definition, ObjectNode, Value } from "./schema.ts";
 import { schemaKey } from "./schema.ts";
 import { getContext, onDestroy } from "svelte";
-export const documentContext = Symbol("hitslop.document");
+import { documentContext } from "./document-context";
+export { documentContext } from "./document-context";
 /** Handle for any object from `current`: the root, a row, a nested object, a record entry or a tree node. */
 export type { At } from "./handles";
 export type DocumentScope<N extends ObjectNode> = Scope<N>;
@@ -54,5 +55,4 @@ export function useDocument<N extends ObjectNode>(definition: Definition<N>): Sl
 export { bindText } from "./bind-text";
 export { bindValue } from "./bind-value";
 export { default as Slop } from "./Slop.svelte";
-export { useSlop } from "./slop-context";
 export type { Handle, TextHandle, RichTextHandle, ScalarHandle, InsertResult } from "./handles";

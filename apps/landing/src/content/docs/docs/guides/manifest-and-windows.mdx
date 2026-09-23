@@ -62,13 +62,16 @@ Standard windows support these options:
 | `shape` | `rounded`, `ellipse`, or `capsule` | Selects a built-in native silhouette. |
 | `background` | `transparent` | Makes the WebView background transparent for a custom HTML surface. |
 
-For a transparent window, the host supplies the page sizing and transparency
-reset. Draw the visible surface in your app. `<Slop>` (or a framework-neutral
-`data-hitslop-root` element) and its mount ancestors fill the viewport.
+The window is the stage in every mode. The host resets the page margins, and
+`<Slop>` (or a framework-neutral `data-hitslop-root` element) and its mount
+ancestors fill the window. Prefer `height: 100%`, grid, or flex inside it rather
+than repeating page sizing or using `100vh`; deliberate overrides remain possible.
+For a transparent window, draw the visible surface inside your app: the host
+overrides ordinary `html`/`body` backgrounds with transparency.
 
 The native host derives `data-slop-presentation` as `standard`, `transparent`, or `skin`
 and exposes initial dimensions through `--slop-width` and `--slop-height`.
-Opaque standard windows keep their authored layout rules.
+`slop dev` previews the window at its manifest size with the same shape or skin.
 
 Keep controls inside the visible shape and test focus, resizing, and dragging
 at the smallest size you support.

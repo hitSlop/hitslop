@@ -1,7 +1,6 @@
 <script lang="ts">
   import { Slop, useDocument, bindText } from "@hitslop/document/svelte";
-  import { capture } from "@hitslop/document/capture";
-  import { onDestroy, onMount, tick, untrack } from "svelte";
+  import { onDestroy, untrack } from "svelte";
   import { Tween, prefersReducedMotion } from "svelte/motion";
   import { cubicOut } from "svelte/easing";
   import { flip } from "svelte/animate";
@@ -28,7 +27,6 @@
     void fill.set(ratio, { duration: !initialized || prefersReducedMotion.current ? 0 : 280, delay: 0 });
     initialized = true;
   });
-  onMount(() => capture.onPrepare(async () => { await fill.set(ratio, {duration:0,delay:0}); await tick(); }));
   onDestroy(() => { void fill.set(fill.target, {duration:0,delay:0}); });
   $effect(() => { if (notice) { const timer = setTimeout(() => notice = "", 4000); return () => clearTimeout(timer); } });
   const flipMs = $derived(prefersReducedMotion.current ? 0 : 240);
@@ -73,7 +71,7 @@
 
 {/snippet}
 
-<Slop document={doc}>
+<Slop>
 <main
   class="checklist-shell"
   data-slop-selection="none"
@@ -92,7 +90,6 @@
         use:sizeToText={doc.current.title}
         use:bindText={doc.fields.title}
         placeholder="Name your list"
-        data-slop-export="hide"
       ></textarea>
       <div class="checklist-progress">
         <span aria-live="polite"
@@ -108,7 +105,6 @@
     </div>
     <form
       class="checklist-composer"
-      data-slop-export="hide"
       onsubmit={(event) => {
         event.preventDefault();
         addTask();
@@ -136,7 +132,6 @@
       <Tabs.List
         class="checklist-tabs"
         aria-label="Checklist views"
-        data-slop-export="hide"
       >
         <Tabs.Trigger value="tasks" class="checklist-tab"
           >To do <span>{visible.length}</span></Tabs.Trigger
@@ -172,7 +167,6 @@
                 use:sizeToText={task.text}
                 use:bindText={doc.at(task).text}
                 placeholder="Untitled task"
-                data-slop-export="hide"
                 onkeydown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
@@ -184,7 +178,6 @@
                 <DropdownMenu.Trigger
                   class="checklist-more"
                   aria-label={`Actions for ${task.text || "untitled task"}`}
-                  data-slop-export="hide"
                   ><Ellipsis size={19} /></DropdownMenu.Trigger
                 >
                 <DropdownMenu.Portal
@@ -192,7 +185,6 @@
                     class="checklist-menu"
                     sideOffset={5}
                     align="end"
-                    data-slop-export="hide"
                   >
                     <DropdownMenu.Item
                       disabled={index === 0}
@@ -223,7 +215,6 @@
         <div class="checklist-filed-list">
           {#each filed as task (task.$id)}<div class="checklist-filed-row">
               <span>{task.text || "Untitled task"}</span><button
-                data-slop-export="hide"
                 onclick={() => restore(task)}
                 aria-label={`Restore ${task.text || "untitled task"}`}
                 ><RotateCcw size={16} /> Restore</button
@@ -237,7 +228,7 @@
         </div>
       {/if}
     </div>
-    <div class="checklist-paper-foot" data-slop-export="hide">
+    <div class="checklist-paper-foot">
       <span
         >{activeView === "tasks"
           ? "Enter to add. Check to finish."
@@ -251,7 +242,7 @@
         >{/if}
     </div>
   </section>
-  {#if notice}<div class="checklist-notice" role="status" data-slop-export="hide">{notice}</div>{/if}
+  {#if notice}<div class="checklist-notice" role="status">{notice}</div>{/if}
 </main>
 
 {#snippet exportView()}
@@ -278,13 +269,11 @@
 
 {/snippet}
 {#snippet icon()}
-<div style="width:512px;height:512px;display:grid;place-items:center" aria-hidden="true">
-  <div class="checklist-icon-tile"><div class="checklist-icon-paper">
+<div class="checklist-icon-tile" aria-hidden="true"><div class="checklist-icon-paper">
     {#each [0, 1, 2] as index}
       <div data-complete={index < marks}><span>{#if index < marks}<Check size={32} strokeWidth={3} />{/if}</span><i></i></div>
     {/each}
   </div></div>
-</div>
 
 {/snippet}
 </Slop>

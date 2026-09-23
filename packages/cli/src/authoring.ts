@@ -1,6 +1,7 @@
 import { resolve, join, basename } from "node:path";
 import { mkdtemp, rm, cp, mkdir, readFile, writeFile, stat } from "node:fs/promises";
 import metadata from "../package.json";
+import type { SlopManifest } from "@hitslop/schema";
 import { tmpdir, homedir } from "node:os";
 import { buildProject, runtimeDirectory, cliRoot } from "./build";
 import { buildTemplate, prepareRenderer, installTemplate } from "./template";
@@ -63,16 +64,26 @@ export async function runAuthoring(
       throw new Error("CLI preview runtime is missing. Reinstall @hitslop/cli.");
     const temporary = await mkdtemp(join(tmpdir(), "hitslop-preview-"));
     const out = await buildProject(target, join(temporary, "preview.slop"));
+    const frame = previewFrame(JSON.parse(await readFile(join(out, "manifest.json"), "utf8")));
     const server = Bun.serve({
       port,
       async fetch(request) {
         const url = new URL(request.url),
           relative = decodeURIComponent(url.pathname);
+        if (relative === "/")
+          return new Response(frame, {
+            headers: {
+              "Cache-Control": "no-store",
+              "Content-Type": "text/html; charset=utf-8",
+              "Content-Security-Policy":
+                "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; frame-src 'self'",
+            },
+          });
         const runtime = relative.startsWith("/__runtime__/");
         const base = runtime ? runtimeDirectory : out;
         const path = resolve(
           base,
-          relative === "/" ? "app.html" : relative.slice(runtime ? 13 : 1),
+          relative.slice(runtime ? 13 : 1),
         );
         if (!path.startsWith(base + "/")) return new Response("Forbidden", { status: 403 });
         const file = Bun.file(path);
@@ -93,4 +104,29 @@ export async function runAuthoring(
       process.exit(0);
     });
   }
+}
+
+/** Stands in for the native window: manifest size, shape mask, and backing or skin chrome. */
+export function previewFrame(manifest: Pick<SlopManifest, "title" | "presentation">) {
+  const presentation = manifest.presentation;
+  const { width, height } = presentation;
+  const window = [`width:${width}px`, `height:${height}px`];
+  if ("skin" in presentation)
+    window.push(
+      ...["background", "-webkit-mask", "mask"].map(
+        (property) => `${property}:url("/${presentation.skin}") 0 0/100% 100% no-repeat`,
+      ),
+    );
+  else {
+    const { shape = "rounded", background, resizable = true } = presentation;
+    window.push(
+      `border-radius:${shape === "ellipse" ? "50%" : shape === "capsule" ? "9999px" : "min(22px,50%)"}`,
+    );
+    if (background !== "transparent")
+      window.push("background:Canvas", "box-shadow:0 18px 50px #0004,0 0 0 .5px #0003");
+    if (resizable) window.push("resize:both", "min-width:240px", "min-height:180px");
+    if (shape === "ellipse" && width === height) window.push("aspect-ratio:1");
+  }
+  const title = manifest.title.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${title} preview</title><style>html,body{margin:0;height:100%}body{display:grid;place-items:center;background:#e4e4e4 repeating-conic-gradient(#d2d2d2 0 25%,#e4e4e4 0 50%) 0 0/24px 24px}.window{overflow:hidden;${window.join(";")}}iframe{display:block;width:100%;height:100%;border:0}</style></head><body><div class="window"><iframe src="/app.html" title="${title}"></iframe></div></body></html>`;
 }

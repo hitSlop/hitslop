@@ -29,7 +29,6 @@ The builder emits immutable `assets/theme.css` and machine-readable defaults. Ea
 Import `./styles.css` from `main.ts`. The builder emits a separate, minified `assets/main.css`. Styles ship as ordinary CSS.
 
 ```css title="styles.css"
-html, body { margin: 0; min-height: 100%; }
 body { color: var(--slop-ink); background: var(--slop-surface); font-family: var(--slop-font); }
 .my-slop-paper { padding: clamp(1rem, 5vw, 2.5rem); }
 .my-slop-footer {
@@ -77,8 +76,8 @@ Overrides live in `state/theme.json` in a writable document. Use the CLI or an a
 
 ## Design the window and its captures
 
-Transparent and PNG-skinned apps receive the host's transparent stage and initial size variables. Wrap the interface in `<Slop>`; keep actual surface styling in your app. Use the native toolbar handle for dragging. See [PNG window skins](/docs/guides/png-window-skins/).
+Every presentation mode receives host page resets, window sizing, and initial size variables. Wrap the interface in `<Slop>` and prefer `height: 100%`, grid, or flex inside it; override the page sizing deliberately only when your layout needs it. Keep surface styling in your app. Transparent and PNG-skinned modes also override ordinary `html`/`body` backgrounds with transparency, so paint the visible surface inside the wrapper. Use the native toolbar handle for dragging. See [manifest and windows](/docs/guides/manifest-and-windows/) and [PNG window skins](/docs/guides/png-window-skins/).
 
-Dedicated `icon` and `exportView` snippets use the same current document and theme as the editor. Export layouts should use normal flow, without nested scrolling or fixed viewport heights. Mark editor-only elements `data-slop-export="hide"`. See [icons and exports](/docs/guides/icons-and-exports/) for capture sizing and behavior.
+Dedicated `icon` and `exportView` snippets use the same current document and theme as the editor. Export layouts should use normal flow, without nested scrolling or fixed viewport heights. Without an `exportView`, mark editor-only elements `data-slop-export="hide"`. See [icons and exports](/docs/guides/icons-and-exports/) for capture sizing and behavior.
 
 See [package anatomy](/docs/concepts/how-slop-files-work/) for how theme files travel with a document.

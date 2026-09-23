@@ -8,14 +8,6 @@
   font-synthesis: none;
 }
 
-html,
-body,
-#app {
-  margin: 0;
-  min-height: 100%;
-  width: 100%;
-}
-
 body {
   background: var(--slop-surface);
   color: var(--slop-ink);
@@ -55,7 +47,9 @@ button {
 
 .checklist-shell {
   position: relative;
-  height: 100vh;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
   padding: 23px 22px 18px;
   background:
@@ -101,7 +95,6 @@ button {
 }
 
 .checklist-paper {
-  height: calc(100vh - 80px);
   min-height: 0;
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
@@ -497,13 +490,10 @@ button {
   overflow-wrap: anywhere;
 }
 
-html[data-slop-capture="static"] [data-slop-export="hide"] {
-  display: none !important;
-}
-
 html[data-slop-capture="static"] .checklist-shell {
   /* WebKit's vector PDF path paints the layered gradients black. */
   background: var(--slop-surface);
+  display: block;
   height: auto;
   min-height: 100vh;
   overflow: visible;

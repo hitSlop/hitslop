@@ -244,7 +244,7 @@
   });
 </script>
 
-<Slop document={doc}>
+<Slop>
   <main class="soma-amp" class:soma-wide={visualizerOpen} aria-label="SomaAmp radio receiver">
     <div class="soma-stage" bind:this={stage}>
       {#if !receiver}<div class="soma-start"><strong>SOMA<span>AMP</span></strong><span>{status}</span></div>{/if}

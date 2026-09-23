@@ -19,7 +19,7 @@ export function initialize() {
 // Callers observe failures through initialize().
 initialize().catch(() => {});
 
-export { installPresentationStage } from "./presentation";
+export { installPresentationStage, presentationStage } from "./presentation";
 export { fromDescriptor } from "./schema";
 
 export { openTheme } from "./theme-runtime";

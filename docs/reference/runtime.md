@@ -90,6 +90,10 @@ Export destinations must be outside the source package. Capture stages output an
 
 Svelte's `<Slop>` boundary registers optional lazy export/icon snippets against the existing document. Framework-neutral targets must be direct body children. Native code consumes controller geometry and its `dedicated` flag rather than a separate DOM-marker protocol.
 
+The host supplies page margin/padding resets and window-filling page, root, and mount-ancestor sizing in every presentation mode. Sizing rules have zero specificity and are disabled during capture; the page reset remains. Transparent and skinned modes override ordinary page backgrounds, while standard mode preserves authored backgrounds. The Svelte icon target owns a transparent 512×512 canvas and centers authored artwork within it.
+
+Export and icon snippets have separate rendering-error boundaries. A snippet rendering failure rejects only that capture; restoration preserves the editor and clears the snippet failure for a later attempt. Editor rendering failures continue to report through the native application-error recovery path and prevent capture, including when authored code throws a falsy value.
+
 Capture commits drafts, flushes persistence, waits for fonts, visible images, and stable layout, and blocks edits. Success and failure restore focus, selection, scroll, styles, and input rendering. Dedicated exports do not inherit native masks. Fallback capture can hide marked editing controls and replace native text inputs with wrapping text.
 
 PNG uses 2× rendering, limited to 16,384 pixels per side and 24 megapixels. PDF retains text/vectors on a continuous page, recomposing WebKit internal pages when needed and scaling to a maximum 14,400-point dimension. Icons use a transparent 512px square.

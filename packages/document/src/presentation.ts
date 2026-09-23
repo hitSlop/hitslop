@@ -9,8 +9,7 @@ export type PresentationStage = {
   shape?: "rounded" | "ellipse" | "capsule";
 };
 
-// Retained for runtime 1/1 byte identity: removing this otherwise-unused helper
-// changes esbuild minified names. Revisit only with an intentional runtime revision.
+/** Maps a manifest presentation to the stage the native host would configure. */
 export function presentationStage(presentation: SlopPresentation): PresentationStage {
   if ("skin" in presentation)
     return {
@@ -31,13 +30,23 @@ export function presentationStage(presentation: SlopPresentation): PresentationS
 export const hostScrollbarCSS =
   "*{scrollbar-width:none!important}*::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}";
 
+/**
+ * The window is the stage in every mode: html, body and the Slop root fill it, and
+ * the app lays out inside. Sizing is zero-specificity so authors can override it.
+ * Transparent and skin windows show native geometry or chrome behind the page,
+ * overriding ordinary authored page backgrounds. Capture keeps the page reset
+ * and lays out in normal flow.
+ */
 export function presentationStageCSS(stage?: PresentationStage): string {
-  if (!stage || stage.mode === "standard") return hostScrollbarCSS;
-  const root = `html[data-slop-presentation="${stage.mode}"]:not([data-slop-capture])`;
+  if (!stage) return hostScrollbarCSS;
+  const page = `html[data-slop-presentation="${stage.mode}"]`;
+  const root = `${page}:not([data-slop-capture])`;
   return (
     hostScrollbarCSS +
-    `:where(${root},${root} body){margin:0;padding:0;width:100%;height:100%;background:transparent}` +
+    `:where(${page},${page} body){margin:0;padding:0}` +
+    `:where(${root},${root} body){width:100%;height:100%}` +
     `:where(${root} [data-hitslop-root],${root} body *:has([data-hitslop-root])){height:100%;min-height:0}` +
+    (stage.mode === "standard" ? "" : `${root},${root} body{background:transparent}`) +
     (stage.mode === "skin" ? `:where(${root},${root} body){overflow:hidden}` : "")
   );
 }

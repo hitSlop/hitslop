@@ -117,7 +117,7 @@ Motion should explain change and settle for capture. Persist target values immed
 
 Standard windows use initial width/height, optional `resizable` (default true), and optional `shape` (`rounded`, `ellipse`, or `capsule`). Width is 240–4096px; height is 180–4096px. Use fluid outer layouts and test initial and narrower dimensions. In native windows, unskinned apps can request `globalThis.slop.window.resize({ width, height })`; the host returns the applied size. The manifest remains the initial size. This host global is not a removed runtime-package import and is unavailable in disposable browser preview.
 
-For transparency, set `background: "transparent"` with a built-in shape. The host supplies viewport sizing/transparency and fills `<Slop>`'s root and its mount ancestors. Framework-neutral apps mark the root `data-hitslop-root`. Standard opaque documents retain authored layout. These low-specificity stage rules are disabled during capture.
+The window is the stage in every mode. The host resets `html`/`body` margins and makes them, `<Slop>`'s root, and its mount ancestors fill the window; framework-neutral apps mark their root `data-hitslop-root`. Size your shell with `height: 100%`, grid, or flex, and scroll inside panes or the root. Prefer these defaults over repeated `html`/`body` sizing or `100vh`; override deliberately when the layout requires it. The sizing rules have zero specificity, so deliberate overrides still work. Native owns the silhouette: built-in shapes and skin PNGs mask the window, so keep controls inside the visible shape (`data-slop-shape` is set for padding). For transparency, set `background: "transparent"` with a built-in shape; transparent and skin windows override ordinary `html`/`body` backgrounds, so draw the visible surface in your app and avoid more-specific or `!important` page backgrounds that defeat that transparency. Capture disables the sizing rules, so export and icon views use normal flow. `slop dev` previews the same stage at the manifest size, with the shape or skin mask.
 
 | Host value | Meaning |
 | --- | --- |
@@ -140,7 +140,7 @@ Keep editor, export, and icon markup together unless a separate component helps:
   import schema from "./schema";
   const doc = useDocument(schema);
 </script>
-<Slop document={doc}>
+<Slop>
   <input aria-label="Title" use:bindText={doc.fields.title} />
   {#snippet exportView()}
     <article><h1>{doc.current.title}</h1></article>
@@ -149,9 +149,13 @@ Keep editor, export, and icon markup together unless a separate component helps:
 </Slop>
 ```
 
-`<Slop>` reports rendering failures, provides `useSlop()` context, flushes before capture, and mounts snippets lazily against the same document. Nested wrappers for multiple documents are unsupported. Preview/PNG/PDF use `exportView` when supplied, otherwise the editor. Without an icon snippet, the host uses its generic icon.
+`<Slop>` reads the host document from context, reports rendering failures, flushes before capture, and mounts snippets lazily against the same document. It requires an app mounted with `mountDocument`; no document prop is needed. Nested wrappers for multiple documents are unsupported. Preview/PNG/PDF use `exportView` when supplied, otherwise the editor. Without an icon snippet, the host uses its generic icon.
 
-Dedicated exports should use normal flow, not fixed viewport heights or nested scrolling. Mark editing-only controls `data-slop-export="hide"`; fallback capture renders native text inputs as wrapping text. Icon art occupies a transparent 512px square with a strong silhouette and safe margins. Dedicated exports do not inherit native masks.
+Rendering failures in export or icon snippets reject that capture without replacing the editor or reporting an application-render error. Restoration clears the snippet failure so a later attempt renders it again. Editor rendering failures still use native application-error recovery and prevent capture.
+
+Child components can call `useDocument(schema)` during initialization for typed access to the same host document, including inside export and icon snippets. Each call creates its own subscription, not another document engine. For repeated list components, pass reactive rows and typed handles (or the existing `doc` facade) as props to avoid a subscription per row.
+
+Dedicated exports should use normal flow, not fixed viewport heights or nested scrolling. With `exportView`, the editor is never captured. Without one, mark editing-only controls `data-slop-export="hide"`; fallback capture renders native text inputs as wrapping text. `<Slop>` centers icon art in a transparent 512px square with a strong silhouette and safe margins. Dedicated exports do not inherit native masks.
 
 Framework-neutral apps may use `capture.registerTarget("export" | "icon", { element, prepare, restore })`; targets must be direct body children. `capture.onPrepare` supports asynchronous readiness. Dispose registrations and do not mutate durable state. Capture waits for fonts, visible images, and stable layout, blocks edits, and restores editor focus/selection/scroll on success or failure.
 
