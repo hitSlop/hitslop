@@ -1,0 +1,4 @@
+# Historical refactor test-filter list: both values are declared Swift test functions,
+# nativeCommandsRecoverThroughRealCloudflareRoom and compiledCounterStarterPersistsAndReopens.
+# Cloudflare keyword proximity caused a false positive; this is not a credential.
+b24a5152f52c15f7fe790358038566ce73c7b57e:scripts/local-check.ts:cloudflare-api-key:113
