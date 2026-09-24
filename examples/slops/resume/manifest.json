@@ -1,5 +1,6 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
@@ -7,10 +8,7 @@
   "slug": "resume",
   "title": "Resume",
   "description": "An editorial paper resume with direct editing, strong typography, and clean export.",
-  "categories": [
-    "personal",
-    "business"
-  ],
+  "categories": ["personal", "business"],
   "presentation": {
     "width": 680,
     "height": 780

@@ -1,5 +1,6 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
@@ -7,10 +8,7 @@
   "slug": "daily-planner",
   "title": "Daily Planner",
   "description": "A slim day board with three priorities, movable time blocks, and a live now marker.",
-  "categories": [
-    "productivity",
-    "personal"
-  ],
+  "categories": ["productivity", "personal"],
   "presentation": {
     "width": 400,
     "height": 900

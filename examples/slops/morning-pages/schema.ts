@@ -1,16 +1,14 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const dayEntry = Type.Object({
-  date: Type.String(),
-  text: Type.String(),
-  completedAt: Type.String(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  currentKey: s.string(),
+  entries: s.record(s.object({
+    date: s.string(),
+    text: s.text(),
+    completedAt: s.string(),
+  })),
+});
 
-const morningPagesSchema = Type.Object({
-  currentKey: Type.String(),
-  entries: Type.Record(Type.String(), dayEntry),
-}, { additionalProperties: true });
-
-export type DayEntry = Type.Static<typeof dayEntry>;
-export type MorningPages = Type.Static<typeof morningPagesSchema>;
-export default morningPagesSchema;
+export type MorningPages = Value<typeof schema.fields.node>;
+export type DayEntry = MorningPages["entries"][string];
+export default schema;

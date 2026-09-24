@@ -1,4 +1,5 @@
-import { defineTheme } from "@hitslop/runtime/theme";
+import { defineTheme } from "@hitslop/document/theme";
+
 export default defineTheme({
   surface: "#101214",
   plate: "#191c1f",

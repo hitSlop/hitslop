@@ -3,10 +3,10 @@ title: PNG window skins
 description: Give a fixed-size slop a custom native silhouette and click-through transparent areas.
 ---
 
-Use a PNG skin when the outer shape is part of the app: a dial, toy, ticket,
-device, or other fixed-size object. For ordinary panels, start with a built-in
-`rounded`, `ellipse`, or `capsule` shape. Use `background: "transparent"` when
-HTML and CSS can draw the surface cleanly.
+Start with a built-in `rounded`, `ellipse`, or `capsule` shape and
+`background: "transparent"`. Use a PNG when you need a hole in the window or an
+outline those shapes cannot describe. PNG skins are fixed-size and cannot resize.
+A washer with a transparent center is a useful first test.
 
 ## Create the mask asset
 
@@ -17,6 +17,7 @@ accepts pointer input.
 ```json title="manifest.json"
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": { "name": "Your Name" },
   "slug": "pocket-dial",
   "title": "Pocket Dial",
@@ -36,26 +37,15 @@ at the skin's fixed size.
 
 ## Align the WebView to the skin
 
-Make the page transparent and fill the exact window dimensions. Align visible
-controls with the opaque areas of the image.
+The host draws the PNG behind the page, supplies window sizing, and overrides
+ordinary `html`/`body` backgrounds with transparency. Avoid overriding that
+transparency with more-specific or `!important` page backgrounds. Wrap the app in `<Slop>`
+or mark a framework-neutral root with `data-hitslop-root`; its mount ancestors
+fill the window too. No sizing/transparency reset or duplicated pixel constants
+are needed; use `100%` or `--slop-width`/`--slop-height`. Align controls with opaque areas of the PNG using ordinary CSS.
 
-```css
-html,
-body,
-#app {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  overflow: hidden;
-  background: transparent;
-}
-
-.app {
-  position: relative;
-  width: 480px;
-  height: 480px;
-}
-```
+The native host exposes initial dimensions as `--slop-width` and `--slop-height`, and
+sets `data-slop-presentation="skin"`. These layout rules are disabled for capture.
 
 Pixels below 10% alpha are click-through. Feathered edge pixels may still
 receive or reject clicks depending on their alpha, so keep important controls
@@ -66,10 +56,9 @@ click the content behind the window.
 
 - Confirm the PNG is RGBA and exactly matches the manifest dimensions.
 - Test clicks around curved edges, transparent holes, and soft shadows.
-- Give users an obvious opaque drag region or call `slop.window.drag()` from a
-  custom handle.
+- Move the window with its native toolbar handle; guest controls do not drag it.
 - Check that focus rings and menus stay inside the usable silhouette.
 - Preview at native size; a skin is not a responsive window treatment.
 
-The PNG belongs to immutable `assets/`. User data and named media still belong
-in `stores/` and do not alter the native mask.
+The PNG belongs to immutable `assets/`; the native mask is defined by the template.
+Document data stays in host-managed state. Media import is deferred.

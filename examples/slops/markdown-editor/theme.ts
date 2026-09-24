@@ -1,4 +1,4 @@
-import { defineTheme } from "@hitslop/runtime/theme";
+import { defineTheme } from "@hitslop/document/theme";
 
 export default defineTheme({
   desk: "#efe8d6",
@@ -14,8 +14,8 @@ export default defineTheme({
   quote: "#d8ccb4",
   onAccent: "#fffaf2",
   shadow: "0 14px 36px rgba(70, 50, 20, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.65)",
-  font: 'Georgia, "Times New Roman", serif',
-  mono: '"SF Mono", Menlo, ui-monospace, monospace',
+  font: "Georgia, \"Times New Roman\", serif",
+  mono: "\"SF Mono\", Menlo, ui-monospace, monospace",
   darkDesk: "#0e0f11",
   darkPaper: "#17181c",
   darkInk: "#f4f1ea",

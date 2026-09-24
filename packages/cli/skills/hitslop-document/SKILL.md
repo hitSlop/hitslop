@@ -1,43 +1,29 @@
 ---
 name: hitslop-document
-description: Safely inspect, edit, validate, and export a built hitSlop .slop document. Use when changing its JSON data, named media, or theme overrides.
-metadata:
-  hitslop-skill-version: "1"
+description: Inspect and edit a hitSlop v1 document with the local CLI.
 ---
+Read manifest.json first. Only hitslop-v1 is supported.
+Use slop schema PATH and slop get PATH, then slop apply PATH --op JSON or slop batch PATH --ops JSON.
+Paths name fields with strings, rows and tree nodes with {"id":"$id from get"}, record entries with {"key":"..."} and scalar list elements with {"index":n}. Never use array indexes as row identity.
+Operations: set (scalars), clear (optional fields, record entries), assign (whole optional objects, record entries, scalar lists), text.replace, text.splice {index,delete,insert}, text.mark/text.unmark {start,end,key,value} for declared rich text marks, insert {value, destination {before|after|parent}} for rows and tree nodes or {value,index} for scalar lists, remove {id} or {index,count}, move {id,destination} or {from,to}, increment {value} for counters. Read slop schema to see which kind each field is; prefer batch for several related edits.
 
-# Work with this hitSlop document
+assign can initialize absent optional row lists/trees and record entries containing them. It cannot replace an existing identity-bearing collection, even through a containing object. Use insert/remove/move, or explicitly clear/delete before creating new identities. Text offsets are UTF-16 and must fall on whole code-point boundaries. Checkpoints retain history; automatic history pruning is deferred.
+Keep manifest.json, app.html, assets/, state.schema.json and initial.json immutable.
+Never edit state/document.sqlite or invent stores/data.json. The CLI routes to the live host or acquires exclusive ownership when closed.
+A failed transport can have an unknown outcome. Run slop get before issuing another edit; never automatically replay a mutation.
 
-Locate the target `.slop` directory and read its `manifest.json` first.
-It is a built, framework-neutral web document, not a source project. All document
-paths and commands below are relative to that target directory, not this skill's
-installation directory. If the target contains
-`.agents/skills/hitslop-document/references/app-guide.md`, read it for
-app-specific data and styling guidance.
+get flushes pending edits and returns persisted state; a save failure returns an error. Native export captures the live selected view when open and the initial view when closed; export output must be outside the source package.
 
-## Inspect
+Use `slop theme get PATH` to inspect public token defaults and overrides.
+Change declared tokens with `slop theme set PATH --values '{"accent":"#123456"}'`;
+reset one with `slop theme reset PATH --token accent`, or omit the token to reset
+all. These commands preserve the writer lock and update the open view. Never
+edit assets/theme.css or add stores/theme.css. After an uncertain result inspect
+`theme get` before another change. PNG/PDF exports include the effective theme.
 
-- Read `data.schema.json` when present before changing `stores/data.json`.
-- Treat `manifest.json`, `app.html`, `data.schema.json`, `assets/`, this
-  skill, and `QuickLook/Icon.png` as immutable application files.
-- User data belongs only in `stores/`. `QuickLook/Preview.png` may be
-  refreshed by the host. `Icon\r` is Finder metadata, not document content.
-
-## Edit data safely
-
-- For JSON, validate the complete value against the schema, write a temporary
-  sibling file, then atomically replace `stores/data.json`.
-- Named attachments belong in `stores/media/`. Names start with a lowercase
-  ASCII letter and contain only lowercase letters, digits, and hyphens. Replace
-  a media file atomically; use only supported image or bounded ZIP content.
-
-## Edit the theme
-
-The immutable defaults are in `assets/theme.css`. To customize appearance,
-write `stores/theme.css` with one `:root` rule that overrides only existing
-`--slop-*` variables. Do not add selectors, layout rules, or new variables.
-
-## Check and export
-
-Run `slop validate .` after edits. Use
-`slop export . --format png|pdf --output <path>` for the full document and
-`slop screenshot . --target preview|icon --output <path>` for render targets.
+Use `slop attachments list PATH`, `slop attachments import PATH FILE`, and
+`slop attachments export PATH ID --output FILE`. Import returns a reference with
+id/name/mimeType/byteLength; store it in the app schema through apply/batch.
+Never write `state/attachments` yourself. Limits are 10 MiB per file, 100 MiB and
+256 unique files per document. Removing a reference retains its blob. Export
+refuses existing destinations. Inspect attachments after an uncertain import.

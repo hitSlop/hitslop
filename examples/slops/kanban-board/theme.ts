@@ -1,4 +1,4 @@
-import { defineTheme } from "@hitslop/runtime/theme";
+import { defineTheme } from "@hitslop/document/theme";
 
 export default defineTheme({
   graphite: "#202227",
@@ -18,28 +18,14 @@ export default defineTheme({
   steelDim: "#6d737b",
   railInk: "#dfe3e8",
   meterInk: "#c9ced5",
-  overWarm: "#5d4d2d",
-  overDeep: "#3d3320",
-  wipAlert: "#c08a3d",
   doneHead: "#414a3d",
   doneHeadDeep: "#2a2f27",
   donePaper: "#dcdcd6",
   donePaperDeep: "#cbccc4",
-  doneStub: "#bcbdb4",
-  doneRule: "#a9aaa2",
   doneInk: "#4d5049",
   doneMuted: "#74776f",
   doneTag: "#4f5b42",
-  doneFill: "#7f9968",
-  doneFillHi: "#b6cf9a",
-  tagInk: "#7d5510",
-  ticketNo: "#8b8069",
   danger: "#ff9a76",
-  remove: "#a2331a",
-  error: "#ffbc72",
-  iconSlot: "#a8aeb6",
-  iconSlotDeep: "#949aa3",
-  iconLive: "#ffbe57",
   font: '"Avenir Next", Avenir, "Helvetica Neue", sans-serif',
   mono: 'ui-monospace, "SFMono-Regular", Menlo, monospace',
 });

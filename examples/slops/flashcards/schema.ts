@@ -1,27 +1,22 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const cardSchema = Type.Object({
-  id: Type.String(),
-  front: Type.String(),
-  back: Type.String(),
-  box: Type.Integer(),
-  lastReviewed: Type.Union([Type.String(), Type.Null()]),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  decks: s.list(s.object({
+    deckKey: s.string(),
+    name: s.text(),
+    cards: s.list(s.object({
+      front: s.text(),
+      back: s.text(),
+      box: s.integer({ min: 1, max: 4 }),
+      lastReviewed: s.optional(s.string()),
+    })),
+  })),
+  selectedDeckId: s.string(),
+  selectedBox: s.integer({ min: 0, max: 4 }),
+  cardIndex: s.integer({ min: 0 }),
+});
 
-const deckSchema = Type.Object({
-  id: Type.String(),
-  name: Type.String(),
-  cards: Type.Array(cardSchema),
-}, { additionalProperties: true });
-
-const flashcardsSchema = Type.Object({
-  decks: Type.Array(deckSchema),
-  selectedDeckId: Type.String(),
-  selectedBox: Type.Integer(),
-  cardIndex: Type.Integer(),
-  flipped: Type.Boolean(),
-}, { additionalProperties: true });
-
-export type Flashcards = Type.Static<typeof flashcardsSchema>;
-export type Flashcard = Type.Static<typeof cardSchema>;
-export default flashcardsSchema;
+export type Flashcards = Value<typeof schema.fields.node>;
+export type Deck = Flashcards["decks"][number];
+export type Flashcard = Deck["cards"][number];
+export default schema;

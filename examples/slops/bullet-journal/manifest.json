@@ -1,5 +1,6 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
@@ -7,10 +8,7 @@
   "slug": "bullet-journal",
   "title": "Bullet Journal",
   "description": "Ryder Carroll’s analog rapid logging on cream dot-grid paper: tasks, events, notes, and classic signifier transitions.",
-  "categories": [
-    "productivity",
-    "personal"
-  ],
+  "categories": ["productivity", "personal"],
   "presentation": {
     "width": 600,
     "height": 820,

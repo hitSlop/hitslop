@@ -1,31 +1,25 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const course = Type.Object({
-  id: Type.String(),
-  code: Type.String(),
-  name: Type.String(),
-  colorHex: Type.String(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  studentName: s.text(),
+  term: s.text(),
+  courses: s.list(s.object({
+    code: s.string(),
+    name: s.text(),
+    colorHex: s.string(),
+  })),
+  assignments: s.list(s.object({
+    courseCode: s.string(),
+    title: s.text(),
+    dueDate: s.string(),
+    category: s.text(),
+    points: s.number({ min: 0 }),
+    completed: s.boolean(),
+    notes: s.text(),
+  })),
+});
 
-const assignment = Type.Object({
-  id: Type.String(),
-  courseCode: Type.String(),
-  title: Type.String(),
-  dueDate: Type.String(),
-  category: Type.String(),
-  points: Type.Number(),
-  completed: Type.Boolean(),
-  notes: Type.String(),
-}, { additionalProperties: true });
-
-const assignmentTrackerSchema = Type.Object({
-  studentName: Type.String(),
-  term: Type.String(),
-  courses: Type.Array(course),
-  assignments: Type.Array(assignment),
-}, { additionalProperties: true });
-
-export type Course = Type.Static<typeof course>;
-export type Assignment = Type.Static<typeof assignment>;
-export type AssignmentTracker = Type.Static<typeof assignmentTrackerSchema>;
-export default assignmentTrackerSchema;
+export type AssignmentTracker = Value<typeof schema.fields.node>;
+export type Course = AssignmentTracker["courses"][number];
+export type Assignment = AssignmentTracker["assignments"][number];
+export default schema;

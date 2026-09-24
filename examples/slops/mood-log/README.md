@@ -1,9 +1,13 @@
 # Mood Log
 
-A gentle color journal for mood, energy, and a short dated reflection.
+A quiet color journal for a mood, an energy level, and one line about the day.
+
+From the repository root:
 
 ```sh
 bun slop dev examples/slops/mood-log
 bun slop build examples/slops/mood-log
-bun slop validate examples/slops/mood-log/dist/mood-log.slop
+bun slop register examples/slops/mood-log
 ```
+
+Create a writable copy of the registered template before editing.

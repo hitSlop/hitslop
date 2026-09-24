@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Build, embed, and sign a Release hitslop-native in an existing .app.
+# Build, embed, and sign a configuration-selected hitslop-native in an existing .app.
 # Usage: embed-hitslop-native.sh <HitSlop.app>
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -41,12 +41,15 @@ if [ -z "$arch_flags" ]; then
   exit 69
 fi
 
-echo "Building hitslop-native ($archs)…"
+configuration=${HITSLOP_NATIVE_CONFIGURATION:-release}
+case "$configuration" in debug|release) ;; *) echo "Expected debug or release configuration" >&2; exit 64 ;; esac
+
+echo "Building hitslop-native ($configuration, $archs)…"
 # shellcheck disable=SC2086
 /usr/bin/swift build \
   --package-path "$native_package" \
   --scratch-path "$scratch" \
-  --configuration release \
+  --configuration "$configuration" \
   --product hitslop-native \
   $arch_flags
 
@@ -55,7 +58,7 @@ native_bin=$(
   /usr/bin/swift build \
     --package-path "$native_package" \
     --scratch-path "$scratch" \
-    --configuration release \
+    --configuration "$configuration" \
     --product hitslop-native \
     --show-bin-path \
     $arch_flags
@@ -67,9 +70,10 @@ if [ ! -f "$helper" ]; then
 fi
 
 # SwiftPM executables locate Bundle.module resources beside the executable.
-# The host app also links HitSlopCore and therefore has a copy in Resources,
-# but that location is not visible to this independently-built helper.
+# Host resources are not visible to this independently-built helper.
 /bin/mkdir -p "$app/Contents/Helpers"
+# Remove the retired skill bundle from incremental build artifacts.
+/bin/rm -rf "$app/Contents/Helpers/HitSlopApple_HitSlopCore.bundle" "$app/Contents/Resources/HitSlopApple_HitSlopCore.bundle"
 /bin/cp "$helper" "$app/Contents/Helpers/hitslop-native"
 /bin/chmod 755 "$app/Contents/Helpers/hitslop-native"
 
@@ -77,7 +81,7 @@ fi
 # its resolved identity for normal builds and an ad-hoc signature when signing
 # is disabled; distribution packaging replaces both signatures as needed.
 signing_identity=${EXPANDED_CODE_SIGN_IDENTITY:--}
-for module in HitSlopCore HitSlopRuntime; do
+for module in HitSlopRuntime HitSlopWasm; do
   resource_bundle="$native_bin/HitSlopApple_${module}.bundle"
   if [ ! -d "$resource_bundle" ]; then
     echo "hitslop-native resource bundle is missing at $resource_bundle" >&2
@@ -85,9 +89,13 @@ for module in HitSlopCore HitSlopRuntime; do
   fi
   embedded="$app/Contents/Helpers/HitSlopApple_${module}.bundle"
   /usr/bin/ditto "$resource_bundle" "$embedded"
-  /bin/cp "$script_dir/HitSlopNativeResources-Info.plist" "$embedded/Info.plist"
-  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.hitslop.app.native-resources.$module" "$embedded/Info.plist"
-  /usr/libexec/PlistBuddy -c "Set :CFBundleName $module Resources" "$embedded/Info.plist"
+  # SwiftPM's Xcode build system emits macOS Contents bundles; its native
+  # build system emits flat resource bundles. Preserve the emitted layout.
+  info="$embedded/Info.plist"
+  if [ -d "$embedded/Contents" ]; then info="$embedded/Contents/Info.plist"; fi
+  /bin/cp "$script_dir/HitSlopNativeResources-Info.plist" "$info"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.hitslop.app.native-resources.$module" "$info"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleName $module Resources" "$info"
   /usr/bin/codesign --force --sign "$signing_identity" "$embedded"
 done
 /usr/bin/codesign --force --options runtime --sign "$signing_identity" "$app/Contents/Helpers/hitslop-native"

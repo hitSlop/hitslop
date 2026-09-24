@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "cases": [
+    "hold",
+    "append:uncommitted",
+    "append:committed",
+    "checkpoint:uncommitted",
+    "checkpoint:committed"
+  ]
+}

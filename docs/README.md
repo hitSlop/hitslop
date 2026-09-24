@@ -1,27 +1,17 @@
 # hitSlop documentation
 
-## Build with hitSlop
+hitSlop ships a macOS app and a matching Bun authoring CLI/SDK. Documents stay local; the catalog combines bundled templates, installed templates, and Recents.
 
-- [Authoring a slop](authoring.md) — scaffold, preview, validate, build, register,
-  and publish.
-- [Design and presentation](presentation.md) — Paper/Instrument/Skin, responsive
-  layout, transparent windows, resizing, icon art, and static export.
-- [Package format](package-format.md) — the exact source/runtime boundary.
-- [Storage](storage.md) — JSON, named media, concurrency, and iCloud.
-- [Framework packages](packages.md) — CLI, runtime, schema, and Svelte.
+| Task | Guide |
+| --- | --- |
+| Build or refine a mini app | [Authoring](guides/authoring.md) |
+| Read, edit, theme, or export a document | [CLI](guides/cli.md) |
+| Work on the repository or add templates | [Development](guides/development.md) |
+| Validate and release the app and npm packages | [Releasing](guides/releasing.md) |
+| Understand package, engine, storage, and security boundaries | [Runtime reference](reference/runtime.md) |
+| Preserve shipped documents across releases | [Runtime versioning](versioning.md) |
+| Understand deferred capabilities | [Roadmap](roadmap.md) |
 
-## Understand the platform
+The [public tutorial](../apps/landing/src/content/docs/docs/getting-started.mdx) is for authors using the distributed tools. Repository guides cover contributor workflows and implementation contracts. Packaged agent guidance lives in [packages/cli/skills](../packages/cli/skills); repository discovery links point there.
 
-- [Architecture](architecture.md) — trust boundaries and end-to-end data flow.
-- [Apple apps](apps/apple.md) — Core, Runtime, Host, Catalog, Registry, and CLI.
-- [Firebase backend](apps/firebase.md) — signed publishing, catalog metadata,
-  immutable artifacts, and API hosting.
-- [Self-hosting](self-hosting.md) — replace the official hosted services.
-- [Repository guide](repository.md) — workspace map and change discipline.
-- [Releasing](releasing.md) — versions, checks, npm, services, and macOS.
-
-## Historical decisions
-
-[Swift to web runtime](SWIFTTOSVELTE.md) and [the v1 contract
-refactor](v1-refactor.md) preserve design history. They are context, not the
-current operating manual; the documents above are authoritative.
+[Restored-client measurements](benchmarks/v1/README.md) describe historical observations, not performance guarantees. Retired implementations and measurements may be kept in the local, Git-ignored `deferred/` archive. That archive is optional and is not included in fresh clones.

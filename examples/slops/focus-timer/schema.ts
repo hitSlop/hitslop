@@ -1,14 +1,13 @@
-import * as Type from "typebox";
+import { defineDocument, s } from "@hitslop/document";
 
-const timerSchema = Type.Object({
-  focusMinutes: Type.Integer(),
-  restMinutes: Type.Integer(),
-  history: Type.Array(Type.Object({
-    startedAt: Type.String(),
-    kind: Type.String(),
-    seconds: Type.Integer(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+export const timerKinds = ["focus", "rest"] as const;
 
-export type FocusTimer = Type.Static<typeof timerSchema>;
-export default timerSchema;
+export default defineDocument({
+  focusMinutes: s.integer({ min: 1, max: 120 }),
+  restMinutes: s.integer({ min: 1, max: 60 }),
+  history: s.list(s.object({
+    startedAt: s.string(),
+    kind: s.enum(timerKinds),
+    seconds: s.integer({ min: 1 }),
+  })),
+});

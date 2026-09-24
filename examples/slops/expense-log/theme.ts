@@ -1,4 +1,4 @@
-import { defineTheme } from "@hitslop/runtime/theme";
+import { defineTheme } from "@hitslop/document/theme";
 
 export default defineTheme({
   paper: "#f7f1e3",

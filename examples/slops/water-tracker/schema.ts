@@ -1,16 +1,15 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const waterSchema = Type.Object({
-  target: Type.Number(),
-  current: Type.Number(),
-  unit: Type.String(),
-  logs: Type.Array(Type.Object({
-    id: Type.String(),
-    time: Type.String(),
-    amount: Type.Number(),
-    label: Type.String(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  target: s.number(),
+  current: s.number(),
+  unit: s.string(),
+  logs: s.list(s.object({
+    time: s.string(),
+    amount: s.number(),
+    label: s.string(),
+  })),
+});
 
-export type WaterTracker = Type.Static<typeof waterSchema>;
-export default waterSchema;
+export type WaterTracker = Value<typeof schema.fields.node>;
+export default schema;

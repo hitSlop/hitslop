@@ -1,5 +1,6 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
@@ -7,10 +8,7 @@
   "slug": "meeting-notes",
   "title": "Meeting Notes",
   "description": "A forest-letterhead meeting memo for agenda, notes, decisions, and owned action items.",
-  "categories": [
-    "productivity",
-    "business"
-  ],
+  "categories": ["productivity", "business"],
   "presentation": {
     "width": 680,
     "height": 780

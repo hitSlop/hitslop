@@ -1,9 +1,13 @@
 # Contact Card
 
-A mint glass pager badge for a name, portrait, contact channels, and vCard export.
+A translucent mint glass badge and digital business card with direct links, bio, and vCard export.
+
+From the repository root:
 
 ```sh
 bun slop dev examples/slops/contact-card
 bun slop build examples/slops/contact-card
-bun slop validate examples/slops/contact-card/dist/contact-card.slop
+bun slop register examples/slops/contact-card
 ```
+
+Create a writable copy of the registered template before editing.

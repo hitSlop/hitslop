@@ -1,21 +1,18 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const task = Type.Object({
-  id: Type.String(),
-  text: Type.String(),
-  done: Type.Boolean(),
-}, { additionalProperties: true });
+export const zones = ["inbox", "q1", "q2", "q3", "q4"] as const;
 
-const matrixSchema = Type.Object({
-  title: Type.String(),
-  date: Type.String(),
-  q1: Type.Array(task),
-  q2: Type.Array(task),
-  q3: Type.Array(task),
-  q4: Type.Array(task),
-  inbox: Type.Array(task),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  title: s.text(),
+  date: s.text(),
+  tasks: s.list(s.object({
+    text: s.text(),
+    done: s.boolean(),
+    zone: s.enum(zones),
+  })),
+});
 
-export type Matrix = Type.Static<typeof matrixSchema>;
-export type Task = Matrix["q1"][number];
-export default matrixSchema;
+export type Matrix = Value<typeof schema.fields.node>;
+export type Task = Matrix["tasks"][number];
+export type Zone = Task["zone"];
+export default schema;

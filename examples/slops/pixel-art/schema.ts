@@ -1,10 +1,10 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const pixelArtSchema = Type.Object({
-  pixels: Type.Array(Type.String()),
-  paletteId: Type.String(),
-  selectedColor: Type.String(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  pixels: s.list(s.string()),
+  paletteId: s.string(),
+  selectedColor: s.string(),
+});
 
-export type PixelArt = Type.Static<typeof pixelArtSchema>;
-export default pixelArtSchema;
+export type PixelArt = Value<typeof schema.fields.node>;
+export default schema;

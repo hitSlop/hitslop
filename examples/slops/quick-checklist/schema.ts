@@ -1,14 +1,7 @@
-import * as Type from "typebox";
-
-const checklistSchema = Type.Object({
-  title: Type.String(),
-  tasks: Type.Array(Type.Object({
-    id: Type.String(),
-    text: Type.String(),
-    done: Type.Boolean(),
-    archived: Type.Boolean(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
-
-export type Checklist = Type.Static<typeof checklistSchema>;
-export default checklistSchema;
+import { defineDocument, s, type Value } from "@hitslop/document";
+export const checklist = defineDocument({
+  title: s.text(),
+  tasks: s.list(s.object({ text: s.text(), done: s.boolean(), archived: s.boolean() })),
+});
+export type Checklist = Value<typeof checklist.descriptor.root>;
+export default checklist;

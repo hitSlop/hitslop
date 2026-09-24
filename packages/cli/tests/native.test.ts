@@ -1,11 +1,26 @@
-import { expect, test } from "bun:test";
-import { runNativeCandidates } from "../src/native.ts";
+import { test, expect } from "bun:test";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
-test("native discovery skips missing helpers but not failed commands", async () => {
-  await expect(runNativeCandidates(["/nonexistent/hitslop-native", process.execPath], ["--eval", "process.exit(0)"])).resolves.toBeUndefined();
-  await expect(runNativeCandidates([process.execPath, "/nonexistent/never-retry"], ["--eval", "process.exit(7)"])).rejects.toThrow("status 7");
-});
-
-test("explicit helper failures never fall back", async () => {
-  await expect(runNativeCandidates(["/nonexistent/hitslop-native", process.execPath], ["--eval", "process.exit(0)"], true)).rejects.toThrow("Could not launch");
+test("explicit native helper overrides fail without falling back or retrying", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hsl-native-discovery-"));
+  const run = async (helper: string) => {
+    const child = Bun.spawn([process.execPath, "packages/cli/src/cli.ts", "get", "example.slop"], {
+      env: { ...process.env, HITSLOP_NATIVE_CLI: helper },
+      stdout: "pipe", stderr: "pipe",
+    });
+    return { code: await child.exited, error: await new Response(child.stderr).text() };
+  };
+  try {
+    if (process.platform !== "darwin") return;
+    const missing = await run(join(root, "missing"));
+    expect(missing.code).not.toBe(0);
+    expect(missing.error).toContain("HITSLOP_NATIVE_CLI is not executable");
+    const helper = join(root, "helper");
+    await writeFile(helper, '#!/bin/sh\necho "selected helper failed" >&2\nexit 23\n', { mode: 0o755 });
+    const selected = await run(helper);
+    expect(selected.code).toBe(23);
+    expect(selected.error).toContain("selected helper failed");
+  } finally { await rm(root, { recursive: true, force: true }); }
 });

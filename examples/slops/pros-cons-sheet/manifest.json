@@ -1,5 +1,6 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
@@ -7,10 +8,7 @@
   "slug": "pros-cons-sheet",
   "title": "Decision Balance",
   "description": "Weigh the reasons for and against a decision, adjust their importance, and record your own conclusion.",
-  "categories": [
-    "productivity",
-    "personal"
-  ],
+  "categories": ["productivity", "personal"],
   "presentation": {
     "width": 720,
     "height": 680

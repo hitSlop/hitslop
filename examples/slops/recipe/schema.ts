@@ -1,24 +1,33 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const recipeSchema = Type.Object({
-  title: Type.String(),
-  description: Type.String(),
-  difficulty: Type.String(),
-  servings: Type.Union([Type.Number(), Type.Null()]),
-  prepMinutes: Type.Union([Type.Number(), Type.Null()]),
-  cookMinutes: Type.Union([Type.Number(), Type.Null()]),
-  ingredients: Type.Array(Type.Object({
-    id: Type.String(),
-    text: Type.String(),
-    checked: Type.Boolean(),
-  }, { additionalProperties: true })),
-  steps: Type.Array(Type.Object({
-    id: Type.String(),
-    title: Type.String(),
-    text: Type.String(),
-    minutes: Type.Union([Type.Number(), Type.Null()]),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+export const difficulties = ["Easy", "Medium", "Advanced"] as const;
 
-export type Recipe = Type.Static<typeof recipeSchema>;
-export default recipeSchema;
+const minutes = s.optional(s.number({ min: 0, max: 9_999 }));
+
+const schema = defineDocument({
+  title: s.text(),
+  description: s.text(),
+  difficulty: s.enum(difficulties),
+  servings: s.optional(s.number({ min: 1, max: 999 })),
+  prepMinutes: minutes,
+  cookMinutes: minutes,
+  ingredients: s.list(s.object({
+    text: s.text(),
+    checked: s.boolean(),
+  })),
+  steps: s.list(s.object({
+    title: s.text(),
+    text: s.text(),
+    minutes,
+  })),
+  photo: s.optional(s.object({
+    id: s.string(),
+    name: s.string(),
+    mimeType: s.string(),
+  })),
+});
+
+export type Recipe = Value<typeof schema.fields.node>;
+export type Ingredient = Recipe["ingredients"][number];
+export type Step = Recipe["steps"][number];
+export default schema;

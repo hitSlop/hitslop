@@ -1,5 +1,6 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
@@ -7,10 +8,7 @@
   "slug": "flashcards",
   "title": "Flashcards",
   "description": "A tactile index-card study machine with 3D flipping cards, deck editing, and Leitner spaced repetition.",
-  "categories": [
-    "education",
-    "productivity"
-  ],
+  "categories": ["education", "productivity"],
   "presentation": {
     "width": 540,
     "height": 440,

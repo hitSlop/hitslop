@@ -1,32 +1,45 @@
-import { homedir } from "node:os";
+import { access, constants } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 
-/** Discovery skips missing executables; an executed command is never retried. */
-export async function runNative(arguments_: string[]): Promise<void> {
-  const override = process.env.HITSLOP_NATIVE_CLI;
-  const arch = process.arch === "arm64" ? "arm64-apple-macosx" : "x86_64-apple-macosx";
-  const build = resolve(import.meta.dir, "../../../apps/apple/Packages/HitSlopApple/.build", arch);
-  const candidates = override !== undefined ? [override] : [
-    "/Applications/hitSlop.app/Contents/Helpers/hitslop-native",
-    join(homedir(), "Applications/hitSlop.app/Contents/Helpers/hitslop-native"),
-    join(build, "debug/hitslop-native"), join(build, "release/hitslop-native"),
-    "hitslop-native",
-  ];
-  await runNativeCandidates(candidates, arguments_, override !== undefined);
+async function executable(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-export async function runNativeCandidates(candidates: string[], arguments_: string[], explicit = false): Promise<void> {
-  for (const executable of candidates) {
-    let child;
-    try {
-      child = Bun.spawn([executable, ...arguments_], { stdin: "inherit", stdout: "inherit", stderr: "inherit" });
-    } catch (error) {
-      if (!explicit && error && typeof error === "object" && "code" in error && error.code === "ENOENT") continue;
-      throw new Error(`Could not launch native helper ${executable}`, { cause: error });
-    }
-    const status = await child.exited;
-    if (status !== 0) throw new Error(`Native helper ${executable} failed with status ${status}`);
-    return;
-  }
-  throw new Error("Install hitSlop or set HITSLOP_NATIVE_CLI to use native rendering.");
+export async function nativeOverride(): Promise<string | undefined> {
+  const value = process.env.HITSLOP_NATIVE_CLI;
+  if (value === undefined) return;
+  const path = resolve(value);
+  if (!value || !(await executable(path)))
+    throw new Error(`HITSLOP_NATIVE_CLI is not executable: ${value}`);
+  return path;
+}
+
+export async function findNative(): Promise<string> {
+  const override = await nativeOverride();
+  if (override) return override;
+  const candidates = [
+    "/Applications/hitSlop.app/Contents/Helpers/hitslop-native",
+    join(homedir(), "Applications/hitSlop.app/Contents/Helpers/hitslop-native"),
+  ];
+  for (const path of candidates) if (await executable(path)) return path;
+  throw new Error(
+    "Install hitSlop.app in /Applications or ~/Applications to use native document commands",
+  );
+}
+
+export async function runNative(args: string[]) {
+  const binary = await findNative();
+  const child = Bun.spawn([binary, ...args], {
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  const code = await child.exited;
+  if (code) process.exit(code);
 }

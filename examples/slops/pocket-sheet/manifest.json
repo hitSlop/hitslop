@@ -1,19 +1,10 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
-  "author": {
-    "name": "hitSlop",
-    "url": "https://hitslop.com"
-  },
+  "runtime": "hitslop-v1",
+  "author": { "name": "hitSlop" },
   "slug": "pocket-sheet",
-  "title": "Pocket Spreadsheet",
-  "description": "A graphite pocket spreadsheet for formulas, cell ranges, multi-cell selection, and CSV.",
-  "categories": [
-    "finance",
-    "productivity"
-  ],
-  "presentation": {
-    "width": 760,
-    "height": 600,
-    "shape": "rounded"
-  }
+  "title": "Pocket Sheet",
+  "description": "A little graph-paper spreadsheet for bill splits, tallies, and quick math.",
+  "categories": ["productivity", "personal"],
+  "presentation": { "width": 700, "height": 640, "shape": "rounded" }
 }

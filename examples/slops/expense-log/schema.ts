@@ -1,18 +1,20 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const expenseSchema = Type.Object({
-  storeName: Type.String(),
-  terminalId: Type.String(),
-  currency: Type.String(),
-  items: Type.Array(Type.Object({
-    id: Type.String(),
-    title: Type.String(),
-    amount: Type.Number(),
-    category: Type.String(),
-    date: Type.String(),
-    time: Type.String(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+export const categories = ["food", "transit", "coffee", "gear", "bills", "other"] as const;
 
-export type ExpenseLog = Type.Static<typeof expenseSchema>;
-export default expenseSchema;
+const schema = defineDocument({
+  storeName: s.text(),
+  terminalId: s.text(),
+  currency: s.string({ maxLength: 3 }),
+  items: s.list(s.object({
+    title: s.text(),
+    amount: s.number(),
+    category: s.enum(categories),
+    date: s.string(),
+    time: s.string(),
+  })),
+});
+
+export type ExpenseLog = Value<typeof schema.fields.node>;
+export type ExpenseItem = ExpenseLog["items"][number];
+export default schema;

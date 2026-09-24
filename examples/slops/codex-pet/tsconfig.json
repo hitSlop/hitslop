@@ -1,5 +1,5 @@
 {
-  "extends": "../tsconfig.json",
-  "include": ["theme.ts", "src/**/*.ts", "src/**/*.svelte", "vite.config.ts"],
+  "extends": "../../../tsconfig.v1.json",
+  "include": ["./**/*.svelte", "./**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }

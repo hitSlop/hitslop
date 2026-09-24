@@ -1,15 +1,14 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const moodSchema = Type.Object({
-  prompt: Type.String(),
-  entries: Type.Array(Type.Object({
-    id: Type.String(),
-    day: Type.String(),
-    mood: Type.Number(),
-    energy: Type.Number(),
-    note: Type.String(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  prompt: s.text(),
+  entries: s.list(s.object({
+    day: s.string(),
+    mood: s.integer({ min: 1, max: 5 }),
+    energy: s.integer({ min: 1, max: 5 }),
+    note: s.text(),
+  })),
+});
 
-export type MoodLog = Type.Static<typeof moodSchema>;
-export default moodSchema;
+export type MoodLog = Value<typeof schema.fields.node>;
+export default schema;

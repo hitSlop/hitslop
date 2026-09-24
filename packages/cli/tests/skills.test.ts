@@ -1,145 +1,161 @@
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import * as fs from "node:fs/promises";
-import { cp, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rename, rm, symlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { test, expect } from "bun:test";
+import {
+  mkdtemp,
+  rm,
+  readFile,
+  mkdir,
+  symlink,
+  readlink,
+  writeFile,
+  access,
+  realpath,
+} from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { documentSkillContent } from "@hitslop/schema";
-import { bundledSkillsRoot, managedSkillNames, syncAgentSkills } from "../src/skills.ts";
+import { buildSkills } from "../src/skills-build";
 
-const roots: string[] = [];
-afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
-
-describe("syncAgentSkills", () => {
-  test("writes the machine cache and discovery links without touching other skills", async () => {
-    const root = await mkdtemp(join(tmpdir(), "hitslop-skills-")); roots.push(root);
-    const cacheRoot = join(root, "cache");
-    const agents = join(root, "agents");
-    const claude = join(root, "claude");
-    await mkdir(join(agents, "other-skill"), { recursive: true });
-    await writeFile(join(agents, "other-skill", "SKILL.md"), "keep me\n");
-
-    const first = await syncAgentSkills({ cacheRoot, discoveryRoots: [agents, claude] });
-    expect(first.installed).toBe(true);
-    expect(first.cache).toBe(cacheRoot);
-    for (const name of managedSkillNames) {
-      expect(await readFile(join(cacheRoot, name, "SKILL.md"), "utf8")).toContain("name: " + name);
-      expect((await lstat(join(agents, name))).isSymbolicLink()).toBe(true);
-      expect(await readlink(join(agents, name))).toBe(join(cacheRoot, name));
-      expect(await readlink(join(claude, name))).toBe(join(cacheRoot, name));
+test("skills are deterministic, self-contained and describe the active commands", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hsl-skills-"));
+  try {
+    const first = join(root, "first/skills"),
+      second = join(root, "second/skills");
+    const files = await buildSkills(first);
+    expect(await buildSkills(second)).toEqual(files);
+    for (const file of files) {
+      const content = await readFile(join(first, file), "utf8");
+      expect(content).toBe(await readFile(join(second, file), "utf8"));
+      expect(content).not.toContain(process.cwd());
+      for (const match of content.matchAll(/\]\((references\/[^)#]+)(?:#[^)]*)?\)/g))
+        await access(join(first, file, "..", match[1]!));
     }
-    expect(await readFile(join(cacheRoot, "hitslop-document", "SKILL.md"), "utf8")).toBe(documentSkillContent);
-    expect(await readFile(join(agents, "other-skill", "SKILL.md"), "utf8")).toBe("keep me\n");
-
-    const second = await syncAgentSkills({ cacheRoot, discoveryRoots: [agents, claude], missingOnly: true });
-    expect(second.installed).toBe(false);
-    expect(await readFile(join(agents, "other-skill", "SKILL.md"), "utf8")).toBe("keep me\n");
-  });
-
-  test("preserves existing directories and unrelated links, repairing only managed links", async () => {
-    const root = await mkdtemp(join(tmpdir(), "hitslop-skills-")); roots.push(root);
-    const cacheRoot = join(root, "cache");
-    const agents = join(root, "agents");
-    await mkdir(join(agents, "hitslop-authoring"), { recursive: true });
-    await writeFile(join(agents, "hitslop-authoring", "SKILL.md"), "stale\n");
-    await symlink(join(root, "unrelated"), join(agents, "hitslop-design"));
-    await symlink(join(cacheRoot, "old-document"), join(agents, "hitslop-document"));
-    const result = await syncAgentSkills({ cacheRoot, discoveryRoots: [agents] });
-    expect(result.conflicts).toEqual([join(agents, "hitslop-authoring"), join(agents, "hitslop-design")]);
-    expect(await readFile(join(agents, "hitslop-authoring", "SKILL.md"), "utf8")).toBe("stale\n");
-    expect(await readlink(join(agents, "hitslop-design"))).toBe(join(root, "unrelated"));
-    expect(await readlink(join(agents, "hitslop-document"))).toBe(join(cacheRoot, "hitslop-document"));
-  });
+    for (const command of [
+      "init",
+      "dev",
+      "build",
+      "register",
+      "schema",
+      "get",
+      "apply",
+      "batch",
+      "compact",
+      "export",
+      "skills",
+    ])
+      expect(files).toContain(`hitslop-cli/commands/${command}.md`);
+    for (const name of [
+      "hitslop",
+      "hitslop-authoring",
+      "hitslop-design",
+      "hitslop-document",
+      "hitslop-cli",
+    ])
+      expect(await readFile(join(first, name, "SKILL.md"), "utf8")).toContain(`name: ${name}`);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
-test("packaged CLI skills stay in sync with canonical guidance", async () => {
-  const bundled = bundledSkillsRoot();
-  const source = new URL("../../../.agents/skills/", import.meta.url).pathname;
-  for (const skill of ["hitslop-authoring", "hitslop-design"] as const) {
-    const walk = async (relative: string): Promise<void> => {
-      for (const entry of await readdir(join(source, relative), { withFileTypes: true })) {
-        const path = join(relative, entry.name);
-        if (entry.isDirectory()) await walk(path);
-        else expect(await readFile(join(bundled, path), "utf8")).toBe(await readFile(join(source, path), "utf8"));
-      }
+test("Crust installs and repairs links without replacing conflicting directories", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hsl-skill-links-"));
+  try {
+    const home = join(root, "home"),
+      project = join(root, "project"),
+      skills = join(root, "bundle/skills");
+    await mkdir(home);
+    await mkdir(project);
+    await buildSkills(skills);
+    // Run in a separate process so homedir and scope resolution cannot touch the real user.
+    const module = resolve("packages/cli/node_modules/@crustjs/skills/dist/index.js");
+    const script = `import { installSkill, getSkillStatus, uninstallSkill } from ${JSON.stringify(module)};
+      import {readlink} from "node:fs/promises";
+      const sourceDir = ${JSON.stringify(join(skills, "hitslop-cli"))};
+      const options = { sourceDir, agents: ["codex"], scope: "project" };
+      await installSkill(options);
+      if ((await readlink(".agents/skills/hitslop-cli")).startsWith("/")) throw new Error("Expected relative project link");
+      console.log((await getSkillStatus({name:"hitslop-cli", ...options})).agents.find(a=>a.agent==="codex").status);
+      await uninstallSkill({name:"hitslop-cli",agents:["codex"],scope:"project"});
+      await installSkill({...options,scope:"global"});`;
+    const run = async (code: string) => {
+      const child = Bun.spawn([process.execPath, "-e", code], {
+        cwd: project,
+        env: { ...process.env, HOME: home },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [out, err, status] = await Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ]);
+      expect(err).toBe("");
+      expect(status).toBe(0);
+      return out;
     };
-    await walk(skill);
-  }
-  expect(await readFile(join(bundled, "hitslop-document", "SKILL.md"), "utf8")).toBe(documentSkillContent);
-});
-
-async function fixture() {
-  const root = await mkdtemp(join(tmpdir(), "hitslop-skills-")); roots.push(root);
-  return { root, cacheRoot: join(root, "cache"), discoveryRoots: [] as string[] };
-}
-
-test("bootstrap fills missing skills while explicit sync replaces the bundle", async () => {
-  const options = await fixture();
-  await syncAgentSkills(options);
-  const skill = join(options.cacheRoot, "hitslop-authoring", "SKILL.md");
-  await writeFile(skill, "newer guidance");
-  await rm(join(options.cacheRoot, "hitslop-design"), { recursive: true });
-  await syncAgentSkills({ ...options, missingOnly: true });
-  expect(await readFile(skill, "utf8")).toBe("newer guidance");
-  expect(await readFile(join(options.cacheRoot, "hitslop-design", "SKILL.md"), "utf8")).toContain("name: hitslop-design");
-  await syncAgentSkills(options);
-  expect(await readFile(skill, "utf8")).toContain("name: hitslop-authoring");
-});
-
-test("failed staging preserves the complete previous bundle", async () => {
-  const options = await fixture();
-  await syncAgentSkills(options);
-  const bundledRoot = join(options.root, "incomplete");
-  await mkdir(join(bundledRoot, "hitslop-authoring"), { recursive: true });
-  await writeFile(join(bundledRoot, "hitslop-authoring", "SKILL.md"), "replacement");
-  await expect(syncAgentSkills({ ...options, bundledRoot })).rejects.toThrow();
-  for (const name of managedSkillNames) {
-    expect(await readFile(join(options.cacheRoot, name, "SKILL.md"), "utf8")).toContain(`name: ${name}`);
+    expect(await run(script)).toContain("linked");
+    const globalLink = join(home, ".agents/skills/hitslop-cli");
+    expect(await readlink(globalLink)).toBe(join(skills, "hitslop-cli"));
+    await rm(globalLink);
+    await symlink(join(home, ".hitslop/skills/hitslop-cli"), globalLink);
+    await run(script); // Repair an old native-style dangling link.
+    expect(await readlink(globalLink)).toBe(join(skills, "hitslop-cli"));
+    await rm(globalLink);
+    await mkdir(globalLink);
+    await run(`import { installSkill } from ${JSON.stringify(module)};
+      try { await installSkill({sourceDir:${JSON.stringify(join(skills, "hitslop-cli"))},agents:["codex"],scope:"global"}); throw new Error("Expected conflict"); }
+      catch(e) { if(e.name !== "SkillConflictError") throw e; }`);
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
 
-test("activation failure rolls back and a later sync can retry", async () => {
-  const options = await fixture();
-  await syncAgentSkills(options);
-  const skill = join(options.cacheRoot, "hitslop-authoring", "SKILL.md");
-  await writeFile(skill, "previous guidance");
-  const original = fs.rename;
-  const failingRename = spyOn(fs, "rename").mockImplementation(async (from, to) => {
-    if (String(from).includes(".staging-") && to === options.cacheRoot) throw new Error("activation failed");
-    return original(from, to);
-  });
-  try { await expect(syncAgentSkills(options)).rejects.toThrow("activation failed"); }
-  finally { failingRename.mockRestore(); }
-  expect(await readFile(skill, "utf8")).toBe("previous guidance");
-  await syncAgentSkills(options);
-  expect(await readFile(skill, "utf8")).toContain("name: hitslop-authoring");
-});
-
-test("bootstrap recovers the previous tree after an interrupted activation", async () => {
-  const options = await fixture();
-  await syncAgentSkills(options);
-  await writeFile(join(options.cacheRoot, "hitslop-authoring", "SKILL.md"), "previous guidance");
-  await rename(options.cacheRoot, `${options.cacheRoot}.previous`);
-  await syncAgentSkills({ ...options, missingOnly: true });
-  expect(await readFile(join(options.cacheRoot, "hitslop-authoring", "SKILL.md"), "utf8")).toBe("previous guidance");
-});
-
-test("competing processes install complete bundles and release their locks", async () => {
-  const options = await fixture();
-  const modulePath = new URL("../src/skills.ts", import.meta.url).pathname;
-  const bundles = await Promise.all(["a", "b", "c"].map(async (value) => {
-    const bundle = join(options.root, value);
-    await cp(bundledSkillsRoot(), bundle, { recursive: true });
-    for (const name of managedSkillNames) await writeFile(join(bundle, name, "SKILL.md"), value);
-    return bundle;
-  }));
-  const children = bundles.map((bundledRoot) => Bun.spawn([process.execPath, "-e",
-    `import { syncAgentSkills } from ${JSON.stringify(modulePath)}; await syncAgentSkills(${JSON.stringify({ ...options, bundledRoot })});`,
-  ], { stdout: "pipe", stderr: "pipe" }));
-  for (const child of children) {
-    const error = await new Response(child.stderr).text();
-    expect({ code: await child.exited, error }).toEqual({ code: 0, error: "" });
+test("public skills commands install all guides and update existing links only", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hsl-skill-cli-"));
+  try {
+    const home = join(root, "home"),
+      project = join(root, "project");
+    await mkdir(home);
+    await mkdir(project);
+    await writeFile(join(root, "package.json"), '{"type":"module"}');
+    await writeFile(
+      join(root, "cli.ts"),
+      `import { app } from ${JSON.stringify(resolve("packages/cli/src/app.ts"))}; await app.execute();`,
+    );
+    const skills = join(root, ".crust/root/skills");
+    await buildSkills(skills);
+    const run = async (...args: string[]) => {
+      const child = Bun.spawn([process.execPath, join(root, "cli.ts"), ...args], {
+        cwd: project,
+        env: { ...process.env, HOME: home, PATH: "/usr/bin:/bin" },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [out, err, code] = await Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+        child.exited,
+      ]);
+      expect(code).toBe(0);
+      expect(err).not.toContain("Error");
+      return out;
+    };
+    await run("skills", "update", "--scope", "global");
+    expect(await Bun.file(join(home, ".agents/skills/hitslop-cli/SKILL.md")).exists()).toBe(false);
+    await run("skills", "--all", "--scope", "project");
+    for (const name of [
+      "hitslop",
+      "hitslop-authoring",
+      "hitslop-design",
+      "hitslop-document",
+      "hitslop-cli",
+    ])
+      expect(await readlink(join(project, ".agents/skills", name))).not.toStartWith("/");
+    await run("skill", "--all", "--scope", "global");
+    const link = join(home, ".agents/skills/hitslop-cli");
+    await rm(link);
+    await symlink(join(home, ".hitslop/skills/hitslop-cli"), link);
+    await run("skills", "update", "--scope", "global");
+    expect(await realpath(link)).toBe(await realpath(join(skills, "hitslop-cli")));
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
-  const contents = await Promise.all(managedSkillNames.map((name) => readFile(join(options.cacheRoot, name, "SKILL.md"), "utf8")));
-  expect(new Set(contents).size).toBe(1);
-  await syncAgentSkills(options);
 });

@@ -1,26 +1,21 @@
-# Storage and package boundary
+# Source, templates, and documents
 
-Use no persistence for a pure calculation. Use JSON for structured data and
-named media for a small set of known file roles.
+Source contains the manifest, TypeScript descriptor definition, initial values,
+theme tokens, components, and plain CSS. Build compiles immutable app.html/assets,
+state.schema.json, initial.json, runtime requirements, and document guidance.
+Native capture adds QuickLook artwork. Templates contain no mutable state,
+source, dependencies, caches, or stores.
 
-JSON writes replace the value atomically and may use an expected revision.
-Root `schema.ts` authors the TypeBox data shape. Svelte stores import its
-default export directly and infer data types through
-`jsonStore({ schema, initial })`. Validation checks values without
-coercion, defaults, or field removal. Quick Checklist and the CLI counter starter use this workflow;
-backlog examples remain deferred. Replace/remove named media through the host
-rather than treating it as an arbitrary filesystem.
+Creating a writable copy adds state/document.sqlite and ownership files. Loro
+in WebKit owns live data; Swift persists opaque bytes. Initial values seed only
+a new document. Never reconcile JSON files into state or edit SQLite directly.
+Use typed handles or the native CLI; `flush()` acknowledges persistence.
 
-A template contains immutable `manifest.json`, generated `app.html`, optional
-`data.schema.json`, optional immutable `.agents/skills/hitslop-document` guidance,
-optional `assets/`, and capture images when registered/published. A writable document may lazily add `stores/data.json`,
-`stores/media/`, and `stores/theme.css`.
-The macOS host may add Finder `Icon\r` metadata locally.
+state/theme.json contains bounded declared-token overrides. Use theme commands,
+not arbitrary CSS. Close before moving documents; synced folders are unsupported.
+Shipped v1 runtime contracts remain supported; pre-v1 formats are not migrated.
 
-The builder supplies current guidance, but hosts must not require its presence
-or compare it with their own copy. Quick Checklist and the CLI starter use single-source
-`theme.ts`; backlog migration remains a separate task.
-
-Never ship source, `node_modules`, `.hitslop`, `dist` nesting, authoring skills,
-`style.css`, `document.json`, seed stores, unsupported stores, env files, keys,
-or Finder metadata in a template or published artifact.
+Optional `state/attachments/<sha256>` files hold opaque imported bytes. Only the
+host attachment API/CLI writes them, under existing ownership. References belong
+to Loro; templates remain free of mutable state. Duplicate/export snapshots copy
+attachments. Close/export flush accepted imports before proceeding.

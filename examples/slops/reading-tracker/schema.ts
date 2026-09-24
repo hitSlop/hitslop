@@ -1,25 +1,19 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const book = Type.Object(
-  {
-    id: Type.String(),
-    title: Type.String(),
-    author: Type.String(),
-    rating: Type.Number(),
-    status: Type.String(),
-    notes: Type.Optional(Type.String()),
-  },
-  { additionalProperties: true },
-);
+export const statuses = ["To Read", "Reading", "Read"] as const;
 
-const readingSchema = Type.Object(
-  {
-    memberName: Type.String(),
-    memberSince: Type.String(),
-    books: Type.Array(book),
-  },
-  { additionalProperties: true },
-);
+const schema = defineDocument({
+  memberName: s.text(),
+  memberSince: s.text(),
+  books: s.list(s.object({
+    title: s.text(),
+    author: s.text(),
+    rating: s.integer({ min: 0, max: 5 }),
+    status: s.enum(statuses),
+    notes: s.optional(s.text()),
+  })),
+});
 
-export type ReadingTracker = Type.Static<typeof readingSchema>;
-export default readingSchema;
+export type ReadingTracker = Value<typeof schema.fields.node>;
+export type Book = ReadingTracker["books"][number];
+export default schema;

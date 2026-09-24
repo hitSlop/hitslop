@@ -1,16 +1,16 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const countdownSchema = Type.Object({
-  title: Type.String(),
-  createdAt: Type.String(),
-  targetDate: Type.String(),
-  targetTime: Type.String(),
-  milestones: Type.Array(Type.Object({
-    id: Type.String(),
-    title: Type.String(),
-    done: Type.Boolean(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  title: s.text(),
+  createdAt: s.string(),
+  targetDate: s.string(),
+  targetTime: s.string(),
+  milestones: s.list(s.object({
+    title: s.text(),
+    done: s.boolean(),
+  })),
+});
 
-export type CountdownData = Type.Static<typeof countdownSchema>;
-export default countdownSchema;
+export type Countdown = Value<typeof schema.fields.node>;
+export type Milestone = Countdown["milestones"][number];
+export default schema;

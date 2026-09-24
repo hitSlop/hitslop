@@ -1,9 +1,13 @@
 # Markdown Editor
 
-A paper manuscript for writing markdown. The editor is a native textarea layered over the page (OverType), with edit, split, and preview, and a clean rendered export.
+A paper manuscript for writing markdown, with edit, split, and preview over a native textarea.
+
+From the repository root:
 
 ```sh
 bun slop dev examples/slops/markdown-editor
 bun slop build examples/slops/markdown-editor
-bun slop validate examples/slops/markdown-editor/dist/markdown-editor.slop
+bun slop register examples/slops/markdown-editor
 ```
+
+Create a writable copy of the registered template before editing.

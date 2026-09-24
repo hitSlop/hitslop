@@ -44,11 +44,8 @@ import ImageIO
 
     init(package: SlopPackage) throws {
         transparentBacking = package.usesTransparentBackground
-        if let url = try package.skinURL() {
-            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-                throw SlopPackageError.invalid("could not decode window skin")
-            }
-            content = .image(image, try AlphaMap(image: image))
+        if let skin = try package.skin() {
+            content = .image(skin.image, try AlphaMap(image: skin.image))
         } else {
             content = .geometry(package.shape)
         }

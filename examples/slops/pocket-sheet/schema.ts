@@ -1,28 +1,19 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const cellStyle = Type.Object({
-  bold: Type.Optional(Type.Boolean()),
-  align: Type.Optional(Type.Union([
-    Type.Literal("left"),
-    Type.Literal("center"),
-    Type.Literal("right"),
-  ])),
-  currency: Type.Optional(Type.Boolean()),
-}, { additionalProperties: true });
+export const tints = ["butter", "mint", "sky", "rose", "lilac"] as const;
+export type Tint = (typeof tints)[number];
+export const stamps = ["🍕", "⭐", "✅", "❤️", "💸", "🎉", "⚠️", "🌱"] as const;
 
-const cellData = Type.Object({
-  raw: Type.String(),
-  style: Type.Optional(cellStyle),
-}, { additionalProperties: true });
-
-const pocketSheetSchema = Type.Object({
-  title: Type.String(),
-  rows: Type.Number(),
-  cols: Type.Number(),
-  cells: Type.Record(Type.String(), cellData),
-}, { additionalProperties: true });
-
-export type CellStyle = Type.Static<typeof cellStyle>;
-export type CellData = Type.Static<typeof cellData>;
-export type PocketSheet = Type.Static<typeof pocketSheetSchema>;
-export default pocketSheetSchema;
+const schema = defineDocument({
+  title: s.text(),
+  // Sparse cells keyed "B3": edits to different cells merge independently.
+  cells: s.record(s.object({
+    input: s.string({ maxLength: 500 }),
+    tint: s.optional(s.enum(tints)),
+    stamp: s.optional(s.string({ maxLength: 16 })),
+  })),
+  // Column letter to pixel width, present only after a resize.
+  widths: s.record(s.integer({ min: 56, max: 320 })),
+});
+export type Cell = Value<typeof schema.fields.node>["cells"][string];
+export default schema;

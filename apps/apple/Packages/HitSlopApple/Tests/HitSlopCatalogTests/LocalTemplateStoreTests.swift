@@ -6,19 +6,20 @@ import HitSlopRuntime
 import Testing
 @testable import HitSlopCatalog
 
-@Test @MainActor func discoversAndDuplicatesInstalledTemplate() throws {
+@Test @MainActor func discoversAndDuplicatesInstalledTemplate() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     let package = try writeTemplate(named: "tiny-counter", in: root)
 
     let store = LocalTemplateStore(templatesURL: root)
+    await store.refresh()
     #expect(store.templates.count == 1)
     #expect(store.templates.first?.manifest.title == "Tiny Counter")
     #expect(store.templates.first?.iconURL.lastPathComponent == "Icon.png")
     #expect(store.issues.isEmpty)
 
     let destination = root.appendingPathComponent("created.slop", isDirectory: true)
-    try DocumentFactory(catalogURL: URL(string: "https://api.hitslop.com")!).create(fromLocalPackage: store.templates[0].packageURL, at: destination)
+    try DocumentFactory().create(fromLocalPackage: #require(store.templates.first).packageURL, at: destination)
     SlopPreviewWriter.installExistingPreview(for: destination)
     #expect(try Data(contentsOf: package.appendingPathComponent("manifest.json")) == Data(contentsOf: destination.appendingPathComponent("manifest.json")))
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("app.html").path))
@@ -35,13 +36,14 @@ import Testing
     #expect(!FileManager.default.fileExists(atPath: destination.appendingPathComponent("stores").path))
 }
 
-@Test @MainActor func ignoresHostedCacheWhenListingTemplates() throws {
+@Test @MainActor func discoversOnlyTopLevelPackages() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     _ = try writeTemplate(named: "tiny-counter", in: root)
-    _ = try writeTemplate(named: "cached-slop", in: root.appendingPathComponent("cache/publisher/cached-slop", isDirectory: true), fileName: "1.slop")
+    _ = try writeTemplate(named: "cached-slop", in: root.appendingPathComponent("nested/archived/cached-slop", isDirectory: true), fileName: "1.slop")
 
     let store = LocalTemplateStore(templatesURL: root)
+    await store.refresh()
     #expect(store.templates.map(\.manifest.slug) == ["tiny-counter"])
     #expect(store.issues.isEmpty)
 }
@@ -53,11 +55,13 @@ private func writeTemplate(named slug: String, in directory: URL, fileName: Stri
     let package = directory.appendingPathComponent(fileName ?? "\(slug).slop", isDirectory: true)
     try FileManager.default.createDirectory(at: package.appendingPathComponent("QuickLook"), withIntermediateDirectories: true)
     try Data("<main>Hello</main>".utf8).write(to: package.appendingPathComponent("app.html"))
-    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"\#(slug)","title":"Tiny Counter","description":"Counts a very small thing.","categories":["utilities","personal"],"presentation":{"width":320,"height":240}}"#
+    try Data(#"{"format":1,"root":{"kind":"object","properties":{}}}"#.utf8).write(to: package.appendingPathComponent("state.schema.json"))
+    try Data("{}".utf8).write(to: package.appendingPathComponent("initial.json"))
+    let manifest = #"{"runtime":"hitslop-v1","$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"\#(slug)","title":"Tiny Counter","description":"Counts a very small thing.","categories":["utilities","personal"],"presentation":{"width":320,"height":240}}"#
     try Data(manifest.utf8).write(to: package.appendingPathComponent("manifest.json"))
     let skill = package.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
     try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
+    try Data(contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../../../../../packages/cli/skills/hitslop-document/SKILL.md").standardizedFileURL).write(to: skill)
     try png.write(to: package.appendingPathComponent("QuickLook/Preview.png"))
     try iconPNG.write(to: package.appendingPathComponent("QuickLook/Icon.png"))
     return package
@@ -66,4 +70,81 @@ private func writeTemplate(named slug: String, in directory: URL, fileName: Stri
 private func makeIconPNG() throws -> Data {
     let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 512, pixelsHigh: 512, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
     return bitmap.representation(using: .png, properties: [:])!
+}
+
+@Test @MainActor func templateIdentityIncludesItsSource() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: root) }
+    for source in ["built-in", "registered"] { _ = try writeTemplate(named: "same-slug", in: root.appendingPathComponent(source)) }
+    let scanner = CatalogScanner()
+    let builtIn = try await scanner.local(at: root.appendingPathComponent("built-in"), makeImmutable: false)
+    let local = try await scanner.local(at: root.appendingPathComponent("registered"))
+    let first = CatalogServices.localEntry(try #require(builtIn.templates.first))
+    let second = CatalogServices.localEntry(try #require(local.templates.first))
+    #expect(first.id != second.id)
+}
+
+@Test @MainActor func localCatalogCombinesSourcesAndReportsInvalidPackages() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let bundledRoot = root.appendingPathComponent("bundled"), installedRoot = root.appendingPathComponent("installed")
+    _ = try writeTemplate(named: "same-slug", in: bundledRoot)
+    _ = try writeTemplate(named: "same-slug", in: installedRoot)
+    try FileManager.default.createDirectory(at: installedRoot.appendingPathComponent("invalid.slop"), withIntermediateDirectories: true)
+    let services = CatalogServices(templatesURL: installedRoot, bundledRoot: bundledRoot)
+    let stream = await services.client.local()
+    var iterator = stream.makeAsyncIterator()
+    var snapshot = await iterator.next()
+    if snapshot?.entries.count == 1 { snapshot = await iterator.next() }
+    let entries = try #require(snapshot?.entries)
+    #expect(entries.count == 2)
+    #expect(entries.map(\.isBundled) == [true, false])
+    #expect(Set(entries.map(\.id)).count == 2)
+    #expect(entries.allSatisfy { $0.categories == ["utilities", "personal"] })
+    #expect(snapshot?.issues.count == 1)
+}
+
+@Test @MainActor func creationTelemetryExcludesCancellationAndKeepsTheMasterUnchanged() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let templates = root.appendingPathComponent("templates")
+    let source = try writeTemplate(named: "tiny-counter", in: templates)
+    let before = try Data(contentsOf: source.appendingPathComponent("initial.json"))
+    let scanner = CatalogScanner()
+    let snapshot = try await scanner.local(at: templates)
+    let entry = CatalogServices.localEntry(try #require(snapshot.templates.first))
+    var events: [SlopTelemetryEvent] = []
+    var recent: URL?
+    var destination: URL?
+    let services = CatalogServices(templatesURL: templates, bundledRoot: nil,
+        telemetry: SlopTelemetry { events.append($0) },
+        chooseDestination: { _ in destination }, recordRecent: { recent = $0 })
+    #expect(try await services.client.chooseDestination(entry) == nil)
+    #expect(events.isEmpty && recent == nil)
+    destination = root.appendingPathComponent("created.slop")
+    let chosen = try #require(try await services.client.chooseDestination(entry))
+    #expect(try await services.client.create(entry, chosen) == destination?.standardizedFileURL.resolvingSymlinksInPath())
+    #expect(events == [.created(.installed)])
+    #expect(recent == destination)
+    #expect(try Data(contentsOf: source.appendingPathComponent("initial.json")) == before)
+    #expect(!FileManager.default.fileExists(atPath: source.appendingPathComponent("state").path))
+    // Existing destinations fail without emitting another creation.
+    await #expect(throws: (any Error).self) { _ = try await services.client.create(entry, chosen) }
+    #expect(events == [.created(.installed), .failed(.create)])
+}
+
+@Test @MainActor func templateFolderChangesRefreshTheExistingStore() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let store = LocalTemplateStore(templatesURL: root)
+    defer { store.stop(); try? FileManager.default.removeItem(at: root) }
+    await store.refresh()
+    #expect(store.templates.isEmpty)
+    let package = try writeTemplate(named: "added", in: root)
+    await store.refresh()
+    #expect(store.templates.map(\.manifest.slug) == ["added"])
+    try SlopDuplicator.makeWritable(package)
+    try FileManager.default.removeItem(at: package)
+    await store.refresh()
+    #expect(store.templates.isEmpty)
+    #expect(store.issues.isEmpty)
 }

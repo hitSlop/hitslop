@@ -1,19 +1,23 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const threeLines = Type.Array(Type.String(), { minItems: 3, maxItems: 3 });
+const schema = defineDocument({
+  date: s.string(),
+  quote: s.text(),
+  quoteAuthor: s.text(),
+  morningDone: s.boolean(),
+  gratitude1: s.text(),
+  gratitude2: s.text(),
+  gratitude3: s.text(),
+  intention1: s.text(),
+  intention2: s.text(),
+  intention3: s.text(),
+  affirmation: s.text(),
+  eveningDone: s.boolean(),
+  highlight1: s.text(),
+  highlight2: s.text(),
+  highlight3: s.text(),
+  lesson: s.text(),
+});
 
-const journalSchema = Type.Object({
-  date: Type.String(),
-  quote: Type.String(),
-  quoteAuthor: Type.String(),
-  morningDone: Type.Boolean(),
-  gratitudes: threeLines,
-  intentions: threeLines,
-  affirmation: Type.String(),
-  eveningDone: Type.Boolean(),
-  highlights: threeLines,
-  lesson: Type.String(),
-}, { additionalProperties: true });
-
-export type FiveMinuteJournal = Type.Static<typeof journalSchema>;
-export default journalSchema;
+export type FiveMinuteJournal = Value<typeof schema.fields.node>;
+export default schema;

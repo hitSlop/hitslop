@@ -1,4 +1,4 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
 export const DAYS = ["MON", "TUE", "WED", "THU", "FRI"] as const;
 export type DayKey = (typeof DAYS)[number];
@@ -6,50 +6,39 @@ export type DayKey = (typeof DAYS)[number];
 export const COLORS = ["sage", "slate", "amber", "terracotta", "indigo", "rose", "teal"] as const;
 export type SubjectColor = (typeof COLORS)[number];
 
-const day = Type.Enum(["MON", "TUE", "WED", "THU", "FRI"]);
-const color = Type.Enum(["sage", "slate", "amber", "terracotta", "indigo", "rose", "teal"]);
+const schema = defineDocument({
+  studentName: s.text(),
+  term: s.text(),
+  homeroom: s.text(),
+  locker: s.text(),
+  periods: s.list(s.object({
+    periodKey: s.string(),
+    name: s.text(),
+    start: s.string(),
+    end: s.string(),
+  })),
+  classes: s.list(s.object({
+    periodKey: s.string(),
+    day: s.enum(DAYS),
+    subject: s.text(),
+    room: s.text(),
+    teacher: s.text(),
+    color: s.enum(COLORS),
+  })),
+  activities: s.list(s.object({
+    day: s.enum(DAYS),
+    start: s.string(),
+    end: s.string(),
+    title: s.text(),
+    location: s.text(),
+  })),
+});
 
-const period = Type.Object({
-  id: Type.String(),
-  name: Type.String(),
-  start: Type.String(),
-  end: Type.String(),
-}, { additionalProperties: true });
-
-const classEntry = Type.Object({
-  id: Type.String(),
-  periodId: Type.String(),
-  day,
-  subject: Type.String(),
-  room: Type.String(),
-  teacher: Type.String(),
-  color,
-}, { additionalProperties: true });
-
-const activity = Type.Object({
-  id: Type.String(),
-  day,
-  start: Type.String(),
-  end: Type.String(),
-  title: Type.String(),
-  location: Type.String(),
-}, { additionalProperties: true });
-
-const scheduleSchema = Type.Object({
-  studentName: Type.String(),
-  term: Type.String(),
-  homeroom: Type.String(),
-  locker: Type.String(),
-  periods: Type.Array(period),
-  classes: Type.Array(classEntry),
-  activities: Type.Array(activity),
-}, { additionalProperties: true });
-
-export type PeriodSlot = Type.Static<typeof period>;
-export type ClassEntry = Type.Static<typeof classEntry>;
-export type ActivityEntry = Type.Static<typeof activity>;
-export type Schedule = Type.Static<typeof scheduleSchema>;
-export default scheduleSchema;
+export type Schedule = Value<typeof schema.fields.node>;
+export type PeriodSlot = Schedule["periods"][number];
+export type ClassEntry = Schedule["classes"][number];
+export type ActivityEntry = Schedule["activities"][number];
+export default schema;
 
 export function isDay(value: string): value is DayKey {
   return (DAYS as readonly string[]).includes(value);
@@ -57,25 +46,6 @@ export function isDay(value: string): value is DayKey {
 
 export function isColor(value: string): value is SubjectColor {
   return (COLORS as readonly string[]).includes(value);
-}
-
-export function toMinutes(hhmm: string): number {
-  const [hours, minutes] = hhmm.split(":").map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
-}
-
-export function formatClock(hhmm: string): string {
-  if (!hhmm) return "";
-  const [hours, minutes] = hhmm.split(":");
-  if (!hours) return hhmm;
-  return `${hours.padStart(2, "0")}:${(minutes || "00").padStart(2, "0")}`;
-}
-
-export function addMinutes(hhmm: string, delta: number): string {
-  const total = Math.max(0, Math.min(23 * 60 + 59, toMinutes(hhmm) + delta));
-  const hours = Math.floor(total / 60);
-  const minutes = total % 60;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 export function isBreakName(name: string): boolean {

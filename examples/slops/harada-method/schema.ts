@@ -1,17 +1,15 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const themeSchema = Type.Object({
-  title: Type.String(),
-  cells: Type.Array(Type.String()),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  goal: s.text(),
+  deadline: s.string(),
+  themes: s.list(s.object({
+    title: s.text(),
+    cells: s.list(s.string()),
+  })),
+  done: s.record(s.boolean()),
+});
 
-const sheetSchema = Type.Object({
-  goal: Type.String(),
-  deadline: Type.String(),
-  themes: Type.Array(themeSchema),
-  done: Type.Record(Type.String(), Type.Boolean()),
-}, { additionalProperties: true });
-
-export type Theme = Type.Static<typeof themeSchema>;
-export type Sheet = Type.Static<typeof sheetSchema>;
-export default sheetSchema;
+export type Sheet = Value<typeof schema.fields.node>;
+export type Theme = Sheet["themes"][number];
+export default schema;

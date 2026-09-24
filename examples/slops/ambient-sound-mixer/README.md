@@ -2,8 +2,12 @@
 
 A smoked-glass hi-fi deck for mixing five synthesized ambient channels.
 
+From the repository root:
+
 ```sh
 bun slop dev examples/slops/ambient-sound-mixer
 bun slop build examples/slops/ambient-sound-mixer
-bun slop validate examples/slops/ambient-sound-mixer/dist/ambient-sound-mixer.slop
+bun slop register examples/slops/ambient-sound-mixer
 ```
+
+Create a writable copy of the registered template before editing.

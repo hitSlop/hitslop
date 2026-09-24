@@ -1,11 +1,15 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const markdownSchema = Type.Object({
-  title: Type.String(),
-  content: Type.String(),
-  mode: Type.Union([Type.Literal("inplace"), Type.Literal("split"), Type.Literal("preview")]),
-  theme: Type.Union([Type.Literal("paper"), Type.Literal("dark")]),
-}, { additionalProperties: true });
+export const modes = ["inplace", "split", "preview"] as const;
+export const themes = ["paper", "dark"] as const;
 
-export type MarkdownDoc = Type.Static<typeof markdownSchema>;
-export default markdownSchema;
+const schema = defineDocument({
+  title: s.text(),
+  content: s.text(),
+  mode: s.enum(modes),
+  theme: s.enum(themes),
+});
+
+export type MarkdownDoc = Value<typeof schema.fields.node>;
+export type Mode = MarkdownDoc["mode"];
+export default schema;

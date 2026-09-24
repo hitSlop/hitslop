@@ -1,370 +1,253 @@
 import AppKit
 import HitSlopCore
 import HitSlopHost
-import HitSlopRegistry
+import ComposableArchitecture
+@_exported import HitSlopFeatures
 import HitSlopRuntime
 import SwiftUI
 
-enum CatalogFilter: Hashable {
-    case all, myTemplates, recents, category(String)
-
-    var title: String {
-        switch self {
-        case .all: "All Slops"
-        case .myTemplates: "Mine"
-        case .recents: "Recents"
-        case .category(let category): categoryLabel(category)
-        }
-    }
-}
-
-private struct TemplateCreationFailure: Identifiable {
-    let id = UUID()
-    let title: String
-    let message: String
-}
-
-private struct RecentCatalogItem: Identifiable {
-    let url: URL
-    let package: SlopPackage?
-    let packageBytes: Int64
-    let createdAt: Date?
-    let updatedAt: Date?
-
-    var id: String { "recent:\(url.standardizedFileURL.path)" }
-    var title: String { package?.manifest.title ?? url.deletingPathExtension().lastPathComponent }
-    var description: String { package?.manifest.description ?? "A local hitSlop document." }
-    var categories: [String] { package?.manifest.categories.map(\.rawValue) ?? [] }
-    var authorName: String? { package?.manifest.author.name }
-    var authorURL: URL? { package?.manifest.author.url.flatMap(URL.init(string:)) }
-    var searchableText: String { ([title, description, authorName ?? ""] + categories).joined(separator: " ").localizedLowercase }
-    var previewURL: URL? { package?.previewURL }
-    var iconURL: URL? { package?.iconURL }
-
-    init(url: URL) {
-        self.url = url
-        package = try? SlopPackage(rootURL: url)
-        packageBytes = slopPackageByteCount(url)
-        let values = try? url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
-        createdAt = values?.creationDate
-        updatedAt = values?.contentModificationDate
-    }
-}
-
-private enum CatalogEntry: Identifiable {
-    case template(CatalogItem)
-    case recent(RecentCatalogItem)
-
-    var id: String { switch self { case .template(let item): item.id; case .recent(let item): item.id } }
-    var title: String { switch self { case .template(let item): item.title; case .recent(let item): item.title } }
-    var description: String { switch self { case .template(let item): item.description; case .recent(let item): item.description } }
-    var categories: [String] { switch self { case .template(let item): item.categories; case .recent(let item): item.categories } }
-    var authorName: String? { switch self { case .template(let item): item.authorName; case .recent(let item): item.authorName } }
-    var authorURL: URL? { switch self { case .template(let item): item.authorURL; case .recent(let item): item.authorURL } }
-    var searchableText: String { switch self { case .template(let item): item.searchableText; case .recent(let item): item.searchableText } }
-}
-
 public struct CatalogView: View {
-    @StateObject private var model: RegistryModel
-    @StateObject private var localStore: LocalTemplateStore
-    @State private var query = ""
-    @State private var filter: CatalogFilter = .all
-    @State private var catalogSort: RegistrySort = .popular
-    @State private var selectedID: String?
-    @State private var searchTask: Task<Void, Never>?
-    @State private var creatingTemplateTitle: String?
-    @State private var creationFailure: TemplateCreationFailure?
-    @State private var recentRevision = 0
+    @Bindable var store: StoreOf<CatalogFeature>
     @FocusState private var searchFocused: Bool
     @Environment(\.scenePhase) private var scenePhase
-    private let openDocumentAction: (URL) -> Void
 
-    public init(catalogURL: URL, templatesURL: URL = DocumentFactory.defaultTemplatesRoot, openDocument: @escaping (URL) -> Void) {
-        _model = StateObject(wrappedValue: RegistryModel(catalogURL: catalogURL))
-        _localStore = StateObject(wrappedValue: LocalTemplateStore(templatesURL: templatesURL))
-        openDocumentAction = openDocument
-    }
-
-    private let categories = ["productivity", "utilities", "finance", "media", "games", "developer-tools", "education", "business", "personal", "other"]
-    private var searchTerm: String { query.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase }
-    private var hostedItems: [CatalogItem] { model.templates.map { CatalogItem(source: .hosted($0)) } }
-    private var localItems: [CatalogItem] { localStore.templates.map { CatalogItem(source: .local($0)) } }
-    private var recentItems: [RecentCatalogItem] {
-        _ = recentRevision
-        return NSDocumentController.shared.recentDocumentURLs.filter {
-            $0.pathExtension.lowercased() == "slop"
-                && FileManager.default.fileExists(atPath: $0.path)
-                && !DocumentFactory.isManagedTemplatePackage($0, templatesRoot: localStore.templatesURL)
-        }.map(RecentCatalogItem.init)
-    }
-    private var visibleEntries: [CatalogEntry] {
-        let entries: [CatalogEntry] = switch filter {
-        case .all, .category: hostedItems.map(CatalogEntry.template)
-        case .myTemplates: localItems.map(CatalogEntry.template)
-        case .recents: recentItems.map(CatalogEntry.recent)
-        }
-        guard !searchTerm.isEmpty, filter == .myTemplates || filter == .recents else { return entries }
-        return entries.filter { $0.searchableText.contains(searchTerm) }
-    }
-    private var selectedEntry: CatalogEntry? { visibleEntries.first { $0.id == selectedID } }
-    private var visibleIDs: [String] { visibleEntries.map(\.id) }
-    private var showsCatalogSort: Bool {
-        switch filter { case .all, .category: true; case .myTemplates, .recents: false }
+    public init(store: StoreOf<CatalogFeature>) {
+        self.store = store
     }
 
     public var body: some View {
         NavigationSplitView {
-            CatalogSidebar(
-                filter: filter,
-                categories: categories,
-                localCount: localItems.count,
-                recentCount: recentItems.count,
-                select: select
-            )
-            .navigationSplitViewColumnWidth(min: 168, ideal: 184, max: 204)
+            CatalogSidebarFeatureView(store: store)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 220)
         } content: {
-            CatalogRail(
-                title: filter.title,
-                entries: visibleEntries,
-                selectedID: $selectedID,
-                query: $query,
-                searchFocused: $searchFocused,
-                catalogURL: model.catalogURL,
-                errorMessage: showsCatalogSort ? model.errorMessage : nil,
-                localIssues: filter == .myTemplates ? localStore.issues : [],
-                sort: $catalogSort,
-                showsSort: showsCatalogSort
-            )
-            .navigationSplitViewColumnWidth(min: 236, ideal: 264, max: 304)
+            CatalogResultsFeatureView(store: store, searchFocused: $searchFocused)
+            .navigationSplitViewColumnWidth(min: 250, ideal: 280, max: 320)
             .ignoresSafeArea(.container, edges: .top)
         } detail: {
-            CatalogDetail(
-                entry: selectedEntry,
-                catalogURL: model.catalogURL,
-                isCreating: creatingTemplateTitle != nil,
-                primaryAction: performPrimaryAction
-            )
+            CatalogDetailFeatureView(store: store)
             .frame(minWidth: 460)
             .ignoresSafeArea(.container, edges: .top)
         }
         .navigationSplitViewStyle(.balanced)
+        .tint(CatalogStyle.brand)
         .background {
             Button("Focus template search") { searchFocused = true }
                 .keyboardShortcut("k", modifiers: .command)
-                .frame(width: 1, height: 1)
-                .opacity(0)
+                .frame(width: 1, height: 1).opacity(0)
         }
-        .onAppear { synchronizeSelection() }
-        .onChange(of: visibleIDs) { _, _ in synchronizeSelection() }
-        .onChange(of: query) { _, value in scheduleSearch(value) }
-        .onChange(of: catalogSort) { _, value in
-            switch filter {
-            case .all: model.list(sort: value)
-            case .category(let category): model.list(category: category, sort: value)
-            case .myTemplates, .recents: break
-            }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                localStore.refresh()
-                recentRevision &+= 1
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .hitSlopPreviewDidChange)) { _ in recentRevision &+= 1 }
-        .onOpenURL { url in if url.pathExtension == "slop" { openDocumentAction(url) } }
-        .alert(item: $creationFailure) { failure in
-            Alert(title: Text("Could not create \(failure.title)"), message: Text(failure.message), dismissButton: .default(Text("OK")))
-        }
+        .onAppear { store.send(.start) }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { store.send(.refreshSources) } }
+        .onReceive(NotificationCenter.default.publisher(for: .hitSlopPreviewDidChange)) { _ in store.send(.refreshRecents) }
+        .alert($store.scope(state: \.$alert, action: \.alert))
         .preferredColorScheme(.light)
     }
+}
 
-    private func synchronizeSelection() {
-        if let selectedID, visibleIDs.contains(selectedID) { return }
-        selectedID = visibleIDs.first
-    }
-
-    private func select(_ next: CatalogFilter) {
-        filter = next
-        selectedID = nil
-        guard searchTerm.isEmpty else {
-            scheduleSearch(query)
-            return
-        }
-        switch next {
-        case .all: model.list(sort: catalogSort)
-        case .category(let category): model.list(category: category, sort: catalogSort)
-        case .myTemplates, .recents: break
-        }
-    }
-
-    private func scheduleSearch(_ value: String) {
-        searchTask?.cancel()
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        searchTask = Task {
-            try? await Task.sleep(for: .milliseconds(180))
-            guard !Task.isCancelled else { return }
-            switch filter {
-            case .all:
-                trimmed.isEmpty ? model.list(sort: catalogSort) : model.search(trimmed)
-            case .category(let category):
-                trimmed.isEmpty ? model.list(category: category, sort: catalogSort) : model.search(trimmed, category: category)
-            case .myTemplates, .recents:
-                synchronizeSelection()
-            }
-        }
-    }
-
-    private func performPrimaryAction(_ entry: CatalogEntry) {
-        switch entry {
-        case .recent(let item): openDocumentAction(item.url)
-        case .template(let item): createDocument(from: item)
-        }
-    }
-
-    private func createDocument(from item: CatalogItem) {
-        guard creatingTemplateTitle == nil else { return }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.init(filenameExtension: "slop")!]
-        panel.canCreateDirectories = true
-        panel.directoryURL = SlopCloud.defaultCreationDirectory()
-        let slug: String = switch item.source { case .hosted(let template): template.slug; case .local(let template): template.manifest.slug }
-        panel.nameFieldStringValue = "\(slug).slop"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        withAnimation(.easeOut(duration: 0.16)) { creatingTemplateTitle = item.title }
-        Task { @MainActor in
-            do {
-                switch item.source {
-                case .hosted(let template):
-                    _ = try await DocumentFactory(catalogURL: model.catalogURL).create(from: template.remoteTemplate(), at: url)
-                    SlopPreviewWriter.installExistingPreview(for: url)
-                    await model.recordCreation(template: template)
-                case .local(let template):
-                    try DocumentFactory(catalogURL: model.catalogURL).create(fromLocalPackage: template.packageURL, at: url)
-                    SlopPreviewWriter.installExistingPreview(for: url)
-                }
-                NSDocumentController.shared.noteNewRecentDocumentURL(url)
-                openDocumentAction(url)
-            } catch {
-                creationFailure = TemplateCreationFailure(title: item.title, message: error.localizedDescription)
-            }
-            withAnimation(.easeOut(duration: 0.16)) { creatingTemplateTitle = nil }
+private struct CatalogSidebarFeatureView: View {
+    let store: StoreOf<CatalogFeature>
+    var body: some View {
+        CatalogSidebar(filter: store.filter, categories: store.categories, recentCount: store.recents.count) {
+            store.send(.filterChanged($0))
         }
     }
 }
 
+private struct CatalogResultsFeatureView: View {
+    @Bindable var store: StoreOf<CatalogFeature>
+    var searchFocused: FocusState<Bool>.Binding
+    var body: some View {
+        CatalogRail(
+            title: store.filter.title, entries: store.visibleEntries,
+            selectedID: $store.selectedID.sending(\.selected),
+            query: $store.query.sending(\.queryChanged), searchFocused: searchFocused,
+            localIssues: store.filter != .recents ? store.localIssues : [],
+            onRefresh: { store.send(.refreshSources) }
+        )
+    }
+}
+
+private struct CatalogDetailFeatureView: View {
+    let store: StoreOf<CatalogFeature>
+    var body: some View {
+        CatalogDetail(
+            section: store.filter.title, entry: store.selectedEntry,
+            isCreating: store.creating != nil, isCopying: store.isCopying, isQuitting: store.isQuitting
+        ) {
+            store.send(.primaryAction($0))
+        }
+    }
+}
+
+// MARK: - Style
+
+private enum CatalogStyle {
+    static let brand = Color(red: 0.45, green: 0.16, blue: 0.96)
+    static let brandHover = Color(red: 0.53, green: 0.24, blue: 0.98)
+    static let selection = brand.opacity(0.10)
+    static let hover = Color.primary.opacity(0.04)
+    static let hairline = Color.primary.opacity(0.07)
+    static let fill = Color.primary.opacity(0.045)
+    static let sidebar = Color(nsColor: .windowBackgroundColor)
+    static let content = Color(nsColor: .textBackgroundColor)
+    /// Height of the titlebar strip the traffic lights sit in.
+    static let titlebar: CGFloat = 52
+}
+
+/// Rounded white tile holding a template or document icon.
+private struct IconTile: View {
+    let urls: [URL]
+    let size: CGFloat
+    let radius: CGFloat
+
+    var body: some View {
+        CatalogImageView(urls: urls, fallback: .applicationIcon)
+            .padding(size * 0.1)
+            .frame(width: size, height: size)
+            .background(.white, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(CatalogStyle.hairline))
+            .shadow(color: .black.opacity(0.06), radius: 1.5, y: 1)
+    }
+}
+
+// MARK: - Sidebar
+
 private struct CatalogSidebar: View {
     let filter: CatalogFilter
     let categories: [String]
-    let localCount: Int
     let recentCount: Int
     let select: (CatalogFilter) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 9) {
+            HStack(spacing: 10) {
                 Image(nsImage: NSApplication.shared.applicationIconImage)
-                    .resizable().interpolation(.high).scaledToFit().frame(width: 32, height: 32)
-                Text("hitSlop").font(.headline.weight(.bold))
+                    .resizable().interpolation(.high).scaledToFit().frame(width: 30, height: 30)
+                Text("hitSlop").font(.title3.weight(.bold))
             }
-            .padding(.horizontal, 14).padding(.top, 18).padding(.bottom, 14)
+            .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 18)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 3) {
-                    SidebarButton(title: "All Slops", emoji: catalogFilterEmoji(.all), selected: filter == .all) { select(.all) }
-                    SidebarButton(title: "Recents", emoji: catalogFilterEmoji(.recents), count: recentCount, selected: filter == .recents) { select(.recents) }
-                    SidebarButton(title: "Mine", emoji: catalogFilterEmoji(.myTemplates), count: localCount, selected: filter == .myTemplates) { select(.myTemplates) }
+                VStack(alignment: .leading, spacing: 2) {
+                    SidebarSection("Library")
+                    SidebarButton(title: "Recents", icon: .symbol("clock"), count: recentCount, selected: filter == .recents) { select(.recents) }
+                    SidebarButton(title: "Templates", icon: .symbol("square.grid.2x2"), selected: filter == .all) { select(.all) }
 
-                    Text("CATEGORIES")
-                        .font(.caption2.weight(.semibold)).tracking(1.2).foregroundStyle(.secondary)
-                        .padding(.horizontal, 12).padding(.top, 22).padding(.bottom, 6)
-                    ForEach(categories, id: \.self) { category in
-                        SidebarButton(title: categoryLabel(category), emoji: categoryEmoji(category), selected: filter == .category(category)) {
-                            select(.category(category))
+                    if !categories.isEmpty {
+                        SidebarSection("Categories").padding(.top, 14)
+                        ForEach(categories, id: \.self) { category in
+                            SidebarButton(title: categoryLabel(category), icon: .emoji(categoryEmoji(category)), selected: filter == .category(category)) { select(.category(category)) }
                         }
                     }
                 }
-                .padding(.horizontal, 8).padding(.bottom, 18)
+                .padding(.horizontal, 10).padding(.bottom, 18)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                if let docs = CatalogLinks.authoringDocs {
-                    Link(destination: docs) {
-                        Label("Make your own slop", systemImage: "sparkles")
-                            .font(.callout.weight(.semibold))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12).frame(height: 38)
-                            .foregroundStyle(.white)
-                            .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 9))
-                    }.buttonStyle(.plain)
-                }
-                HStack(spacing: 9) {
-                    BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
-                    if let discord = CatalogLinks.discord {
-                        BrandLink(name: "discord", label: "Discord", destination: discord)
-                    }
-                }
-                Text("Mini apps · local data · fun").font(.caption2).foregroundStyle(.tertiary)
+            HStack(spacing: 2) {
+                BrandLink(name: "github", label: "GitHub", destination: CatalogLinks.github)
+                BrandLink(name: "discord", label: "Discord", destination: CatalogLinks.discord)
             }
-            .padding(14)
-            .overlay(alignment: .top) { Divider() }
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .top) { Rectangle().fill(CatalogStyle.hairline).frame(height: 1).padding(.horizontal, 14) }
         }
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(CatalogStyle.sidebar)
+    }
+}
+
+private struct SidebarSection: View {
+    let title: String
+    init(_ title: String) { self.title = title }
+    var body: some View {
+        Text(title)
+            .font(.caption.weight(.medium)).foregroundStyle(.secondary)
+            .padding(.horizontal, 10).padding(.bottom, 4)
     }
 }
 
 private struct BrandLink: View {
     let name: String
     let label: String
-    let destination: URL
+    let destination: URL?
+    @State private var isHovering = false
 
     var body: some View {
-        Link(destination: destination) {
-            Group {
-                if let image = brandImage(named: name) {
-                    Image(nsImage: image).resizable().scaledToFit()
-                } else {
-                    Image(systemName: "link")
-                }
+        Group {
+            if let destination {
+                Link(destination: destination) { icon }
+            } else {
+                Button {} label: { icon }
+                    .disabled(true)
             }
-            .frame(width: 15, height: 15)
-            .frame(width: 30, height: 30)
-            .foregroundStyle(.secondary)
-            .background(Color.primary.opacity(0.055), in: Circle())
-            .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .help(label)
-        .accessibilityLabel(label)
+        .onHover { isHovering = $0 }
+        .help(destination == nil ? "\(label) — coming soon" : label)
+        .accessibilityLabel(destination == nil ? "\(label) — coming soon" : label)
+    }
+
+    private var icon: some View {
+        Group {
+            if let image = brandImage(named: name) {
+                Image(nsImage: image).resizable().scaledToFit()
+            } else {
+                Image(systemName: "link")
+            }
+        }
+        .frame(width: 14, height: 14)
+        .frame(width: 28, height: 28)
+        .foregroundStyle(isHovering ? .primary : .secondary)
+        .background(isHovering ? CatalogStyle.hover : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .contentShape(Rectangle())
     }
 }
 
+private enum SidebarIcon { case symbol(String), emoji(String) }
+
 private struct SidebarButton: View {
     let title: String
-    let emoji: String
+    let icon: SidebarIcon
     var count: Int?
     let selected: Bool
     let action: () -> Void
+    @State private var isHovering = false
 
-    init(title: String, emoji: String, count: Int? = nil, selected: Bool, action: @escaping () -> Void) {
-        self.title = title; self.emoji = emoji; self.count = count; self.selected = selected; self.action = action
+    init(title: String, icon: SidebarIcon, count: Int? = nil, selected: Bool, action: @escaping () -> Void) {
+        self.title = title; self.icon = icon; self.count = count; self.selected = selected; self.action = action
     }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 9) {
-                Text(emoji).font(.system(size: 14)).frame(width: 20).accessibilityHidden(true)
+                Group {
+                    switch icon {
+                    case .symbol(let name):
+                        Image(systemName: name).font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(selected ? CatalogStyle.brand : .secondary)
+                    case .emoji(let emoji):
+                        Text(emoji).font(.system(size: 14))
+                    }
+                }
+                .frame(width: 20).accessibilityHidden(true)
                 Text(title).lineLimit(1)
                 Spacer(minLength: 4)
-                if let count, count > 0 { Text("\(count)").font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                if let count, count > 0 {
+                    Text("\(count)").font(.caption.monospacedDigit()).foregroundStyle(.tertiary)
+                }
             }
-            .font(.callout.weight(selected ? .semibold : .regular))
-            .padding(.horizontal, 10).frame(height: 34)
-            .background(selected ? Color.accentColor.opacity(0.13) : .clear, in: RoundedRectangle(cornerRadius: 8))
+            .font(.body.weight(selected ? .medium : .regular))
+            .padding(.horizontal, 10).frame(height: 32)
+            .background(
+                selected ? CatalogStyle.selection : isHovering ? CatalogStyle.hover : .clear,
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
             .contentShape(Rectangle())
-        }.buttonStyle(.plain)
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
     }
 }
+
+// MARK: - Rail
 
 private struct CatalogRail: View {
     let title: String
@@ -372,55 +255,94 @@ private struct CatalogRail: View {
     @Binding var selectedID: String?
     @Binding var query: String
     var searchFocused: FocusState<Bool>.Binding
-    let catalogURL: URL
-    let errorMessage: String?
     let localIssues: [String]
-    @Binding var sort: RegistrySort
-    let showsSort: Bool
+    let onRefresh: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             CatalogSearchBar(query: $query, focused: searchFocused)
-            VStack(alignment: .leading, spacing: showsSort ? 9 : 0) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(title).font(.headline.weight(.semibold))
-                    Spacer()
-                    Text("\(entries.count)").font(.caption.monospacedDigit()).foregroundStyle(.tertiary)
-                }
-                if showsSort {
-                    Picker("Catalog order", selection: $sort) {
-                        ForEach(RegistrySort.allCases) { option in Text(option.title).tag(option) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .accessibilityLabel("Catalog order")
-                }
-            }
-            .padding(.horizontal, 14).padding(.vertical, 10)
+                .padding(.horizontal, 14).padding(.top, 14)
 
-            if errorMessage != nil {
-                Label("Online catalog unavailable", systemImage: "wifi.exclamationmark")
-                    .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.bottom, 8)
-                    .help(errorMessage ?? "")
+            HStack(alignment: .center) {
+                Text(title).font(.title3.weight(.semibold))
+                Spacer()
+                QuietIconButton(systemName: "arrow.clockwise", help: "Refresh", action: onRefresh)
+                    .accessibilityLabel("Refresh catalog")
             }
+            .padding(.leading, 16).padding(.trailing, 12).padding(.top, 16).padding(.bottom, 10)
+            .overlay(alignment: .bottom) { Rectangle().fill(CatalogStyle.hairline).frame(height: 1).padding(.horizontal, 14) }
+
             if !localIssues.isEmpty {
-                Label("\(localIssues.count) local template \(localIssues.count == 1 ? "needs" : "need") attention", systemImage: "exclamationmark.triangle")
-                    .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 14).padding(.bottom, 8)
+                Label("\(localIssues.count) local template \(localIssues.count == 1 ? "needs" : "need") attention", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption).foregroundStyle(Color.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .background(Color.orange.opacity(0.09), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(.horizontal, 14).padding(.top, 10)
                     .help(localIssues.joined(separator: "\n"))
             }
 
             if entries.isEmpty {
                 ContentUnavailableView("Nothing here", systemImage: "sparkles.rectangle.stack", description: Text("Try another search or category."))
+                    .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(entries, selection: $selectedID) { entry in
-                    CatalogRow(entry: entry, catalogURL: catalogURL)
-                        .tag(entry.id)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 2) {
+                            ForEach(entries) { entry in
+                                CatalogRow(entry: entry, selected: entry.id == selectedID) { selectedID = entry.id }
+                                    .id(entry.id)
+                            }
+                        }
+                        .padding(.horizontal, 8).padding(.vertical, 8)
+                    }
+                    .focusable()
+                    .focusEffectDisabled()
+                    .onMoveCommand { direction in
+                        guard let next = neighbor(direction) else { return }
+                        selectedID = next
+                        withAnimation(.easeOut(duration: 0.12)) { proxy.scrollTo(next) }
+                    }
                 }
-                .listStyle(.sidebar)
             }
+
+            Text(entries.count == 1 ? "1 slop" : "\(entries.count) slops")
+                .font(.caption).foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16).padding(.vertical, 12)
         }
-        .background(Color(nsColor: .textBackgroundColor))
+        .background(CatalogStyle.content)
+    }
+
+    private func neighbor(_ direction: MoveCommandDirection) -> String? {
+        let index = entries.firstIndex { $0.id == selectedID }
+        switch direction {
+        case .up: return index.map { entries[max($0 - 1, 0)].id } ?? entries.last?.id
+        case .down: return index.map { entries[min($0 + 1, entries.count - 1)].id } ?? entries.first?.id
+        default: return nil
+        }
+    }
+}
+
+private struct QuietIconButton: View {
+    let systemName: String
+    let help: String
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(isHovering ? .primary : .secondary)
+                .frame(width: 26, height: 26)
+                .background(isHovering ? CatalogStyle.hover : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .help(help)
     }
 }
 
@@ -429,237 +351,290 @@ private struct CatalogSearchBar: View {
     var focused: FocusState<Bool>.Binding
 
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search slops…", text: $query)
+            TextField("Search slops", text: $query)
                 .textFieldStyle(.plain).focused(focused)
             if query.isEmpty {
-                Text("⌘K").font(.caption2.weight(.medium)).foregroundStyle(.tertiary)
+                KeyCap("⌘K")
             } else {
                 Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
                     .buttonStyle(.plain).help("Clear search")
             }
         }
-        .padding(.horizontal, 11).frame(height: 36)
-        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 9))
-        .overlay(RoundedRectangle(cornerRadius: 9).stroke(focused.wrappedValue ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.08), lineWidth: focused.wrappedValue ? 2 : 1))
-        .padding(12)
-        .overlay(alignment: .bottom) { Divider() }
+        .padding(.horizontal, 10).frame(height: 34)
+        .background(focused.wrappedValue ? Color.white : CatalogStyle.fill, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .strokeBorder(focused.wrappedValue ? CatalogStyle.brand.opacity(0.6) : CatalogStyle.hairline, lineWidth: focused.wrappedValue ? 1.5 : 1)
+        )
+        .animation(.easeOut(duration: 0.12), value: focused.wrappedValue)
+    }
+}
+
+private struct KeyCap: View {
+    let label: String
+    var foreground: Color = .secondary
+    var border: Color = CatalogStyle.hairline
+    init(_ label: String, foreground: Color = .secondary, border: Color = CatalogStyle.hairline) {
+        self.label = label; self.foreground = foreground; self.border = border
+    }
+    var body: some View {
+        Text(label)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 5).padding(.vertical, 1.5)
+            .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(border))
     }
 }
 
 private struct CatalogRow: View {
     let entry: CatalogEntry
-    let catalogURL: URL
+    let selected: Bool
+    let select: () -> Void
+    @State private var isHovering = false
 
     var body: some View {
         HStack(spacing: 11) {
-            CatalogImageView(urls: iconURLs, fallback: .applicationIcon)
-                .frame(width: 52, height: 52)
-                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary.opacity(0.08)))
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.title).font(.callout.weight(.semibold)).lineLimit(1)
-                Text(entry.categories.prefix(2).map(categoryLabel).joined(separator: " · "))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                Text(sourceLabel).font(.caption2.weight(.medium)).foregroundStyle(.tertiary).lineLimit(1)
+            IconTile(urls: entry.iconURLs, size: 40, radius: 9)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.displayTitle).font(.body.weight(.medium)).lineLimit(1)
+                    .truncationMode(entry.isRecent ? .middle : .tail)
+                Text(subtitle)
+                    .font(.callout).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 5)
+        .padding(.horizontal, 8).padding(.vertical, 7)
+        .background(
+            selected ? CatalogStyle.selection : isHovering ? CatalogStyle.hover : .clear,
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
         .contentShape(Rectangle())
+        .onTapGesture(perform: select)
+        .onHover { isHovering = $0 }
+        .help(entry.documentIdentity?.path ?? entry.title)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction(.default, select)
     }
 
-    private var sourceLabel: String {
-        switch entry {
-        case .recent: "LOCAL DOCUMENT"
-        case .template(let item): item.isLocal ? "READY LOCALLY" : "CATALOG"
+    private var subtitle: String {
+        if let identity = entry.documentIdentity {
+            let folder = folderName(identity.folderPath)
+            guard let date = entry.updatedAt else { return folder }
+            return "\(folder) · \(relativeDate(date))"
         }
-    }
-
-    private var iconURLs: [URL] {
-        switch entry {
-        case .recent(let item): [item.iconURL, item.previewURL].compactMap { $0 }
-        case .template(let item):
-            switch item.source {
-            case .local(let template): [template.iconURL, template.previewURL]
-            case .hosted(let template): [artifactURL(catalogURL: catalogURL, key: template.currentRelease.icon.key), artifactURL(catalogURL: catalogURL, key: template.currentRelease.preview.key)].compactMap { $0 }
-            }
-        }
+        var parts = entry.categories.prefix(2).map(categoryLabel)
+        if !entry.isBundled { parts.append("Installed") }
+        return parts.isEmpty ? entry.title : parts.joined(separator: " · ")
     }
 }
 
+// MARK: - Detail
+
 private struct CatalogDetail: View {
+    let section: String
     let entry: CatalogEntry?
-    let catalogURL: URL
     let isCreating: Bool
+    let isCopying: Bool
+    let isQuitting: Bool
     let primaryAction: (CatalogEntry) -> Void
 
     var body: some View {
-        ZStack {
-            Color(nsColor: .textBackgroundColor).ignoresSafeArea()
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text(section).foregroundStyle(.secondary)
+                if let entry {
+                    Text("/").foregroundStyle(.tertiary)
+                    Text(entry.displayTitle).lineLimit(1).truncationMode(.middle)
+                }
+                Spacer()
+            }
+            .font(.callout)
+            .padding(.horizontal, 28)
+            .frame(height: CatalogStyle.titlebar)
+            .overlay(alignment: .bottom) { Rectangle().fill(CatalogStyle.hairline).frame(height: 1).padding(.horizontal, 28) }
+
             if let entry {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(entry.title)
-                                .font(.system(size: 34, weight: .semibold, design: .rounded))
-                                .tracking(-1)
+                    VStack(alignment: .leading, spacing: 18) {
+                        hero(entry)
+
+                        if !entry.description.isEmpty {
                             Text(entry.description)
                                 .font(.body)
-                                .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
-                            if let authorName = entry.authorName {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                    Text("By \(authorName)")
-                                        .font(.callout.weight(.medium))
-                                        .foregroundStyle(.secondary)
-                                    if let authorURL = entry.authorURL {
-                                        Link(authorURL.absoluteString, destination: authorURL)
-                                            .font(.callout)
-                                            .lineLimit(1)
-                                            .truncationMode(.middle)
-                                    }
-                                }
-                            }
                         }
 
                         if !entry.categories.isEmpty {
                             HStack(spacing: 7) {
                                 ForEach(entry.categories, id: \.self) { category in
-                                    Text(categoryLabel(category)).font(.caption.weight(.medium))
-                                        .padding(.horizontal, 10).padding(.vertical, 5)
-                                        .background(Color.accentColor.opacity(0.09), in: Capsule())
+                                    Text(categoryLabel(category)).font(.callout)
+                                        .foregroundStyle(CatalogStyle.brand)
+                                        .padding(.horizontal, 11).padding(.vertical, 4)
+                                        .background(CatalogStyle.selection, in: Capsule())
                                 }
                             }
                         }
 
-                        CatalogImageView(urls: previewURLs(for: entry), fallback: .preview)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        PreviewCard(urls: entry.previewURLs)
 
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text("At a glance").font(.headline).padding(.bottom, 9)
-                            ForEach(facts(for: entry)) { fact in
-                                HStack(spacing: 12) {
-                                    Label(fact.title, systemImage: fact.icon).foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(fact.value).multilineTextAlignment(.trailing)
-                                }
-                                .font(.callout).padding(.vertical, 8)
-                                Divider()
-                            }
+                        details(entry)
+
+                        if let authorName = entry.authorName {
+                            footer(authorName: authorName, url: entry.authorURL)
                         }
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 12)
+                    .padding(.horizontal, 28)
+                    .padding(.top, 22)
                     .padding(.bottom, 88)
-                    .frame(maxWidth: 860, alignment: .leading)
+                    .frame(maxWidth: 760, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    FloatingPrimaryButton(
-                        title: primaryTitle(for: entry),
-                        icon: primaryIcon(for: entry),
-                        isWorking: isCreating
+                    PrimaryButton(
+                        title: entry.isRecent ? "Open" : "Create",
+                        icon: entry.isRecent ? "arrow.up.forward.square" : "plus",
+                        isBusy: isCreating, isWorking: isCopying
                     ) { primaryAction(entry) }
-                    .padding(22)
+                    .disabled(isQuitting)
+                    .padding(24)
                 }
             } else {
                 ContentUnavailableView("Select a slop", systemImage: "square.stack.3d.up", description: Text("Choose an item from the list to see its preview and details."))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+        .background(CatalogStyle.content.ignoresSafeArea())
+    }
+
+    private func hero(_ entry: CatalogEntry) -> some View {
+        HStack(alignment: .top, spacing: 16) {
+            IconTile(urls: entry.iconURLs, size: 64, radius: 14)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.displayTitle)
+                    .font(.title.weight(.semibold))
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let identity = entry.documentIdentity {
+                    Text(entry.title).font(.body).foregroundStyle(.secondary)
+                    Label(folderName(identity.folderPath), systemImage: "folder")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .labelStyle(.titleAndIcon)
+                        .help(identity.path)
+                } else {
+                    Text(entry.isBundled ? "Included with hitSlop" : "Installed template")
+                        .font(.body).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.top, 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private func primaryTitle(for entry: CatalogEntry) -> String {
-        switch entry { case .recent: "Open"; case .template: "Create" }
-    }
-
-    private func primaryIcon(for entry: CatalogEntry) -> String {
-        switch entry { case .recent: "arrow.up.forward.app"; case .template: "sparkles" }
-    }
-
-    private func previewURLs(for entry: CatalogEntry) -> [URL] {
-        switch entry {
-        case .recent(let item): [item.previewURL, item.iconURL].compactMap { $0 }
-        case .template(let item):
-            switch item.source {
-            case .local(let template): [template.previewURL, template.iconURL]
-            case .hosted(let template): [artifactURL(catalogURL: catalogURL, key: template.currentRelease.preview.key), artifactURL(catalogURL: catalogURL, key: template.currentRelease.icon.key)].compactMap { $0 }
+    private func details(_ entry: CatalogEntry) -> some View {
+        Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 8) {
+            ForEach(facts(for: entry)) { fact in
+                GridRow {
+                    Text(fact.title).foregroundStyle(.secondary)
+                    Text(fact.value)
+                }
             }
         }
+        .font(.callout)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 16)
+        .overlay(alignment: .top) { Rectangle().fill(CatalogStyle.hairline).frame(height: 1) }
+    }
+
+    private func footer(authorName: String, url: URL?) -> some View {
+        HStack(spacing: 14) {
+            (Text("Made by ").foregroundStyle(.secondary) + Text(authorName))
+            if let url {
+                Link(destination: url) {
+                    HStack(spacing: 4) {
+                        Text(url.absoluteString).lineLimit(1).truncationMode(.middle)
+                        Image(systemName: "arrow.up.right.square")
+                    }
+                }
+                .foregroundStyle(CatalogStyle.brand)
+            }
+            Spacer()
+        }
+        .font(.callout)
+        .padding(.top, 16)
+        .overlay(alignment: .top) { Rectangle().fill(CatalogStyle.hairline).frame(height: 1) }
     }
 
     private func facts(for entry: CatalogEntry) -> [CatalogFact] {
-        switch entry {
-        case .recent(let item):
-            return commonFacts(
-                source: "Local document",
-                manifest: item.package?.manifest,
-                packageBytes: item.packageBytes,
-                updatedAt: item.updatedAt,
-                extra: item.createdAt.map { [CatalogFact(icon: "calendar", title: "Created", value: $0.formatted(date: .abbreviated, time: .omitted))] } ?? []
-            )
-        case .template(let item):
-            var extra: [CatalogFact] = []
-            if let release = item.releaseNumber { extra.append(CatalogFact(icon: "shippingbox", title: "Release", value: "Release \(release)")) }
-            if let creationCount = item.creationCount { extra.append(CatalogFact(icon: "doc.on.doc", title: "Creations", value: "\(creationCount)")) }
-            return commonFacts(
-                source: item.isLocal ? "Installed locally" : "Online catalog",
-                manifest: item.manifest,
-                packageBytes: item.packageBytes ?? 0,
-                updatedAt: item.updatedAt,
-                extra: extra
-            )
-        }
-    }
-
-    private func commonFacts(source: String, manifest: SlopManifest?, packageBytes: Int64, updatedAt: Date?, extra: [CatalogFact]) -> [CatalogFact] {
-        var result = [CatalogFact(icon: "externaldrive", title: "Source", value: source)]
-        result.append(contentsOf: extra)
-        if let presentation = manifest?.presentation {
-            result.append(CatalogFact(icon: "rectangle", title: "Initial size", value: "\(presentation.width) × \(presentation.height)"))
-        }
-        if packageBytes > 0 {
-            result.append(CatalogFact(icon: "doc", title: "Package size", value: ByteCountFormatter.string(fromByteCount: packageBytes, countStyle: .file)))
-        }
-        if let updatedAt {
-            result.append(CatalogFact(icon: "clock", title: "Updated", value: updatedAt.formatted(date: .abbreviated, time: .shortened)))
-        }
+        var result = [CatalogFact(title: "Source", value: entry.isRecent ? "Local document" : entry.isBundled ? "Included with hitSlop" : "Installed locally")]
+        if entry.isRecent, let date = entry.createdAt { result.append(CatalogFact(title: "Created", value: date.formatted(date: .abbreviated, time: .omitted))) }
+        if let size = entry.initialSize { result.append(CatalogFact(title: "Initial size", value: size)) }
+        if entry.packageBytes > 0 { result.append(CatalogFact(title: "Package size", value: ByteCountFormatter.string(fromByteCount: entry.packageBytes, countStyle: .file))) }
+        if let date = entry.updatedAt { result.append(CatalogFact(title: "Updated", value: date.formatted(date: .abbreviated, time: .shortened))) }
         return result
     }
 }
 
-private struct FloatingPrimaryButton: View {
+private struct PreviewCard: View {
+    let urls: [URL]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("PREVIEW")
+                .font(.caption2.weight(.semibold)).tracking(0.6)
+                .foregroundStyle(.secondary)
+            CatalogImageView(urls: urls, fallback: .preview)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(14).padding(.bottom, 6)
+        .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(CatalogStyle.hairline))
+    }
+}
+
+private struct PrimaryButton: View {
     let title: String
     let icon: String
+    /// Disables the button, e.g. while the save panel is open.
+    let isBusy: Bool
+    /// Show copying feedback only if the copy lasts more than 300 ms.
     let isWorking: Bool
     let action: () -> Void
     @State private var isHovering = false
+    @State private var showsWork = false
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                if isWorking {
+                if showsWork {
                     ProgressView().controlSize(.small).tint(.white)
                 } else {
                     Image(systemName: icon)
                 }
-                Text(isWorking ? "Creating…" : title)
+                Text(showsWork ? "Creating…" : title)
+                if !showsWork {
+                    KeyCap("⌘↩", foreground: .white.opacity(0.75), border: .white.opacity(0.3))
+                }
             }
-            .font(.callout.weight(.bold))
+            .font(.body.weight(.semibold))
             .foregroundStyle(.white)
-            .padding(.horizontal, 18)
-            .frame(height: 44)
-            .background(
-                Color(red: isHovering ? 0.53 : 0.45, green: 0.16, blue: 0.96),
-                in: Capsule()
-            )
-            .overlay(Capsule().stroke(.white.opacity(0.18)))
-            .shadow(color: Color(red: 0.35, green: 0.08, blue: 0.78).opacity(0.28), radius: 14, y: 7)
-            .scaleEffect(isHovering ? 1.02 : 1)
+            .padding(.horizontal, 16)
+            .frame(height: 38)
+            .background(isHovering ? CatalogStyle.brandHover : CatalogStyle.brand, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .shadow(color: CatalogStyle.brand.opacity(isHovering ? 0.32 : 0.22), radius: isHovering ? 10 : 6, y: 3)
+            .fixedSize()
         }
         .buttonStyle(.plain)
-        .disabled(isWorking)
+        .keyboardShortcut(.return, modifiers: .command)
+        .disabled(isBusy || isWorking)
+        .task(id: isWorking) {
+            guard isWorking else { showsWork = false; return }
+            try? await Task.sleep(for: .milliseconds(300))
+            if !Task.isCancelled { showsWork = true }
+        }
         .onHover { isHovering = $0 }
         .animation(.easeOut(duration: 0.12), value: isHovering)
     }
@@ -667,7 +642,6 @@ private struct FloatingPrimaryButton: View {
 
 private struct CatalogFact: Identifiable {
     let id = UUID()
-    let icon: String
     let title: String
     let value: String
 }
@@ -686,36 +660,29 @@ private struct CatalogImageView: View {
             if let image {
                 let preview = Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
                 if fallback == .preview {
-                    preview.frame(maxWidth: min(maxPreviewWidth, image.size.width), maxHeight: min(maxPreviewHeight, image.size.height))
+                    preview
+                        .frame(maxWidth: min(maxPreviewWidth, image.size.width), maxHeight: min(maxPreviewHeight, image.size.height))
+                        .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
                 } else {
                     preview
                 }
             } else if fallback == .applicationIcon {
-                Image(nsImage: NSApplication.shared.applicationIconImage).resizable().interpolation(.high).scaledToFit().padding(8)
+                Image(nsImage: NSApplication.shared.applicationIconImage).resizable().interpolation(.high).scaledToFit()
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "photo").font(.title2)
                     Text("Preview unavailable").font(.caption.weight(.medium))
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, minHeight: 180)
-            }
-        }
-        .padding(fallback == .preview ? 10 : 0)
-        .background {
-            if fallback == .preview {
-                RoundedRectangle(cornerRadius: 16).fill(Color(nsColor: .controlBackgroundColor))
-            }
-        }
-        .overlay {
-            if fallback == .preview {
-                RoundedRectangle(cornerRadius: 16).stroke(Color.primary.opacity(0.09))
             }
         }
         .task(id: urls.map(\.absoluteString).joined(separator: "|")) {
             image = nil
             for url in urls {
-                if let loaded = await loadCatalogImage(url) {
+                let loaded = await loadCatalogImage(url)
+                guard !Task.isCancelled else { return }
+                if let loaded {
                     image = loaded
                     return
                 }
@@ -724,16 +691,22 @@ private struct CatalogImageView: View {
     }
 }
 
-private func artifactURL(catalogURL: URL, key: String) -> URL? {
-    var components = URLComponents(url: catalogURL.appendingPathComponent("api/artifact"), resolvingAgainstBaseURL: false)
-    components?.queryItems = [URLQueryItem(name: "key", value: key)]
-    return components?.url
-}
+/// Catalog artwork keyed by path and modification date, so refreshed previews reload
+/// while scrolling and reselecting reuse decoded images.
+@MainActor private let catalogImages = NSCache<NSString, NSImage>()
 
 @MainActor private func loadCatalogImage(_ url: URL) async -> NSImage? {
-    if url.isFileURL { return NSImage(contentsOf: url) }
-    guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
-    return NSImage(data: data)
+    guard url.isFileURL else { return nil }
+    let modified = await Task.detached(priority: .userInitiated) {
+        (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+    }.value
+    guard !Task.isCancelled, let modified else { return nil }
+    let key = "\(url.path)|\(modified.timeIntervalSinceReferenceDate)" as NSString
+    if let cached = catalogImages.object(forKey: key) { return cached }
+    let data = await Task.detached(priority: .userInitiated) { try? Data(contentsOf: url) }.value
+    guard !Task.isCancelled, let data, let image = NSImage(data: data) else { return nil }
+    catalogImages.setObject(image, forKey: key)
+    return image
 }
 
 private func brandImage(named name: String) -> NSImage? {
@@ -744,11 +717,20 @@ private func brandImage(named name: String) -> NSImage? {
 
 private func categoryLabel(_ id: String) -> String { id == "developer-tools" ? "Developer Tools" : id.capitalized }
 
+/// Last component of an abbreviated folder path, e.g. "~/Desktop" → "Desktop".
+private func folderName(_ folderPath: String) -> String {
+    let name = (folderPath as NSString).lastPathComponent
+    return name.isEmpty ? folderPath : name
+}
+
+private func relativeDate(_ date: Date, now: Date = .now) -> String {
+    now.timeIntervalSince(date) < 60 ? "Just now" : date.formatted(.relative(presentation: .named))
+}
+
 func catalogFilterEmoji(_ filter: CatalogFilter) -> String {
     switch filter {
     case .all: "🧃"
     case .recents: "🔥"
-    case .myTemplates: "🏡"
     case .category(let category): categoryEmoji(category)
     }
 }

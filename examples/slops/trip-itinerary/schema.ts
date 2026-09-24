@@ -1,46 +1,41 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const stopTag = Type.Enum(["flight", "hotel", "dining", "train", "explore"]);
+export const stopTags = ["flight", "hotel", "dining", "train", "explore"] as const;
+export type StopTag = (typeof stopTags)[number];
 
-const stop = Type.Object({
-  id: Type.String(),
-  time: Type.String(),
-  title: Type.String(),
-  location: Type.String(),
-  tag: stopTag,
-  done: Type.Boolean(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  tripTitle: s.text(),
+  origin: s.text(),
+  originCity: s.text(),
+  destination: s.text(),
+  destCity: s.text(),
+  bookingRef: s.text(),
+  passenger: s.text(),
+  flight: s.text(),
+  gate: s.text(),
+  seat: s.text(),
+  selectedDay: s.string(),
+  days: s.list(s.object({
+    dayKey: s.string(),
+    title: s.text(),
+    subtitle: s.text(),
+    date: s.string(),
+    events: s.list(s.object({
+      time: s.string(),
+      title: s.text(),
+      location: s.text(),
+      tag: s.enum(stopTags),
+      done: s.boolean(),
+    })),
+  })),
+  stubItems: s.list(s.object({
+    text: s.text(),
+    done: s.boolean(),
+  })),
+});
 
-const day = Type.Object({
-  id: Type.String(),
-  title: Type.String(),
-  subtitle: Type.String(),
-  date: Type.String(),
-  events: Type.Array(stop),
-}, { additionalProperties: true });
-
-const stubItem = Type.Object({
-  id: Type.String(),
-  text: Type.String(),
-  done: Type.Boolean(),
-}, { additionalProperties: true });
-
-const itinerarySchema = Type.Object({
-  tripTitle: Type.String(),
-  origin: Type.String(),
-  originCity: Type.String(),
-  destination: Type.String(),
-  destCity: Type.String(),
-  bookingRef: Type.String(),
-  passenger: Type.String(),
-  flight: Type.String(),
-  gate: Type.String(),
-  seat: Type.String(),
-  selectedDayId: Type.String(),
-  days: Type.Array(day),
-  stubItems: Type.Array(stubItem),
-}, { additionalProperties: true });
-
-export type StopTag = Type.Static<typeof stopTag>;
-export type TripItinerary = Type.Static<typeof itinerarySchema>;
-export default itinerarySchema;
+export type TripItinerary = Value<typeof schema.fields.node>;
+export type Day = TripItinerary["days"][number];
+export type Stop = Day["events"][number];
+export type StubItem = TripItinerary["stubItems"][number];
+export default schema;

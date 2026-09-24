@@ -9,8 +9,8 @@ The Astro landing page and Starlight documentation deploy together as the
 From the repository root:
 
 ```sh
-bun install
-bun run landing:dev
+bun install --cwd apps/landing --frozen-lockfile
+bun run --cwd apps/landing dev
 ```
 
 Run the production checks with:
@@ -20,22 +20,25 @@ bun run --cwd apps/landing check
 bun run --cwd apps/landing build
 ```
 
+The build uses Astro directly. Review edited documentation links in the local preview;
+there is no custom link checker.
+
 ## Cloudflare Workers Builds
 
-Connect the `hitSlop/hitslop` GitHub repository to the existing
-`hitslop-landing` Worker with these settings:
+Use these configuration settings when connecting the `hitSlop/hitslop` repository
+to the `hitslop-landing` Worker. Confirm the actual dashboard settings before deployment:
 
 | Setting | Value |
 | --- | --- |
 | Production branch | `master` |
 | Root directory | `/` |
-| Build command | `bun run --cwd packages/schema build && bun run --cwd apps/landing check && bun run --cwd apps/landing build` |
+| Build command | `bun install --cwd apps/landing --frozen-lockfile && bun run --cwd apps/landing check && bun run --cwd apps/landing build` |
 | Deploy command | `cd apps/landing && npx --no-install wrangler deploy` |
-| Build variable | `BUN_VERSION=1.4.0` |
+| Build variable | `BUN_VERSION=1.4.2` |
 
-Cloudflare installs dependencies before running the build command and deploys
-commits to `master` automatically. Non-production branch builds are currently
-disabled. If previews are enabled later, use
+The landing app has its own lockfile and needs its own dependency install.
+Automatic production and branch preview deployment depend on the Worker dashboard
+configuration; these settings are not verified by a local build. For branch previews, use
 `bun run --cwd apps/landing preview:upload` as the preview deploy command.
 
 For a manual production deploy, run:

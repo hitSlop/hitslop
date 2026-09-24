@@ -2,11 +2,10 @@
 // This file was generated from JSON Schema using quicktype, do not modify it directly.
 // To parse the JSON, add this file to your project and do:
 //
-//   let slopManifest = try? JSONDecoder().decode(SlopManifest.self, from: jsonData)
+//   let slopManifest = try SlopManifest(json)
 
 import Foundation
 
-/// The framework-neutral manifest for hitSlop web documents.
 // MARK: - SlopManifest
 public struct SlopManifest: Codable, Sendable {
     public let schema: Schema
@@ -14,6 +13,7 @@ public struct SlopManifest: Codable, Sendable {
     public let categories: [SlopCategory]
     public let description: String
     public let presentation: SlopPresentation
+    public let runtime: Runtime
     public let slug: String
     public let title: String
 
@@ -23,18 +23,69 @@ public struct SlopManifest: Codable, Sendable {
         case categories = "categories"
         case description = "description"
         case presentation = "presentation"
+        case runtime = "runtime"
         case slug = "slug"
         case title = "title"
     }
 
-    public init(schema: Schema, author: SlopAuthor, categories: [SlopCategory], description: String, presentation: SlopPresentation, slug: String, title: String) {
+    public init(schema: Schema, author: SlopAuthor, categories: [SlopCategory], description: String, presentation: SlopPresentation, runtime: Runtime, slug: String, title: String) {
         self.schema = schema
         self.author = author
         self.categories = categories
         self.description = description
         self.presentation = presentation
+        self.runtime = runtime
         self.slug = slug
         self.title = title
+    }
+}
+
+// MARK: SlopManifest convenience initializers and mutators
+
+public extension SlopManifest {
+    init(data: Data) throws {
+        self = try newJSONDecoder().decode(SlopManifest.self, from: data)
+    }
+
+    init(_ json: String, using encoding: String.Encoding = .utf8) throws {
+        guard let data = json.data(using: encoding) else {
+            throw NSError(domain: "JSONDecoding", code: 0, userInfo: nil)
+        }
+        try self.init(data: data)
+    }
+
+    init(fromURL url: URL) throws {
+        try self.init(data: try Data(contentsOf: url))
+    }
+
+    func with(
+        schema: Schema? = nil,
+        author: SlopAuthor? = nil,
+        categories: [SlopCategory]? = nil,
+        description: String? = nil,
+        presentation: SlopPresentation? = nil,
+        runtime: Runtime? = nil,
+        slug: String? = nil,
+        title: String? = nil
+    ) -> SlopManifest {
+        return SlopManifest(
+            schema: schema ?? self.schema,
+            author: author ?? self.author,
+            categories: categories ?? self.categories,
+            description: description ?? self.description,
+            presentation: presentation ?? self.presentation,
+            runtime: runtime ?? self.runtime,
+            slug: slug ?? self.slug,
+            title: title ?? self.title
+        )
+    }
+
+    func jsonData() throws -> Data {
+        return try newJSONEncoder().encode(self)
+    }
+
+    func jsonString(encoding: String.Encoding = .utf8) throws -> String? {
+        return String(data: try self.jsonData(), encoding: encoding)
     }
 }
 
@@ -51,6 +102,43 @@ public struct SlopAuthor: Codable, Sendable {
     public init(name: String, url: String?) {
         self.name = name
         self.url = url
+    }
+}
+
+// MARK: SlopAuthor convenience initializers and mutators
+
+public extension SlopAuthor {
+    init(data: Data) throws {
+        self = try newJSONDecoder().decode(SlopAuthor.self, from: data)
+    }
+
+    init(_ json: String, using encoding: String.Encoding = .utf8) throws {
+        guard let data = json.data(using: encoding) else {
+            throw NSError(domain: "JSONDecoding", code: 0, userInfo: nil)
+        }
+        try self.init(data: data)
+    }
+
+    init(fromURL url: URL) throws {
+        try self.init(data: try Data(contentsOf: url))
+    }
+
+    func with(
+        name: String? = nil,
+        url: String?? = nil
+    ) -> SlopAuthor {
+        return SlopAuthor(
+            name: name ?? self.name,
+            url: url ?? self.url
+        )
+    }
+
+    func jsonData() throws -> Data {
+        return try newJSONEncoder().encode(self)
+    }
+
+    func jsonString(encoding: String.Encoding = .utf8) throws -> String? {
+        return String(data: try self.jsonData(), encoding: encoding)
     }
 }
 
@@ -95,6 +183,51 @@ public struct SlopPresentation: Codable, Sendable {
     }
 }
 
+// MARK: SlopPresentation convenience initializers and mutators
+
+public extension SlopPresentation {
+    init(data: Data) throws {
+        self = try newJSONDecoder().decode(SlopPresentation.self, from: data)
+    }
+
+    init(_ json: String, using encoding: String.Encoding = .utf8) throws {
+        guard let data = json.data(using: encoding) else {
+            throw NSError(domain: "JSONDecoding", code: 0, userInfo: nil)
+        }
+        try self.init(data: data)
+    }
+
+    init(fromURL url: URL) throws {
+        try self.init(data: try Data(contentsOf: url))
+    }
+
+    func with(
+        background: Background?? = nil,
+        height: Int? = nil,
+        resizable: Bool?? = nil,
+        shape: Shape?? = nil,
+        width: Int? = nil,
+        skin: String?? = nil
+    ) -> SlopPresentation {
+        return SlopPresentation(
+            background: background ?? self.background,
+            height: height ?? self.height,
+            resizable: resizable ?? self.resizable,
+            shape: shape ?? self.shape,
+            width: width ?? self.width,
+            skin: skin ?? self.skin
+        )
+    }
+
+    func jsonData() throws -> Data {
+        return try newJSONEncoder().encode(self)
+    }
+
+    func jsonString(encoding: String.Encoding = .utf8) throws -> String? {
+        return String(data: try self.jsonData(), encoding: encoding)
+    }
+}
+
 public enum Background: String, Codable, Sendable {
     case transparent = "transparent"
 }
@@ -105,9 +238,30 @@ public enum Shape: String, Codable, Sendable {
     case rounded = "rounded"
 }
 
+public enum Runtime: String, Codable, Sendable {
+    case hitslopV1 = "hitslop-v1"
+}
+
 public enum Schema: String, Codable, Sendable {
     case httpsAPIHitslopCOMSchemasV1ManifestSchemaJSON = "https://api.hitslop.com/schemas/v1/manifest.schema.json"
 }
 
+// MARK: - Helper functions for creating encoders and decoders
+
+func newJSONDecoder() -> JSONDecoder {
+    let decoder = JSONDecoder()
+    if #available(iOS 10.0, OSX 10.12, tvOS 10.0, watchOS 3.0, *) {
+        decoder.dateDecodingStrategy = .iso8601
+    }
+    return decoder
+}
+
+func newJSONEncoder() -> JSONEncoder {
+    let encoder = JSONEncoder()
+    if #available(iOS 10.0, OSX 10.12, tvOS 10.0, watchOS 3.0, *) {
+        encoder.dateEncodingStrategy = .iso8601
+    }
+    return encoder
+}
 
 extension SlopCategory: CaseIterable {}

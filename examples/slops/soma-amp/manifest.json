@@ -13,7 +13,8 @@
   ],
   "presentation": {
     "width": 275,
-    "height": 438,
+    "height": 470,
     "resizable": false
-  }
+  },
+  "runtime": "hitslop-v1"
 }

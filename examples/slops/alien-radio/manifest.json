@@ -1,5 +1,6 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
@@ -7,10 +8,7 @@
   "slug": "alien-radio",
   "title": "Alien Radio",
   "description": "A sculpted desktop receiver for exploring listener-supported SomaFM stations.",
-  "categories": [
-    "media",
-    "personal"
-  ],
+  "categories": ["media", "personal"],
   "presentation": {
     "width": 720,
     "height": 560,

@@ -1,9 +1,8 @@
-import { defineTheme } from "@hitslop/runtime/theme";
+import { defineTheme } from "@hitslop/document/theme";
 
 export default defineTheme({
   surface: "#d94935",
   surfaceLight: "#f36b50",
-  surfaceRest: "#d94935",
   surfaceDeep: "#a92b22",
   panel: "#f5edda",
   panelShade: "#e8ddc4",
@@ -15,5 +14,5 @@ export default defineTheme({
   focus: "#fff8dc",
   onSurface: "#fff3df",
   font: '"Avenir Next", Avenir, sans-serif',
-  displayFont: '"Barlow Timer", "Avenir Next", sans-serif',
+  displayFont: '"Avenir Next", Avenir, sans-serif',
 });

@@ -26,11 +26,33 @@ import Testing
     #expect(window.styleMask.contains(.borderless))
     #expect(window.styleMask.contains(.miniaturizable))
     #expect(window.styleMask.contains(.resizable))
+    #expect(window.validateMenuItem(NSMenuItem(title: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")))
     #expect(window.representedURL?.standardizedFileURL == root.standardizedFileURL)
-    #expect(window.miniwindowTitle == "Miniwindow Fixture")
+    #expect(window.title == "fixture.slop")
+    #expect(window.miniwindowTitle == "fixture.slop")
     #expect(window.miniwindowImage != nil)
-    #expect(controller.documentTitle == "Miniwindow Fixture")
+    #expect(controller.documentTitle == "fixture.slop")
     #expect(controller.dockMenuImage.size == NSSize(width: 16, height: 16))
+}
+
+@Test func toolbarFitsDocumentAndVisibleScreen() {
+    let screen = NSRect(x: 100, y: 50, width: 1000, height: 800)
+    for width: CGFloat in [240, 480, 640] {
+        let document = NSRect(x: 300, y: 200, width: width, height: 300)
+        let toolbar = slopToolbarFrame(document: document, visible: screen)
+        #expect(toolbar.width == min(max(width, 360), 560))
+        #expect(toolbar.height == 44)
+        #expect(toolbar.midX == document.midX)
+        #expect(toolbar.minY == document.maxY + 8)
+    }
+    let edge = slopToolbarFrame(document: NSRect(x: 990, y: 600, width: 240, height: 250), visible: screen)
+    #expect(screen.contains(edge))
+    #expect(edge.maxX == screen.maxX - 8)
+    #expect(edge.maxY == screen.maxY - 10)
+    let narrow = NSRect(x: -300, y: 0, width: 320, height: 600)
+    let toolbar = slopToolbarFrame(document: NSRect(x: -300, y: 200, width: 240, height: 200), visible: narrow)
+    #expect(toolbar.width == 304)
+    #expect(narrow.contains(toolbar))
 }
 
 @Test @MainActor func nonResizableDocumentWindowStillMiniaturizes() throws {
@@ -44,6 +66,17 @@ import Testing
     #expect(!window.styleMask.contains(.resizable))
 }
 
+@Test func openInMenuIncludesEditorsAndTerminals() {
+    let titles = slopOpenInCatalog().map(\.0)
+    #expect(titles.contains("Open in Cursor"))
+    #expect(titles.contains("Open in Visual Studio Code"))
+    #expect(titles.contains("Open in Terminal"))
+    #expect(titles.contains("Open in iTerm"))
+    #expect(titles.contains("Open in Warp"))
+    #expect(titles.contains("Open in Wave"))
+    #expect(titles.contains("Open in Ghostty"))
+}
+
 @Test func dockMenuImageFallsBackToTheWorkspaceIcon() {
     let missing = URL(fileURLWithPath: "/tmp/hitslop-missing-icon-\(UUID().uuidString)")
     let image = slopDockMenuImage(iconURL: missing.appendingPathComponent("QuickLook/Icon.png"), fallbackURL: missing)
@@ -55,12 +88,16 @@ private func documentWindowFixture(resizable: Bool) throws -> URL {
     let root = parent.appendingPathComponent("fixture.slop", isDirectory: true)
     try FileManager.default.createDirectory(at: root.appendingPathComponent("QuickLook"), withIntermediateDirectories: true)
     try Data("<!doctype html><html><body><script>window.slop.ready()</script></body></html>".utf8).write(to: root.appendingPathComponent("app.html"))
+    try Data(#"{"format":1,"root":{"kind":"object","properties":{}}}"#.utf8).write(to: root.appendingPathComponent("state.schema.json"))
+    try Data("{}".utf8).write(to: root.appendingPathComponent("initial.json"))
+    try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
+    try Data(#"{"runtimeContract":1,"minRuntimeRevision":1,"sdkVersion":"1.0.0","loroVersion":"1.16.1","protocolVersion":1}"#.utf8).write(to: root.appendingPathComponent("assets/runtime.json"))
     let resizableJSON = resizable ? "true" : "false"
-    let manifest = #"{"$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"miniwindow-fixture","title":"Miniwindow Fixture","description":"Tests document miniaturize chrome.","categories":["utilities"],"presentation":{"width":320,"height":240,"resizable":\#(resizableJSON)}}"#
+    let manifest = #"{"runtime":"hitslop-v1","$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"miniwindow-fixture","title":"Miniwindow Fixture","description":"Tests document miniaturize chrome.","categories":["utilities"],"presentation":{"width":320,"height":240,"resizable":\#(resizableJSON)}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))
     let skill = root.appendingPathComponent(".agents/skills/hitslop-document/SKILL.md")
     try FileManager.default.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
-    try SlopPackage.canonicalDocumentSkillData().write(to: skill)
+    try Data(contentsOf: URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../../../../../packages/cli/skills/hitslop-document/SKILL.md").standardizedFileURL).write(to: skill)
     let bitmap = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 512, pixelsHigh: 512, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)

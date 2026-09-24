@@ -1,12 +1,13 @@
 # Reading Tracker
 
-A personal reading journal in berry, white, and lavender. Keep books and authors,
-change reading status, and rate books when you are ready. New books are unrated.
+A personal reading journal for books, authors, star ratings, and reading status.
+
+From the repository root:
 
 ```sh
-bun run slops:review reading-tracker
+bun slop dev examples/slops/reading-tracker
 bun slop build examples/slops/reading-tracker
-bun slop validate examples/slops/reading-tracker/dist/reading-tracker.slop
+bun slop register examples/slops/reading-tracker
 ```
 
-Use **Add note** on a book to save thoughts or quotes. Notes are included in export.
+Create a writable copy of the registered template before editing.

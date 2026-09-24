@@ -2,50 +2,15 @@ import AppKit
 import Foundation
 import HitSlopCore
 import HitSlopRuntime
+import HitSlopWasm
 import WebKit
-
-@MainActor private final class SlopDevelopmentWebView: WKWebView {
-    private var windowDragEvent: NSEvent?
-    nonisolated(unsafe) private var windowDragMonitor: Any?
-
-    override init(frame: CGRect, configuration: WKWebViewConfiguration) {
-        super.init(frame: frame, configuration: configuration)
-        windowDragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard let self, event.window === self.window,
-                  self.bounds.contains(self.convert(event.locationInWindow, from: nil)) else { return event }
-            self.windowDragEvent = event
-            return event
-        }
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("SlopDevelopmentWebView must be created programmatically") }
-
-    deinit {
-        if let windowDragMonitor { NSEvent.removeMonitor(windowDragMonitor) }
-    }
-
-    func consumeWindowDragEvent(for window: NSWindow) -> NSEvent? {
-        defer { windowDragEvent = nil }
-        guard let event = windowDragEvent, event.type == .leftMouseDown, event.buttonNumber == 0,
-              event.window === window, ProcessInfo.processInfo.systemUptime - event.timestamp < 1 else { return nil }
-        return event
-    }
-}
 
 @MainActor private final class SlopDevelopmentWindowBridge: NSObject, WKScriptMessageHandlerWithReply {
     weak var window: NSWindow?
-    weak var webView: SlopDevelopmentWebView?
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
         guard let body = message.body as? [String: Any] else {
             replyHandler(nil, "Window request must be an object"); return
-        }
-        if body["action"] as? String == "drag" {
-            guard let window, let event = webView?.consumeWindowDragEvent(for: window) else {
-                replyHandler(nil, "Window dragging requires a current left mouse-down gesture"); return
-            }
-            window.performDrag(with: event); replyHandler(["dragging": true], nil); return
         }
         guard let width = body["width"] as? NSNumber,
               let height = body["height"] as? NSNumber else {
@@ -96,25 +61,56 @@ struct SlopDocumentAssets: Sendable {
     public static func exportPDFData(session: SlopRuntimeSession) async throws -> Data { try await capture(session: session, output: .pdf) }
 
     static func documentAssetsPNGData(packageURL: URL) async throws -> SlopDocumentAssets {
-        let snapshot = try SlopRenderSnapshot(packageURL: packageURL)
+        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
         defer { snapshot.remove() }
         return try await documentAssetsPNGData(snapshot: snapshot)
     }
 
     static func documentAssetsPNGData(snapshot: SlopRenderSnapshot) async throws -> SlopDocumentAssets {
-        let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true)
-        defer { session.close() }
+        try await withCaptureSession(snapshot: snapshot, renderTargetsEnabled: true) { session in
+            var preview: Data?, icon: Data?
+            do { preview = try await capture(session: session, output: .previewPNG) }
+            catch { print("[hitSlop assets] Preview failed: \(error.localizedDescription)") }
+            try Task.checkCancellation()
+            do { icon = try await targetPNGData(session: session, target: .icon) }
+            catch { print("[hitSlop assets] Icon failed: \(error.localizedDescription)") }
+            try Task.checkCancellation()
+            return SlopDocumentAssets(previewPNG: preview, finderIconPNG: icon)
+        }
+    }
+
+    /// The snapshot remains leased until all native storage and engine resources
+    /// have closed, including when readiness/capture throws or is cancelled.
+    static func withCaptureSession<T>(
+        snapshot: SlopRenderSnapshot, renderTargetsEnabled: Bool = false,
+        readinessTimeout: Duration = .seconds(15),
+        _ capture: (SlopRuntimeSession) async throws -> T
+    ) async throws -> T {
+        try snapshot.beginUse()
+        let session: SlopRuntimeSession
+        do {
+            session = try await SlopRuntimeSession.open(
+                packageURL: snapshot.url, renderTargetsEnabled: renderTargetsEnabled, purpose: .backgroundRender)
+        } catch {
+            snapshot.endUse(teardownSucceeded: !(error is SlopRuntimeTeardownError))
+            throw error
+        }
         let window = hiddenWindow(session)
-        defer { window.contentView = nil }
-        session.load()
-        try await session.waitUntilReady()
-        var preview: Data?, icon: Data?
-        do { preview = try await capture(session: session, output: .previewPNG) }
-        catch { print("[hitSlop assets] Preview failed: \(error.localizedDescription)") }
-        try Task.checkCancellation()
-        do { icon = try await targetPNGData(session: session, target: .icon) }
-        catch { print("[hitSlop assets] Icon failed: \(error.localizedDescription)") }
-        return SlopDocumentAssets(previewPNG: preview, finderIconPNG: icon)
+        let result: Result<T, Error>
+        do {
+            session.load()
+            try await session.waitUntilReady(timeout: readinessTimeout)
+            try Task.checkCancellation()
+            result = .success(try await capture(session))
+        } catch { result = .failure(error) }
+        window.contentView = nil
+        do { try await session.closeAndWait() }
+        catch {
+            snapshot.endUse(teardownSucceeded: false)
+            throw error
+        }
+        snapshot.endUse(teardownSucceeded: true)
+        return try result.get()
     }
 
     private static func hiddenWindow(_ session: SlopRuntimeSession) -> NSWindow {
@@ -125,47 +121,37 @@ struct SlopDocumentAssets: Sendable {
     }
 
     public static func targetPNGData(packageURL: URL, target: SlopRenderTarget) async throws -> Data? {
-        let snapshot = try SlopRenderSnapshot(packageURL: packageURL)
+        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
         defer { snapshot.remove() }
-        let session = try SlopRuntimeSession(packageURL: snapshot.url, renderTargetsEnabled: true)
-        defer { session.close() }
-        let window = hiddenWindow(session)
-        defer { window.contentView = nil }
-        session.load()
-        try await session.waitUntilReady()
-        return try await targetPNGData(session: session, target: target)
+        return try await withCaptureSession(snapshot: snapshot, renderTargetsEnabled: true) { session in
+            try await targetPNGData(session: session, target: target)
+        }
     }
 
     public static func targetPNGData(session: SlopRuntimeSession, target: SlopRenderTarget) async throws -> Data? {
         await acquire(session)
-        defer { release(session) }
+        defer { session.engine.capturing = false; release(session) }
+        session.engine.capturing = true
+        try await session.flush()
         try Task.checkCancellation()
         let token = UUID().uuidString, originalFrame = session.webView.frame
-        let background = session.webView.value(forKey: "drawsBackground") as? Bool ?? true
-        defer { session.webView.setValue(background, forKey: "drawsBackground") }
+        let background = WebViewBackground.get(session.webView)
+        defer { WebViewBackground.set(background, on: session.webView) }
         do {
             session.webView.frame.size = CGSize(width: max(512, originalFrame.width), height: max(512, originalFrame.height))
-            _ = try await begin(session.webView, token: token, mode: "icon")
-            let value = try await session.webView.callAsyncJavaScript(#"""
-                const matches = [...document.querySelectorAll('[data-slop-render="icon"]')];
-                if (!matches.length) return null;
-                if (matches.length !== 1) return {count:matches.length};
-                const rect = matches[0].getBoundingClientRect();
-                return {x:rect.x,y:rect.y,width:rect.width,height:rect.height};
-                """#, arguments: [:], in: nil, contentWorld: .page)
-            guard let value = value as? [String: Any] else {
+            let value = try await begin(session.webView, token: token, mode: "icon")
+            guard value["dedicated"] as? Bool == true else {
                 session.webView.frame = originalFrame
                 try await restore(session.webView, token: token)
                 return nil
             }
-            if value["count"] != nil { throw SlopPackageError.invalid("Expected one icon capture target") }
             let rect = try geometry(value)
             guard rect.width > 0, abs(rect.width - rect.height) < 0.5,
                   rect.minX >= -0.5, rect.minY >= -0.5,
                   rect.maxX <= session.webView.bounds.width + 0.5, rect.maxY <= session.webView.bounds.height + 0.5 else {
                 throw SlopPackageError.invalid("icon target must be a visible square inside the capture viewport")
             }
-            session.webView.setValue(false, forKey: "drawsBackground")
+            WebViewBackground.set(false, on: session.webView)
             let configuration = WKSnapshotConfiguration()
             configuration.rect = rect
             configuration.snapshotWidth = 512
@@ -173,7 +159,8 @@ struct SlopDocumentAssets: Sendable {
             let data = try SlopPreviewImage.png(from: image)
             session.webView.frame = originalFrame
             try await restore(session.webView, token: token)
-            return data
+            WebViewBackground.set(background, on: session.webView)
+            return try await SlopPNG.optimized(data)
         } catch {
             session.webView.frame = originalFrame
             try? await restore(session.webView, token: token)
@@ -182,25 +169,23 @@ struct SlopDocumentAssets: Sendable {
     }
 
     private static func render(packageURL: URL, output: CaptureOutput) async throws -> Data {
-        let snapshot = try SlopRenderSnapshot(packageURL: packageURL)
+        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
         defer { snapshot.remove() }
-        let session = try SlopRuntimeSession(packageURL: snapshot.url)
-        defer { session.close() }
-        let window = hiddenWindow(session)
-        defer { window.contentView = nil }
-        session.load()
-        try await session.waitUntilReady()
-        return try await capture(session: session, output: output)
+        return try await withCaptureSession(snapshot: snapshot) { session in
+            try await capture(session: session, output: output)
+        }
     }
 
     private static func capture(session: SlopRuntimeSession, output: CaptureOutput) async throws -> Data {
         await acquire(session)
-        defer { release(session) }
+        defer { session.engine.capturing = false; release(session) }
+        session.engine.capturing = true
+        try await session.flush()
         try Task.checkCancellation()
         let token = UUID().uuidString, originalFrame = session.webView.frame
         let isPreview = output == .previewPNG
-        let background = session.webView.value(forKey: "drawsBackground") as? Bool ?? true
-        defer { session.webView.setValue(background, forKey: "drawsBackground") }
+        let background = WebViewBackground.get(session.webView)
+        defer { WebViewBackground.set(background, on: session.webView) }
         do {
             var measurement = try await begin(session.webView, token: token, mode: isPreview ? "preview" : "export")
             let dedicated = measurement["dedicated"] as? Bool == true
@@ -264,7 +249,7 @@ struct SlopDocumentAssets: Sendable {
                 let configuration = WKSnapshotConfiguration()
                 configuration.rect = rect
                 configuration.snapshotWidth = NSNumber(value: Double(width * scale))
-                if dedicated { session.webView.setValue(false, forKey: "drawsBackground") }
+                if dedicated { WebViewBackground.set(false, on: session.webView) }
                 let image = try await session.webView.takeSnapshot(configuration: configuration)
                 data = dedicated ? try SlopPreviewImage.png(from: image) : try SlopPreviewImage.png(from: image, package: session.package, scale: scale)
             case .pdf:
@@ -275,7 +260,8 @@ struct SlopDocumentAssets: Sendable {
             }
             session.webView.frame = originalFrame
             try await restore(session.webView, token: token)
-            return data
+            WebViewBackground.set(background, on: session.webView)
+            return output == .pdf ? data : try await SlopPNG.optimized(data)
         } catch {
             session.webView.frame = originalFrame
             try? await restore(session.webView, token: token)
@@ -351,9 +337,9 @@ struct SlopDocumentAssets: Sendable {
         let configuration = WKWebViewConfiguration()
         let bridge = SlopDevelopmentWindowBridge()
         configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "hitslopDevWindow")
-        let view = SlopDevelopmentWebView(frame: .init(origin: .zero, size: size), configuration: configuration)
+        let view = WKWebView(frame: .init(origin: .zero, size: size), configuration: configuration)
         let window = NSWindow(contentRect: view.frame, styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        bridge.window = window; bridge.webView = view
+        bridge.window = window
         window.title = "hitSlop Dev"
         window.contentView = view
         view.load(URLRequest(url: url))

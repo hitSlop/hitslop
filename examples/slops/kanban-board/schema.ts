@@ -1,28 +1,23 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const laneSchema = Type.Object({
-  id: Type.String(),
-  title: Type.String(),
-  limit: Type.Union([Type.Number(), Type.Null()]),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  title: s.text(),
+  doneLaneKey: s.optional(s.string()),
+  lanes: s.list(s.object({
+    laneKey: s.string(),
+    title: s.text(),
+    limit: s.optional(s.integer({ min: 0, max: 999 })),
+  })),
+  cards: s.list(s.object({
+    laneKey: s.string(),
+    title: s.text(),
+    note: s.text(),
+    tag: s.text(),
+    order: s.integer({ min: 0 }),
+  })),
+});
 
-const cardSchema = Type.Object({
-  id: Type.String(),
-  laneId: Type.String(),
-  title: Type.String(),
-  note: Type.String(),
-  tag: Type.String(),
-  order: Type.Number(),
-}, { additionalProperties: true });
-
-const boardSchema = Type.Object({
-  title: Type.String(),
-  doneLaneId: Type.Union([Type.String(), Type.Null()]),
-  lanes: Type.Array(laneSchema),
-  cards: Type.Array(cardSchema),
-}, { additionalProperties: true });
-
-export type Board = Type.Static<typeof boardSchema>;
+export type Board = Value<typeof schema.fields.node>;
 export type Lane = Board["lanes"][number];
 export type Card = Board["cards"][number];
-export default boardSchema;
+export default schema;

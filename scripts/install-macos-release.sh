@@ -26,6 +26,8 @@ esac
 
 echo "Building development-signed hitSlop Release for ${build_arch}…"
 /usr/bin/xcodebuild \
+  -skipPackagePluginValidation \
+  -skipMacroValidation \
   -quiet \
   -allowProvisioningUpdates \
   -project "$project" \
@@ -40,10 +42,8 @@ echo "Building development-signed hitSlop Release for ${build_arch}…"
   build
 
 app="$stage_dir/derived/Build/Products/Release/hitSlop.app"
-native_resources="$app/Contents/Helpers/HitSlopApple_HitSlopCore.bundle"
-provisioning_profile="$app/Contents/embedded.provisionprofile"
 
-for required in "$app" "$native_resources" "$app/Contents/Helpers/HitSlopApple_HitSlopRuntime.bundle" "$provisioning_profile"; do
+for required in "$app" "$app/Contents/Helpers/HitSlopApple_HitSlopRuntime.bundle" "$app/Contents/Helpers/HitSlopApple_HitSlopWasm.bundle"; do
   if [ ! -e "$required" ]; then
     echo "Release output is missing: $required" >&2
     exit 70

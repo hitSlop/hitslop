@@ -1,5 +1,6 @@
 {
   "$schema": "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+  "runtime": "hitslop-v1",
   "author": {
     "name": "hitSlop",
     "url": "https://hitslop.com"
@@ -7,10 +8,7 @@
   "slug": "packing-list",
   "title": "Packing List",
   "description": "A traveler's luggage-tag checklist for organizing, weighing, and checking packing essentials across bags.",
-  "categories": [
-    "productivity",
-    "personal"
-  ],
+  "categories": ["productivity", "personal"],
   "presentation": {
     "width": 540,
     "height": 680,

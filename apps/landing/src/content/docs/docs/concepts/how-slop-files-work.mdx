@@ -1,88 +1,59 @@
 ---
 title: How .slop files work
-description: Understand source projects, immutable templates, writable documents, and local stores.
+description: Source, immutable runtime templates, writable state, and native ownership.
 ---
 
-There are three related objects in the hitSlop workflow. Keeping them separate
-prevents personal data from leaking into a template and prevents tools from
-rewriting a signed app.
+A `.slop` is a directory package macOS presents as one document. It carries the interface needed to open it and, once created as a writable document, its local state.
 
-## 1. The source project
+## Source is not the runtime package
 
-This is the directory you edit as an author:
+Authoring source contains `App.svelte`, `styles.css`, `theme.ts`, `schema.ts`, `initial.ts`, `main.ts`, and a package manifest. Authors define theme defaults once in `theme.ts`, using `defineTheme`. The builder generates two files from those same defaults: `assets/theme.css` declares the `--slop-*` CSS variables, and `assets/theme.json` lets the runtime load the declared tokens and apply owner overrides. You do not maintain either generated file.
 
 ```text
-tiny-counter/
-├── manifest.json
-├── schema.ts
-├── theme.ts
-├── document-guide.md       optional
-├── package.json
-├── index.html
-├── src/
-└── assets/                 optional immutable assets
+theme.ts   ── build ──→ assets/theme.css + assets/theme.json
+styles.css ── build ──→ assets/main.css
 ```
 
-It contains source and dependencies. It must not contain a real document's
-`stores/` directory.
-
-## 2. The runtime template
-
-`bun run build` produces a source-free package:
+The `assets/` folder in the built package contains compiled output and any bundled static resources. Build produces:
 
 ```text
-tiny-counter.slop/
-├── manifest.json
-├── app.html
-├── data.schema.json        optional, generated
-├── assets/                 optional, immutable
-├── .agents/skills/hitslop-document/
-└── QuickLook/
-    ├── Preview.png
-    └── Icon.png
+My.slop/
+  manifest.json
+  app.html
+  assets/
+    main.js
+    main.css
+    theme.css
+    theme.json
+    runtime.json
+  state.schema.json
+  initial.json
+  QuickLook/
+    Preview.png
+    Icon.png              # optional declared icon
+  .agents/skills/hitslop-document/
 ```
 
-The app files describe one fixed release. A registered master under
-`~/.hitslop/templates/` or a published catalog artifact is never a writable
-personal document.
+`assets/theme.css` and `assets/theme.json` are immutable build output from `theme.ts`. `runtime.json` declares the required runtime contract and minimum revision. SDK/Loro versions record provenance, not opening gates. The authored bundle does not contain its own document engine. The host supplies that pinned runtime.
 
-## 3. The writable document
-
-Opening a template creates a copy at a destination the user chooses. The host
-may add canonical stores lazily:
+## A writable copy adds state
 
 ```text
-my-counter.slop/
-├── …immutable runtime files…
-├── stores/
-│   ├── data.json
-│   ├── media/
-│   └── theme.css
-└── QuickLook/Preview.png
+state/
+  document.sqlite
+  writer.lock
+  host.lock               # present while a live session advertises itself
+  theme.json              # optional owner token overrides
 ```
 
-The interface, data, media, and preview now travel together as one Finder
-document. Copying or sharing this document includes its personal stores.
-Publishing the source project builds a clean template instead.
+Loro in the WebView owns the live document. Swift persists opaque checkpoints and updates in format-1 SQLite. `initial.json` is creation-only data, and `state.schema.json` is a descriptor rather than JSON Schema. There is no editable document JSON projection or `stores/` directory.
 
-## What may change
+The permanent `writer.lock` is the OS ownership lock: never unlink it. `host.lock` is discovery JSON, not ownership. CLI commands route to the live owner's socket or acquire the writer lock and use an engine-only hidden WebView. Headless editing never loads authored `app.html`.
 
-| Area | Owner | Editable in a document? |
-| --- | --- | --- |
-| `manifest.json`, `app.html`, `data.schema.json` | App author | No |
-| `assets/`, `.agents/`, `QuickLook/Icon.png` | App author | No |
-| `stores/data.json` | Document owner | Yes |
-| `stores/media/`, `stores/theme.css` | Document owner | Yes |
-| `QuickLook/Preview.png` | Native host | Refreshed by the host |
+Owner changes go into `state/theme.json`, a separate, bounded token object. It contains overrides, not another copy of the authored theme defaults, and does not pass through Loro or live in SQLite. Direct file edits are not watched. See [theme files and commands](/docs/guides/styling/#let-owners-override-tokens). Use theme commands rather than editing files underneath a running owner. Duplicating a document preserves its saved content and overrides while creating fresh ownership files.
 
-Finder may add a local `Icon\r` metadata file. It is not document content and
-must never appear in authored or published templates.
+## Masters and copies
 
-## Use the native document controls
+Registered templates and built-in starters remain immutable. **Create** makes a writable copy. Rebuilding or updating a template does not update existing documents. Export uses a live capture or a disposable saved snapshot, not a second writer on the same SQLite file.
 
-Move the pointer near the window to reveal hitSlop's native toolbar. It can
-drag, close, minimize, or keep the document always on top. It also duplicates
-the document, exports PNG or PDF, opens the macOS share sheet, reveals the
-package in Finder, copies its path, and opens it in an installed supported code
-editor. Close, duplicate, and export coordinate pending writes so those results
-use stable saved data.
+Close before moving or copying a document. Keep it on a local filesystem outside iCloud and other synced folders. Packages reject symlink entries, source/dependency caches, and oversized resources. Only `hitslop-v1` is accepted; migrations, schema evolution, and multi-writer local packages are not supported.

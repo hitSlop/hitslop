@@ -1,33 +1,15 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const agendaItem = Type.Object({
-  id: Type.String(),
-  text: Type.String(),
-  done: Type.Boolean(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  title: s.text(),
+  date: s.string(),
+  time: s.string(),
+  attendees: s.list(s.string()),
+  agenda: s.list(s.object({ text: s.text(), done: s.boolean() })),
+  decisions: s.list(s.object({ text: s.text() })),
+  notes: s.text(),
+  actions: s.list(s.object({ text: s.text(), owner: s.text(), done: s.boolean() })),
+});
 
-const decisionItem = Type.Object({
-  id: Type.String(),
-  text: Type.String(),
-}, { additionalProperties: true });
-
-const actionItem = Type.Object({
-  id: Type.String(),
-  text: Type.String(),
-  owner: Type.String(),
-  done: Type.Boolean(),
-}, { additionalProperties: true });
-
-const meetingSchema = Type.Object({
-  title: Type.String(),
-  date: Type.String(),
-  time: Type.String(),
-  attendees: Type.Array(Type.String()),
-  agenda: Type.Array(agendaItem),
-  decisions: Type.Array(decisionItem),
-  notes: Type.String(),
-  actions: Type.Array(actionItem),
-}, { additionalProperties: true });
-
-export type Meeting = Type.Static<typeof meetingSchema>;
-export default meetingSchema;
+export type Meeting = Value<typeof schema.fields.node>;
+export default schema;

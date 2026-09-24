@@ -1,15 +1,11 @@
 import { untrack } from "svelte";
 
 export type TimerKind = "focus" | "rest";
+export type Session = { startedAt: string; kind: TimerKind; seconds: number };
 type Durations = { focusMinutes: number; restMinutes: number };
-type Session = { startedAt: string; kind: TimerKind; seconds: number };
 
-/** The live clock is transient; only finished sessions go into the document. */
-export function createCountdown(
-  durations: () => Durations,
-  onComplete: (session: Session) => void,
-  now: () => number = Date.now,
-) {
+/** The live clock is transient; only finished sessions are saved. */
+export function createCountdown(durations: () => Durations, onComplete: (session: Session) => void, now = Date.now) {
   const state = $state({
     kind: "focus" as TimerKind,
     remaining: 1500,
@@ -29,8 +25,6 @@ export function createCountdown(
     startedAt = null;
   }
 
-  // Track settings, not running/paused state. Pausing must never reset duration.
-  // External settings apply to the next fresh session.
   $effect(() => {
     const settings = durations();
     void settings.focusMinutes;

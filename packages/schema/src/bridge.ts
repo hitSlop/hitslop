@@ -1,57 +1,42 @@
-import * as Type from "typebox";
-
+import * as T from "typebox";
 export const protocolVersion = 1;
-export const BridgeErrorCodeSchema = Type.Enum(["invalid_request", "unsupported", "revision_conflict", "validation_failed", "storage_error", "limit_exceeded", "closed"]);
-export type JSONValue = null | boolean | number | string | JSONValue[] | { [key: string]: JSONValue };
-const jsonDefinitions = { json: { anyOf: [
-  { type: "null" }, { type: "boolean" }, { type: "number" }, { type: "string" },
-  { type: "array", items: { $ref: "#/$defs/json" } },
-  { type: "object", additionalProperties: { $ref: "#/$defs/json" } },
-] } };
-export const JSONValueSchema = Type.Unsafe<JSONValue>({ $defs: jsonDefinitions, $ref: "#/$defs/json" });
-const json = Type.Unsafe<JSONValue>({ $ref: "#/$defs/json" });
-const object = <P extends Type.TProperties>(properties: P) => Type.Object(properties, { additionalProperties: false, $defs: jsonDefinitions });
-const method = <P extends Type.TProperties, R extends Type.TSchema>(params: P, response: R) => ({ params: object(params), response });
-const mediaName = Type.String({ pattern: "^[a-z][a-z0-9-]{0,63}$" });
-const revision = object({ revision: Type.String() });
-const snapshot = object({ value: json, revision: Type.String() });
-// Capabilities may contain methods introduced by a newer host.
-export const HostInfoSchema = object({ protocolVersion: Type.Literal(protocolVersion), capabilities: Type.Array(Type.String()) });
-
-/** Single source for method names, wire arguments, and successful reply values. */
+const text = T.String({ maxLength: 4096 });
+const bytes = T.String({ maxLength: 48 * 1024 * 1024 });
+export const AttachmentIDSchema = T.String({ pattern: "^[a-f0-9]{64}$", minLength: 64, maxLength: 64 });
+export const AttachmentBytesSchema = T.String({ maxLength: 13981016 });
+export const ThemeValuesSchema = T.Record(T.String({pattern:"^[a-zA-Z][a-zA-Z0-9-]*$"}),T.String({minLength:1,maxLength:4096}));
 export const BridgeMethods = {
-  "host.info": method({}, HostInfoSchema),
-  log: method({ message: Type.String() }, Type.Null()),
-  ready: method({}, Type.Null()),
-  "json.open": method({ value: json }, snapshot),
-  "json.read": method({}, snapshot),
-  "json.write": method({ value: json, expectedRevision: Type.Optional(Type.String()) }, revision),
-  "media.open": method({ name: mediaName }, object({ exists: Type.Boolean(), revision: Type.Union([Type.String(), Type.Null()]) })),
-  "media.write": method({ name: mediaName, data: Type.String(), mimeType: Type.String() }, revision),
-  "media.remove": method({ name: mediaName }, object({ revision: Type.Null() })),
-  "window.resize": method({ width: Type.Integer({ minimum: 240, maximum: 4096 }), height: Type.Integer({ minimum: 180, maximum: 4096 }) }, object({ width: Type.Number({ exclusiveMinimum: 0 }), height: Type.Number({ exclusiveMinimum: 0 }) })),
-  "window.drag": method({}, Type.Null()),
+  "attachments.put": T.Object({ method: T.Literal("attachments.put"), bytes: AttachmentBytesSchema }),
+  "attachments.read": T.Object({ method: T.Literal("attachments.read"), attachmentID: AttachmentIDSchema }),
+  "attachments.list": T.Object({ method: T.Literal("attachments.list") }),
+  "theme.load": T.Object({method:T.Literal("theme.load")}),
+  "theme.save": T.Object({method:T.Literal("theme.save"),values:ThemeValuesSchema}),
+  runtimeRecovered: T.Object({method:T.Literal("runtimeRecovered")}),
+  "window.resize": T.Object({ method: T.Literal("window.resize"), width:T.Integer({minimum:240,maximum:4096}), height:T.Integer({minimum:180,maximum:4096}) }),
+  config: T.Object({ method: T.Literal("config") }),
+  ready: T.Object({ method: T.Literal("ready") }),
+  load: T.Object({ method: T.Literal("load") }),
+  append: T.Object({
+    method: T.Literal("append"),
+    generation: text,
+    updates: T.Array(bytes, { maxItems: 4096 }),
+  }),
+  checkpoint: T.Object({
+    method: T.Literal("checkpoint"),
+    generation: text,
+    bytes,
+    schemaKey: T.String({ maxLength: 1048576 }),
+  }),
+  status: T.Object({
+    method: T.Literal("status"),
+    status: T.Enum(["saved", "saving", "save-failed"]),
+    error: T.Union([text, T.Null()]),
+  }),
+  failed: T.Object({ method: T.Literal("failed"), error: text }),
+  runtimeError: T.Object({
+    method: T.Literal("runtimeError"),
+    kind: T.Enum(["operation", "application"]),
+    error: text,
+  }),
 } as const;
-
-export type BridgeMethod = keyof typeof BridgeMethods;
-type Params<M extends BridgeMethod> = Type.Static<(typeof BridgeMethods)[M]["params"]>;
-export type BridgeParams<M extends BridgeMethod> = keyof Params<M> extends never ? Record<string, never> : Params<M>;
-export type BridgeResult<M extends BridgeMethod> = Type.Static<(typeof BridgeMethods)[M]["response"]>;
-export type BridgeRequest = { [M in BridgeMethod]: { method: M } & Params<M> }[BridgeMethod];
-export const bridgeMethodNames = Object.keys(BridgeMethods) as BridgeMethod[];
-export const BridgeMethodSchema = Type.Enum(bridgeMethodNames);
-// Object.entries loses key/value correlation. This annotation restores exactly
-// the mapped request type constructed from the same method registry.
-export const BridgeRequestSchema = Type.Unsafe<BridgeRequest>({
-  $defs: jsonDefinitions,
-  anyOf: Object.entries(BridgeMethods).map(([name, contract]) => object({ method: Type.Literal(name), ...contract.params.properties })),
-});
-export const BridgeReplySchema = Type.Union([
-  object({ ok: Type.Literal(true), value: json }),
-  object({ ok: Type.Literal(false), error: object({ code: BridgeErrorCodeSchema, message: Type.String() }) }),
-], { $defs: jsonDefinitions });
-export const ChangeSchema = object({ kind: Type.Enum(["json", "media"]), source: Type.Enum(["app", "external", "dev"]), revision: Type.Optional(Type.Union([Type.String(), Type.Null()])), sequence: Type.Optional(Type.Integer()), name: Type.Optional(mediaName) });
-export type BridgeReply = Type.Static<typeof BridgeReplySchema>;
-export type BridgeErrorCode = Type.Static<typeof BridgeErrorCodeSchema>;
-export type HostInfo = Type.Static<typeof HostInfoSchema>;
-export type SlopChange = Type.Static<typeof ChangeSchema>;
+export const BridgeRequestSchema = T.Union(Object.values(BridgeMethods));

@@ -1,15 +1,15 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const timeSignature = Type.Enum(["2/4", "3/4", "4/4", "6/8"]);
+export const signatures = ["2/4", "3/4", "4/4", "6/8"] as const;
 
-const metronomeSchema = Type.Object({
-  bpm: Type.Integer({ minimum: 40, maximum: 240 }),
-  signature: timeSignature,
-  volume: Type.Number({ minimum: 0, maximum: 1 }),
-  muted: Type.Boolean(),
-  presets: Type.Array(Type.Integer({ minimum: 40, maximum: 240 }), { minItems: 1, maxItems: 6 }),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  bpm: s.integer({ min: 40, max: 240 }),
+  signature: s.enum(signatures),
+  volume: s.number({ min: 0, max: 1 }),
+  muted: s.boolean(),
+  presets: s.list(s.integer({ min: 40, max: 240 })),
+});
 
-export type TimeSignature = Type.Static<typeof timeSignature>;
-export type MetronomeState = Type.Static<typeof metronomeSchema>;
-export default metronomeSchema;
+export type MetronomeState = Value<typeof schema.fields.node>;
+export type TimeSignature = MetronomeState["signature"];
+export default schema;

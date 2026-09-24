@@ -1,27 +1,23 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
+import { signifierTypes } from "./signifiers";
 
-const entry = Type.Object({
-  id: Type.String(),
-  type: Type.String(),
-  star: Type.Boolean(),
-  text: Type.String(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  date: s.text(),
+  monthTitle: s.text(),
+  dailyPage: s.text(),
+  monthlyPage: s.text(),
+  entries: s.list(s.object({
+    type: s.enum(signifierTypes),
+    star: s.boolean(),
+    text: s.text(),
+  })),
+  monthlyLog: s.list(s.object({
+    day: s.integer({ min: 1, max: 31 }),
+    weekday: s.text(),
+    text: s.text(),
+  })),
+});
 
-const monthlyItem = Type.Object({
-  id: Type.String(),
-  day: Type.Number(),
-  weekday: Type.String(),
-  text: Type.String(),
-}, { additionalProperties: true });
-
-const bulletJournalSchema = Type.Object({
-  date: Type.String(),
-  monthTitle: Type.String(),
-  dailyPage: Type.String(),
-  monthlyPage: Type.String(),
-  entries: Type.Array(entry),
-  monthlyLog: Type.Array(monthlyItem),
-}, { additionalProperties: true });
-
-export type BulletJournal = Type.Static<typeof bulletJournalSchema>;
-export default bulletJournalSchema;
+export type BulletJournal = Value<typeof schema.fields.node>;
+export type JournalEntry = BulletJournal["entries"][number];
+export default schema;

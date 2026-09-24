@@ -1,31 +1,30 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const category = Type.Object({
-  id: Type.String(),
-  name: Type.String(),
-  tagCode: Type.String(),
-  color: Type.String(),
-}, { additionalProperties: true });
+export const stampColors = ["cobalt", "vermilion", "emerald", "amber", "plum", "slate"] as const;
 
-const item = Type.Object({
-  id: Type.String(),
-  categoryId: Type.String(),
-  text: Type.String(),
-  quantity: Type.Number(),
-  packed: Type.Boolean(),
-  essential: Type.Boolean(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  tripTitle: s.text(),
+  destination: s.text(),
+  departureDate: s.string(),
+  traveler: s.text(),
+  bagTag: s.string(),
+  flag: s.string(),
+  categories: s.list(s.object({
+    key: s.string(),
+    name: s.string(),
+    tagCode: s.string(),
+    color: s.enum(stampColors),
+  })),
+  items: s.list(s.object({
+    key: s.string(),
+    text: s.text(),
+    quantity: s.integer({ min: 1, max: 9 }),
+    packed: s.boolean(),
+    essential: s.boolean(),
+  })),
+});
 
-const packingSchema = Type.Object({
-  tripTitle: Type.String(),
-  destination: Type.String(),
-  departureDate: Type.String(),
-  traveler: Type.String(),
-  bagTag: Type.String(),
-  flag: Type.String(),
-  categories: Type.Array(category),
-  items: Type.Array(item),
-}, { additionalProperties: true });
-
-export type PackingList = Type.Static<typeof packingSchema>;
-export default packingSchema;
+export type PackingList = Value<typeof schema.fields.node>;
+export type PackingItem = PackingList["items"][number];
+export type PackingCategory = PackingList["categories"][number];
+export default schema;

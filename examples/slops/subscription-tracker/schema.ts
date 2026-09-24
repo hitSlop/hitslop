@@ -1,21 +1,25 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const subscription = Type.Object({
-  id: Type.String(),
-  name: Type.String(),
-  amount: Type.Number(),
-  cadence: Type.String(),
-  nextRenewal: Type.String(),
-  category: Type.String(),
-  note: Type.String(),
-  active: Type.Boolean(),
-}, { additionalProperties: true });
+export const currencies = ["USD", "CAD", "EUR", "GBP", "AUD", "JPY"] as const;
+export const cadences = ["monthly", "annual"] as const;
+export const categories = ["Entertainment", "Work", "Home", "Health", "Other"] as const;
 
-const trackerSchema = Type.Object({
-  currency: Type.String(),
-  subscriptions: Type.Array(subscription),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  currency: s.enum(currencies),
+  subscriptions: s.list(s.object({
+    name: s.text(),
+    amount: s.number(),
+    cadence: s.enum(cadences),
+    nextRenewal: s.string(),
+    category: s.enum(categories),
+    note: s.text(),
+    active: s.boolean(),
+  })),
+});
 
-export type Subscription = Type.Static<typeof subscription>;
-export type Tracker = Type.Static<typeof trackerSchema>;
-export default trackerSchema;
+export type Tracker = Value<typeof schema.fields.node>;
+export type Subscription = Tracker["subscriptions"][number];
+export type Currency = (typeof currencies)[number];
+export type Cadence = (typeof cadences)[number];
+export type Category = (typeof categories)[number];
+export default schema;

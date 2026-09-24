@@ -1,27 +1,23 @@
-import * as Type from "typebox";
+import { defineDocument, s } from "@hitslop/document";
 
-const party = Type.Object({
-  name: Type.String(),
-  detail: Type.String(),
-}, { additionalProperties: true });
+export const statuses = ["draft", "sent", "paid"] as const;
+export const currencies = ["USD", "CAD", "EUR", "GBP", "AUD", "JPY"] as const;
 
-const invoiceSchema = Type.Object({
-  number: Type.String(),
-  status: Type.String(),
-  issued: Type.String(),
-  due: Type.String(),
+const party = s.object({ name: s.text(), detail: s.text() });
+
+export default defineDocument({
+  number: s.text(),
+  status: s.enum(statuses),
+  issued: s.string(),
+  due: s.string(),
   from: party,
   billTo: party,
-  items: Type.Array(Type.Object({
-    id: Type.String(),
-    description: Type.String(),
-    quantity: Type.Union([Type.Number(), Type.Null()]),
-    rate: Type.Union([Type.Number(), Type.Null()]),
-  }, { additionalProperties: true })),
-  taxPercent: Type.Union([Type.Number(), Type.Null()]),
-  notes: Type.String(),
-  currency: Type.String(),
-}, { additionalProperties: true });
-
-export type Invoice = Type.Static<typeof invoiceSchema>;
-export default invoiceSchema;
+  items: s.list(s.object({
+    description: s.text(),
+    quantity: s.number({ min: 0, max: 1_000_000 }),
+    rate: s.number({ min: 0, max: 1_000_000_000 }),
+  })),
+  taxPercent: s.number({ min: 0, max: 100 }),
+  notes: s.text(),
+  currency: s.enum(currencies),
+});

@@ -1,20 +1,20 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const factor = Type.Object({
-  id: Type.String(),
-  text: Type.String(),
-  weight: Type.Number(),
-}, { additionalProperties: true });
+export const sides = ["pro", "con"] as const;
 
-const decisionSchema = Type.Object({
-  question: Type.String(),
-  date: Type.String(),
-  status: Type.String(),
-  pros: Type.Array(factor),
-  cons: Type.Array(factor),
-  verdict: Type.String(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  question: s.text(),
+  date: s.text(),
+  status: s.enum(["evaluating", "leaning_pro", "leaning_con", "decided_pro", "decided_con"]),
+  factors: s.list(s.object({
+    text: s.text(),
+    weight: s.integer({ min: 1, max: 5 }),
+    side: s.enum(sides),
+  })),
+  verdict: s.text(),
+});
 
-export type Factor = Type.Static<typeof factor>;
-export type Decision = Type.Static<typeof decisionSchema>;
-export default decisionSchema;
+export type Decision = Value<typeof schema.fields.node>;
+export type Factor = Decision["factors"][number];
+export type Side = Factor["side"];
+export default schema;

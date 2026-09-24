@@ -5,6 +5,8 @@ description: Design or refine hitSlop mini apps and documents with a purpose-led
 
 # hitSlop design
 
+Do not display “Saved,” “Saving…,” or routine persistence indicators inside authored slops. The native host owns save-failure and retry UI. Use task-specific feedback for explicit operations, such as “Importing skin…” or “Skin applied.”
+
 Read `manifest.json` first and design at its exact initial dimensions. A slop
 is one complete digital object, not a small website.
 
@@ -13,13 +15,46 @@ purpose. Share standards of clarity and familiar interaction behavior; let each
 object choose its own palette, typography, composition, and material. Paper,
 Instrument, and Skin are starting points, not a required retro or physical look.
 
-If the project provides `_vibe/`, inspect it for visual direction. Treat those
-images as inspiration only; do not copy them into source or runtime packages.
+The guidance below is self-contained; reference images are not required. If the
+project provides `_vibe/`, use it as optional inspiration. Never copy those
+images into generated projects or runtime packages.
+
+## Give the object its own character
+
+Choose an expression that makes the job feel natural: an orderly paper record,
+a precise desktop instrument, a cheerful pocket companion, or a quiet modern
+tool. Let that choice shape the whole composition, not just its accent color.
+The checklist supplied by `slop init` is a working starting point; adapt its
+layout, typography, palette, and controls to the requested object.
+
+- Give typography a job: editorial headings for reading, aligned tabular figures
+  for accounting, a prominent numeric display for timing. Keep essential labels
+  readable even when the display type is playful.
+- Choose a deliberate surface and palette: warm paper with fine ink rules,
+  saturated molded plastic with a recessed display, or dark glass with crisp
+  readouts. Keep highlights, borders, shadows, and corner shapes consistent with
+  the chosen material. Quiet, flat treatments can have just as much identity.
+- Build recognition through proportions and composition: the long strip of a
+  ticket, the rhythm of a ledger, or the display-and-controls grouping of an
+  instrument. Use an unusual silhouette only when it helps the object.
+- Make controls feel responsive through visible pressed, selected, and focused
+  states. Depth and brief motion should explain operation; decorative knobs,
+  fake window chrome, and unreadable display effects add no useful character.
+- Implement the expression with plain CSS, declared theme tokens, and styled
+  Bits UI primitives. Use spacing, rules, gradients, borders, and restrained
+  shadows before reaching for image skins; reserve PNG skins for meaningful
+  silhouettes as described in the presentation reference.
+
+Related slops share interaction quality, not a universal shell. A recipe, timer,
+and budget tool should remain distinguishable even with their titles removed.
+Follow the user's visual direction and preserve an existing object's identity
+when refining it.
 
 ## Decide before styling
 
 1. State the single job in one sentence.
-2. Choose a dominant object family: Paper, Instrument, or Skin.
+2. Choose a visual direction suited to the job; Paper, Instrument, and Skin are
+   useful starting points, not a required taxonomy.
 3. Identify the primary action/readout and persistent state.
 4. Decide whether the window is standard/resizable, transparent, or PNG-skinned.
 5. Define what live editing, static capture, and icon must show.
@@ -54,28 +89,43 @@ and PDF behavior.
   (`--slop-surface`, `--slop-accent`, `--slop-ink`). This ensures each slop retains its
   authentic physical personality (Paper, Instrument, Skin) while remaining effortless
   to restyle or re-theme at runtime.
-- In new Svelte projects, keep structural styles in Vanilla Extract `.css.ts`
-  files and define public tokens in root `theme.ts` via `defineTheme` from
-  `@hitslop/runtime/theme`. Use its typed variable references in Vanilla Extract;
-  the builder generates `assets/theme.css`. Never maintain both defaults files.
-- Use exported `style()` classes for owned elements and import them into Svelte.
-  Keep pseudo states, Bits UI data-attribute selectors, and media/container
-  queries with the element's base style. Reserve `globalStyle()` for document
-  defaults and necessary descendants anchored to a scoped parent. Read
-  [references/vanilla-extract.md](references/vanilla-extract.md) when authoring or
-  reorganizing styles; do not translate a whole stylesheet into global selectors.
-- Mark editing-only UI with `data-slop-export="hide"`; keep exportable content
-  in normal flow.
+- Keep structural styles in plain `styles.css`, imported by `main.ts`. Define public
+  tokens in `theme.ts` using `defineTheme` from `@hitslop/document/theme`.
+  The builder emits `assets/theme.css`; use `var(--slop-TOKEN)` in CSS.
+- Group base rules, states, descendants, and responsive rules together. Use
+  app-prefixed classes, including explicit classes on Bits UI portal content.
+  Read [references/css.md](references/css.md) for the authoring pattern.
+- Owners change declared tokens through `slop theme set/reset`. Overrides live in
+  `state/theme.json`; never write arbitrary CSS or `stores/theme.css`.
+- Keep exportable content in normal flow. Without an `exportView`, mark
+  editing-only UI with `data-slop-export="hide"`; with one, the editor is never
+  captured.
 - Make each slop purpose-specific. Shared SDK patterns must not make unrelated
   objects look like one reskinned dashboard.
 
 ## Review efficiently
 
-In the hitSlop repository, prefer `bun run slops:review <slug>` for fixed-size
-editor, narrow, export, and icon previews with repeatable fixtures and a review
-packet. Read [references/review-workbench.md](references/review-workbench.md).
-Batch inspection and corrections; verify later changes with the evidence they
-need rather than repeating every visual capture for an invisible code change.
+Use `bun run dev` for disposable browser preview. Review at the manifest size
+and a narrow width, with menus open and keyboard focus visible. Build with the
+matching Mac app to verify export and icon artwork. Read
+[references/review-workbench.md](references/review-workbench.md) for a short pass.
+
+## Check the real task
+
+Preserve the established identity during refinement; a redesign requires an explicit
+change of direction. Use realistic content to judge hierarchy before adding decoration.
+Give typography distinct roles and load only the fonts and weights those roles need.
+Use familiar controls, clear labels, visible focus, and meaningful loading/error feedback.
+Do not invent facts or marketing claims while polishing copy.
+
+Exercise empty, typical, long-content, failed, and busy states. Check text wrapping,
+keyboard operation, narrow windows, zoom, emoji/IME input, and reduced motion. Keep
+critical actions reachable. Overlays must escape scrolling/clipping containers.
+
+Review editor, narrow, export, and icon views together, fix material findings in one
+batch, then verify the affected behavior. Source changes invalidate old captures;
+nonvisual changes do not justify another full visual review. Keep PRODUCT.md and each
+app's DESIGN.md concise and grounded in what is actually shipped.
 
 ## Motion
 
@@ -83,7 +133,7 @@ Use motion to explain an interaction or reinforce the object's character: a
 pressed control, settling needle, or changing liquid level. Keep idle objects
 quiet unless ongoing motion communicates a real function.
 
-- Keep simple hover/press feedback in `.css.ts` transitions. Use Svelte
+- Keep simple hover/press feedback in CSS transitions. Use Svelte
   transitions for entering/leaving DOM and `animate:flip` for keyed-list
   reordering. Use `Spring` for physical responses or `Tween` for predictable
   interpolation from `svelte/motion`; prefer these over legacy `spring`/`tweened`.

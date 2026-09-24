@@ -1,25 +1,9 @@
 # Contributing to hitSlop
 
-Thanks for helping make tiny software feel personal again.
+Use the Bun version pinned in root `package.json`. Read [AGENTS](AGENTS.md) and [development](docs/guides/development.md), then install the root and landing dependencies with their frozen lockfiles. Apple work requires Xcode and XcodeGen on macOS.
 
-## Start here
+Keep changes focused and preserve work already in the checkout. Add meaningful tests or a reproducible manual check. For templates, read the manifest first, follow [authoring](docs/guides/authoring.md), and use the discovery/bundled-selection workflow in the development guide.
 
-1. Install [Bun](https://bun.sh/) 1.4.0 and Xcode if you are changing Apple code.
-2. Run `bun install` from the repository root.
-3. Read [the repository guide](docs/repository.md) and the nearest `AGENTS.md`.
-4. Make a focused change with tests or a reproducible manual check.
-5. Run `bun run release:check` before opening a pull request.
+Run `bun run test:local` before release or a release-ready pull request. Focused commands are documented in the development guide. After changing TypeBox contracts, run `bun run schema:generate` and inspect generated output. Never edit generated contracts or historical compatibility fixtures by hand.
 
-For a new mini app, start in `examples/slops/` and follow
-[the authoring guide](docs/authoring.md). Do not commit generated `app.html`,
-dependencies, caches, seed databases, or editable stylesheets inside an
-authored template.
-
-## Pull requests
-
-- Explain the user-visible problem and the chosen approach.
-- Include screenshots for visual changes.
-- Note any manifest, storage, compatibility, or migration impact.
-- Keep generated schema output in sync by running `bun run schema:generate`
-  after TypeBox schema changes.
-- Do not include secrets, signing keys, local documents, or private paths.
+Explain the problem, resulting behavior, and verification in pull requests. Include screenshots for visual changes and call out runtime/package/storage compatibility impact. Keep secrets, signing keys, local documents, dependencies, and generated artifacts out of Git. See [releasing](docs/guides/releasing.md) for publication and manual acceptance.

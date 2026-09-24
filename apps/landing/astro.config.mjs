@@ -1,11 +1,9 @@
 import { defineConfig } from "astro/config";
 import svelte from "@astrojs/svelte";
 import starlight from "@astrojs/starlight";
-import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
 
 export default defineConfig({
   site: "https://hitslop.com",
-  vite: { plugins: [vanillaExtractPlugin()] },
   integrations: [
     svelte(),
     starlight({
@@ -23,9 +21,7 @@ export default defineConfig({
         baseUrl: "https://github.com/hitSlop/hitslop/edit/master/apps/landing/",
       },
       lastUpdated: true,
-      social: [
-        { icon: "github", label: "GitHub", href: "https://github.com/hitSlop/hitslop" },
-      ],
+      social: [{ icon: "github", label: "GitHub", href: "https://github.com/hitSlop/hitslop" }],
       sidebar: [
         { label: "Overview", slug: "docs" },
         {
@@ -36,7 +32,7 @@ export default defineConfig({
             { label: "Style an app", slug: "docs/guides/styling" },
             { label: "Icons, previews, and exports", slug: "docs/guides/icons-and-exports" },
             { label: "PNG window skins", slug: "docs/guides/png-window-skins" },
-            { label: "Data and media", slug: "docs/guides/data-and-schemas" },
+            { label: "Data and schemas", slug: "docs/guides/data-and-schemas" },
             { label: "Build and share", slug: "docs/guides/build-and-share" },
           ],
         },
@@ -44,6 +40,7 @@ export default defineConfig({
           label: "Work with a document",
           items: [
             { label: "Edit installed data", slug: "docs/guides/edit-installed-data" },
+            { label: "Collaboration (coming soon)", slug: "docs/guides/live-sharing" },
             { label: "How .slop files work", slug: "docs/concepts/how-slop-files-work" },
           ],
         },

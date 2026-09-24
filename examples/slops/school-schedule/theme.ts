@@ -1,4 +1,5 @@
-import { defineTheme } from "@hitslop/runtime/theme";
+import { defineTheme } from "@hitslop/document/theme";
+
 export default defineTheme({
   surface: "#f7faff",
   panel: "#eaf0fb",
@@ -18,6 +19,6 @@ export default defineTheme({
   indigo: "#e1d9ff",
   rose: "#f8d8e8",
   teal: "#c9eeeb",
-  font: '"Outfit", "Avenir Next", sans-serif',
-  mono: 'ui-monospace, "SFMono-Regular", Menlo, monospace',
+  font: "\"Outfit\", \"Avenir Next\", sans-serif",
+  mono: "ui-monospace, \"SFMono-Regular\", Menlo, monospace",
 });

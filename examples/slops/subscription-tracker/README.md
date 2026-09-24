@@ -1,13 +1,13 @@
 # Subscription Tracker
 
-A violet-and-mint tracker for recurring costs and renewal dates, with a monthly
-total, annual estimate, and service pause/resume controls.
+A violet-and-mint tracker for recurring costs and renewal dates, with a monthly total, annual estimate, and service pause/resume controls.
+
+From the repository root:
 
 ```sh
-bun run slops:review subscription-tracker
+bun slop dev examples/slops/subscription-tracker
 bun slop build examples/slops/subscription-tracker
-bun slop validate examples/slops/subscription-tracker/dist/subscription-tracker.slop
+bun slop register examples/slops/subscription-tracker
 ```
 
-Pausing affects tracking only. Manage actual billing with the service provider.
-Sample amounts are illustrative. Currency selection does not convert amounts.
+Create a writable copy of the registered template before editing.

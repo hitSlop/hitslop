@@ -1,40 +1,29 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const skill = Type.Object({
-  id: Type.String(),
-  label: Type.String(),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  name: s.text(),
+  initials: s.string({ maxLength: 3 }),
+  role: s.text(),
+  email: s.string(),
+  location: s.text(),
+  website: s.string(),
+  summary: s.text(),
+  skills: s.list(s.object({ label: s.text() })),
+  experience: s.list(s.object({
+    role: s.text(),
+    company: s.text(),
+    period: s.text(),
+    summary: s.text(),
+  })),
+  education: s.list(s.object({
+    school: s.text(),
+    program: s.text(),
+    year: s.string(),
+  })),
+});
 
-const experience = Type.Object({
-  id: Type.String(),
-  role: Type.String(),
-  company: Type.String(),
-  period: Type.String(),
-  summary: Type.String(),
-}, { additionalProperties: true });
-
-const education = Type.Object({
-  id: Type.String(),
-  school: Type.String(),
-  program: Type.String(),
-  year: Type.String(),
-}, { additionalProperties: true });
-
-const resumeSchema = Type.Object({
-  name: Type.String(),
-  initials: Type.String(),
-  role: Type.String(),
-  email: Type.String(),
-  location: Type.String(),
-  website: Type.String(),
-  summary: Type.String(),
-  skills: Type.Array(skill),
-  experience: Type.Array(experience),
-  education: Type.Array(education),
-}, { additionalProperties: true });
-
-export type Resume = Type.Static<typeof resumeSchema>;
-export default resumeSchema;
+export type Resume = Value<typeof schema.fields.node>;
+export default schema;
 
 export function badgeInitials(name: string, initials: string): string {
   const fromName = name.split(/\s+/).filter(Boolean).map(word => word[0] ?? "").join("").slice(0, 2).toUpperCase();

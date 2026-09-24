@@ -1,16 +1,16 @@
-import * as Type from "typebox";
+import { defineDocument, s, type Value } from "@hitslop/document";
 
-const personalBudgetSchema = Type.Object({
-  month: Type.String(),
-  income: Type.Number(),
-  savings: Type.Number(),
-  categories: Type.Array(Type.Object({
-    id: Type.String(),
-    name: Type.String(),
-    allocated: Type.Number(),
-    spent: Type.Number(),
-  }, { additionalProperties: true })),
-}, { additionalProperties: true });
+const schema = defineDocument({
+  month: s.string(),
+  income: s.number({ min: 0 }),
+  savings: s.number({ min: 0 }),
+  categories: s.list(s.object({
+    name: s.text(),
+    allocated: s.number({ min: 0 }),
+    spent: s.number({ min: 0 }),
+  })),
+});
 
-export type PersonalBudget = Type.Static<typeof personalBudgetSchema>;
-export default personalBudgetSchema;
+export type PersonalBudget = Value<typeof schema.fields.node>;
+export type BudgetCategory = PersonalBudget["categories"][number];
+export default schema;
