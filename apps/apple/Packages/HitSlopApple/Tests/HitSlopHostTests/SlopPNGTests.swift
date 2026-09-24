@@ -93,14 +93,22 @@ struct SlopPNGTests {
         let a = try #require(NSBitmapImageRep(data: first)), b = try #require(NSBitmapImageRep(data: second))
         #expect(a.pixelsWide == b.pixelsWide && a.pixelsHigh == b.pixelsHigh)
         // Normalize storage layout only; getPixel returns unpremultiplied encoded components.
-        var left = [UInt](repeating: 0, count: 4), right = left
-        for y in 0..<a.pixelsHigh {
-            for x in 0..<a.pixelsWide {
-                left[3] = 255; right[3] = 255
-                a.getPixel(&left, atX: x, y: y); b.getPixel(&right, atX: x, y: y)
-                if left != right { Issue.record("Pixels differ at \(x),\(y): \(left) != \(right)"); return }
+        // AppKit imports the sample pointer as Int or UInt depending on the SDK.
+        // Infer it from getPixel so both SDKs exercise the same component comparison.
+        func compare<Sample: FixedWidthInteger>(
+            _ readLeft: (UnsafeMutablePointer<Sample>, Int, Int) -> Void,
+            _ readRight: (UnsafeMutablePointer<Sample>, Int, Int) -> Void
+        ) {
+            var left = [Sample](repeating: 0, count: 4), right = left
+            for y in 0..<a.pixelsHigh {
+                for x in 0..<a.pixelsWide {
+                    left[3] = 255; right[3] = 255
+                    readLeft(&left, x, y); readRight(&right, x, y)
+                    if left != right { Issue.record("Pixels differ at \(x),\(y): \(left) != \(right)"); return }
+                }
             }
         }
+        compare(a.getPixel, b.getPixel)
     }
 
     private func makePNG(width: Int, height: Int, color: Int, pixels: [UInt8],
