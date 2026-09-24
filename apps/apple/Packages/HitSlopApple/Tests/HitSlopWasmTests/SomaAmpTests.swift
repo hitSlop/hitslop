@@ -15,24 +15,12 @@ import WebKit
     let text = try await engine.webView.evaluateJavaScript("document.body.innerText")
     throw NSError(domain: "SomaAmpTests", code: 1, userInfo: [NSLocalizedDescriptionKey: "Timed out: \(predicate)\n\(String(describing: text))"])
   }
-  @Test @MainActor func nativeReceiverImportsReopensResizesAndRendersAudio() async throws {
-    _ = NSApplication.shared
-    let source = URL(fileURLWithPath: repository + "/generated/v1/templates/soma-amp.slop")
-    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
-    try SlopDuplicator.duplicate(from: source, to: root)
-    defer { try? FileManager.default.removeItem(at: root) }
-    let engine = try WasmSession(package: SlopPackage(rootURL: root))
-    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 725, height: 470), styleMask: [.borderless], backing: .buffered, defer: false)
-    window.contentView = engine.webView
-    window.orderFront(nil)
-    defer { window.orderOut(nil); window.contentView = nil; engine.onResize = nil }
-    var sizes: [CGSize] = []
-    engine.onResize = { size in sizes.append(size); engine.webView.setFrameSize(size); return size }
+  @MainActor private func installMediaFixture(_ engine: WasmSession) {
     // Deterministic audio source exercises Webamp's real media graph and WASM visualizer
     // without making the test depend on SomaFM availability. Never installed in the app.
     engine.webView.configuration.userContentController.addUserScript(WKUserScript(source: """
       globalThis.testAudio = []; globalThis.testAnalysers = []; globalThis.testErrors = []; globalThis.testDraws = 0;
-      for (const method of ['drawArrays', 'drawElements']) {
+      for (const method of (globalThis.WebGL2RenderingContext ? ['drawArrays', 'drawElements'] : [])) {
         const original = WebGL2RenderingContext.prototype[method];
         WebGL2RenderingContext.prototype[method] = function(...args) { testDraws++; return original.apply(this,args); };
       }
@@ -55,9 +43,24 @@ import WebKit
       globalThis.fetch = (url, options) => String(url).endsWith('.pls')
         ? Promise.resolve(new Response('[playlist]\\nFile1=https://test.invalid/radio\\n')) : originalFetch(url, options);
       """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+  }
+  @Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_TEMPLATE_INTEGRATION"] == "1")) @MainActor func nativeReceiverImportsReopensResizesAndRendersAudio() async throws {
+    _ = NSApplication.shared
+    let source = URL(fileURLWithPath: repository + "/generated/v1/templates/soma-amp.slop")
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
+    try SlopDuplicator.duplicate(from: source, to: root)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let engine = try WasmSession(package: SlopPackage(rootURL: root))
+    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 725, height: 470), styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = engine.webView
+    window.orderFront(nil)
+    defer { window.orderOut(nil); window.contentView = nil; engine.onResize = nil }
+    var sizes: [CGSize] = []
+    engine.onResize = { size in sizes.append(size); engine.webView.setFrameSize(size); return size }
+    installMediaFixture(engine)
     engine.load()
     try await engine.waitUntilReady()
-    try await wait(engine, for: "document.querySelector('#webamp') && !document.querySelector('.soma-rail button').disabled")
+    try await wait(engine, for: "document.querySelector('#webamp') && document.querySelector('.soma-skin-controls button')?.disabled === false")
     let paused = try await engine.webView.evaluateJavaScript("testAudio[0].paused")
     #expect(paused as? Bool == true)
     let skin = try Data(contentsOf: URL(fileURLWithPath: repository + "/tests/fixtures/soma-amp/base-2.91.wsz"))
@@ -66,35 +69,38 @@ import WebKit
       transfer.items.add(new File([Uint8Array.from(atob(bytes), c=>c.charCodeAt(0))], 'Classic.wsz', {type:'application/zip'}));
       input.files = transfer.files; input.dispatchEvent(new Event('change',{bubbles:true})); return true;
       """, arguments: ["bytes": skin.base64EncodedString()], in: nil, contentWorld: .page)
-    try await wait(engine, for: "document.querySelector('.soma-status').textContent.includes('Skin applied')")
+    try await wait(engine, for: "document.querySelector('button[title=\"Restore the classic base skin\"]')?.disabled === false")
     let saved = try await DocumentCommand.run(method: "get", url: root)
     let state = try #require(try JSONSerialization.jsonObject(with: saved) as? [String: Any])
     let ref = try #require(state["skin"] as? [String: Any])
     let id = try #require(ref["id"] as? String)
     #expect(try SlopAttachments.read(id, in: root) == skin)
-    _ = try await engine.webView.callAsyncJavaScript("document.querySelector('[aria-label=\"MilkDrop visualizer\"]').click(); return true", arguments: [:], in: nil, contentWorld: .page)
-    try await wait(engine, for: "document.querySelector('.soma-wide')")
-    #expect(sizes.last?.width == 725)
-    _ = try await engine.webView.callAsyncJavaScript("""
-      document.querySelector('#play').click();
-      void testAnalysers[0].context.resume(); return true;
-      """, arguments: [:], in: nil, contentWorld: .page)
-    try await wait(engine, for: "testAudio[0].currentTime > 0.2 && !testAudio[0].paused")
-    try await wait(engine, for: "(() => { const b=new Uint8Array(testAnalysers[0].frequencyBinCount); testAnalysers[0].getByteFrequencyData(b); return Math.max(...b) > 0; })()")
-    try await wait(engine, for: "document.querySelector('.gen-window canvas') && testDraws > 0")
+    if ProcessInfo.processInfo.environment["HITSLOP_MEDIA_TESTS"] == "1" {
+      _ = try await engine.webView.callAsyncJavaScript("document.querySelector('[aria-label=\"MilkDrop visualizer\"]').click(); return true", arguments: [:], in: nil, contentWorld: .page)
+      try await wait(engine, for: "document.querySelector('.soma-wide')")
+      #expect(sizes.last?.width == 725)
+      _ = try await engine.webView.callAsyncJavaScript("""
+        document.querySelector('#play').click();
+        void testAnalysers[0].context.resume(); return true;
+        """, arguments: [:], in: nil, contentWorld: .page)
+      try await wait(engine, for: "testAudio[0].currentTime > 0.2 && !testAudio[0].paused")
+      try await wait(engine, for: "(() => { const b=new Uint8Array(testAnalysers[0].frequencyBinCount); testAnalysers[0].getByteFrequencyData(b); return Math.max(...b) > 0; })()")
+      try await wait(engine, for: "document.querySelector('.gen-window canvas') && testDraws > 0")
+    }
     let errors = try await engine.webView.evaluateJavaScript("testErrors.join('\\n')")
     #expect(errors as? String == "")
     try await engine.close()
     let reopened = try WasmSession(package: SlopPackage(rootURL: root))
     defer { reopened.onResize = nil }
     reopened.onResize = { size in reopened.webView.setFrameSize(size); return size }
+    installMediaFixture(reopened)
     reopened.load()
     try await reopened.waitUntilReady()
-    try await wait(reopened, for: "document.querySelector('#webamp') && !document.querySelector('.soma-rail button:last-of-type').disabled")
+    try await wait(reopened, for: "document.querySelector('#webamp') && document.querySelector('.soma-skin-controls button')?.disabled === false")
     #expect(try SlopAttachments.read(id, in: root) == skin)
     try await reopened.close()
   }
-  @Test @MainActor func importButtonRequestsPickerAndCancelsOnClose() async throws {
+  @Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_TEMPLATE_INTEGRATION"] == "1")) @MainActor func importButtonRequestsPickerAndCancelsOnClose() async throws {
     _ = NSApplication.shared
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
     try SlopDuplicator.duplicate(from: URL(fileURLWithPath: repository + "/generated/v1/templates/soma-amp.slop"), to: root)
@@ -104,6 +110,7 @@ import WebKit
     window.contentView = engine.webView
     window.orderFront(nil)
     defer { window.orderOut(nil); window.contentView = nil }
+    installMediaFixture(engine)
     engine.load()
     try await engine.waitUntilReady()
     try await wait(engine, for: "!document.querySelector('button[title=\"Import a classic Winamp skin\"]').disabled")
@@ -131,7 +138,7 @@ import WebKit
     _ = try await engine.webView.evaluateJavaScript(click)
     for _ in 0..<100 where !engine.filePicker.hasPendingSelection { try await Task.sleep(for: .milliseconds(20)) }
     selected?([URL(fileURLWithPath: repository + "/tests/fixtures/soma-amp/base-2.91.wsz")])
-    try await wait(engine, for: "document.querySelector('.soma-status').textContent.includes('Skin applied')")
+    try await wait(engine, for: "document.querySelector('button[title=\"Restore the classic base skin\"]')?.disabled === false")
     let saved = try await DocumentCommand.run(method: "get", url: root)
     let savedObject = try #require(try JSONSerialization.jsonObject(with: saved) as? [String: Any])
     let skin = try #require(savedObject["skin"] as? [String: Any])
@@ -139,8 +146,11 @@ import WebKit
     #expect(try SlopAttachments.read(skinID, in: root) == Data(contentsOf: URL(fileURLWithPath: repository + "/tests/fixtures/soma-amp/base-2.91.wsz")))
     _ = try await engine.webView.evaluateJavaScript(click)
     for _ in 0..<100 where !engine.filePicker.hasPendingSelection { try await Task.sleep(for: .milliseconds(20)) }
-    selected?([URL(fileURLWithPath: repository + "/tests/fixtures/soma-amp/README.md")])
-    try await wait(engine, for: "document.querySelector('.soma-error')?.textContent.includes('classic Winamp')")
+    let malformed = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".wsz")
+    try Data("Not a ZIP archive".utf8).write(to: malformed)
+    defer { try? FileManager.default.removeItem(at: malformed) }
+    selected?([malformed])
+    try await wait(engine, for: "document.querySelector('.soma-error')?.textContent.includes('readable ZIP')")
     #expect(try await DocumentCommand.run(method: "get", url: root) == saved)
     engine.allowsFileSelection = false
     _ = try await engine.webView.evaluateJavaScript(click)

@@ -16,7 +16,23 @@ bun run test:local
 
 The complete gate checks hygiene; builds runtime, helper, and all active templates; verifies generated contracts, provenance, compatibility, types, and skills; runs JS and native tests with presentation fixtures; exercises relocated helper editing/export and storage crashes; packs/tests npm artifacts outside the checkout without Node; checks/builds the public site; builds/verifies the Apple app; and exercises native process death. Any failure stops the gate. Partial or non-macOS checks are not a complete release gate.
 
-Bundled selection comes from `examples/slops/bundled.json`. Every selected package must be present in the app with no unexpected stale starters. Generic create/schema/get/reopen/export checks run for every bundled template. Schema-specific mutation/crash probes use known fixtures separately. Packed consumer tests also compile the public getting-started tutorial; its code is an executable contract.
+Bundled selection comes from `examples/slops/bundled.json`. Every selected package must be present in the app with no unexpected stale starters. Every package is checked for matching build bytes, valid manifest/schema/initial data, runtime requirements, immutable contents, and preview/icon artwork. Installed create/schema/get/reopen/PNG/PDF checks run on Quick Checklist and Small Expenses. Set `HITSLOP_TEMPLATE_EXHAUSTIVE=1` to run those installed checks on every bundled template. Schema-specific mutation/crash probes use known fixtures separately. Packed consumer tests also compile the public getting-started tutorial; its code is an executable contract.
+
+### GitHub template cache and optional walkthroughs
+
+GitHub CI and tagged releases restore completed template packages before `bun run build`. Each package has an input fingerprint and output checksum. Template changes rebuild that template; shared SDK, renderer, runtime, dependency, build-script, or toolchain changes invalidate all entries. Missing or damaged entries rebuild automatically. Inventory is regenerated each run, and removed templates are pruned. Cache snapshots are saved after a successful build, before later validation steps. A first run or evicted cache still performs a complete build.
+
+Only the workflows set `HITSLOP_TEMPLATE_CACHE_DIR=.hitslop/template-cache`; ordinary local builds remain uncached. Unset that variable to force fresh template builds. The workflows run hygiene/build explicitly followed by `bun run test:built`; local `bun run test:local` runs the same stages together. Runtime generation, native compilation, compatibility checks, and signing are never skipped by the template cache.
+
+Default native tests retain host/runtime, persistence, locking, attachment, file picker cancellation, and export coverage. Detailed Habit Heatmap, Pocket Sheet, and Soma Amp walkthroughs are opt-in:
+
+```sh
+HITSLOP_TEMPLATE_INTEGRATION=1 bun run swift:test
+# On hardware with working WebGL/audio, also exercise Soma Amp playback and visualization:
+HITSLOP_TEMPLATE_INTEGRATION=1 HITSLOP_MEDIA_TESTS=1 bun run swift:test --filter SomaAmpTests
+```
+
+These flags are off in both normal CI and tagged releases. Fast JavaScript app-logic tests remain in the default gate.
 
 Inspect generated changes. Never regenerate preserved compatibility fixtures or rewrite release hashes to mask drift. See [versioning](../versioning.md). At shipment, after the release preparation is merged, run `bun scripts/v1/runtime-release.ts` after compatibility validation, commit the ledger change, and retain `generated/v1/runtime-releases/<contract>-<revision>/` permanently with release artifacts. Restore historical releases for cross-revision tests. Ordinary builds do not seal releases. Commit the ledger, validate that final commit, push master and wait for CI, then tag that exact commit. The release workflow rejects an unsealed runtime or a tag that disagrees with the Apple project version.
 

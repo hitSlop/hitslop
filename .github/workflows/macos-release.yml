@@ -38,8 +38,24 @@ jobs:
       - run: bun install --cwd apps/landing --frozen-lockfile
       - name: Install XcodeGen
         run: brew install xcodegen
-      - name: Validate tagged commit
-        run: bun run test:local
+      - run: bun run hygiene
+      - name: Restore template cache
+        uses: actions/cache/restore@v6
+        with:
+          path: .hitslop/template-cache
+          key: templates-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: templates-v1-${{ runner.os }}-${{ runner.arch }}-
+      - name: Build runtime, helper, and templates
+        run: bun run build
+        env:
+          HITSLOP_TEMPLATE_CACHE_DIR: .hitslop/template-cache
+      - name: Save completed template cache
+        uses: actions/cache/save@v6
+        with:
+          path: .hitslop/template-cache
+          key: templates-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Validate tagged artifacts
+        run: bun run test:built
       - name: Import Developer ID certificate
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}

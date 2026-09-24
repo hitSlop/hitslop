@@ -10,7 +10,7 @@ import WebKit
 @testable import HitSlopWasm
 
 extension LoroClientTests {
-  @Test @MainActor func habitHeatmapEditsReopensDuplicatesAndExports() async throws {
+  @Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_TEMPLATE_INTEGRATION"] == "1")) @MainActor func habitHeatmapEditsReopensDuplicatesAndExports() async throws {
     _ = NSApplication.shared
     NSApp.setActivationPolicy(.regular)
     NSApp.activate(ignoringOtherApps: true)

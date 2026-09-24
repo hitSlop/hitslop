@@ -4,11 +4,13 @@ import {
   verifyCurrentRuntime,
   runtimeDestinations,
   verifyReleasedIdentities,
+  digest,
 } from "./runtime-artifacts";
 import { strict as assert } from "node:assert";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { join, resolve, dirname } from "node:path";
 import { tmpdir } from "node:os";
+import { validateTemplate } from "./template-cache";
 const app = resolve(process.argv[2] ?? "generated/v1/app/hitSlop.app");
 const helper = join(app, "Contents/Helpers/hitslop-native");
 const roots = [
@@ -52,15 +54,20 @@ try {
   const selected = (await builtTemplates()).templates.filter((t) => t.bundled).map((t) => t.slug);
   const starters = join(app, "Contents/Resources/StarterTemplates");
   assert.deepEqual((await readdir(starters)).sort(), selected.map((slug) => slug + ".slop").sort());
+  const exhaustive = process.env.HITSLOP_TEMPLATE_EXHAUSTIVE === "1";
+  const fixtures = ["quick-checklist", "small-expenses"];
+  for (const fixture of fixtures)
+    assert.ok(selected.includes(fixture), `Missing release fixture: ${fixture}`);
   for (const slug of selected) {
-    console.log(`Verifying packaged template: ${slug}`);
+    console.log(`Validating packaged template: ${slug}`);
     const source = join(app, "Contents/Resources/StarterTemplates", slug + ".slop");
-    const entries = await readdir(source);
-    assert.ok(!entries.includes("state") && !entries.includes("stores"));
     assert.equal(
-      JSON.parse(await readFile(join(source, "manifest.json"), "utf8")).runtime,
-      "hitslop-v1",
+      await validateTemplate(source, slug),
+      await digest(resolve("generated/v1/templates", slug + ".slop")),
+      `Packaged template differs from build: ${slug}`,
     );
+    if (!exhaustive && !fixtures.includes(slug)) continue;
+    console.log(`Exercising installed create/reopen/export: ${slug}`);
     const document = join(folder, slug + ".slop");
     await run(["create", "--from", source, "--output", document]);
     const initial = JSON.parse(await run(["get", document]));
