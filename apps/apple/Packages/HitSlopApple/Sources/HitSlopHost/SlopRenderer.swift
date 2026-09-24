@@ -84,7 +84,7 @@ struct SlopDocumentAssets: Sendable {
     static func withCaptureSession<T>(
         snapshot: SlopRenderSnapshot, renderTargetsEnabled: Bool = false,
         readinessTimeout: Duration = .seconds(15),
-        _ capture: (SlopRuntimeSession) async throws -> T
+        _ capture: @MainActor (SlopRuntimeSession) async throws -> T
     ) async throws -> T {
         try snapshot.beginUse()
         let session: SlopRuntimeSession

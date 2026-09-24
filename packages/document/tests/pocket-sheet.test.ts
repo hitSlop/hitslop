@@ -86,10 +86,10 @@ test("cells put, decorate, clear and survive reopening", async () => {
   doc.fields.widths.put("D", 150);
   await doc.close();
   const reopened = await Document.open(schema, store, initial);
-  expect(reopened.current.cells.D1).toEqual({ input: "=B9*2", tint: "rose" });
-  expect(reopened.current.cells.A2).toEqual({ input: "Pizza" });
+  expect<unknown>(reopened.current.cells.D1).toEqual({ input: "=B9*2", tint: "rose" });
+  expect<unknown>(reopened.current.cells.A2).toEqual({ input: "Pizza" });
   expect(reopened.current.cells.C4).toBeUndefined();
-  expect(reopened.current.widths).toEqual({ A: 128, D: 150 });
+  expect<unknown>(reopened.current.widths).toEqual({ A: 128, D: 150 });
   expect(() => reopened.fields.cells.entry("D1").tint.set("orange" as any)).toThrow();
   expect(() => reopened.fields.widths.put("E", 1000)).toThrow();
   await reopened.close();

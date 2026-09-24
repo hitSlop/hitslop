@@ -49,7 +49,10 @@ import WebKit
     try await offerAndWait()
     #expect(engine.fileSaver.hasPendingSave)
     #expect(names == ["_Totals_ March.xlsx"])  // WebKit sanitizes first; native cleanup is defense in depth.
+    let cancelledReply = reply
     reply?(nil)
+    cancelledReply?(folder.appendingPathComponent("late.xlsx"))
+    #expect(!engine.fileSaver.hasActiveTransfers)
     #expect(!engine.fileSaver.hasPendingSave)
     #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).isEmpty)
 
@@ -60,6 +63,26 @@ import WebKit
     reply?(target)
     for _ in 0..<100 where saved.isEmpty { try await Task.sleep(for: .milliseconds(20)) }
     #expect(saved == [target])
+    #expect(try Data(contentsOf: target) == Data("hi!".utf8))
+
+    // Cancelling an accepted transfer must not install its bytes or report failure.
+    var failures: [String] = []
+    engine.onIssue = { message, _ in failures.append(message) }
+    try await offerAndWait()
+    reply?(folder.appendingPathComponent("cancelled.xlsx"))
+    engine.fileSaver.cancel()
+    #expect(!engine.fileSaver.hasActiveTransfers)
+    try await Task.sleep(for: .milliseconds(300))
+    #expect(!FileManager.default.fileExists(atPath: folder.appendingPathComponent("cancelled.xlsx").path))
+    #expect(saved == [target])
+    #expect(failures.isEmpty)
+
+    // Filesystem failures reach the native issue handler and leave the old file intact.
+    try await offerAndWait()
+    reply?(target.appendingPathComponent("impossible.xlsx"))
+    for _ in 0..<100 where failures.isEmpty { try await Task.sleep(for: .milliseconds(20)) }
+    #expect(failures.count == 1)
+    #expect(!engine.fileSaver.hasActiveTransfers)
     #expect(try Data(contentsOf: target) == Data("hi!".utf8))
 
     // Capture and disabled selection never present a panel.
@@ -79,7 +102,32 @@ import WebKit
     #expect(engine.fileSaver.hasPendingSave)
     try await engine.close()
     #expect(!engine.fileSaver.hasPendingSave)
-    #expect(names.count == 3)
+    #expect(names.count == 5)
+    reply?(target)
+    #expect(!engine.fileSaver.hasActiveTransfers)
+    #expect(try Data(contentsOf: target) == Data("hi!".utf8))
+  }
+
+  @Test @MainActor func installationPreservesDestinationOnFailureAndSizeRejection() throws {
+    let manager = FileManager.default
+    let folder = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try manager.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? manager.removeItem(at: folder) }
+    let staging = folder.appendingPathComponent("staging")
+    let target = folder.appendingPathComponent("existing")
+    try Data("old".utf8).write(to: target)
+    try Data("new contents".utf8).write(to: staging)
+    #expect(throws: (any Error).self) { try DocumentFileSaver.install(staging, at: target, limit: 2) }
+    #expect(try Data(contentsOf: target) == Data("old".utf8))
+    #expect(throws: (any Error).self) {
+      try DocumentFileSaver.install(staging, at: target.appendingPathComponent("impossible"))
+    }
+    #expect(try Data(contentsOf: target) == Data("old".utf8))
+    try DocumentFileSaver.install(staging, at: target)
+    #expect(try Data(contentsOf: target) == Data("new contents".utf8))
+    let fresh = folder.appendingPathComponent("fresh")
+    try DocumentFileSaver.install(staging, at: fresh)
+    #expect(try Data(contentsOf: fresh) == Data("new contents".utf8))
   }
 
   @Test func suggestedNamesStayPlainFileNames() {

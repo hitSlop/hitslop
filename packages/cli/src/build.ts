@@ -1,7 +1,7 @@
 import { build as esbuild, type Plugin } from "esbuild";
 import { sveltePlugin } from "./svelte-plugin";
 import { cp, mkdir, readFile, writeFile, rm, rename, stat } from "node:fs/promises";
-import { resolve, join } from "node:path";
+import { resolve, join, relative, isAbsolute } from "node:path";
 import { parseManifest } from "@hitslop/schema";
 import { fromDescriptor, validate } from "@hitslop/document";
 import { fileURLToPath } from "node:url";
@@ -93,6 +93,32 @@ export async function buildProjectInBun(source: string, destination?: string) {
       metafile: true,
       plugins: [
         runtimePlugin,
+        {
+          name: "copied-fonts",
+          setup(b) {
+            b.onResolve({ filter: /\.(ttf|otf|woff2?)([?#].*)?$/ }, async (args) => {
+              if (args.pluginData?.resolvingFont) return;
+              // Absolute browser URLs already refer to the copied assets directory.
+              if (args.path.startsWith("/assets/")) return args.kind === "url-token"
+                ? { path: args.path, external: true }
+                : { path: args.path, namespace: "copied-font" };
+              if (/^(https?:|data:)/.test(args.path)) return;
+              const resolved = await b.resolve(args.path, {
+                kind: args.kind, resolveDir: args.resolveDir,
+                pluginData: { resolvingFont: true },
+              });
+              if (resolved.errors.length || resolved.external) return resolved;
+              const path = relative(join(source, "assets"), resolved.path);
+              if (isAbsolute(path) || path === ".." || path.startsWith("../")) return;
+              const url = "/assets/" + path.split("/").map(encodeURIComponent).join("/") + resolved.suffix;
+              if (args.kind === "url-token") return { path: url, external: true };
+              return { path: url, namespace: "copied-font" };
+            });
+            b.onLoad({ filter: /.*/, namespace: "copied-font" }, ({ path }) => ({
+              contents: `export default ${JSON.stringify(path)}`, loader: "js",
+            }));
+          },
+        },
         sveltePlugin(cliRoot),
       ],
     });

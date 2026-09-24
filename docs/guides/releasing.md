@@ -18,7 +18,7 @@ The complete gate checks hygiene; builds runtime, helper, and all active templat
 
 Bundled selection comes from `examples/slops/bundled.json`. Every selected package must be present in the app with no unexpected stale starters. Generic create/schema/get/reopen/export checks run for every bundled template. Schema-specific mutation/crash probes use known fixtures separately. Packed consumer tests also compile the public getting-started tutorial; its code is an executable contract.
 
-Inspect generated changes. Never regenerate preserved compatibility fixtures or rewrite release hashes to mask drift. See [versioning](../versioning.md). Before publishing a runtime revision, run `bun scripts/v1/runtime-release.ts` after compatibility validation, commit the ledger change, and retain `generated/v1/runtime-releases/<contract>-<revision>/` permanently with release artifacts. Restore historical releases for cross-revision tests. Ordinary builds do not seal releases.
+Inspect generated changes. Never regenerate preserved compatibility fixtures or rewrite release hashes to mask drift. See [versioning](../versioning.md). At shipment, after the release preparation is merged, run `bun scripts/v1/runtime-release.ts` after compatibility validation, commit the ledger change, and retain `generated/v1/runtime-releases/<contract>-<revision>/` permanently with release artifacts. Restore historical releases for cross-revision tests. Ordinary builds do not seal releases. Commit the ledger, validate that final commit, push master and wait for CI, then tag that exact commit. The release workflow rejects an unsealed runtime or a tag that disagrees with the Apple project version.
 
 ## Package the Mac app
 
@@ -54,7 +54,11 @@ Use a disposable Release validation build to verify representative Analytics eve
 
 `bun run packages:pack` writes tarballs under `generated/v1/npm`. `bun run test:packed` installs those exact artifacts into a temporary directory with spaces and verifies initialization, authoring, registration, themes, exports, preview resources, and durable installed skill links after package-cache removal. It derives versions from package manifests. Consumer-only overrides connect unpublished tarballs; shipped manifests contain registry versions, never workspace/file dependencies.
 
-Keep the tested artifacts from the release commit. Confirm package versions/dependency pins and runtime provenance agree, and make the compatible signed Mac app available first. With maintainer npm authentication configured outside the repository, publish these exact files in order (substitute the tested version):
+Keep the tested artifacts from the release commit. Confirm package versions/dependency pins and runtime provenance agree, and make the compatible signed Mac app available first. Download the three npm tarballs, `SHA256SUMS`, and `release-record.json` from the matching GitHub Release. Verify each tarball against its checksum and confirm the record identifies the tagged commit. The workflow retains the exact artifacts exercised by `test:packed`; do not repack them locally. It also archives the sealed runtime and ledger for future compatibility checks.
+
+Authenticate locally with `npm login --registry=https://registry.npmjs.org`, then check the account with `npm whoami`. Keep credentials in your user configuration outside the repository. Publication may require an interactive 2FA challenge; Bun supports browser authentication and `--otp` for supported OTP challenges. See [npm authentication](https://docs.npmjs.com/accessing-npm-using-2fa/) and [Bun publishing](https://bun.sh/docs/pm/cli/publish). Never put tokens or OTPs in Git.
+
+Publish the downloaded files in order (substitute the tested version and download directory):
 
 ```sh
 bun publish ./generated/v1/npm/hitslop-schema-VERSION.tgz --access public

@@ -28,5 +28,16 @@
   ],
   "engines": {
     "bun": ">=1.4.2"
+  },
+  "description": "Create, preview, build, register, and edit hitSlop v1 documents.",
+  "license": "MIT",
+  "homepage": "https://hitslop.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hitSlop/hitslop.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/hitSlop/hitslop/issues"
   }
 }

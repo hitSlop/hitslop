@@ -6,89 +6,130 @@ import UniformTypeIdentifiers
 /// private staging file; the chosen destination is replaced only after a complete download.
 @MainActor final class DocumentFileSaver: NSObject, WKDownloadDelegate {
   typealias Presenter = @MainActor (NSWindow, String, @escaping (URL?) -> Void) -> (() -> Void)
-  static let maximumBytes: Int64 = 100 * 1024 * 1024
+  nonisolated static let maximumBytes: Int64 = 100 * 1024 * 1024
 
   private final class Transfer {
+    let download: WKDownload
     var staging: URL?
     var destination: URL?
+    var completion: ((URL?) -> Void)?
     var dismiss: (() -> Void)?
+    var observation: NSKeyValueObservation?
+    init(_ download: WKDownload) { self.download = download }
   }
   private let presenter: Presenter
   private var transfers: [ObjectIdentifier: Transfer] = [:]
-  private var presenting = false
   var window: () -> NSWindow? = { nil }
   var onSaved: ((URL) -> Void)?
   var onFailed: ((String) -> Void)?
-  var hasPendingSave: Bool { presenting }
+  var hasPendingSave: Bool { transfers.values.contains { $0.completion != nil } }
+  var hasActiveTransfers: Bool { !transfers.isEmpty }
 
   init(presenter: @escaping Presenter = DocumentFileSaver.presentSheet) {
     self.presenter = presenter
   }
 
   func begin(_ download: WKDownload) {
-    transfers[ObjectIdentifier(download)] = Transfer()
+    let transfer = Transfer(download)
+    transfers[ObjectIdentifier(download)] = transfer
     download.delegate = self
+    transfer.observation = download.progress.observe(\.completedUnitCount, options: [.new]) {
+      [weak self, weak download] progress, _ in
+      guard progress.completedUnitCount > Self.maximumBytes else { return }
+      Task { @MainActor in
+        guard let self, let download,
+          self.transfers[ObjectIdentifier(download)] != nil else { return }
+        self.stop(download)
+        self.onFailed?("Download exceeds the 100 MiB limit.")
+      }
+    }
   }
 
   func cancel() {
-    for transfer in transfers.values { transfer.dismiss?() }
+    for transfer in Array(transfers.values) { stop(transfer.download) }
+  }
+
+  private func stop(_ download: WKDownload) {
+    guard let transfer = transfers.removeValue(forKey: ObjectIdentifier(download)) else { return }
+    transfer.observation = nil
+    let completion = transfer.completion
+    transfer.completion = nil
+    transfer.dismiss?()
+    transfer.dismiss = nil
+    completion?(nil)
+    download.cancel { _ in
+      if let staging = transfer.staging { try? FileManager.default.removeItem(at: staging) }
+    }
   }
 
   func download(
     _ download: WKDownload, decideDestinationUsing response: URLResponse,
     suggestedFilename: String, completionHandler: @escaping @MainActor (URL?) -> Void
   ) {
-    guard let transfer = transfers[ObjectIdentifier(download)], !presenting,
-      response.expectedContentLength <= Self.maximumBytes,
+    guard let transfer = transfers[ObjectIdentifier(download)], !hasPendingSave,
       let window = window(), window.isVisible, window.attachedSheet == nil
-    else { return refuse(download, completionHandler) }
-    presenting = true
-    var completed = false
-    transfer.dismiss = presenter(window, Self.filename(suggestedFilename)) { [weak self] target in
-      guard let self, !completed else { return }
-      completed = true
-      presenting = false
+    else { completionHandler(nil); stop(download); return }
+    guard response.expectedContentLength <= Self.maximumBytes else {
+      completionHandler(nil)
+      stop(download)
+      onFailed?("Download exceeds the 100 MiB limit.")
+      return
+    }
+    transfer.completion = completionHandler
+    let dismiss = presenter(window, Self.filename(suggestedFilename)) { [weak self, weak transfer] target in
+      guard let self, let transfer,
+        self.transfers[ObjectIdentifier(download)] === transfer,
+        let completion = transfer.completion else { return }
+      transfer.completion = nil
       transfer.dismiss = nil
-      guard let target else { return refuse(download, completionHandler) }
+      guard let target else { completion(nil); stop(download); return }
       let staging = FileManager.default.temporaryDirectory
         .appendingPathComponent("hitslop-download-" + UUID().uuidString)
       transfer.staging = staging
       transfer.destination = target
-      completionHandler(staging)
+      completion(staging)
     }
+    // A presenter may complete synchronously (including injected test presenters).
+    if transfer.completion != nil { transfer.dismiss = dismiss }
   }
 
   func downloadDidFinish(_ download: WKDownload) {
     guard let transfer = transfers.removeValue(forKey: ObjectIdentifier(download)),
-      let staging = transfer.staging, let destination = transfer.destination
-    else { return }
+      let staging = transfer.staging, let destination = transfer.destination else { return }
+    transfer.observation = nil
+    defer { try? FileManager.default.removeItem(at: staging) }
     do {
-      let size = try FileManager.default.attributesOfItem(atPath: staging.path)[.size] as? Int64 ?? 0
-      guard size <= Self.maximumBytes else { throw CocoaError(.fileWriteOutOfSpace) }
-      if FileManager.default.fileExists(atPath: destination.path) {
-        _ = try FileManager.default.replaceItemAt(destination, withItemAt: staging)
-      } else {
-        try FileManager.default.moveItem(at: staging, to: destination)
-      }
+      try Self.install(staging, at: destination)
       onSaved?(destination)
-    } catch {
-      try? FileManager.default.removeItem(at: staging)
-      onFailed?(error.localizedDescription)
+    } catch { onFailed?(error.localizedDescription) }
+  }
+
+  /// Copy to the destination volume before the final atomic replacement.
+  static func install(_ staging: URL, at destination: URL, limit: Int64 = maximumBytes) throws {
+    let manager = FileManager.default
+    let attributes = try manager.attributesOfItem(atPath: staging.path)
+    guard let size = attributes[.size] as? NSNumber, size.int64Value <= limit else {
+      throw NSError(domain: "hitSlop.Download", code: 1,
+        userInfo: [NSLocalizedDescriptionKey: "Download exceeds the 100 MiB limit."])
+    }
+    let replacement = try manager.url(for: .itemReplacementDirectory, in: .userDomainMask,
+      appropriateFor: destination, create: true)
+    defer { try? manager.removeItem(at: replacement) }
+    let ready = replacement.appendingPathComponent("download")
+    try manager.copyItem(at: staging, to: ready)
+    if manager.fileExists(atPath: destination.path) {
+      _ = try manager.replaceItemAt(destination, withItemAt: ready)
+    } else {
+      try manager.moveItem(at: ready, to: destination)
     }
   }
 
   func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
-    guard let transfer = transfers.removeValue(forKey: ObjectIdentifier(download)) else { return }
-    transfer.dismiss?()
-    if let staging = transfer.staging {
-      try? FileManager.default.removeItem(at: staging)
+    guard transfers[ObjectIdentifier(download)] != nil else { return }
+    stop(download)
+    if (error as NSError).domain != NSURLErrorDomain || (error as NSError).code != NSURLErrorCancelled {
       onFailed?(error.localizedDescription)
     }
-  }
-
-  private func refuse(_ download: WKDownload, _ completionHandler: @MainActor (URL?) -> Void) {
-    transfers.removeValue(forKey: ObjectIdentifier(download))
-    completionHandler(nil)
   }
 
   /// Suggested names come from authored code; keep only a plain file name.

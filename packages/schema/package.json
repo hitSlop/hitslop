@@ -21,5 +21,16 @@
   ],
   "engines": {
     "bun": ">=1.4.2"
+  },
+  "description": "Canonical manifest, bridge, and runtime contracts for hitSlop v1.",
+  "license": "MIT",
+  "homepage": "https://hitslop.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hitSlop/hitslop.git",
+    "directory": "packages/schema"
+  },
+  "bugs": {
+    "url": "https://github.com/hitSlop/hitslop/issues"
   }
 }

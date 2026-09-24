@@ -33,6 +33,8 @@ jobs:
         with:
           bun-version: "1.4.2"
       - run: bun install --frozen-lockfile
+      - name: Check release identity
+        run: bun scripts/v1/release-bundle.ts --preflight
       - run: bun install --cwd apps/landing --frozen-lockfile
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -86,6 +88,11 @@ jobs:
           codesign --verify --deep --strict "$RUNNER_TEMP/verify-zip/hitSlop.app"
           spctl --assess --type execute "$RUNNER_TEMP/verify-zip/hitSlop.app"
           (cd dist/macos && shasum -a 256 -c SHA256SUMS)
+      - name: Retain tested npm packages and sealed runtime
+        run: |
+          bun scripts/v1/release-bundle.ts
+          git diff --exit-code -- runtimes/releases.json
+          (cd dist/macos && shasum -a 256 -c SHA256SUMS)
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -93,12 +100,16 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#macos-v}"
           NOTES="$RUNNER_TEMP/release-notes.md"
+          SDK_VERSION=$(bun -e 'console.log((await Bun.file("dist/macos/release-record.json").json()).runtime.sdkVersion)')
           cat > "$NOTES" <<EOF
           hitSlop $VERSION for Apple silicon Macs.
 
           Signed and notarized by Apple (Developer ID: Mushroom DAO Holdings Corp.).
           Requires a Mac with an Apple M-series processor and macOS 14 or newer.
-          Drag hitSlop.app into Applications, then create a document from either included template.
+          Drag hitSlop.app into Applications, then create a document from the included template collection.
+
+          This release uses the hitSlop v1 document format. Older pre-v1 documents are not supported.
+          The matching authoring packages are @hitslop/schema, @hitslop/document, and @hitslop/cli $SDK_VERSION.
           EOF
           gh release create "$GITHUB_REF_NAME" \
             --title "hitSlop $VERSION" \
@@ -108,4 +119,8 @@ jobs:
             dist/macos/hitSlop.dmg \
             dist/macos/hitSlop.zip \
             dist/macos/appcast.xml \
-            dist/macos/SHA256SUMS
+            dist/macos/SHA256SUMS \
+            dist/macos/hitslop-*.tgz \
+            dist/macos/runtime-*.tar.gz \
+            dist/macos/runtime-releases.json \
+            dist/macos/release-record.json

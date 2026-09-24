@@ -53,6 +53,7 @@ try {
   const starters = join(app, "Contents/Resources/StarterTemplates");
   assert.deepEqual((await readdir(starters)).sort(), selected.map((slug) => slug + ".slop").sort());
   for (const slug of selected) {
+    console.log(`Verifying packaged template: ${slug}`);
     const source = join(app, "Contents/Resources/StarterTemplates", slug + ".slop");
     const entries = await readdir(source);
     assert.ok(!entries.includes("state") && !entries.includes("stores"));

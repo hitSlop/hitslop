@@ -221,3 +221,34 @@ test("build paths and fresh source evaluation do not depend on authored stdout",
     await rm(root, { recursive: true, force: true });
   }
 }, 60000);
+
+test("copied fonts retain their URLs without duplicate bundles", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".v1-build-test-"));
+  try {
+    const source = join(root, "source");
+    await cp("examples/slops/quick-checklist", source, { recursive: true });
+    await mkdir(join(source, "assets/fonts"), { recursive: true });
+    await mkdir(join(source, "dependency"));
+    await writeFile(join(source, "assets/fonts/My Font.ttf"), "copied-font");
+    await writeFile(join(source, "assets/fonts/OFL.txt"), "font license");
+    await writeFile(join(source, "dependency/External.woff2"), "dependency-font");
+    await writeFile(join(source, "font-test.css"), `
+      @font-face { font-family: Local; src: url('./assets/fonts/My Font.ttf'); }
+      @font-face { font-family: Direct; src: url('/assets/fonts/My%20Font.ttf'); }
+      @font-face { font-family: External; src: url('./dependency/External.woff2'); }
+    `);
+    const main = await readFile(join(source, "main.ts"), "utf8");
+    await writeFile(join(source, "main.ts"), main + `
+      import './font-test.css';
+      import fontURL from './assets/fonts/My Font.ttf';
+      console.log(fontURL);
+    `);
+    const output = await buildProject(source, join(root, "fonts.slop"));
+    const files = await readdir(join(output, "assets"), { recursive: true });
+    expect(files.filter(file => file.endsWith(".ttf"))).toEqual(["fonts/My Font.ttf"]);
+    expect(files.filter(file => file.endsWith(".woff2"))).toHaveLength(1);
+    expect(await readFile(join(output, "assets/fonts/OFL.txt"), "utf8")).toBe("font license");
+    expect(await readFile(join(output, "assets/main.css"), "utf8")).toContain("/assets/fonts/My%20Font.ttf");
+    expect(await readFile(join(output, "assets/main.js"), "utf8")).toContain("/assets/fonts/My%20Font.ttf");
+  } finally { await rm(root, { recursive: true, force: true }); }
+}, 60000);

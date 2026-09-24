@@ -28,8 +28,10 @@ const output = join(repository, "generated/v1/templates");
 const stage = output + ".building-" + crypto.randomUUID();
 await mkdir(stage, { recursive: true });
 try {
-  for (const template of templates)
+  for (const [index, template] of templates.entries()) {
+    console.log(`Building template ${index + 1}/${templates.length}: ${template.slug}`);
     await buildTemplate(template.source, renderer, join(stage, template.slug + ".slop"));
+  }
   await writeFile(
     join(stage, "inventory.json"),
     JSON.stringify(templateInventory(templates), null, 2) + "\n",

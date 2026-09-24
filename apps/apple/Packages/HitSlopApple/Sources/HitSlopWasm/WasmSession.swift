@@ -31,7 +31,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   }
   var filePicker = DocumentFilePicker()
   var fileSaver = DocumentFileSaver() {
-    didSet { fileSaver.window = { [weak self] in self?.liveWebView?.window } }
+    didSet { configureFileSaver() }
   }
   public var onRecovered: (() -> Void)?
   public var onReady: (() -> Void)?
@@ -138,7 +138,12 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     view.navigationDelegate = self
     view.uiDelegate = self
     liveWebView = view
+    configureFileSaver()
+  }
+
+  private func configureFileSaver() {
     fileSaver.window = { [weak self] in self?.liveWebView?.window }
+    fileSaver.onFailed = { [weak self] message in self?.onIssue?(message, true) }
   }
 
   public func load() { liveWebView?.load(URLRequest(url: URL(string: "slop://app/")!)) }
@@ -459,6 +464,8 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   public func webView(
     _ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload
   ) {
+    guard webView === liveWebView, allowsFileSelection, !headless, !capturing,
+      isReady, !closing, !closed, !rendererDead else { download.cancel { _ in }; return }
     fileSaver.begin(download)
   }
 

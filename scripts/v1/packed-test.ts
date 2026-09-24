@@ -139,24 +139,31 @@ try {
   const previewError = new Response(preview.stderr).text();
   let previewExited = false;
   void preview.exited.then(() => { previewExited = true; });
+  async function stopPreview() {
+    const timeout = setTimeout(() => preview.kill("SIGKILL"), 5_000);
+    try {
+      preview.kill("SIGINT");
+      await preview.exited;
+    } finally { clearTimeout(timeout); }
+  }
   try {
-    let ok = false;
+    let frame: Response | undefined;
     const deadline = Date.now() + 180_000;
     while (Date.now() < deadline && !previewExited) {
-      try {
-        const r = await fetch("http://localhost:5197/");
-        if (r.ok) {
-          assert.ok((await r.text()).includes("main.css"));
-          ok = true;
-          break;
-        }
-      } catch {}
+      const response = await fetch("http://localhost:5197/", {
+        signal: AbortSignal.timeout(2_000),
+      }).catch(() => undefined);
+      if (response?.ok) { frame = response; break; }
       await Bun.sleep(50);
     }
-    if (!ok) {
-      preview.kill("SIGINT");
+    if (!frame) {
+      await stopPreview();
       throw new Error("Packed preview failed: " + (await previewError) + (await previewOutput));
     }
+    assert.ok((await frame.text()).includes('src="/app.html"'));
+    const app = await fetch("http://localhost:5197/app.html");
+    assert.equal(app.status, 200);
+    assert.ok((await app.text()).includes("main.css"));
     const runtime = await fetch("http://localhost:5197/__runtime__/identity.json");
     assert.equal(runtime.status, 200);
     const identity = JSON.parse(await readFile(join(root, "node_modules/@hitslop/document/src/runtime-identity.json"), "utf8"));
@@ -165,8 +172,7 @@ try {
     assert.equal(wasm.status, 200);
     assert.equal(Buffer.from(await wasm.arrayBuffer()).subarray(0,4).toString("hex"), "0061736d");
   } finally {
-    preview.kill("SIGINT");
-    await preview.exited;
+    await stopPreview();
   }
   // Compile the actual getting-started code, so documentation is an executable contract.
   const tutorial = await readFile(
