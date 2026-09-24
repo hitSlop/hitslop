@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 const root = await mkdtemp(join(tmpdir(), "hitslop packed "));
+const coreRoot = await mkdtemp(join(tmpdir(), "hitslop framework neutral "));
 const repository = process.cwd();
 const env = {
   ...process.env,
@@ -41,6 +42,20 @@ try {
     versions[name] = metadata.version;
     tarballs[metadata.name] = resolve(`generated/v1/npm/hitslop-${name}-${metadata.version}.tgz`);
   }
+  await writeFile(join(coreRoot, "package.json"), JSON.stringify({
+    private: true,
+    dependencies: { "@hitslop/document": tarballs["@hitslop/document"] },
+  }));
+  await run([process.execPath, "install"], coreRoot, noNode);
+  await run([process.execPath, "-e", `
+    import {strict as assert} from "node:assert";
+    import {defineDocument, s} from "@hitslop/document";
+    import {mountDocumentView} from "@hitslop/document/adapter";
+    assert.equal(typeof mountDocumentView, "function");
+    assert.ok(defineDocument({title: s.text()}).descriptor);
+    assert.throws(() => Bun.resolveSync("svelte", process.cwd()));
+  `], coreRoot, noNode);
+  console.log("PASS packed document SDK and adapter load without Svelte installed");
   await writeFile(
     join(root, "package.json"),
     JSON.stringify({
@@ -168,4 +183,5 @@ try {
   );
 } finally {
   await rm(root, { recursive: true, force: true });
+  await rm(coreRoot, { recursive: true, force: true });
 }

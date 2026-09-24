@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
-import { buildProject } from "../src/build";
+import { buildProject, runtimePlugin } from "../src/build";
+import { build as esbuild } from "esbuild";
 import { mkdtemp, cp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -21,10 +22,54 @@ test("build contains no document engine, and rejects direct Loro imports", async
     await expect(buildProject(source, join(root, "bad.slop"))).rejects.toThrow(
       "cannot import engine",
     );
+    await writeFile(join(source, "main.ts"),
+      'import {Document} from "@hitslop/document/runtime"; console.log(Document);');
+    await expect(buildProject(source, join(root, "bad-runtime.slop"))).rejects.toThrow(
+      "cannot import engine",
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 }, 60000);
+
+test("plain DOM adapter builds and renders with no Svelte or embedded engine", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".v1-build-test-"));
+  try {
+    const source = join(root, "source");
+    await cp("packages/cli/templates/checklist", source, { recursive: true });
+    await writeFile(join(source, "main.ts"), `
+      import "./styles.css";
+      import {mountDocumentView} from "@hitslop/document/adapter";
+      await mountDocumentView({
+        mount({document: doc, target}) {
+          const root = document.createElement("main");
+          root.dataset.hitslopRoot = "";
+          const render = () => { root.textContent = String(doc.current.title); };
+          render();
+          target.append(root);
+          const stop = doc.subscribe(render);
+          return { rendered() {}, unmount() { stop(); root.remove(); } };
+        },
+      });
+    `);
+    // Only the host-runtime plugin: a non-Svelte app needs no Svelte compiler or runtime.
+    const bundle = await esbuild({
+      entryPoints: [join(source, "main.ts")], bundle: true, write: false,
+      outdir: join(root, "graph"), format: "esm", platform: "browser",
+      metafile: true, plugins: [runtimePlugin],
+    });
+    for (const input of Object.keys(bundle.metafile!.inputs)) {
+      expect(input).not.toMatch(/svelte|loro-crdt/);
+      expect(input).not.toMatch(/document\/src\/(document|operations|session|runtime-entry)\.ts/);
+    }
+    const renderer = join(process.cwd(), "apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native");
+    const output = await buildTemplate(source, renderer, join(root, "plain.slop"));
+    const png = await readFile(join(output, "QuickLook/Preview.png"));
+    expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 90000);
 
 test("init creates a buildable v1 source and refuses to overwrite it", async () => {
   const root = await mkdtemp(join(process.cwd(), ".v1-build-test-"));

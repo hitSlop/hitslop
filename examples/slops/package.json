@@ -4,8 +4,11 @@
   "type": "module",
   "dependencies": {
     "@hitslop/document": "workspace:*",
+    "@internationalized/date": "^3.12.4",
     "bits-ui": "^2.19.2",
     "jszip": "3.10.1",
+    "p5": "2.3.3",
+    "p5.brush": "2.2.3",
     "perfect-freehand": "1.2.3",
     "svelte": "5.57.1",
     "webamp": "2.3.1"

@@ -21,9 +21,9 @@ in-progress, and completed authored template. The exact inventory below is
 retained as prior art, not as parallel template homes. Unlisted local archive
 or prototype directories stay ignored.
 
-- [ ] Inventory each repository template and map it to one canonical slug in `examples/slops/`, consolidating overlapping versions instead of copying duplicates.
-- [ ] Migrate selected archived templates into current authored packages under `examples/slops/`; repair manifests, storage, accessibility, responsive behavior, export state, and visuals as part of each migration.
-- [ ] Move `archive/prototypes/ambient-mixer` to `examples/slops/ambient-sound-mixer` when its P0 build begins.
+- [x] Inventory each repository template and map it to one canonical slug in `examples/slops/`, consolidating overlapping versions instead of copying duplicates.
+- [ ] Migrate selected archived templates into current authored packages under `examples/slops/`; repair manifests, storage, accessibility, responsive behavior, export state, and visuals as part of each migration. The archived sources now have canonical folders on the v1 document API (Xbox excluded), and every manifest under `examples/slops/` is listed in `bundled.json`. Each still needs the quality pass in this line before its box above is treated as reviewed.
+- [x] Move `archive/prototypes/ambient-mixer` to `examples/slops/ambient-sound-mixer` when its P0 build begins. The canonical folder is `examples/slops/ambient-sound-mixer`.
 - [ ] Retire repository-local archived and prototype source copies after their canonical replacement is verified.
 
 ## Current examples
@@ -88,6 +88,7 @@ so it is intentionally excluded from the implemented count.
 - [ ] **Guest Welcome Card** — Home / Paper + Skin — Present Wi-Fi, house notes, contacts, and checkout details. **Visual:** old motel key tag paired with a compact house manual.
 - [ ] **City Cheat Sheet** — Travel / Paper — Save essential places, transit notes, phrases, and emergency details without requiring a live map. **Visual:** folded pocket map with dense but calm wayfinding typography.
 - [ ] **Travel Expense Tracker** — Travel / Paper — Record trip spending by currency and category with local and home totals. **Visual:** passport-stamp ledger with crisp conversion figures.
+- [ ] **Side Quest — quality review required** — Learning / Paper + Skin — Map a semester as a doodled notebook overworld: each course is a washi-taped trail, assignments are quest nodes placed by due date, and exams are doodle-monster bosses whose HP drops with every logged study session. Cleared quests and side quests earn emoji stickers to slap anywhere on the map; export is a shareable semester recap. Boss HP is a Loro counter so a study group can raid the same boss once collaboration lands. **Visual:** cream graph paper, spiral binding, red margin rule, gel-pen trails (solid behind today, dotted ahead), a highlighter "today" band, and a sticky-note side panel. The icon is a graph-paper map with a dotted trail running up to a red boss.
 - [ ] **Study Plan** — Learning / Paper — Break a learning goal into sessions, topics, milestones, and deadlines. **Visual:** academic timetable with selective highlighter marks.
 - [ ] **Decision Matrix** — Thinking / Instrument — Score options against weighted criteria and compare derived totals. **Visual:** drafting-board grid with transparent scoring overlays.
 - [ ] **Brain Dump** — Thinking / Paper — Rapidly capture, cluster, and promote loose thoughts into next actions. **Visual:** oversized yellow legal pad with margin annotations.

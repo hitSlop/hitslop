@@ -27,9 +27,12 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   public var onExport: ((String, URL, NativeCommandDeadline) async throws -> Void)?
   public var capturing = false
   public var allowsFileSelection = true {
-    didSet { if !allowsFileSelection { filePicker.cancel() } }
+    didSet { if !allowsFileSelection { filePicker.cancel(); fileSaver.cancel() } }
   }
   var filePicker = DocumentFilePicker()
+  var fileSaver = DocumentFileSaver() {
+    didSet { fileSaver.window = { [weak self] in self?.liveWebView?.window } }
+  }
   public var onRecovered: (() -> Void)?
   public var onReady: (() -> Void)?
   public var onStatus: ((WasmSaveStatus) -> Void)?
@@ -106,6 +109,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
       throw failure("Document interface unavailable")
     }
     filePicker.cancel()
+    fileSaver.cancel()
     _ = try await webView.callAsyncJavaScript(
       "await globalThis.__slop.reloadInterface(); return true", arguments: [:], in: nil,
       contentWorld: .page)
@@ -134,6 +138,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     view.navigationDelegate = self
     view.uiDelegate = self
     liveWebView = view
+    fileSaver.window = { [weak self] in self?.liveWebView?.window }
   }
 
   public func load() { liveWebView?.load(URLRequest(url: URL(string: "slop://app/")!)) }
@@ -321,6 +326,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     guard !closed else { return }
     guard !capturing else { throw failure("Document is exporting; try again when it finishes") }
     filePicker.cancel()
+    fileSaver.cancel()
     closing = true
     do {
       if isReady && !rendererDead {
@@ -401,6 +407,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
 
   private func destroyWebView() {
     filePicker.cancel()
+    fileSaver.cancel()
     liveWebView?.uiDelegate = nil
     liveWebView?.stopLoading()
     liveWebView?.configuration.userContentController.removeScriptMessageHandler(
@@ -425,6 +432,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
 
   public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
     filePicker.cancel()
+    fileSaver.cancel()
     rendererDead = true
     isReady = false
     stopDiscovery()
@@ -449,6 +457,12 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   }
 
   public func webView(
+    _ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload
+  ) {
+    fileSaver.begin(download)
+  }
+
+  public func webView(
     _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
     withError error: Error
   ) {
@@ -461,6 +475,15 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   ) {
     if let url = action.request.url, url.scheme == "slop", url.host == "app" {
       decisionHandler(.allow)
+      return
+    }
+    // Authored `<a download>` of in-page bytes: native asks where to save them.
+    if action.shouldPerformDownload, let url = action.request.url, ["blob", "data"].contains(url.scheme),
+      webView === liveWebView, allowsFileSelection, !headless, !capturing, isReady, !closing, !closed,
+      action.sourceFrame.isMainFrame, action.sourceFrame.securityOrigin.protocol == "slop",
+      action.sourceFrame.securityOrigin.host == "app"
+    {
+      decisionHandler(.download)
       return
     }
     if !headless, action.navigationType == .linkActivated, let url = action.request.url,

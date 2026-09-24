@@ -7,6 +7,7 @@
     "./runtime": "./src/document.ts",
     "./svelte": "./src/store.svelte.ts",
     "./host": "./src/host.ts",
+    "./adapter": "./src/adapter.ts",
     "./theme": "./src/theme.ts",
     "./capture": "./src/capture.ts",
     "./attachments": "./src/attachments.ts",
@@ -17,6 +18,11 @@
   },
   "peerDependencies": {
     "svelte": "5.57.1"
+  },
+  "peerDependenciesMeta": {
+    "svelte": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

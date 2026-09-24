@@ -1,3 +1,8 @@
 # Active examples
 
-Quick Checklist and Small Expenses use the same host-supplied v1 document runtime. Run `bun slop dev examples/slops/quick-checklist` or `bun slop dev examples/slops/small-expenses`. Run `bun run build` to bundle both into the native app. All other examples are deferred.
+Every immediate folder here with a `manifest.json` is an active v1 template. Quick Checklist and Small Expenses remain the storage fixtures. `bundled.json` chooses which templates ship inside the Mac app; a template can be developed here before it is added to that list.
+
+```sh
+bun slop dev examples/slops/quick-checklist
+bun slop dev examples/slops/grocery-list
+```

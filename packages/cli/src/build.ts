@@ -1,7 +1,7 @@
-import { build as esbuild, transform, type Plugin } from "esbuild";
-import { compile, compileModule } from "svelte/compiler";
+import { build as esbuild, type Plugin } from "esbuild";
+import { sveltePlugin } from "./svelte-plugin";
 import { cp, mkdir, readFile, writeFile, rm, rename, stat } from "node:fs/promises";
-import { resolve, dirname, join } from "node:path";
+import { resolve, join } from "node:path";
 import { parseManifest } from "@hitslop/schema";
 import { fromDescriptor, validate } from "@hitslop/document";
 import { fileURLToPath } from "node:url";
@@ -9,7 +9,8 @@ import { createRequire } from "node:module";
 import identity from "@hitslop/document/identity";
 export const cliRoot = fileURLToPath(new URL("../", import.meta.url));
 export const runtimeDirectory = join(cliRoot, "runtimes", String(identity.runtimeContract));
-const adapters = new Set(["document.ts", "handles.ts", "bind-text.ts", "bind-value.ts", "capture.ts"]);
+// Bootstrap/view adapters stay in the app; shared stateful services come from the host.
+const hostedModules = new Set(["document.ts", "handles.ts", "bind-text.ts", "bind-value.ts", "capture.ts", "attachments.ts"]);
 export const runtimePlugin: Plugin = {
   name: "host-runtime",
   setup(b) {
@@ -21,7 +22,7 @@ export const runtimePlugin: Plugin = {
         return { path: "/__runtime__/index.js", external: true };
       if (
         /\/(?:packages\/document|@hitslop\/document)\/src\//.test(args.importer) &&
-        adapters.has(args.path.replace("./", "").replace(/(?<!\.ts)$/, ".ts"))
+        hostedModules.has(args.path.replace("./", "").replace(/(?<!\.ts)$/, ".ts"))
       )
         return { path: "/__runtime__/index.js", external: true };
     });
@@ -85,44 +86,14 @@ export async function buildProjectInBun(source: string, destination?: string) {
       format: "esm",
       platform: "browser",
       target: "safari17",
+      loader: { ".ttf": "file", ".otf": "file", ".woff": "file", ".woff2": "file" },
       minify: process.env.HITSLOP_DEBUG_BUILD !== "1",
-      conditions: ["browser"],
+      conditions: ["browser", "default", "import", "svelte"],
+      define: { "import.meta.env.DEV": "false", "import.meta.env.PROD": "true" },
       metafile: true,
       plugins: [
         runtimePlugin,
-        {
-          name: "svelte",
-          setup(b) {
-            // Libraries with their own peer installation must share the app's
-            // Svelte runtime; two copies split effect/context and DOM state.
-            b.onResolve({ filter: /^svelte(?:\/.*)?$/ }, (args) => {
-              if (args.pluginData?.svelteRoot) return;
-              return b.resolve(args.path, {
-                kind: args.kind,
-                resolveDir: cliRoot,
-                pluginData: { svelteRoot: true },
-              });
-            });
-            b.onLoad({ filter: /\.svelte$/ }, async ({ path }) => ({
-              contents: compile(await readFile(path, "utf8"), {
-                filename: path,
-                generate: "client",
-                css: "injected",
-                dev: false,
-              }).js.code,
-              loader: "js",
-              resolveDir: dirname(path),
-            }));
-            b.onLoad({ filter: /\.svelte\.(ts|js)$/ }, async ({ path }) => ({
-              contents: compileModule(
-                (await transform(await readFile(path, "utf8"), { loader: "ts" })).code,
-                { filename: path, generate: "client", dev: false },
-              ).js.code,
-              loader: "js",
-              resolveDir: dirname(path),
-            }));
-          },
-        },
+        sveltePlugin(cliRoot),
       ],
     });
     for (const input of Object.keys(result.metafile!.inputs))

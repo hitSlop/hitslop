@@ -12,6 +12,22 @@ CLI → owner's Unix socket ────┘
 CLI → exclusive lock → engine-only WebKit → Swift SQLite (closed document)
 ```
 
+The document engine and visible-session lifecycle are framework independent.
+`@hitslop/document/adapter` exports `mountDocumentView` and the `ViewAdapter` /
+`DocumentView` types. An adapter mounts a view using the existing document and
+target element, then supplies `rendered()` (wait for pending UI updates) and
+`unmount()` (dispose the view and its subscriptions). Reload replaces only the
+view; flush, close, native readiness, themes, attachments and capture coordination
+remain shared. The adapter must not open its own document or bundle the engine.
+
+`@hitslop/document/host` remains the Svelte `mountDocument(App)` entrypoint. It
+supplies Svelte mounting, context and `tick`; `@hitslop/document/svelte` retains
+the reactive bindings, error boundary and capture components. Svelte is an
+optional peer of the SDK, required when using those entrypoints. Other adapters
+mark their root `data-hitslop-root`, use the shared capture API for custom export
+views, and report render failures through the `hitslop:render-error` document
+event. Future framework adapters use the same host-supplied runtime and storage.
+
 An edit returns after in-memory acceptance. `flush()` and successful CLI mutations acknowledge local persistence. Renderer death can lose unsaved memory. There is no network acknowledgement or second document engine.
 
 The macOS client retains Core, HitSlopWasm, Runtime, Host frameless windows and hover toolbar, TCA Features, local Catalog, Firebase Analytics/Crashlytics, Sparkle, and NativeCLI. HitSlopWasm integrates the shared engine; HitSlopRuntime connects it to the client. The installed helper needs neither Node/Bun nor a running app. Closed document operations never load authored app code.
