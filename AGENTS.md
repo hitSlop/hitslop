@@ -24,4 +24,4 @@ Read manifest.json first. Only runtime `hitslop-v1` is accepted. No legacy-forma
 - Launch includes matching npm schema/document/CLI packages, published manually after the compatible signed Mac app. Hosted template publication remains deferred. See docs/guides/releasing.md.
 
 - Reusable attachments are in scope: host-owned immutable blobs in state/attachments, referenced by ordinary Loro fields. Use @hitslop/document/attachments or the native attachment CLI. HTTPS data/media access is allowed; CORS still applies.
-- Initial release is unshipped: keep contract 1/revision 1/SDK 1.0.0; seal the release ledger only at shipment.
+- Initial release baseline: contract 1/revision 1/SDK 1.0.0. Preserve sealed runtime bytes and ledger records; subsequent releases follow docs/versioning.md.

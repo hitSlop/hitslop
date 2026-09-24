@@ -1,8 +1,8 @@
 # Runtime versioning
 
-## Initial release development
+## Initial release baseline
 
-Nothing has shipped yet. Keep contract 1, revision 1, and SDK 1.0.0 while completing the initial release. The release ledger remains empty until actual shipment. The former sealed 1/1 hash was an internal development baseline, retained locally under `generated/v1/prerelease-baselines/1-1`; it is not a published compatibility gate. Existing conformance fixtures remain regression tests. The rules below apply to shipped releases; ordinary builds never modify the ledger.
+The initial v1 release uses contract 1, revision 1, and SDK 1.0.0. Its sealed bytes are recorded in `runtimes/releases.json` and must remain immutable. Subsequent runtime changes follow the revision and compatibility rules below. The former 1/1 hash retained locally under `generated/v1/prerelease-baselines/1-1` was an internal development baseline, not a published compatibility gate. Existing conformance fixtures remain regression tests. Ordinary builds never modify the ledger.
 
 A slop owns its compiled app, schema and state. The host supplies the document engine. `assets/runtime.json` declares a positive integer runtimeContract and minRuntimeRevision. SDK, Loro and bridge protocol versions record provenance; they are not opening gates. Missing or invalid requirements are refused before storage opens. Unsupported contracts and insufficient revisions name the requirement and request an app update. Pre-release identities without these fields are not supported.
 
