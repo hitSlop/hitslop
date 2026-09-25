@@ -238,3 +238,9 @@ those fixture strings preserved their privacy assertions and cleared hygiene.
 These are black-box release specimens, not template business-logic tests. Existing
 compatibility and render runners discover them; no new test runner or app-specific
 assertions are added.
+
+## Clean-checkout CLI help
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Help/version terminate without executing skills maintenance | Source-only CLI copy with installed dependencies and no generated skills returns exit 0, help/version output, and empty stderr, including the skill alias and update help | Bun CLI | Existing case used the developer checkout and could inherit generated skills | EXTEND existing command test; baseline fails with SkillSourceUnavailableError after printing help; run link maintenance only after completed skills actions |

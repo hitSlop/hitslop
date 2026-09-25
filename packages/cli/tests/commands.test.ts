@@ -1,10 +1,10 @@
 import { test, expect } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { cp, mkdtemp, rm, symlink } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
-async function run(args: string[], env: Record<string, string> = {}) {
-  const child = Bun.spawn([process.execPath, "packages/cli/src/cli.ts", ...args], {
+async function run(args: string[], env: Record<string, string> = {}, cli = "packages/cli/src/cli.ts") {
+  const child = Bun.spawn([process.execPath, cli, ...args], {
     env: { ...process.env, ...env },
     stdout: "pipe",
     stderr: "pipe",
@@ -18,17 +18,29 @@ async function run(args: string[], env: Record<string, string> = {}) {
 }
 
 test("help and version do not invoke native or authoring handlers", async () => {
-  for (const args of [
-    [],
-    ["--help"],
-    ["--version"],
-    ["build", "--help"],
-    ["apply", "--help"],
-    ["skills", "--help"],
-  ]) {
-    const result = await run(args, { HITSLOP_NATIVE_CLI: "/nonexistent" });
-    expect(result.code).toBe(0);
-    expect(result.stdout).toContain("slop");
+  // A fresh checkout has sources and dependencies, but no generated skill bundle.
+  const root = await mkdtemp(join(tmpdir(), "hsl-cli-help-"));
+  try {
+    await cp("packages/cli/src", join(root, "src"), { recursive: true });
+    await cp("packages/cli/package.json", join(root, "package.json"));
+    await symlink(resolve("packages/cli/node_modules"), join(root, "node_modules"));
+    for (const args of [
+      [],
+      ["--help"],
+      ["--version"],
+      ["build", "--help"],
+      ["apply", "--help"],
+      ["skills", "--help"],
+      ["skill", "-h"],
+      ["skills", "update", "--help"],
+    ]) {
+      const result = await run(args, { HITSLOP_NATIVE_CLI: "/nonexistent" }, join(root, "src/cli.ts"));
+      expect(result.stderr).toBe("");
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain("slop");
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
 
