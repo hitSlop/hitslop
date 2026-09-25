@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
 import { cp, lstat, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { parseManifest } from "../../packages/schema/src/manifest";
 import { fromDescriptor, validate } from "@hitslop/document";
 import identity from "../../packages/document/src/runtime-identity.json";
 import { digest } from "./runtime-artifacts";
 
-const format = 1;
+const format = 2;
 const ignored = new Set([
   "node_modules",
   "dist",
@@ -21,81 +21,124 @@ const ignored = new Set([
 ]);
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 
+/** Named input hashes; retained in cache entries so misses can name their cause. */
+export type Inputs = Record<string, string>;
+
 /** Content and path based; timestamps and checkout locations never enter the key. */
-export async function fingerprint(root: string, paths: string[], context: unknown = null) {
-  const files: [string, string][] = [];
+export async function inputs(root: string, paths: string[]): Promise<Inputs> {
+  const files: Inputs = {};
   async function visit(path: string, inputRoot = false) {
     const info = await lstat(path);
     if (info.isSymbolicLink() || (!info.isDirectory() && !info.isFile()))
       throw new Error(`Unsupported template input: ${path}`);
     if (info.isDirectory()) {
-      files.push([relative(root, path), "directory"]);
+      files[relative(root, path) || "."] = "directory";
       for (const name of (await readdir(path)).sort())
         if (!inputRoot || !ignored.has(name)) await visit(join(path, name));
     } else
-      files.push([
-        relative(root, path),
-        createHash("sha256")
-          .update(await readFile(path))
-          .digest("hex"),
-      ]);
+      files[relative(root, path)] = createHash("sha256")
+        .update(await readFile(path))
+        .digest("hex");
   }
   for (const path of [...paths].sort()) await visit(join(root, path), true);
-  return hash(JSON.stringify({ format, context, files }));
+  return files;
 }
 
-export async function sharedTemplateFingerprint(repository: string, sources: string[]) {
+/** Relative imports reachable from the template compiler; CLI routing and help stay outside. */
+async function compilerSources(repository: string, entries: string[]) {
+  const transpiler = new Bun.Transpiler({ loader: "ts" });
+  const found = new Set<string>();
+  const pending = [...entries];
+  while (pending.length) {
+    const path = pending.pop()!;
+    if (found.has(path)) continue;
+    found.add(path);
+    for (const { path: specifier } of transpiler.scanImports(
+      await readFile(join(repository, path), "utf8"),
+    ))
+      if (specifier.startsWith("."))
+        pending.push(
+          relative(repository, Bun.resolveSync(specifier, join(repository, dirname(path)))),
+        );
+  }
+  return [...found];
+}
+
+async function version(command: string[]) {
+  const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
+  const [out, error, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  if (code) throw new Error(`Cannot fingerprint ${command[0]}: ${error}`);
+  return out.trim();
+}
+
+/** Files every template build reads: compiler, SDK, runtime and native renderer. */
+export async function sharedTemplatePaths(repository: string, sources: string[]) {
   const native = "apps/apple/Packages/HitSlopApple";
   const paths = [
-    "package.json",
     "bun.lock",
-    "tsconfig.v1.json",
-    "scripts/v1",
-    "packages/cli/src",
-    "packages/cli/skills",
     "packages/cli/package.json",
     "packages/document/src",
     "packages/document/package.json",
     "packages/schema/src",
     "packages/schema/package.json",
     "packages/cli/runtimes",
+    "scripts/v1/build-templates.ts",
+    "scripts/v1/template-cache.ts",
     `${native}/Package.swift`,
     `${native}/Package.resolved`,
     ...["HitSlopCore", "HitSlopWasm", "HitSlopRuntime", "HitSlopHost", "HitSlopNativeCLI"].map(
       (name) => `${native}/Sources/${name}`,
     ),
+    ...(await compilerSources(repository, [
+      "packages/cli/src/template.ts",
+      "packages/cli/src/build-worker.ts",
+    ])),
   ];
-  // Include shared authoring configs and future shared directories, but not other templates.
+  // Shared authoring configs and directories, but not other templates, docs or local tool state.
   for (const name of await readdir(join(repository, "examples/slops"))) {
     const path = join("examples/slops", name);
     if (
       !ignored.has(name) &&
+      !name.startsWith(".") &&
+      !name.endsWith(".md") &&
       !["archive", "bundled.json"].includes(name) &&
       !sources.includes(path)
     )
       paths.push(path);
   }
-  async function version(command: string[]) {
-    const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
-    const [out, error, code] = await Promise.all([
-      new Response(child.stdout).text(),
-      new Response(child.stderr).text(),
-      child.exited,
-    ]);
-    if (code) throw new Error(`Cannot fingerprint ${command[0]}: ${error}`);
-    return out.trim();
-  }
-  const toolchain = await Promise.all([
+  return paths;
+}
+
+/** Shared files plus the toolchain that compiles and renders every template. */
+export async function sharedTemplateInputs(repository: string, sources: string[]): Promise<Inputs> {
+  const [build, xcode, swift] = await Promise.all([
     version(["/usr/bin/sw_vers", "-buildVersion"]),
     version(["xcodebuild", "-version"]),
     version(["swift", "--version"]),
   ]);
-  return fingerprint(repository, paths, {
-    toolchain,
-    arch: process.arch,
-    bun: Bun.version,
-    debug: process.env.HITSLOP_DEBUG_BUILD === "1",
-  });
+  return {
+    ...(await inputs(repository, await sharedTemplatePaths(repository, sources))),
+    "@macos": build,
+    "@xcode": xcode,
+    "@swift": swift,
+    "@arch": process.arch,
+    "@bun": Bun.version,
+    "@debug": String(process.env.HITSLOP_DEBUG_BUILD === "1"),
+  };
+}
+
+/** Name what differs between two input sets, for cache miss reports. */
+export function changedInputs(previous: Inputs = {}, current: Inputs, limit = 5) {
+  const changed = [...new Set([...Object.keys(previous), ...Object.keys(current)])]
+    .filter((key) => previous[key] !== current[key])
+    .sort();
+  return changed.length > limit
+    ? [...changed.slice(0, limit), `…and ${changed.length - limit} more`]
+    : changed;
 }
 
 /** Cheap package checks shared by cache reads and signed-app verification. */
@@ -152,22 +195,31 @@ export async function validateTemplate(path: string, slug: string) {
 
 /** Local and CI builds share this validated cache. A miss uses the ordinary builder. */
 export class TemplateCache {
+  /** Why each rebuilt template missed, by slug. */
+  readonly misses = new Map<string, string[]>();
+
   constructor(
     readonly directory: string,
-    readonly shared: string,
+    readonly shared: Inputs,
   ) {}
 
   async build(source: string, slug: string, destination: string, build: () => Promise<unknown>) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error(`Invalid cache slug: ${slug}`);
-    const key = await fingerprint(source, ["."], this.shared);
+    const template = await inputs(source, ["."]);
+    const key = hash(JSON.stringify({ format, shared: this.shared, template }));
     const entry = join(this.directory, slug);
+    let reason: string[];
     try {
       const metadata = JSON.parse(await readFile(join(entry, "entry.json"), "utf8"));
-      if (
-        metadata.format === format &&
-        metadata.key === key &&
-        metadata.checksum === (await validateTemplate(join(entry, "package.slop"), slug))
-      ) {
+      if (metadata.format !== format) reason = ["obsolete cache format"];
+      else if (metadata.key !== key)
+        reason = [
+          ...changedInputs(metadata.shared, this.shared).map((path) => `shared ${path}`),
+          ...changedInputs(metadata.template, template).map((path) => `template ${path}`),
+        ];
+      else if (metadata.checksum !== (await validateTemplate(join(entry, "package.slop"), slug)))
+        reason = ["cached package changed"];
+      else {
         await cp(join(entry, "package.slop"), destination, {
           recursive: true,
           errorOnExist: true,
@@ -175,9 +227,15 @@ export class TemplateCache {
         });
         return "hit" as const;
       }
-    } catch {
+    } catch (error) {
       // Missing, corrupt, or obsolete cache entries are disposable, never authoritative.
+      reason = [
+        (error as { code?: string }).code === "ENOENT"
+          ? "no cache entry"
+          : "unreadable cache entry",
+      ];
     }
+    this.misses.set(slug, reason);
     await build();
     const checksum = await validateTemplate(destination, slug);
     await mkdir(this.directory, { recursive: true });
@@ -185,7 +243,10 @@ export class TemplateCache {
     try {
       await mkdir(stage);
       await cp(destination, join(stage, "package.slop"), { recursive: true });
-      await writeFile(join(stage, "entry.json"), JSON.stringify({ format, key, checksum }));
+      await writeFile(
+        join(stage, "entry.json"),
+        JSON.stringify({ format, key, checksum, shared: this.shared, template }),
+      );
       await rm(entry, { recursive: true, force: true });
       await rename(stage, entry);
     } finally {
@@ -209,9 +270,9 @@ export class TemplateCache {
         },
         () => undefined,
       );
-      // Only remove our own entries, even if a caller accidentally selects a shared directory.
+      // Only remove our own entries (of any format), even if a caller selects a shared directory.
       if (
-        metadata?.format === format &&
+        typeof metadata?.format === "number" &&
         typeof metadata.key === "string" &&
         typeof metadata.checksum === "string"
       )

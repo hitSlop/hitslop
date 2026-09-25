@@ -52,7 +52,8 @@ jobs:
               - 'tests/**'
               - 'runtimes/**'
               - 'examples/slops/**'
-              - '.github/**'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
               - 'bun.lock'
               - 'package.json'
               - 'tsconfig*.json'
@@ -60,17 +61,18 @@ jobs:
         if: steps.paths.outputs.native == 'true'
       - uses: ./.github/actions/native-cache
         if: steps.paths.outputs.native == 'true'
+        with:
+          templates: fixtures
+      # Fixtures only; the full template corpus, check:built and the app build run on release.
       - name: Validate native boundaries
         if: steps.paths.outputs.native == 'true'
         env:
           HITSLOP_TEMPLATE_CACHE_DIR: .hitslop/template-cache
         run: |
           bun run build
-          bun run build:templates
-          bun run check:built
           bun run swift:test
           bun run test:native
-          bun run test:render
+          bun run test:render --fixtures
           bun run test:native-helper
           bun run test:storage
           bun scripts/v1/crash-matrix.ts --native
@@ -83,9 +85,10 @@ jobs:
           name: native-evidence
           path: .hitslop/v1-evidence
           include-hidden-files: true
-  release:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
-    needs: [fast, native]
+  # Tag runs can only restore caches saved on the default branch, so master keeps the
+  # full template corpus warm for the next release. Not a required check.
+  release-templates:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
@@ -93,14 +96,17 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/prepare-checks
       - uses: ./.github/actions/native-cache
-      - run: brew install xcodegen
-      - run: bun install --cwd apps/landing --frozen-lockfile
-      - run: bun run release:check
+        with:
+          templates: release
+      - name: Build release templates
         env:
           HITSLOP_TEMPLATE_CACHE_DIR: .hitslop/template-cache
+        run: |
+          bun run build
+          bun run build:templates
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: release-evidence
+          name: release-templates-evidence
           path: .hitslop/v1-evidence
           include-hidden-files: true

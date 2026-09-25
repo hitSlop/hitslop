@@ -34,7 +34,7 @@ bun scripts/v1/crash-matrix.ts --native
 
 Run this tier when Apple code, the bridge, document/runtime code, compatibility fixtures, template inputs or build scripts change. Swift tests cover envelopes, isolation, ownership, WebKit lifecycle, draft/save/export ordering, render recovery and host interaction. Cancellation observes an acquired lease and subsequent release. Storage faults distinguish rejection before writing from loss of the reply after a successful write. They are scoped to one store bridge.
 
-Native-only Bun tests use `.native.test.ts`; `test:native` runs those owners. The explicit full corpus is:
+Native-only Bun tests use `.native.test.ts`; `test:native` runs those owners. `bun run test:render --fixtures` renders the native fixtures and the contract specimens (`tests/compatibility/1-1*`); everyday CI runs this. The explicit full corpus, run by releases, is:
 
 ```sh
 bun run build:templates
@@ -42,7 +42,7 @@ bun run check:built
 bun run test:render
 ```
 
-The generic native smoke takes disposable copies of every bundled and preserved package, opens headlessly, renders PNG/PDF with the authored app, reopens and checks unchanged state and master bytes. Both local and CI template builds use the validated cache in `.hitslop/template-cache`; `HITSLOP_TEMPLATE_CACHE_DIR` overrides its location. A cache miss rebuilds the complete package. Images and PDFs are review evidence, not pixel snapshots. Exports that cannot complete fail the gate.
+The generic native smoke takes disposable copies of every bundled and preserved package, opens headlessly, renders PNG/PDF with the authored app, reopens and checks unchanged state and master bytes. Both local and CI template builds use the validated cache in `.hitslop/template-cache`; `HITSLOP_TEMPLATE_CACHE_DIR` overrides its location. Entries are keyed on the template's own files plus the inputs every build shares: the compiler's import closure (not CLI routing, help or skills), document/schema SDK sources, the built runtime, the native renderer sources and the toolchain. A cache miss rebuilds the complete package and logs the changed inputs; `.hitslop/v1-evidence/template-cache-*.json` records hits and miss causes. Images and PDFs are review evidence, not pixel snapshots. Exports that cannot complete fail the gate.
 
 The shared crash matrix runs writer exclusion and process-death cases before/after append and checkpoint commit against both SQLite implementations. `test:native-crash` adds actual host/WebContent death. Startup/window benchmarks remain opt-in diagnostics, without hardware-dependent performance assertions. Bounded waiting remains only where native/WebKit asynchronous completion has no observable completion event.
 
@@ -62,11 +62,18 @@ adding automatic retries or lengthening deadlines.
 
 ## CI and evidence
 
-`fast` always runs on Ubuntu. `native` always reports a check on macOS; an in-job path filter skips its expensive steps when unaffected. Configure branch protection to require both `fast` and `native` after the workflow has reported those check names. Master/manual runs and tagged releases run `release:check`, which never publishes.
+`fast` always runs on Ubuntu. `native` always reports a check on macOS; an in-job path filter skips its expensive steps when unaffected. Configure branch protection to require both `fast` and `native` after the workflow has reported those check names.
 
-Relevant native PRs still build the complete template corpus and run all render specimens; the smaller local defaults do not reduce the PR gate. `release:check` explicitly runs both the template and render stages.
+| Tier | Trigger | Runs |
+|---|---|---|
+| `fast` | every push/PR, Ubuntu | hygiene, check, Bun tests, compatibility replay, landing check |
+| `native` | relevant changes, macOS | build, Swift tests, native owners, fixture render, helper, storage, native crash matrix |
+| `release-templates` | master pushes, not required | builds the full template corpus to keep the release cache warm |
+| Release macOS | `macos-v*` tag, or manual dry run | full `release:check` once, then sign, accept, notarize and publish |
 
-SwiftPM caches include toolchain, lockfile, package and source identity, with a compatible restore prefix. SwiftPM still validates the graph after restore. Template caches retain independently fingerprinted complete builds. Rendering stays in native/release jobs.
+The complete template corpus, `check:built` and full render run once per release, not on every push. A tag runs `release:check --skip-app`: instead of building a Debug app, packaging runs host-crash acceptance against the signed Release app before notarization, and Gatekeeper verification runs `release-artifact.ts` on the notarized app. A manual dry run executes the full `release:check`, including the Debug app, without signing or publishing.
+
+GitHub scopes caches by ref: tag runs restore only caches saved on the default branch, which is why master keeps the release template cache warm. Fixture and release template caches use separate keys. SwiftPM caches include toolchain, lockfile, package and source identity, with a compatible restore prefix. SwiftPM still validates the graph after restore.
 
 CI sets `HITSLOP_COMPAT_BASE` to the PR base or previous pushed commit. A tag/manual run uses the prior release/ancestor. The history guard compares previously recorded fixture files and release records against that commit, so changing both a specimen and its seal cannot bless the change. Local checks prefer the previous release tag, falling back to HEAD before the first release. `bun run compatibility:restore` restores missing historical runtime archives and verifies their ledger hashes; missing history is a failure, never a skipped comparison.
 

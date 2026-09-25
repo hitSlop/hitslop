@@ -2,7 +2,7 @@ import { buildTemplate } from "../../packages/cli/src/template";
 import { join, resolve, relative } from "node:path";
 import { mkdir, writeFile, rm, rename } from "node:fs/promises";
 import { repository, discoverTemplates, templateInventory } from "./templates";
-import { sharedTemplateFingerprint, TemplateCache } from "./template-cache";
+import { sharedTemplateInputs, TemplateCache } from "./template-cache";
 
 export async function buildTemplates(
   output = join(repository, "generated/v1/templates"),
@@ -19,7 +19,7 @@ export async function buildTemplates(
     : discovered;
   const cache = new TemplateCache(
     resolve(process.env.HITSLOP_TEMPLATE_CACHE_DIR ?? join(repository, ".hitslop/template-cache")),
-    await sharedTemplateFingerprint(
+    await sharedTemplateInputs(
       repository,
       discovered.map((template) => relative(repository, template.source)),
     ),
@@ -36,8 +36,9 @@ export async function buildTemplates(
       console.log(`Preparing template ${index + 1}/${templates.length}: ${template.slug}`);
       const status = await cache.build(template.source, template.slug, destination, build);
       if (status === "hit") hits++;
+      const reason = cache.misses.get(template.slug);
       console.log(
-        `Template ${index + 1}/${templates.length}: ${template.slug} — ${status} (${((performance.now() - start) / 1000).toFixed(1)}s)`,
+        `Template ${index + 1}/${templates.length}: ${template.slug} — ${status}${reason ? ` (${reason.join(", ")})` : ""} (${((performance.now() - start) / 1000).toFixed(1)}s)`,
       );
     }
     if (!slugs)
@@ -51,8 +52,20 @@ export async function buildTemplates(
   } finally {
     await rm(stage, { recursive: true, force: true });
   }
+  const seconds = (performance.now() - started) / 1000;
   console.log(
-    `Templates: ${hits} cache hits, ${templates.length - hits} built in ${((performance.now() - started) / 1000).toFixed(1)}s`,
+    `Templates: ${hits} cache hits, ${templates.length - hits} built in ${seconds.toFixed(1)}s`,
+  );
+  // Cross-run reuse is only proven by recorded hits, so retain the report with CI evidence.
+  const evidence = join(repository, ".hitslop/v1-evidence");
+  await mkdir(evidence, { recursive: true });
+  await writeFile(
+    join(evidence, `template-cache-${slugs ? "fixtures" : "templates"}.json`),
+    JSON.stringify(
+      { hits, built: templates.length - hits, seconds, misses: Object.fromEntries(cache.misses) },
+      null,
+      2,
+    ) + "\n",
   );
 }
 

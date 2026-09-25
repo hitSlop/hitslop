@@ -14,6 +14,7 @@ const report: Record<string, unknown> = {
   commit,
   dirty,
   reusedBuild: process.argv.includes("--built"),
+  skippedApp: process.argv.includes("--skip-app"),
   platform: process.platform,
   arch: process.arch,
   bun: Bun.version,
@@ -38,8 +39,8 @@ try {
     "test:packed --native",
     "landing:check",
     "landing:build",
-    "apple:build",
-    "test:native-crash",
+    // The tag workflow accepts its signed Release app instead of building a Debug one.
+    ...(process.argv.includes("--skip-app") ? [] : ["apple:build", "test:native-crash"]),
   ]) {
     const start = performance.now();
     const child = Bun.spawn([process.execPath, "run", ...command.split(" ")], {
