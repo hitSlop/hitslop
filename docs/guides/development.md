@@ -54,7 +54,7 @@ Quick Checklist and Small Expenses are current examples and deliberate fixtures 
 - `bun run check`: runtime provenance/compatibility, generated contracts, skills, package types, and discovered template types.
 - `bun run test`: active document, schema, and CLI tests, compatibility replay, and all bundled template compile/open/reopen checks.
 - `bun run swift:test`: native tests with two cached black-box apps and three presentation fixtures.
-- `bun run test:native`: native CLI owners. `bun run test:render` checks the full built template/preserved-package corpus.
+- `bun run test:native`: native CLI owners. `bun run test:render` checks the full built template/preserved-package corpus; `--fixtures` limits it to the native fixtures and contract specimens.
 - `bun run test:storage` and `bun run test:native-crash`: commit-phase and native-process crash probes.
 - `bun run packages:pack` and `bun run test:packed`: exact npm artifact dependency/type/init/check/preview verification, without native rendering. Add `--native` to the packed check for the complete build/register/theme/export workflow.
 - `bun run landing:check` and `bun run landing:build`: public documentation and site validation.

@@ -6,6 +6,19 @@ Bundled slop business logic is outside the platform suite by Jordan’s explicit
 
 ## Contract dispositions
 
+### Cache and compiler corrections after the Nx pilot
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Shared compiler inputs invalidate every template | Skill/config edits cause rebuilds with named miss reasons; restored guidance equals current source; CLI help changes remain hits | Bun cache | Existing sibling isolation test retains one-template coverage | EXTEND; both missing inputs demonstrably returned stale hits before the fix |
+| Portable Svelte compilation | Identical component sources built in two checkout locations produce identical JavaScript | Bun build | Existing build checks used one source location | ADD; emitted style hashes differed before the fix |
+
+Focused validation passed all 11 build/cache tests after the fixes. No render cases
+or other consequential coverage were removed. Stage timings are observational;
+PNG/PDF, separate reopen, and immutable-master assertions remain in place.
+
+### Existing dispositions
+
 | Contract | Oracle | Tier | Duplicate-of | Verdict |
 |---|---|---|---|---|
 | Catalog discovery, master duplication, source identity and refresh ([LocalTemplateStoreTests](../apps/apple/Packages/HitSlopApple/Tests/HitSlopCatalogTests/LocalTemplateStoreTests.swift)) | Constructed catalog inputs, expected discovered packages, unchanged masters and observed refresh | 1 | — | KEEP |
@@ -40,6 +53,9 @@ Bundled slop business logic is outside the platform suite by Jordan’s explicit
 | Template discovery, selection, hygiene and skills installation ([repository.test.ts](../packages/cli/tests/repository.test.ts), [skills.test.ts](../packages/cli/tests/skills.test.ts)) | Controlled manifests/packages, missing links, conflicting directories, unchanged user files | 0 | — | KEEP |
 | Runtime catalogs, sealed release history and capabilities ([runtime-artifacts.test.ts](../packages/cli/tests/runtime-artifacts.test.ts), [runtime-capabilities.test.ts](../packages/cli/tests/runtime-capabilities.test.ts), [compatibility.test.ts](../packages/cli/tests/compatibility.test.ts)) | Independent base commit, altered bytes/requirements, incorrect expected data and no-op compiled handle | 0 | —; guards release integrity and false-green replay | KEEP; history guard rejects candidate rewrites |
 | Cache invalidation, isolation and safe publication ([template-cache.test.ts](../packages/cli/tests/template-cache.test.ts)) | Changed/damaged input, unaffected sibling cache, failed builder leaves no published entry | 0 | — | REWRITE generated-template dependency with minimal valid package |
+| Template cache keys follow compiler inputs and name miss causes ([template-cache.test.ts](../packages/cli/tests/template-cache.test.ts)) | Template/toolchain edits report the changed input; compiler files keyed, CLI routing/help/skills/scripts not; old-format entries pruned | 0 | — | EXTEND; CLI help edits no longer rebuild the corpus |
+| Full-corpus build, `check:built` and bundled/preserved-template render ([native smoke](../scripts/v1/native-smoke.ts)) | Every bundled and preserved package opens, renders PNG/PDF and reopens unchanged | 1 | Everyday `native` keeps fixtures + contract specimens (`test:render --fixtures`) | MOVE from every push to the release workflow; coverage unchanged per release |
+| Host death after acknowledged write ([crash matrix](../scripts/v1/crash-matrix.ts)) | Acknowledged CLI edit survives killing the host | 1 | — | MOVE on tags from the Debug app to the signed Release candidate, before notarization |
 | Attachment references follow durable blobs, close waits, retries preserve intent ([attachments.test.ts](../packages/document/tests/attachments.test.ts)) | Known bytes, explicit faults, retained/rejected operations and expected MIME/session behavior | 0 | —; document attachment lifecycle | KEEP |
 | Offline convergence, identity and invalid remote state ([convergence.test.ts](../packages/document/tests/convergence.test.ts)) | Literal merged outcomes, stable IDs, rejected malformed updates and reopened state | 0 | — | KEEP |
 | Typed handles, transaction atomicity and identity-bearing composites ([handles.test.ts](../packages/document/tests/handles.test.ts)) | Known values/IDs; rejected writes leave state and selection unchanged | 0 | Former DSL and slop identity assertions | KEEP owner; FOLD optional/nested identity cases |

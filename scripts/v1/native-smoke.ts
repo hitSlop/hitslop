@@ -5,24 +5,42 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { builtTemplates } from "./templates";
 import { digest } from "./runtime-artifacts";
+import { nativeFixtureSlugs, prepareNativeFixtures } from "./native-fixtures";
 
 const helper = resolve("apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native");
 const evidence = resolve(".hitslop/v1-evidence/render");
 const parent = await mkdtemp(join(tmpdir(), "hitslop-native-smoke-"));
-const packages = (await builtTemplates()).templates
-  .filter((t) => t.bundled)
-  .map((t) => ({
-    name: `bundled-${t.slug}`,
-    source: resolve("generated/v1/templates", `${t.slug}.slop`),
-  }));
+// Everyday CI renders the native fixtures; releases render every bundled template.
+const fixtures = process.argv.includes("--fixtures");
+if (fixtures) await prepareNativeFixtures();
+const packages = fixtures
+  ? nativeFixtureSlugs.map((slug) => ({
+      name: `fixture-${slug}`,
+      source: resolve("generated/v1/native-fixtures", `${slug}.slop`),
+    }))
+  : (await builtTemplates()).templates
+      .filter((t) => t.bundled)
+      .map((t) => ({
+        name: `bundled-${t.slug}`,
+        source: resolve("generated/v1/templates", `${t.slug}.slop`),
+      }));
 for (const name of (await readdir("tests/compatibility")).sort()) {
+  // Preserved template snapshots mirror the release corpus; fixtures keep contract specimens.
+  if (fixtures && name.startsWith("template-")) continue;
   if (await Bun.file(`tests/compatibility/${name}/fixture.json`).exists())
     packages.push({
       name: `preserved-${name}`,
       source: resolve("tests/compatibility", name, "document"),
     });
 }
-async function run(args: string[]) {
+type Stage = "initialRead" | "png" | "pdf" | "finalRead";
+type RenderResult = {
+  name: string;
+  sha256: string;
+  passed: boolean;
+  seconds: Partial<Record<Stage | "total", number>>;
+};
+async function run(args: string[], result: RenderResult, stage: Stage) {
   const started = performance.now();
   const child = Bun.spawn([helper, ...args], { stdout: "pipe", stderr: "pipe" });
   const timeout = setTimeout(() => child.kill(), 60_000);
@@ -32,13 +50,19 @@ async function run(args: string[]) {
       new Response(child.stderr).text(),
       child.exited,
     ]);
-    assert.equal(code, 0, `${args.join(" ")} (${((performance.now() - started) / 1000).toFixed(1)}s): ${error}`);
+    assert.equal(
+      code,
+      0,
+      `${args.join(" ")} (${((performance.now() - started) / 1000).toFixed(1)}s): ${error}`,
+    );
     return out;
   } finally {
     clearTimeout(timeout);
+    result.seconds[stage] = (performance.now() - started) / 1000;
   }
 }
-const results: { name: string; sha256: string }[] = [];
+const results: RenderResult[] = [];
+const sweepStarted = performance.now();
 let failure: string | undefined;
 try {
   await mkdir(evidence, { recursive: true });
@@ -47,30 +71,49 @@ try {
     console.log(`Checking ${name}`);
     const root = join(parent, `${name}.slop`);
     const before = await digest(source);
-    await cp(source, root, { recursive: true });
-    const state = JSON.parse(await run(["get", root]));
-    for (const format of ["png", "pdf"]) {
-      const output = join(evidence, `${name}.${format}`);
-      await run(["export", root, "--format", format, "--output", output]);
-      const bytes = await Bun.file(output).bytes();
-      assert(bytes.length > 100, `Empty ${format}: ${name}`);
-      assert.equal(
-        Buffer.from(bytes.subarray(0, format === "png" ? 8 : 4)).toString("hex"),
-        format === "png" ? "89504e470d0a1a0a" : "25504446",
+    const result: RenderResult = { name, sha256: before, passed: false, seconds: {} };
+    results.push(result);
+    try {
+      await cp(source, root, { recursive: true });
+      const state = JSON.parse(await run(["get", root], result, "initialRead"));
+      for (const format of ["png", "pdf"] as const) {
+        const output = join(evidence, `${name}.${format}`);
+        await run(["export", root, "--format", format, "--output", output], result, format);
+        const bytes = await Bun.file(output).bytes();
+        assert(bytes.length > 100, `Empty ${format}: ${name}`);
+        assert.equal(
+          Buffer.from(bytes.subarray(0, format === "png" ? 8 : 4)).toString("hex"),
+          format === "png" ? "89504e470d0a1a0a" : "25504446",
+        );
+      }
+      assert.deepEqual(JSON.parse(await run(["get", root], result, "finalRead")), state);
+      assert.equal(await digest(source), before, `Master changed: ${name}`);
+      result.passed = true;
+      console.log(
+        `PASS ${name}: headless open, authored render, PNG/PDF, reopen (${((performance.now() - started) / 1000).toFixed(1)}s)`,
       );
+    } finally {
+      result.seconds.total = (performance.now() - started) / 1000;
     }
-    assert.deepEqual(JSON.parse(await run(["get", root])), state);
-    assert.equal(await digest(source), before, `Master changed: ${name}`);
-    results.push({ name, sha256: before });
-    console.log(`PASS ${name}: headless open, authored render, PNG/PDF, reopen (${((performance.now() - started) / 1000).toFixed(1)}s)`);
   }
 } catch (error) {
   failure = String(error);
   throw error;
 } finally {
+  const seconds = {
+    initialRead: 0,
+    png: 0,
+    pdf: 0,
+    finalRead: 0,
+    total: (performance.now() - sweepStarted) / 1000,
+  };
+  for (const result of results)
+    for (const stage of ["initialRead", "png", "pdf", "finalRead"] as const)
+      seconds[stage] += result.seconds[stage] ?? 0;
+  console.log(`Render timings (seconds): ${JSON.stringify(seconds)}`);
   await writeFile(
     join(evidence, "results.json"),
-    JSON.stringify({ passed: !failure, results, error: failure }, null, 2) + "\n",
+    JSON.stringify({ passed: !failure, seconds, results, error: failure }, null, 2) + "\n",
   );
   await rm(parent, { recursive: true, force: true });
 }

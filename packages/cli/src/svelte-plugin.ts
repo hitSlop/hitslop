@@ -18,16 +18,23 @@ export function sveltePlugin(cliRoot: string): Plugin {
           pluginData: { svelteRoot: true },
         });
       });
-      b.onLoad({ filter: /\.svelte$/ }, async ({ path }) => ({
-        contents: compile(await readFile(path, "utf8"), {
-          filename: path,
-          generate: "client",
-          css: "injected",
-          dev: false,
-        }).js.code,
-        loader: "js",
-        resolveDir: dirname(path),
-      }));
+      b.onLoad({ filter: /\.svelte$/ }, async ({ path }) => {
+        const source = await readFile(path, "utf8");
+        return {
+          contents: compile(source, {
+            filename: path,
+            generate: "client",
+            css: "injected",
+            // Svelte's default hashes absolute filenames outside cwd (including
+            // installed components). Scope styles by component content so moving
+            // a checkout or dependency installation preserves portable bytes.
+            cssHash: ({ hash }) => `svelte-${hash(source)}`,
+            dev: false,
+          }).js.code,
+          loader: "js",
+          resolveDir: dirname(path),
+        };
+      });
       b.onLoad({ filter: /\.svelte\.(ts|js)$/ }, async ({ path }) => ({
         contents: compileModule(
           (await transform(await readFile(path, "utf8"), { loader: "ts" })).code,
