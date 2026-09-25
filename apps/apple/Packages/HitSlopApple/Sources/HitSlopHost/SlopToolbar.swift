@@ -8,7 +8,7 @@ func slopToolbarFrame(document: NSRect, visible: NSRect?) -> NSRect {
   if let visible {
     frame.origin.x = min(max(frame.minX, visible.minX + 8), visible.maxX - width - 8)
     if frame.maxY > visible.maxY { frame.origin.y = document.maxY - frame.height - 10 }
-    frame.origin.y = max(frame.minY, visible.minY + 8)
+    frame.origin.y = min(max(frame.minY, visible.minY + 8), visible.maxY - frame.height - 10)
   }
   return frame
 }

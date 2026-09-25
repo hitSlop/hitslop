@@ -1,0 +1,20 @@
+name: Native build cache
+description: Reuse compatible SwiftPM and completed template builds
+runs:
+  using: composite
+  steps:
+    - id: toolchain
+      shell: bash
+      run: |
+        TOOLCHAIN_HASH=$( (xcodebuild -version; swift --version) | shasum -a 256 | cut -d ' ' -f 1)
+        echo "hash=$TOOLCHAIN_HASH" >> "$GITHUB_OUTPUT"
+    - uses: actions/cache@v6
+      with:
+        path: apps/apple/Packages/HitSlopApple/.build
+        key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-${{ hashFiles('apps/apple/Packages/HitSlopApple/Package.resolved', 'apps/apple/Packages/HitSlopApple/Package.swift') }}-${{ hashFiles('apps/apple/Packages/HitSlopApple/Sources/**', 'apps/apple/Packages/HitSlopApple/Tests/**', 'packages/document/**', 'packages/schema/**', 'runtimes/**', 'bun.lock') }}
+        restore-keys: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-${{ hashFiles('apps/apple/Packages/HitSlopApple/Package.resolved', 'apps/apple/Packages/HitSlopApple/Package.swift') }}-
+    - uses: actions/cache@v6
+      with:
+        path: .hitslop/template-cache
+        key: templates-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: templates-v1-${{ runner.os }}-${{ runner.arch }}-

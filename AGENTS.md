@@ -1,27 +1,28 @@
 # hitSlop v1
 
-Read manifest.json first. Only runtime `hitslop-v1` is accepted. No legacy-format migration. Preserve all shipped v1 runtime contracts; see docs/versioning.md.
+Read the slop’s `manifest.json` first. Accept only `hitslop-v1`; no legacy migration. Preserve shipped contracts, sealed runtime bytes and release records. Read [engineering contracts](docs/engineering-contract.md) for platform changes and [versioning](docs/versioning.md) for compatibility/release changes.
 
-- The live document is Loro in the WebView. Swift stores opaque checkpoint/update bytes in state/document.sqlite (format 1).
-- One OS writer lock owns a local package. CLI commands route to the live native session or acquire ownership when closed. Never bypass a busy lock or unlink writer.lock.
-- Author schema.ts with defineDocument/s from @hitslop/document. state.schema.json is a descriptor, not JSON Schema. initial.json is immutable creation-only data.
-- App state uses text/rich text, finite scalar registers (including bounded integers), enums, objects, movable object/scalar lists, records, counters, trees, and optional values (scalar lists use an empty list). $id is row/tree identity. Read immutable snapshots; write typed fields or doc.at(snapshot) handles and synchronous change(tx => ...); transaction remains a compatibility alias. Initialize absent composites with set/put; never assign over existing identity-bearing collections, including through a containing object.
-- Never add stores/data.json, projections, watchers for JSON reconciliation, a JavaScriptCore document engine, compatibility lenses, or a second document engine.
-- Host and CLI ship matching runtimes per supported contract. App bundles must not embed Loro or the document implementation. slop dev uses the same runtime with disposable memory storage.
-- Keep TypeBox authoritative for platform manifest/bridge contracts. Generate native contracts with bun run schema:generate; do not edit generated files.
-- Runtime packages contain manifest.json, app.html, assets/, state.schema.json, initial.json, optional QuickLook images and embedded .agents/skills/hitslop-document guidance. Builds contain no state, stores, source, dependencies or caches.
-- Preserve the existing macOS client: TCA Features, Catalog, Host slop windows/hover toolbar, Firebase Analytics/Crashlytics, Sparkle, and NativeCLI. HitSlopWasm supplies the common document engine; HitSlopRuntime integrates it. A runtime rewrite must not replace the client.
-- Flush local drafts and document writes before close/export. Failed saves retain ownership and show native retry. Destroy WebViews on close.
-- Native code validates package isolation, symlinks, bridge envelopes and resource sizes. Authored code can damage its own document; no independent native semantic validator.
-- Active examples are discovered from immediate manifest-bearing directories under examples/slops; bundled.json selects shipped templates. Quick Checklist and Small Expenses remain regression fixtures. Each owns its design; use plain CSS and defineTheme tokens. Read examples/slops/PRODUCT.md and docs/guides/authoring.md for visual changes. _vibe is inspiration only.
-- CLI: bun slop dev/build/register SOURCE; schema/get/apply/batch/compact DOCUMENT. Runtime masters are immutable; create a writable copy to edit.
-- PDF/PNG export is in scope. Collaboration, audio-library import, remote catalog cutover, hosted template publication, undo UI, schema evolution, history pruning, iCloud and other synced folders are deferred.
-- Tests: bun run check; bun run test; bun run build; bun run swift:test. Historical _docs/, archive/, deferred/, retired command-engine tests and backend source are not active tests or implementation contracts.
+## Non-negotiable
 
-- The native Swift CLI edits through the live Unix socket or an engine-only invisible WebKit session. Installed editing needs no Node/Bun. Never load authored app code for headless document operations.
-- Catalog discovery combines bundled slops and ~/.hitslop/templates, with manifest-derived categories and Recents. Users unpack external downloads before placing template packages in that folder. Hosted discovery, OpenAPI/Registry, accounts/Auth/App Check, and sharing code live in deferred; Firebase Analytics/Crashlytics stay active.
+- Loro in the WebView owns live state; Swift persists opaque bytes in `state/document.sqlite` (format 1). One OS writer lock owns a local package. Route CLI edits to its live session or acquire ownership when closed; never bypass a busy lock or unlink `writer.lock`.
+- Preserve the existing macOS client and shared HitSlopWasm/HitSlopRuntime engine. No second engine, JavaScriptCore evaluator, compatibility lenses, JSON projection/reconciliation or `stores/data.json`. App bundles never embed the engine; host and helper runtimes match. Headless native editing never loads authored app code or requires Node/Bun.
+- TypeBox owns platform contracts; run `bun run schema:generate`, never edit generated files. Author descriptors with `defineDocument`/`s`; `initial.json` is creation-only. Read immutable snapshots; write typed handles with synchronous `change`. Preserve `$id` identity and the `transaction` alias. Initialize absent composites; never replace existing identity-bearing collections, including through containing objects.
+- Flush drafts/writes before close/export. Failed saves retain ownership and show native retry; successful close destroys WebViews. Native validates isolation, symlinks, envelopes and resource bounds, not app semantics. Attachments remain host-owned immutable blobs.
+- Masters are immutable; edit copies. Build packages contain no mutable state, source, dependencies or caches. PNG/PDF export, local catalog/Recents, Analytics/Crashlytics and Sparkle remain active.
 
-- Launch includes matching npm schema/document/CLI packages, published manually after the compatible signed Mac app. Hosted template publication remains deferred. See docs/guides/releasing.md.
+## Authoring
 
-- Reusable attachments are in scope: host-owned immutable blobs in state/attachments, referenced by ordinary Loro fields. Use @hitslop/document/attachments or the native attachment CLI. HTTPS data/media access is allowed; CORS still applies.
-- Initial release baseline: contract 1/revision 1/SDK 1.0.0. Preserve sealed runtime bytes and ledger records; subsequent releases follow docs/versioning.md.
+Immediate manifest-bearing directories under `examples/slops` are active; `bundled.json` selects shipped templates. Quick Checklist/Small Expenses remain black-box fixtures. Use plain CSS and `defineTheme`; read [product guidance](examples/slops/PRODUCT.md) and [authoring](docs/guides/authoring.md) for visual changes. `_vibe` is inspiration only.
+
+## Testing
+
+- Before adding a test, name the observable failure, independent expected result and gap in existing coverage. Prefer extending the contract’s existing test at the cheapest stable boundary. Bun owns document semantics and compatibility replay; Swift proves distinct native integration failures.
+- Tautological tests and incidental change detectors are harmful. Literal CSS/HTML, private state and internal call sequences usually aren’t contracts. Frozen runtime bytes, bridge envelopes and save-before-close ordering are.
+- Add bug regression cases only for genuine coverage gaps; demonstrate failure for the intended reason before the fix. When a behavior-preserving refactor breaks a test, rewrite it at the owning boundary or delete it when equivalent proof remains. Never contort production code to preserve test scaffolding.
+- Slops are black boxes; test runtime semantics in dedicated fixtures. Prefer observable completion over sleeps/global switches. Keep fault injection narrow and at real I/O boundaries; moving test flags into a wrapper alone is no improvement.
+- Before removing or replacing consequential coverage, break the protected behavior and verify the remaining owner test catches it. Record changed contracts in the five-column ledger; untouched tests need no audit paperwork.
+- Everyday: `bun run check && bun run test`. Native: `bun run build && bun run swift:test && bun run test:native`. Release: `bun run release:check`. Follow [testing](docs/testing.md) and [releasing](docs/guides/releasing.md); publish matching npm packages manually after the compatible signed Mac app.
+
+## Deferred
+
+Collaboration, audio-library import, undo UI, schema evolution, history pruning, synced folders, hosted catalog/publishing, Registry, accounts/auth and sharing. Historical `_docs/`, `archive/`, `deferred/`, retired command-engine tests and backend source are not active contracts.

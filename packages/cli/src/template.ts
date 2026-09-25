@@ -37,7 +37,7 @@ export async function prepareRenderer() {
   return helper;
 }
 
-/** Publish only a completed artifact. Rendering uses disposable native snapshots. */
+/** Publish only a completed artifact. Native rendering reads the stage into disposable memory storage. */
 export async function buildTemplate(source: string, renderer: string, destination?: string) {
   const manifest = JSON.parse(await readFile(join(source, "manifest.json"), "utf8"));
   const output = resolve(destination ?? join(source, "dist", manifest.slug + ".slop"));

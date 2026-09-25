@@ -11,13 +11,13 @@ final class SocketServer: @unchecked Sendable {
   private var stopped = false
   private let handle:
     @MainActor @Sendable (
-      [String: Any], NativeCommandDeadline, @escaping @MainActor @Sendable ([String: Any]) -> Void
+      SocketRequest, NativeCommandDeadline, @escaping @MainActor @Sendable (SocketReply) -> Void
     ) -> Void
 
   init(
     handle:
       @escaping @MainActor @Sendable (
-        [String: Any], NativeCommandDeadline, @escaping @MainActor @Sendable ([String: Any]) -> Void
+        SocketRequest, NativeCommandDeadline, @escaping @MainActor @Sendable (SocketReply) -> Void
       ) -> Void
   ) throws {
     self.handle = handle
@@ -113,27 +113,28 @@ final class SocketServer: @unchecked Sendable {
       guard active else { return }
       guard let request = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
         bytes.count <= 1_048_576 || request["method"] as? String == "attachments.put",
-        PlatformContract.valid(request, against: socketRequestSchema)
+        PlatformContract.valid(request, against: socketRequestSchema),
+        let command = try? SocketRequest(json: request)
       else {
         self.respond(
-          ["ok": false, "error": "Invalid socket request", "code": "rejected"], fd: fd, token: token)
+          .init(ok: false, error: "Invalid socket request", code: .rejected), fd: fd, token: token)
         return
       }
       // A queued request may expire while MainActor is busy; never start it late.
       do { try deadline.check() } catch {
         self.respond(
-          ["ok": false, "error": "Command timed out before dispatch", "code": "unavailable"],
+          .init(ok: false, error: "Command timed out before dispatch", code: .unavailable),
           fd: fd, token: token)
         return
       }
-      handler(request, deadline) { [weak self] reply in self?.respond(reply, fd: fd, token: token) }
+      handler(command, deadline) { [weak self] reply in self?.respond(reply, fd: fd, token: token) }
     }
   }
 
-  @MainActor private func respond(_ reply: [String: Any], fd: Int32, token: UUID) {
+  @MainActor private func respond(_ reply: SocketReply, fd: Int32, token: UUID) {
     var bytes =
-      PlatformContract.valid(reply, against: socketReplySchema)
-      ? try? JSONSerialization.data(withJSONObject: reply) : nil
+      PlatformContract.valid(reply.json, against: socketReplySchema)
+      ? try? JSONSerialization.data(withJSONObject: reply.json) : nil
     if bytes == nil || bytes!.count > 16 * 1024 * 1024 {
       bytes = Data(
         #"{"ok":false,"error":"Invalid or oversized response. Outcome unknown; run slop get before another edit."}"#

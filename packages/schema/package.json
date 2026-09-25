@@ -6,6 +6,7 @@
     ".": "./src/index.ts",
     "./manifest": "./src/manifest.ts",
     "./runtime": "./src/runtime.ts",
+    "./socket": "./src/socket.ts",
     "./bridge": "./src/bridge.ts",
     "./validation": "./src/validation.ts"
   },

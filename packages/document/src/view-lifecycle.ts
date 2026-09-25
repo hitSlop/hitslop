@@ -67,5 +67,5 @@ export async function mountViewLifecycle<N extends ObjectNode>(options: {
       return capture.begin(token, "export");
     },
     captureRestore: (token: string) => capture.restore(token),
-  };
+  } satisfies import("./runtime-handle").SlopRuntimeHandle;
 }

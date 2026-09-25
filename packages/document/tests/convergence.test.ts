@@ -1,3 +1,4 @@
+// Guards persisted update ancestry, duplicate delivery, move/edit identity and invalid-import isolation.
 import { expect, test } from "bun:test";
 import { LoroDoc, type LoroMap, type ContainerID } from "loro-crdt";
 import { Document } from "../src/document";

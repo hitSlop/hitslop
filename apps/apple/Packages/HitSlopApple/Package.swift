@@ -39,7 +39,6 @@ let package = Package(
       dependencies: [
         "HitSlopCore", "HitSlopWasm",
       ],
-      resources: [.copy("Resources/host-bridge.js")],
       linkerSettings: [
         .linkedFramework("WebKit"), .linkedFramework("CoreServices", .when(platforms: [.macOS])),
       ]

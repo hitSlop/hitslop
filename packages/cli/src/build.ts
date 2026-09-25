@@ -128,7 +128,6 @@ export async function buildProjectInBun(source: string, destination?: string) {
     await writeFile(join(stage, "manifest.json"), JSON.stringify(manifest, null, 2));
     await writeFile(join(stage, "state.schema.json"), JSON.stringify(descriptor, null, 2));
     await writeFile(join(stage, "initial.json"), JSON.stringify(initial, null, 2));
-    await writeFile(join(stage, "assets/theme.css"), theme.css);
     await writeFile(join(stage, "assets/theme.json"), JSON.stringify(theme.defaults));
     await writeFile(
       join(stage, "assets/runtime.json"),
@@ -142,7 +141,7 @@ export async function buildProjectInBun(source: string, destination?: string) {
     );
     await writeFile(
       join(stage, "app.html"),
-      '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>hitSlop</title><link rel="stylesheet" href="/assets/theme.css"><link rel="stylesheet" href="/assets/main.css"></head><body><script type="module" src="/assets/main.js"></script></body></html>',
+      '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>hitSlop</title><link rel="stylesheet" href="/assets/main.css"></head><body><script type="module" src="/assets/main.js"></script></body></html>',
     );
     await mkdir(join(stage, ".agents/skills/hitslop-document"), { recursive: true });
     await cp(

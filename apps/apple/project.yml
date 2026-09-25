@@ -89,6 +89,10 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         OTHER_LDFLAGS: $(inherited) -ObjC
         SKIP_INSTALL: NO
+      configs:
+        Release:
+          DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+          ENABLE_DEBUG_DYLIB: NO
 schemes:
   hitSlop-macOS:
     build:

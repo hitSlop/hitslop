@@ -11,34 +11,35 @@ import HitSlopCore
   )
     async throws -> Data
   {
-    let mutation = ["apply", "batch", "compact", "theme.set", "theme.reset", "attachments.put"].contains(method)
     try SlopLocalDocument.requireLocal(url)
     let package = try SlopPackage(rootURL: url)
     let root = package.rootURL
-    if method == "schema" {
+    guard let command = SocketRequest.Method(rawValue: method) else { throw failure("Invalid document command") }
+    if command == .schema {
       return try SlopFile.read(package.dataSchemaURL, within: root, maximumBytes: 1_048_576)
     }
-    let masters = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(
-      ".hitslop/templates"
-    ).path
-    guard !root.path.hasPrefix(masters + "/") else {
+    let templatesRoot = ProcessInfo.processInfo.environment["HITSLOP_TEMPLATES_ROOT"]
+      .map { URL(fileURLWithPath: $0) } ?? SlopTemplateLocation.defaultTemplatesRoot
+    guard !SlopTemplateLocation.isManagedTemplatePackage(root),
+      !SlopTemplateLocation.isManagedTemplatePackage(root, templatesRoot: templatesRoot) else {
       throw failure("Create a writable copy of this template first")
     }
-    var request: [String: Any] = [
+    var input: [String: Any] = [
       "id": UUID().uuidString, "method": method, "documentPath": root.path,
     ]
-    if let themeValues { request["values"] = try JSONSerialization.jsonObject(with: themeValues) }
-    if let themeToken { request["token"] = themeToken }
-    if let operation { request["op"] = try JSONSerialization.jsonObject(with: operation) }
-    if let operations { request["ops"] = try JSONSerialization.jsonObject(with: operations) }
-    if let attachmentBytes { request["bytes"] = attachmentBytes.base64EncodedString() }
-    if let attachmentID { request["attachmentID"] = attachmentID }
+    if let themeValues { input["values"] = try JSONSerialization.jsonObject(with: themeValues) }
+    if let themeToken { input["token"] = themeToken }
+    if let operation { input["op"] = try JSONSerialization.jsonObject(with: operation) }
+    if let operations { input["ops"] = try JSONSerialization.jsonObject(with: operations) }
+    if let attachmentBytes { input["bytes"] = attachmentBytes.base64EncodedString() }
+    if let attachmentID { input["attachmentID"] = attachmentID }
     // Validate before acquiring ownership or creating any document state.
-    var validation = request
-    if mutation { validation["epoch"] = "new-session" }
-    guard PlatformContract.valid(validation, against: socketRequestSchema) else {
+    // hello supplies the real epoch before any epoch-requiring request is dispatched.
+    if command.requiresEpoch { input["epoch"] = "new-session" }
+    guard PlatformContract.valid(input, against: socketRequestSchema) else {
       throw failure("Invalid document command")
     }
+    var request = try SocketRequest(json: input)
     var engine: WasmSession?
     var socket: String?
     do { engine = try WasmSession(package: package, headless: true) } catch {
@@ -50,28 +51,26 @@ import HitSlopCore
         engine.load()
         try await engine.waitUntilReady()
       }
-      if mutation {
+      if request.requiresEpoch {
         do {
-          let hello: [String: Any] = [
-            "id": UUID().uuidString, "method": "hello", "documentPath": root.path,
-          ]
+          let hello = SocketRequest.hello(.init(id: UUID().uuidString, documentPath: root.path))
           let opening = try await send(hello, engine: engine, socket: socket)
-          guard opening["ok"] as? Bool == true, let current = opening["epoch"] as? String else {
-            throw failure(opening["error"] as? String ?? "Cannot open session")
+          guard opening.ok, let current = opening.epoch else {
+            throw failure(opening.error ?? "Cannot open session")
           }
-          request["epoch"] = current
+          request = request.with(epoch: current)
         }
       }
-      let reply: [String: Any]
+      let reply: SocketReply
       do { reply = try await send(request, engine: engine, socket: socket) } catch {
-        throw failure(error.localizedDescription + (mutation ? retryHint(nil) : ""))
+        throw failure(error.localizedDescription + (request.requiresEpoch ? retryHint(nil) : ""))
       }
-      guard reply["ok"] as? Bool == true else {
+      guard reply.ok else {
         throw failure(
-          (reply["error"] as? String ?? "Document operation failed")
-            + (mutation ? retryHint(reply) : ""))
+          (reply.error ?? "Document operation failed")
+            + (request.requiresEpoch ? retryHint(reply) : ""))
       }
-      guard let state = reply["state"] else { throw failure("Missing document state in response") }
+      guard let state = reply.state else { throw failure("Missing document state in response") }
       let data = try JSONSerialization.data(
         withJSONObject: state, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
       try await engine?.close()
@@ -83,11 +82,11 @@ import HitSlopCore
   }
 
   /// Coded refusals were never applied. Only transport loss or "failed" leaves the outcome unknown.
-  private static func retryHint(_ reply: [String: Any]?) -> String {
-    switch reply?["code"] as? String {
-    case "rejected", "unavailable": return "\nNot applied."
-    case "session_changed", "closing": return "\nNot applied. Run slop get before issuing another edit."
-    default: return "\nOutcome unknown. Run slop get before issuing another edit."
+  private static func retryHint(_ reply: SocketReply?) -> String {
+    switch reply?.code {
+    case .rejected, .unavailable: return "\nNot applied."
+    case .sessionChanged, .closing: return "\nNot applied. Run slop get before issuing another edit."
+    case .failed, nil: return "\nOutcome unknown. Run slop get before issuing another edit."
     }
   }
 
@@ -98,11 +97,11 @@ import HitSlopCore
       let bytes = try SlopFile.read(url, within: root, maximumBytes: 16384)
       guard bytes.count <= 16384,
         let value = try JSONSerialization.jsonObject(with: bytes) as? [String: Any],
-        PlatformContract.valid(value, against: socketDiscoverySchema),
-        value["documentPath"] as? String == root.path,
-        let socket = value["socket"] as? String
+        PlatformContract.valid(value, against: socketDiscoverySchema)
       else { throw failure("Invalid live session discovery") }
-      return socket
+      let discovery = try SocketDiscovery(json: value)
+      guard discovery.documentPath == root.path else { throw failure("Invalid live session discovery") }
+      return discovery.socket
     } catch {
       throw failure(
         "Writer is busy without a ready session; retry later. \(error.localizedDescription)")
@@ -111,40 +110,37 @@ import HitSlopCore
 
   public static func exportLive(root: URL, socket: String, format: String, output: URL) async throws
   {
-    let base: [String: Any] = [
-      "id": UUID().uuidString, "documentPath": root.path, "method": "hello",
-    ]
+    let base = SocketRequest.hello(.init(id: UUID().uuidString, documentPath: root.path))
     let hello = try await send(base, engine: nil, socket: socket)
-    guard hello["ok"] as? Bool == true, let epoch = hello["epoch"] as? String else {
-      throw failure(hello["error"] as? String ?? "Cannot open session")
+    guard hello.ok, let epoch = hello.epoch else {
+      throw failure(hello.error ?? "Cannot open session")
     }
-    let request: [String: Any] = [
-      "id": UUID().uuidString, "documentPath": root.path, "method": "export", "epoch": epoch,
-      "format": format, "output": output.path,
-    ]
-    let reply: [String: Any]
+    guard let format = SocketExportRequestFormat(rawValue: format) else { throw failure("Invalid export format") }
+    let request = SocketRequest.export(.init(
+      id: UUID().uuidString, documentPath: root.path, epoch: epoch, format: format, output: output.path))
+    let reply: SocketReply
     do { reply = try await send(request, engine: nil, socket: socket) } catch {
       throw failure(
         "Export outcome may be unknown; inspect the destination before retrying. \(error.localizedDescription)"
       )
     }
-    guard reply["ok"] as? Bool == true, reply["output"] as? String == output.path else {
-      throw failure(reply["error"] as? String ?? "Invalid export response")
+    guard reply.ok, reply.output == output.path else {
+      throw failure(reply.error ?? "Invalid export response")
     }
   }
 
-  private static func send(_ request: [String: Any], engine: WasmSession?, socket: String?)
-    async throws -> [String: Any]
+  private static func send(_ request: SocketRequest, engine: WasmSession?, socket: String?)
+    async throws -> SocketReply
   {
-    guard PlatformContract.valid(request, against: socketRequestSchema) else {
+    guard PlatformContract.valid(request.json, against: socketRequestSchema) else {
       throw failure("Invalid socket request")
     }
     let object: [String: Any]
     if let engine {
-      object = await engine.request(request)
+      object = await engine.request(request).json
     } else {
       guard let socket else { throw failure("Missing live session") }
-      let bytes = try JSONSerialization.data(withJSONObject: request)
+      let bytes = try JSONSerialization.data(withJSONObject: request.json)
       let result: Data = try await withCheckedThrowingContinuation { continuation in
         DispatchQueue.global(qos: .userInitiated).async {
           continuation.resume(with: Result { try SocketClient.call(path: socket, request: bytes) })
@@ -158,7 +154,7 @@ import HitSlopCore
     guard PlatformContract.valid(object, against: socketReplySchema) else {
       throw failure("Invalid socket response")
     }
-    return object
+    return try SocketReply(json: object)
   }
 }
 enum SocketClient {

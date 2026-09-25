@@ -19,47 +19,27 @@ import HitSlopRuntime
         try await session.waitUntilReady()
         try await body(session)
     } catch {
-        try await session.closeAndWait()
+        try await session.finish()
         throw error
     }
-    try await session.closeAndWait()
+    try await session.finish()
 }
 
 extension LoroClientTests {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_PRESENTATION_FIXTURES"] != nil))
-    @MainActor func presentationStageFillsWindowAndRestoresAfterCapture() async throws {
+    @MainActor func captureRestoresAnOperableEditor() async throws {
         for kind in ["standard", "ellipse", "washer"] {
             try await withPresentationSession(kind) { (session: SlopRuntimeSession) async throws in
                 let view = session.webView
-                let fillsWindow = """
-                ['html','body','[data-hitslop-root]','.editor'].every(selector => {
-                    const element = document.querySelector(selector), rect = element.getBoundingClientRect();
-                    return rect.width === innerWidth && rect.height === innerHeight;
-                }) && getComputedStyle(document.body).margin === '0px'
-                """
-                #expect(try await view.evaluateJavaScript(fillsWindow) as? Bool == true)
-                let background = kind == "standard" ? "rgb(240, 230, 220)" : "rgba(0, 0, 0, 0)"
-                #expect(try await view.evaluateJavaScript(
-                    "['html','body'].every(s => getComputedStyle(document.querySelector(s)).backgroundColor === '\(background)')"
-                ) as? Bool == true)
-                if kind != "washer" {
-                    view.setFrameSize(kind == "ellipse" ? NSSize(width: 400, height: 400) : NSSize(width: 480, height: 400))
-                    #expect(try await view.callAsyncJavaScript(
-                        "await new Promise(r => setTimeout(r, 0)); return \(fillsWindow)",
-                        arguments: [:], in: nil, contentWorld: .page) as? Bool == true)
-                }
+                let data = try await SlopRenderer.exportPNGData(session: session)
+                #expect(NSImage(data: data) != nil)
                 #expect(try await view.callAsyncJavaScript("""
-                    const {captureController} = await import('/__runtime__/index.js');
-                    const capture = captureController();
-                    try {
-                        const bounds = await capture.begin('layout-test', 'export');
-                        return bounds.width === innerWidth && bounds.height === 240 &&
-                            document.querySelector('.export').getBoundingClientRect().width === 320 &&
-                            getComputedStyle(document.body).height !== innerHeight + 'px' &&
-                            getComputedStyle(document.body).margin === '0px';
-                    } finally { await capture.restore('layout-test'); }
+                    const button = document.querySelector('.editor button'), before = button.textContent;
+                    button.click();
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                    return button.isConnected && !button.disabled && button.textContent !== before &&
+                        !document.documentElement.hasAttribute('data-slop-capture');
                     """, arguments: [:], in: nil, contentWorld: .page) as? Bool == true)
-                #expect(try await view.evaluateJavaScript(fillsWindow) as? Bool == true)
             }
         }
     }
@@ -146,6 +126,11 @@ extension LoroClientTests {
         #expect(image.pixelsHigh == 512)
         #expect((image.colorAt(x: 256, y: 256)?.alphaComponent ?? 1) == 0)
         #expect((image.colorAt(x: 256, y: 80)?.alphaComponent ?? 0) > 0.99)
+        // The fixture's opaque ring is red; preserve that color across native profiles.
+        let ring = try #require(image.colorAt(x: 256, y: 80)?.usingColorSpace(.sRGB))
+        #expect(ring.redComponent > 0.8)
+        #expect(ring.redComponent > ring.greenComponent + 0.5)
+        #expect(ring.redComponent > ring.blueComponent + 0.5)
         #expect((image.colorAt(x: 256, y: 431)?.alphaComponent ?? 0) > 0.99)
         #expect((image.colorAt(x: 256, y: 30)?.alphaComponent ?? 1) == 0)
     }

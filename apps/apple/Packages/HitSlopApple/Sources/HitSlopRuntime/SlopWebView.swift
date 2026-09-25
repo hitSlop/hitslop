@@ -10,6 +10,7 @@ import WebKit
   func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue)
   func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error)
   func runtimeSession(_ session: SlopRuntimeSession, saveStatus: WasmSaveStatus)
+  func runtimeSession(_ session: SlopRuntimeSession, storageFailure: SlopFailureContext)
 }
 extension SlopRuntimeSessionDelegate {
   public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {}
@@ -20,12 +21,7 @@ extension SlopRuntimeSessionDelegate {
   public func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue) {}
   public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {}
   public func runtimeSession(_ session: SlopRuntimeSession, saveStatus: WasmSaveStatus) {}
-}
-public struct SlopRuntimeTeardownError: LocalizedError {
-  public let underlying: Error
-  public var errorDescription: String? {
-    "Runtime teardown failed: \(underlying.localizedDescription)"
-  }
+  public func runtimeSession(_ session: SlopRuntimeSession, storageFailure: SlopFailureContext) {}
 }
 @MainActor public final class SlopRuntimeSession {
   public let package: SlopPackage
@@ -38,7 +34,8 @@ public struct SlopRuntimeTeardownError: LocalizedError {
     packageURL: URL, renderTargetsEnabled: Bool = false, purpose: SlopRuntimePurpose = .interactive
   ) throws {
     try SlopLocalDocument.requireLocal(packageURL)
-    let engine = try WasmSession(package: SlopPackage(rootURL: packageURL))
+    let engine = try WasmSession(
+      package: SlopPackage(rootURL: packageURL), storage: purpose.storageMode)
     self.init(engine: engine, renderTargetsEnabled: renderTargetsEnabled, purpose: purpose)
   }
   private init(engine: WasmSession, renderTargetsEnabled: Bool, purpose: SlopRuntimePurpose) {
@@ -56,6 +53,10 @@ public struct SlopRuntimeTeardownError: LocalizedError {
       guard let self else { return }
       self.delegate?.runtimeSessionDidBecomeReady(self)
     }
+    engine.onStorageFailure = { [weak self] diagnostic in
+      guard let self else { return }
+      self.delegate?.runtimeSession(self, storageFailure: diagnostic)
+    }
     engine.onStatus = { [weak self] status in
       guard let self else { return }
       self.delegate?.runtimeSession(self, saveStatus: status)
@@ -72,7 +73,8 @@ public struct SlopRuntimeTeardownError: LocalizedError {
     }
     engine.onError = { [weak self] message in
       guard let self else { return }
-      self.delegate?.runtimeSession(self, didFail: SlopPackageError.invalid(message))
+      self.delegate?.runtimeSession(self, didFail: SlopDiagnosticError(
+        SlopPackageError.invalid(message), diagnostic: .init(self.engine.failureClassification, reason: self.engine.failureReason ?? .startup)))
     }
     if renderTargetsEnabled {
       webView.configuration.userContentController.addUserScript(
@@ -84,7 +86,7 @@ public struct SlopRuntimeTeardownError: LocalizedError {
   public static func open(
     packageURL: URL, renderTargetsEnabled: Bool = false, purpose: SlopRuntimePurpose = .interactive
   ) async throws -> SlopRuntimeSession {
-    let engine = try await WasmSession.open(packageURL: packageURL)
+    let engine = try await WasmSession.open(packageURL: packageURL, storage: purpose.storageMode)
     return SlopRuntimeSession(
       engine: engine, renderTargetsEnabled: renderTargetsEnabled, purpose: purpose)
   }
@@ -94,8 +96,7 @@ public struct SlopRuntimeTeardownError: LocalizedError {
   }
   public func flush() async throws { try await engine.flush() }
   public func finish() async throws { try await engine.close() }
-  public func closeAndWait() async throws { try await engine.close() }
-  public func close() { Task { try? await closeAndWait() } }
+  public func close() { Task { try? await finish() } }
   public func reopenSavedDocument() async throws { try await engine.reopenSavedDocument() }
   /// Warms WebKit and the bundled runtime once so the first open avoids cold startup.
   public static func prewarm() { RuntimePrewarm.start() }

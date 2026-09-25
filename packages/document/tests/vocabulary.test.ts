@@ -1,8 +1,8 @@
+// Guards descriptor interpretation, supported value kinds, identity-preserving edits and persisted reopen.
 import { describe, expect, test } from "bun:test";
 import { LoroDoc } from "loro-crdt";
 import { Document } from "../src/document";
 import { defineDocument, s, OperationRejectedError } from "../src/schema";
-import { project } from "../src/operations";
 import { bindText } from "../src/bind-text";
 import { bindValue } from "../src/bind-value";
 import { MemoryStore } from "../src/memory";
@@ -17,10 +17,18 @@ const schema = defineDocument({
   cups: s.counter(),
   checkins: s.list(s.string()),
   pixels: s.list(s.enum(["off", "red", "blue"])),
-  cells: s.record(s.object({ raw: s.string(), style: s.optional(s.object({ bold: s.boolean() })) })),
+  cells: s.record(
+    s.object({ raw: s.string(), style: s.optional(s.object({ bold: s.boolean() })) }),
+  ),
   done: s.record(s.boolean()),
   cover: s.optional(s.object({ caption: s.text(), tags: s.list(s.string()) })),
-  tasks: s.list(s.object({ text: s.text(), lane: s.enum(["todo", "doing", "done"]), meta: s.object({ points: s.integer() }) })),
+  tasks: s.list(
+    s.object({
+      text: s.text(),
+      lane: s.enum(["todo", "doing", "done"]),
+      meta: s.object({ points: s.integer() }),
+    }),
+  ),
   outline: s.tree(s.object({ label: s.text(), open: s.boolean() })),
 });
 type Root = typeof schema.fields.node;
@@ -42,10 +50,13 @@ const initial = {
   outline: [{ label: "Root", open: true, children: [{ label: "Child", open: false }] }],
 };
 const open = (store = new MemoryStore()) => Document.open(schema, store, initial);
-/** The incrementally patched snapshot must equal a fresh full projection. */
-function consistent(doc: Document<Root>) {
-  const fresh = project(schema.descriptor.root, (doc as any).engine.getMap("data"));
-  expect((doc as any).snapshot).toEqual(fresh);
+/** Public exported bytes must reopen to the same visible state. */
+async function consistent(doc: Document<Root>) {
+  const store = new MemoryStore();
+  await store.checkpoint("0", doc.exportSnapshot(), doc.key);
+  const reopened = await open(store);
+  expect(reopened.current).toEqual(doc.current);
+  await reopened.close();
 }
 
 describe("vocabulary", () => {
@@ -63,7 +74,11 @@ describe("vocabulary", () => {
       done: { a: true },
     });
     expect(doc.current.cover).toBeUndefined();
-    expect(outline[0]).toMatchObject({ label: "Root", open: true, children: [{ label: "Child", open: false, children: [] }] });
+    expect(outline[0]).toMatchObject({
+      label: "Root",
+      open: true,
+      children: [{ label: "Child", open: false, children: [] }],
+    });
     expect(typeof outline[0]!.$id).toBe("string");
     await doc.close();
     const reopened = await open(store);
@@ -103,22 +118,30 @@ describe("vocabulary", () => {
     f.cover.tags.insert("y");
     f.title.splice(4, 0, "!");
     f.notes.mark({ start: 0, end: 5 }, "bold", true);
-    expect(() => f.notes.mark({ start: 0, end: 5 }, "italic" as any, true)).toThrow("Unknown rich text mark");
+    expect(() => f.notes.mark({ start: 0, end: 5 }, "italic" as any, true)).toThrow(
+      "Unknown rich text mark",
+    );
     expect(() => f.title.splice(99, 0, "x")).toThrow("outside");
     const c = doc.current;
     expect(c.bpm).toBe(90);
     expect(c.cups).toBe(1);
     expect(c.checkins).toEqual(["2026-09-01", "2026-08-31"]);
     expect(c.pixels).toEqual(["blue", "off", "red", "off", "red"]);
-    expect<unknown>(c.cells).toEqual({ A1: { raw: "2", style: { bold: true } }, B2: { raw: "=A1" } });
+    expect<unknown>(c.cells).toEqual({
+      A1: { raw: "2", style: { bold: true } },
+      B2: { raw: "=A1" },
+    });
     expect<unknown>(c.done).toEqual({ a: false, b: false });
     expect<unknown>(c.cover).toEqual({ caption: "My Cover", tags: ["x", "y"] });
     expect(c.title).toBe("Plan!");
-    expect(c.notes.delta).toEqual([{ insert: "Hello", attributes: { bold: true } }, { insert: " world" }]);
+    expect(c.notes.delta).toEqual([
+      { insert: "Hello", attributes: { bold: true } },
+      { insert: " world" },
+    ]);
     f.cover.clear();
     expect(doc.current.cover).toBeUndefined();
     expect(() => f.cover.caption.replace("gone")).toThrow("Absent value");
-    consistent(doc);
+    await consistent(doc);
     await doc.close();
   });
 
@@ -126,26 +149,35 @@ describe("vocabulary", () => {
     const doc = await open();
     const root = doc.current.outline[0]!;
     const child = root.children[0]!;
-    const { id: second } = doc.fields.outline.insert({ label: "Second", open: false, children: [{ label: "Nested", open: true }] });
+    const { id: second } = doc.fields.outline.insert({
+      label: "Second",
+      open: false,
+      children: [{ label: "Nested", open: true }],
+    });
     doc.fields.outline.item(second).label.replace("Second!");
     doc.fields.outline.move(second, { before: root.$id });
     expect(doc.current.outline.map((n) => n.label)).toEqual(["Second!", "Root"]);
     doc.fields.outline.move(child.$id, { parent: second });
     expect(doc.current.outline[0]!.children.map((n) => n.label)).toEqual(["Nested", "Child"]);
-    expect(() => doc.fields.outline.move(second, { parent: child.$id })).toThrow(OperationRejectedError);
+    expect(() => doc.fields.outline.move(second, { parent: child.$id })).toThrow(
+      OperationRejectedError,
+    );
     doc.fields.outline.move(child.$id, { parent: null });
     expect(doc.current.outline.map((n) => n.label)).toEqual(["Second!", "Root", "Child"]);
     doc.fields.outline.remove(second);
     expect(doc.current.outline.map((n) => n.label)).toEqual(["Root", "Child"]);
     expect(() => doc.fields.outline.item(second).open.set(true)).toThrow("Unknown tree node");
-    consistent(doc);
+    await consistent(doc);
     await doc.close();
   });
 
   test("object rows insert relative to a sibling", async () => {
     const doc = await open();
     const [one, two] = doc.current.tasks;
-    const { id } = doc.fields.tasks.insert({ text: "Between", lane: "todo", meta: { points: 3 } }, { after: one!.$id });
+    const { id } = doc.fields.tasks.insert(
+      { text: "Between", lane: "todo", meta: { points: 3 } },
+      { after: one!.$id },
+    );
     expect(doc.current.tasks.map((t) => t.$id)).toEqual([one!.$id, id, two!.$id]);
     await doc.close();
   });
@@ -160,11 +192,17 @@ describe("snapshot handles", () => {
     doc.at(doc.current.cells.A1!).raw.set("A");
     doc.at(doc.current.outline[0]!.children[0]!).open.set(true);
     doc.at(doc.current).bpm.set(100);
-    doc.change((tx) => {
-      for (const t of doc.current.tasks) tx.at(t).lane.set("todo");
-    }, { message: "Reset lanes" });
+    doc.change(
+      (tx) => {
+        for (const t of doc.current.tasks) tx.at(t).lane.set("todo");
+      },
+      { message: "Reset lanes" },
+    );
     const c = doc.current;
-    expect(c.tasks.map((t) => [t.lane, t.meta.points])).toEqual([["todo", 1], ["todo", 8]]);
+    expect(c.tasks.map((t) => [t.lane, t.meta.points])).toEqual([
+      ["todo", 1],
+      ["todo", 8],
+    ]);
     expect(c.cells.A1!.raw).toBe("A");
     expect(c.outline[0]!.children[0]!.open).toBe(true);
     expect(c.bpm).toBe(100);
@@ -193,21 +231,34 @@ describe("snapshot handles", () => {
     expect(after.checkins).toBe(before.checkins);
     doc.fields.cells.entry("A1").raw.set("changed");
     expect(doc.current.cells.B2).toBe(before.cells.B2);
-    consistent(doc);
+    await consistent(doc);
     await doc.close();
   });
 
-  test("random edits keep the incremental snapshot equal to a full projection", async () => {
+  test("seeded edits match independent text/counter/record outcomes and reopen", async () => {
     const doc = await open();
+    const model = {
+      title: initial.title,
+      cups: initial.cups,
+      cells: structuredClone(initial.cells) as Record<
+        string,
+        { raw: string; style?: { bold: boolean } }
+      >,
+    };
     let seed = 7;
-    const random = (n: number) => ((seed = (seed * 16807) % 2147483647) % n);
+    const random = (n: number) => (seed = (seed * 16807) % 2147483647) % n;
     const f = doc.fields;
     const actions = [
-      () => f.title.splice(random(doc.current.title.length + 1), 0, "x"),
+      () => {
+        const at = random(model.title.length + 1);
+        f.title.splice(at, 0, "x");
+        model.title = model.title.slice(0, at) + "x" + model.title.slice(at);
+      },
       () => f.tasks.insert({ text: `t${random(99)}`, lane: "todo", meta: { points: random(5) } }),
       () => {
         const rows = doc.current.tasks;
-        if (rows.length > 1) f.tasks.move(rows[random(rows.length)]!.$id, { before: rows[random(rows.length)]!.$id });
+        if (rows.length > 1)
+          f.tasks.move(rows[random(rows.length)]!.$id, { before: rows[random(rows.length)]!.$id });
       },
       () => {
         const rows = doc.current.tasks;
@@ -217,14 +268,31 @@ describe("snapshot handles", () => {
         const rows = doc.current.tasks;
         if (rows.length > 2) f.tasks.remove(rows[random(rows.length)]!.$id);
       },
-      () => f.cells.put(`K${random(6)}`, { raw: String(random(9)) }),
       () => {
-        const keys = Object.keys(doc.current.cells);
-        if (keys.length) f.cells.delete(keys[random(keys.length)]!);
+        const key = `K${random(6)}`,
+          raw = String(random(9));
+        f.cells.put(key, { raw });
+        model.cells[key] = { raw };
+      },
+      () => {
+        const keys = Object.keys(model.cells);
+        if (keys.length) {
+          const key = keys[random(keys.length)]!;
+          f.cells.delete(key);
+          delete model.cells[key];
+        }
       },
       () => f.pixels.set(random(4), (["off", "red", "blue"] as const)[random(3)]!),
-      () => f.cups.increment(random(3)),
-      () => f.outline.insert({ label: "n", open: false }, { parent: doc.current.outline[0]?.$id ?? null }),
+      () => {
+        const by = random(3);
+        f.cups.increment(by);
+        model.cups += by;
+      },
+      () =>
+        f.outline.insert(
+          { label: "n", open: false },
+          { parent: doc.current.outline[0]?.$id ?? null },
+        ),
       () =>
         doc.change((tx) => {
           tx.fields.bpm.set(40 + random(100));
@@ -237,9 +305,12 @@ describe("snapshot handles", () => {
       } catch (error) {
         if (!(error instanceof OperationRejectedError)) throw error;
       }
-      if (i % 25 === 0) consistent(doc);
+      expect(doc.current.title).toBe(model.title);
+      expect(doc.current.cups).toBe(model.cups);
+      expect<unknown>(doc.current.cells).toEqual(model.cells);
+      if (i % 25 === 0) await consistent(doc);
     }
-    consistent(doc);
+    await consistent(doc);
     await doc.close();
   });
 });
@@ -251,14 +322,14 @@ describe("collaboration", () => {
     const ib = new MemoryStore();
     await copyStore(ia, ib);
     const b = await open(ib);
-    const exchange = () => {
+    const exchange = async () => {
       const aa = a.exportUpdates(b.version());
       const bb = b.exportUpdates(a.version());
       a.importUpdates(bb);
       b.importUpdates(aa);
       expect(a.current).toEqual(b.current);
-      consistent(a);
-      consistent(b);
+      await consistent(a);
+      await consistent(b);
     };
     return { a, b, exchange };
   }
@@ -269,7 +340,7 @@ describe("collaboration", () => {
     a.fields.cells.put("Z1", { raw: "a", style: { bold: true } });
     b.fields.cells.put("Z1", { raw: "b" });
     b.fields.cells.entry("Z1").style.set({ bold: false });
-    exchange();
+    await exchange();
     // One shared container per key: both sides' writes land in it rather than one subtree vanishing.
     expect(a.current.cover!.tags.slice().sort()).toEqual(["a", "b"]);
     expect(a.current.cells.Z1!.style).toBeDefined();
@@ -284,13 +355,14 @@ describe("collaboration", () => {
     b.fields.checkins.insert("from-b");
     const root = a.current.outline[0]!;
     const { id: other } = a.fields.outline.insert({ label: "Other", open: false });
-    exchange();
+    await exchange();
     a.fields.outline.move(other, { parent: root.$id });
     b.fields.outline.move(root.$id, { parent: other });
-    exchange();
+    await exchange();
     expect(a.current.cups).toBe(9);
     expect(a.current.checkins.slice().sort()).toEqual(["2026-09-01", "from-a", "from-b"]);
-    const flat = (nodes: readonly any[]): string[] => nodes.flatMap((n) => [n.$id, ...flat(n.children)]);
+    const flat = (nodes: readonly any[]): string[] =>
+      nodes.flatMap((n) => [n.$id, ...flat(n.children)]);
     expect(new Set(flat(a.current.outline)).size).toBe(flat(a.current.outline).length);
     expect(a.current.outline.length).toBeGreaterThan(0);
     await a.close();

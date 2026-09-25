@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import SQLite3
 
 public enum SlopDuplicator {
@@ -34,7 +35,7 @@ public enum SlopDuplicator {
       if fileManager.fileExists(atPath: sourceDB.path) {
         let state = destination.appendingPathComponent("state")
         try fileManager.createDirectory(at: state, withIntermediateDirectories: true)
-        try backup(sourceDB, to: state.appendingPathComponent("document.sqlite"))
+        try backup(source.rootURL, to: state.appendingPathComponent("document.sqlite"))
       }
       try makeWritable(destination)
       let attachments = try SlopAttachments.list(in: source.rootURL)
@@ -55,14 +56,22 @@ public enum SlopDuplicator {
     }
   }
 
-  private static func backup(_ source: URL, to destination: URL) throws {
+  // A source validated during package opening can be replaced before this I/O.
+  static func backup(_ root: URL, to destination: URL) throws {
+    // Foundation retains the system /var alias. Resolve only the package root:
+    // NOFOLLOW must still reject replaced state directories and database files.
+    guard let resolved = Darwin.realpath(root.path, nil) else {
+      throw SlopPackageError.invalid("Cannot resolve document for snapshot")
+    }
+    let sourcePath = String(cString: resolved) + "/state/document.sqlite"
+    free(resolved)
     var input: OpaquePointer?
     var output: OpaquePointer?
     defer {
       sqlite3_close(input)
       sqlite3_close(output)
     }
-    guard sqlite3_open_v2(source.path, &input, SQLITE_OPEN_READONLY, nil) == SQLITE_OK,
+    guard sqlite3_open_v2(sourcePath, &input, SQLITE_OPEN_READONLY | SQLITE_OPEN_NOFOLLOW, nil) == SQLITE_OK,
       sqlite3_open_v2(destination.path, &output, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil)
         == SQLITE_OK
     else { throw SlopPackageError.invalid("Cannot snapshot document") }

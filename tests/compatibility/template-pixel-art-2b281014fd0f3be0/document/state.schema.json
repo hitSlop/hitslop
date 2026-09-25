@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "root": {
+    "kind": "object",
+    "properties": {
+      "pixels": {
+        "kind": "list",
+        "item": {
+          "kind": "string"
+        }
+      },
+      "paletteId": {
+        "kind": "string"
+      },
+      "selectedColor": {
+        "kind": "string"
+      }
+    }
+  }
+}

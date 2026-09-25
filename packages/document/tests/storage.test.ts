@@ -1,3 +1,4 @@
+// Guards acknowledged-write durability, failed-close ownership, reply-loss recovery and queued writes.
 import { MemoryStore } from "../src/memory";
 import { describe, test, expect } from "bun:test";
 import { mkdtemp, rm, mkdir, symlink, rename } from "node:fs/promises";
@@ -5,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineDocument, s, fromDescriptor, schemaKey } from "../src/schema";
 import { Document } from "../src/document";
-import { SQLiteStore } from "../src/sqlite";
+import { SQLiteStore } from "../test-support/sqlite";
 import { Session } from "../src/session";
 const schema = defineDocument({
   title: s.text(),
@@ -256,5 +257,30 @@ test("edits arriving during append and checkpoint remain queued and survive reop
   await doc.close();
   const reopened = await Document.open(schema, io, { title: "Unused", flag: false });
   expect(reopened.current).toEqual(expected);
+  await reopened.close();
+});
+
+test("valid shallow checkpoints remain readable without enabling automatic pruning", async () => {
+  const { LoroDoc } = await import("loro-crdt");
+  const setting = defineDocument({ volume: s.number({ min: 0, max: 1 }) });
+  const source = await Document.open(setting, new MemoryStore(), { volume: 0 });
+  source.fields.volume.set(0.9);
+  const engine = new LoroDoc();
+  engine.import(source.exportSnapshot());
+  const checkpoint = engine.export({
+    mode: "shallow-snapshot",
+    frontiers: engine.oplogFrontiers(),
+  });
+  const store = new MemoryStore();
+  await store.checkpoint("0", checkpoint, source.key);
+  await source.close();
+  engine.free();
+  const doc = await Document.open(setting, store, { volume: 0 });
+  expect(doc.current.volume).toBe(0.9);
+  doc.fields.volume.set(0.6);
+  await doc.compact();
+  await doc.close();
+  const reopened = await Document.open(setting, store, { volume: 0 });
+  expect(reopened.current.volume).toBe(0.6);
   await reopened.close();
 });

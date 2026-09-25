@@ -1,3 +1,4 @@
+// Guards persisted token overrides, failed writes, invalid values and session ordering.
 import { test, expect } from "bun:test";
 import { ThemeController } from "../src/theme-runtime";
 import { defineTheme } from "../src/theme";

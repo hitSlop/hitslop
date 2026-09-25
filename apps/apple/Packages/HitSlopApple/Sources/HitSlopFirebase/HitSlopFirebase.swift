@@ -6,17 +6,18 @@ import HitSlopCore
 
 public enum HitSlopFirebase {
     public static func configure() {
-        guard FirebaseApp.allApps?.isEmpty != false else { return }
+        // Debug and test hosts never initialize Firebase, including its startup collection.
+        #if !DEBUG
+        guard NSClassFromString("XCTestCase") == nil,
+              ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+              FirebaseApp.allApps?.isEmpty != false else { return }
         FirebaseApp.configure()
-        #if DEBUG
-        let telemetryEnabled = false
-        #else
-        let telemetryEnabled = true
+        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
+        Analytics.setAnalyticsCollectionEnabled(true)
         #endif
-        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(telemetryEnabled)
-        Analytics.setAnalyticsCollectionEnabled(telemetryEnabled)
     }
 
+    @MainActor private static let policy = SlopTelemetryPolicy()
     @MainActor public static let telemetry = SlopTelemetry { event in
         #if !DEBUG
         guard FirebaseApp.app() != nil else { return }
@@ -28,11 +29,15 @@ public enum HitSlopFirebase {
             Analytics.logEvent("document_created", parameters: ["source": source.rawValue])
         case .exported(let format):
             Analytics.logEvent("document_exported", parameters: ["format": format.rawValue])
-        case .failed(let operation):
-            // Do not forward Error/userInfo: these can contain file paths and authored data.
+        case .breadcrumb(let operation, let phase):
+            Crashlytics.crashlytics().log("\(operation.rawValue).\(phase.rawValue)")
+        case .failed(let operation, let context):
+            guard policy.shouldRecord(operation, context: context) else { return }
+            let label = "\(operation.rawValue).\(context.classification.rawValue).\(context.reason.rawValue)"
             Crashlytics.crashlytics().record(error: NSError(
-                domain: "com.hitslop.operation", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: operation.rawValue]))
+                // Fixed domains also separate categories on backends that merge different codes.
+                domain: "com.hitslop.operation.\(label)", code: context.code(for: operation),
+                userInfo: [NSLocalizedDescriptionKey: label]), userInfo: context.fields(for: operation))
         }
         #endif
     }

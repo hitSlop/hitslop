@@ -7,44 +7,61 @@ func failure(_ message: String) -> NSError {
   NSError(domain: "hitSlop", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
 }
 
+/// `document` owns the package and persists writes. `snapshot` copies the saved
+/// document and theme into memory without ownership; renderer writes are discarded.
+public enum StorageMode: Sendable { case document, snapshot }
+
 /// The caller serializes database calls on queue. Swift never interprets Loro bytes.
 final class Storage: @unchecked Sendable {
   static let maximumBytes: Int64 = 32 * 1024 * 1024
   static let maximumRows: Int64 = 4096
   let queue = DispatchQueue(label: "hitslop.sqlite")
   private var db: OpaquePointer?
+  #if DEBUG
   var testingPhase: ((String) -> Void)?
+  #endif
   private var ownership: DocumentWriterLock?
   private let root: URL
   private let inode: UInt64
+  let mode: StorageMode
+  private var snapshotTheme: [String: String] = [:]
+  private static let schema =
+    "CREATE TABLE IF NOT EXISTS document(id INTEGER PRIMARY KEY CHECK(id=1), checkpoint BLOB, schema_key TEXT, generation INTEGER NOT NULL); INSERT OR IGNORE INTO document VALUES(1,NULL,NULL,0); CREATE TABLE IF NOT EXISTS updates(seq INTEGER PRIMARY KEY, bytes BLOB NOT NULL); PRAGMA user_version=1;"
   private func checkLocation() throws {
     let current = try FileManager.default.attributesOfItem(atPath: root.path)
     guard (current[.systemFileNumber] as? NSNumber)?.uint64Value == inode else {
       throw failure("Document moved or replaced; close before moving a document")
     }
   }
-  init(root: URL) throws {
+  init(root: URL, mode: StorageMode = .document) throws {
     self.root = root
+    self.mode = mode
     let attributes = try FileManager.default.attributesOfItem(atPath: root.path)
     guard let inode = (attributes[.systemFileNumber] as? NSNumber)?.uint64Value else {
       throw failure("Cannot identify document directory")
     }
     self.inode = inode
-    ownership = try DocumentWriterLock(root: root)
+    if mode == .document { ownership = try DocumentWriterLock(root: root) }
     let state = root.appendingPathComponent("state")
     do {
-      try safeFile(root.appendingPathComponent("state/document.sqlite"), optional: true)
-      guard let resolved = Darwin.realpath(state.path, nil) else {
-        throw failure("Cannot resolve storage directory")
+      let source = state.appendingPathComponent("document.sqlite")
+      if mode == .snapshot {
+        try openSnapshot(state: state, source: source)
+        snapshotTheme = try readTheme()
+      } else {
+        try safeFile(source, optional: true)
+        guard let resolved = Darwin.realpath(state.path, nil) else {
+          throw failure("Cannot resolve storage directory")
+        }
+        let databasePath = String(cString: resolved) + "/document.sqlite"
+        free(resolved)
+        guard
+          sqlite3_open_v2(
+            databasePath, &db,
+            SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW,
+            nil) == SQLITE_OK
+        else { throw error("open") }
       }
-      let databasePath = String(cString: resolved) + "/document.sqlite"
-      free(resolved)
-      guard
-        sqlite3_open_v2(
-          databasePath, &db,
-          SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW,
-          nil) == SQLITE_OK
-      else { throw error("open") }
       try exec("PRAGMA trusted_schema=OFF")
       sqlite3_limit(db, SQLITE_LIMIT_LENGTH, 32 * 1024 * 1024)
       let version = try scalar("PRAGMA user_version")
@@ -55,14 +72,101 @@ final class Storage: @unchecked Sendable {
       }
       try exec("PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;")
       if version == 0 {
-        try exec(
-          "BEGIN IMMEDIATE; CREATE TABLE IF NOT EXISTS document(id INTEGER PRIMARY KEY CHECK(id=1), checkpoint BLOB, schema_key TEXT, generation INTEGER NOT NULL); INSERT OR IGNORE INTO document VALUES(1,NULL,NULL,0); CREATE TABLE IF NOT EXISTS updates(seq INTEGER PRIMARY KEY, bytes BLOB NOT NULL); PRAGMA user_version=1; COMMIT;"
-        )
+        try exec("BEGIN IMMEDIATE; \(Self.schema) COMMIT;")
       }
     } catch {
       close()
       throw error
     }
+  }
+  /// Copies the saved rows into memory, so a render never creates, locks, or
+  /// modifies files inside the package. Limits are checked before any blob is
+  /// read, and free pages in the source file are never loaded.
+  private func openSnapshot(state: URL, source: URL) throws {
+    var saved: (checkpoint: Data?, schemaKey: String?, generation: Int64, updates: [(Int64, Data)])?
+    if FileManager.default.fileExists(atPath: state.path) {
+      let info = try state.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+      guard info.isDirectory == true, info.isSymbolicLink != true else {
+        throw failure("Unsafe directory: state")
+      }
+      try safeFile(source, optional: true)
+    }
+    if FileManager.default.fileExists(atPath: source.path),
+      let resolved = Darwin.realpath(state.path, nil)
+    {
+      let databasePath = String(cString: resolved) + "/document.sqlite"
+      free(resolved)
+      guard
+        sqlite3_open_v2(
+          databasePath, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_NOFOLLOW, nil)
+          == SQLITE_OK
+      else { throw error("open snapshot") }
+      sqlite3_busy_timeout(db, 5000)
+      try exec("PRAGMA trusted_schema=OFF")
+      sqlite3_limit(db, SQLITE_LIMIT_LENGTH, 32 * 1024 * 1024)
+      // One read transaction: validation and the copied rows see the same saved state.
+      try exec("BEGIN")
+      let version = try scalar("PRAGMA user_version")
+      if version == 1 {
+        try checkBounds()
+        let row = try statement("SELECT checkpoint,schema_key,generation FROM document WHERE id=1")
+        defer { sqlite3_finalize(row) }
+        guard sqlite3_step(row) == SQLITE_ROW else { throw error("read") }
+        let updates = try statement("SELECT seq,bytes FROM updates ORDER BY seq")
+        defer { sqlite3_finalize(updates) }
+        var records: [(Int64, Data)] = []
+        var status = sqlite3_step(updates)
+        while status == SQLITE_ROW {
+          guard let bytes = try data(updates, 1) else { throw failure("Missing update bytes") }
+          records.append((sqlite3_column_int64(updates, 0), bytes))
+          status = sqlite3_step(updates)
+        }
+        guard status == SQLITE_DONE else { throw error("read updates") }
+        saved = (
+          try data(row, 0), sqlite3_column_text(row, 1).map { String(cString: $0) },
+          sqlite3_column_int64(row, 2), records
+        )
+      } else {
+        guard version == 0 else { throw failure("Unsupported database format") }
+        let count = try scalar("SELECT count(*) FROM sqlite_master WHERE type='table'")
+        guard count == 0 else { throw failure("Legacy database; migration is not implemented") }
+      }
+      try exec("COMMIT")
+      guard sqlite3_close_v2(db) == SQLITE_OK else { throw error("close snapshot") }
+      db = nil
+    }
+    guard sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK
+    else { throw error("open snapshot storage") }
+    guard let saved else { return }
+    try exec(Self.schema)
+    let row = try statement("UPDATE document SET checkpoint=?,schema_key=?,generation=? WHERE id=1")
+    defer { sqlite3_finalize(row) }
+    if let checkpoint = saved.checkpoint { try bind(checkpoint, row, 1) }
+    if let schemaKey = saved.schemaKey {
+      guard
+        sqlite3_bind_text(row, 2, schemaKey, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+          == SQLITE_OK
+      else { throw error("bind schema key") }
+    }
+    sqlite3_bind_int64(row, 3, saved.generation)
+    try done(row)
+    for (seq, bytes) in saved.updates {
+      let update = try statement("INSERT INTO updates(seq,bytes) VALUES(?,?)")
+      defer { sqlite3_finalize(update) }
+      sqlite3_bind_int64(update, 1, seq)
+      try bind(bytes, update, 2)
+      try done(update)
+    }
+  }
+  private func readTheme() throws -> [String: String] {
+    let url = root.appendingPathComponent("state/theme.json")
+    try safeFile(url, optional: true)
+    if !FileManager.default.fileExists(atPath: url.path) { return [:] }
+    let bytes = try SlopFile.read(url, within: root, maximumBytes: 65536)
+    guard let values = try JSONSerialization.jsonObject(with: bytes) as? [String: String] else {
+      throw failure("Invalid theme overrides")
+    }
+    return values
   }
   func close() {
     if let db {
@@ -147,24 +251,18 @@ final class Storage: @unchecked Sendable {
       }
       return try SlopAttachments.put(data, in: root)
     }
-    if method == "theme.load" || method == "theme.save" {
+    if method == "theme.load" { return ["values": mode == .snapshot ? snapshotTheme : try readTheme()] }
+    if method == "theme.save" {
       let url = root.appendingPathComponent("state/theme.json")
       try safeFile(url, optional: true)
-      if method == "theme.save" {
-        guard let values = args["values"] as? [String: String] else {
-          throw failure("Invalid theme values")
-        }
-        let bytes = try JSONSerialization.data(withJSONObject: values, options: [.sortedKeys])
-        guard bytes.count <= 65536 else { throw failure("Theme exceeds 64 KiB") }
-        try bytes.write(to: url, options: .atomic)
-        return [:]
+      guard let values = args["values"] as? [String: String] else {
+        throw failure("Invalid theme values")
       }
-      if !FileManager.default.fileExists(atPath: url.path) { return ["values": [String: String]()] }
-      let bytes = try SlopFile.read(url, within: root, maximumBytes: 65536)
-      guard let values = try JSONSerialization.jsonObject(with: bytes) as? [String: String] else {
-        throw failure("Invalid theme overrides")
-      }
-      return ["values": values]
+      let bytes = try JSONSerialization.data(withJSONObject: values, options: [.sortedKeys])
+      guard bytes.count <= 65536 else { throw failure("Theme exceeds 64 KiB") }
+      // Snapshot renders keep their theme writes in memory with the rest of the document.
+      if mode == .snapshot { snapshotTheme = values } else { try bytes.write(to: url, options: .atomic) }
+      return [:]
     }
     if method == "load" {
       // Aggregate lengths are checked before allocating or base64 encoding any blobs.
@@ -236,9 +334,13 @@ final class Storage: @unchecked Sendable {
         try exec("DELETE FROM updates")
       default: throw failure("Unknown storage method")
       }
+      #if DEBUG
       testingPhase?(method + ":uncommitted")
+      #endif
       try exec("COMMIT")
+      #if DEBUG
       testingPhase?(method + ":committed")
+      #endif
       return ["generation": String(try scalar("SELECT generation FROM document WHERE id=1"))]
     } catch {
       try? exec("ROLLBACK")

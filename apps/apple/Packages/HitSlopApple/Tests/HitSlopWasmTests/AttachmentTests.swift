@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import CryptoKit
 import HitSlopCore
 import Testing
 @testable import HitSlopWasm
@@ -8,7 +9,7 @@ import Testing
   func fixture() throws -> URL {
     let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
-    try FileManager.default.copyItem(atPath: repository + "/generated/v1/templates/quick-checklist.slop", toPath: root.path)
+    try FileManager.default.copyItem(atPath: repository + "/generated/v1/native-fixtures/quick-checklist.slop", toPath: root.path)
     try SlopDuplicator.makeWritable(root)
     return root
   }
@@ -76,6 +77,16 @@ import Testing
     let response = try await DocumentCommand.run(method: "attachments.put", url: root, attachmentBytes: data)
     let ref = try #require(try JSONSerialization.jsonObject(with: response) as? [String: Any])
     let id = try #require(ref["id"] as? String)
+    let expectedID = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    #expect(id == expectedID)
+    func expectListed() async throws {
+      let response = try await DocumentCommand.run(method: "attachments.list", url: root)
+      let files = try #require(try JSONSerialization.jsonObject(with: response) as? [[String: Any]])
+      #expect(files.count == 1)
+      #expect(files.first?["id"] as? String == expectedID)
+      #expect(files.first?["byteLength"] as? Int == data.count)
+    }
+    try await expectListed()
     let read = try await DocumentCommand.run(method: "attachments.read", url: root, attachmentID: id)
     let payload = try #require(try JSONSerialization.jsonObject(with: read) as? [String: String])
     #expect(Data(base64Encoded: payload["bytes"]!) == data)
@@ -87,5 +98,6 @@ import Testing
     try Data("<script>throw new Error('authored code must not run')</script>".utf8).write(to: root.appendingPathComponent("app.html"))
     let reopened = try await DocumentCommand.run(method: "attachments.read", url: root, attachmentID: id)
     #expect(reopened == read)
+    try await expectListed()
   }
 }

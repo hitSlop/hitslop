@@ -6,10 +6,23 @@ import HitSlopWasm
 
 extension SlopRenderer {
     /// Attach at the host boundary; the engine never imports the renderer.
-    public static func installCLIExport(on session: SlopRuntimeSession) {
+    public static func installCLIExport(
+        on session: SlopRuntimeSession, telemetry: SlopTelemetry = .disabled,
+        onFailure: ((Error, SlopTelemetryEvent.ExportFormat?) -> Void)? = nil
+    ) {
         session.engine.onExport = { [weak session] format, output, deadline in
             guard let session else { throw SlopPackageError.invalid("Document closed") }
-            try await exportDocument(session: session, format: format, output: output, deadline: deadline)
+            telemetry.send(.breadcrumb(.export, .started))
+            do {
+                try await exportDocument(session: session, format: format, output: output, deadline: deadline)
+                telemetry.send(.breadcrumb(.export, .completed))
+                if let format = SlopTelemetryEvent.ExportFormat(rawValue: format) { telemetry.send(.exported(format)) }
+            } catch {
+                if let onFailure { onFailure(error, SlopTelemetryEvent.ExportFormat(rawValue: format)) }
+                else { telemetry.failure(.export, error: error, runtime: session.engine.telemetryRuntime,
+                                         format: SlopTelemetryEvent.ExportFormat(rawValue: format)) }
+                throw error
+            }
         }
     }
 
@@ -41,13 +54,10 @@ extension SlopRenderer {
                 return
             }
         }
-        let snapshot: SlopRenderSnapshot
-        do { snapshot = try SlopRenderSnapshot(packageURL: package.rootURL) }
-        catch { ownership?.close(); throw error }
-        ownership?.close()
-        defer { snapshot.remove() }
+        // Ownership covers taking the in-memory snapshot, so no writer can intervene;
+        // rendering from that snapshot needs none.
         let deadline = NativeCommandDeadline()
-        let data = try await withCaptureSession(snapshot: snapshot) { session in
+        let data = try await withRenderSession(packageURL: package.rootURL, inputReady: { ownership?.close() }) { session in
             try await exportData(session: session, format: format)
         }
         try publishExport(data, to: output, source: package.rootURL, deadline: deadline)
@@ -65,12 +75,12 @@ extension SlopRenderer {
         let destination = output.standardizedFileURL.resolvingSymlinksInPath().path
         let root = source.standardizedFileURL.resolvingSymlinksInPath().path
         guard destination != root, !destination.hasPrefix(root + "/") else {
-            throw SlopPackageError.invalid("Export destination must be outside the source package")
+            throw SlopDiagnosticError(SlopPackageError.invalid("Export destination must be outside the source package"), diagnostic: .init(.rejection, reason: .operationRejected))
         }
         if FileManager.default.fileExists(atPath: output.path) {
             let values = try output.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             guard values.isRegularFile == true, values.isSymbolicLink != true else {
-                throw SlopPackageError.invalid("Export destination must be a regular file")
+                throw SlopDiagnosticError(SlopPackageError.invalid("Export destination must be a regular file"), diagnostic: .init(.rejection, reason: .operationRejected))
             }
         }
     }

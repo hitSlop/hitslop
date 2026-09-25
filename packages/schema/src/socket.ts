@@ -36,3 +36,8 @@ export const SocketReplySchema = T.Object({
 export const SocketDiscoverySchema = T.Object({
   socket: path, epoch: identity, pid: T.Integer({ minimum: 1 }), documentPath: path,
 }, { additionalProperties: false });
+
+export type SocketRequest = T.Static<typeof SocketRequestSchema>;
+export type SocketReply = T.Static<typeof SocketReplySchema>;
+export type SocketReplyCode = NonNullable<SocketReply["code"]>;
+export type SocketDiscovery = T.Static<typeof SocketDiscoverySchema>;

@@ -44,7 +44,8 @@ Example.slop/
   app.html
   assets/                       immutable compiled code, CSS, and resources
     runtime.json                contract, minimum revision, and provenance
-    theme.css                   token defaults as CSS variables
+    main.js                     compiled app entrypoint
+    main.css                    compiled app styling
     theme.json                  declared token defaults
   state.schema.json             {format:1, root:...} descriptor, not JSON Schema
   initial.json                  immutable creation-only values
@@ -80,7 +81,9 @@ Prepare-close commits drafts and freezes edits. Failed saves retain ownership an
 
 Opaque imported attachments live at `state/attachments/<sha256>`, outside Loro. Imports store and fsync bytes before a synchronous typed document transaction commits the reference. Pending imports participate in flush/close and retain failed writes for native retry. The owner enforces 10 MiB per file, 100 MiB total, and 256 files, rejects links, and verifies hashes on read. Duplication copies attachments; runtime templates contain none. Unreferenced blobs remain until a future explicit garbage-collection policy.
 
-Theme overrides are bounded host presentation state, not a document projection. The 64 KiB `state/theme.json` map contains declared token overrides. Theme commands share ownership with document operations. JavaScript validates declared names and CSS values; native code validates envelopes, isolation, and size. Arbitrary CSS override files are unsupported.
+Theme defaults are declared in immutable `assets/theme.json`. The runtime applies defaults and document overrides as CSS variables before mounting the app; new builds need no separate theme stylesheet. Existing packages may retain their generated `assets/theme.css` and remain supported.
+
+Theme overrides are bounded host presentation state, not a document projection. The 64 KiB `state/theme.json` map contains declared token overrides. Use `slop theme get/set/reset`; never edit this file or compiled assets directly. Layout changes require authoring source and a rebuild. Theme commands share ownership with document operations. JavaScript validates declared names and CSS values; native code validates envelopes, isolation, and size. Arbitrary CSS override files are unsupported.
 
 ## Opening and recovery
 
@@ -94,13 +97,17 @@ Application-render errors and save failures have separate recovery paths. Render
 
 Authored code can change or damage its own document. Runtime operation validation is not a separate security boundary from code sharing that page. Native code validates package isolation, symlinks, bridge envelopes, and resource sizes. Credentials never belong in authored code.
 
-The resource scheme exposes only `app.html`, descriptor, initial values, immutable assets, and host runtime resources. Databases and discovery files are not served. Descriptor-relative no-follow reads reject nonregular files and enforce 25 MiB per resource. Immutable packages are limited to 256 entries and 50 MiB. Symlinks are rejected during opening and resource reads.
+The resource scheme exposes only `app.html`, descriptor, initial values, immutable assets, and host runtime resources. Databases and discovery files are not served. Decoded resource paths reject empty, dot and parent segments before normalization; the allowlist applies to the resolved path. Descriptor-relative no-follow reads reject nonregular files and enforce 25 MiB per resource. Immutable packages are limited to 256 entries and 50 MiB. Symlinks are rejected during opening and resource reads.
 
 CSP permits local scripts/WASM, local and HTTPS connections/media, inline styles, and local/data/HTTPS/blob images. CORS remains enforced. Remote scripts and JavaScript eval remain blocked; fonts stay local/data. Native navigation cancels external navigation; explicit HTTP(S) links open in the system browser. Camera/microphone grants are not part of v1.
 
 Bridge calls must originate in the main frame at `slop://app` and match generated TypeBox envelopes. Serialized requests are bounded to 48 MiB, with storage bounds checked before blob materialization. SQLite uses NOFOLLOW and `trusted_schema=OFF`. Socket request/reply bounds are 1 MiB/16 MiB, one request per connection, with bounded concurrency/timeouts. The server command deadline is 30 seconds; the client waits 35 seconds.
 
 Export destinations must be outside the source package. Capture stages output and publishes by atomic rename before its deadline. Failures do not replace existing output. A lost acknowledgement leaves an uncertain outcome; inspect the destination before retrying.
+
+Slop-initiated blob/data downloads require a native save confirmation. Download bytes receive quarantine metadata before atomic installation, including replacement of existing files; a quarantine write failure leaves the destination unchanged.
+
+Bridge resize requests respect the manifest’s resizable setting, including fixed-size skin windows.
 
 ## Capture and Finder integration
 
@@ -122,4 +129,10 @@ Live exports use the current editor width and selected view. Closed exports rend
 
 ## Telemetry
 
-Firebase configuration, Analytics, and Crashlytics remain enabled in Release; Debug collection is disabled. Auth/App Check are deferred. Events record launch, creation source, opening, duplication, and export format. Cancelled pickers do not record success. Nonfatal categories are create, open, save, export, and renderer. Reports exclude document paths, titles, contents, authored error strings, and raw error userInfo. Release validation includes actual Firebase delivery and symbolication; unit tests cannot establish those.
+Release enables Firebase Analytics and Crashlytics after configuration; Debug/tests do not initialize Firebase. Collection defaults off in the app plist. Auth/App Check remain deferred. Existing Analytics events record launch, creation source, opening, duplication, and export format. Cancelled operations produce only fixed breadcrumbs.
+
+Non-fatals carry a fixed operation, classification (platform/authored/rejection), and reason. Native storage and WebKit callbacks supply diagnostic categories before error text is flattened. Fixed category-specific domains and stable numeric codes distinguish issue groups; per-event keys can include export format and the resolved bundled runtime contract/revision. No document IDs, paths, titles, contents, guest codes, authored error strings, or raw error userInfo enter reports. Document context never uses global Crashlytics keys.
+
+Save and renderer incidents report once until recovery; propagated close/quit/export errors add breadcrumbs. Authored errors, expected rejections, and background catalog/artwork failures share a two-report limit per app launch, once per category, and stop after the first foreground platform failure. Optional artwork and stale Recents remain normal fallbacks. Standalone CLI processes have no Firebase sink.
+
+Release validation requires actual Firebase delivery and symbolication; unit tests cannot establish those. Use a disposable validation build and retain its dSYM and dashboard evidence, without shipping a crash trigger.

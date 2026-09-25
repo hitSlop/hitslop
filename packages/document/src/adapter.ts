@@ -1,3 +1,4 @@
+import type { PresentationStage } from "./presentation";
 import type { Document } from "./document";
 import type { ObjectNode } from "./schema";
 import { mountViewLifecycle } from "./view-lifecycle";
@@ -31,7 +32,7 @@ export async function mountDocumentView(adapter: ViewAdapter): Promise<void> {
           throw new Error("Installed document runtime mismatch");
         const [, config, theme] = await Promise.all([
           runtime.initialize(),
-          native ? runtime.hostCall({ method: "config" }) : { epoch: crypto.randomUUID() },
+          native ? runtime.hostCall({ method: "config" }) : { epoch: crypto.randomUUID() } as { epoch: string; presentation?: PresentationStage },
           runtime.openTheme(native),
         ]);
         return { runtime, config, theme };
@@ -69,7 +70,7 @@ export async function mountDocumentView(adapter: ViewAdapter): Promise<void> {
     performance.mark("hitslop:document-open");
     const attachments = runtime.configureAttachments(doc, native);
     const session = new runtime.Session(doc, config.epoch, theme, attachments);
-    (globalThis as any).__slop = await mountViewLifecycle({
+    globalThis.__slop = await mountViewLifecycle({
       adapter,
       document: doc,
       target: document.body,

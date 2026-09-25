@@ -9,10 +9,10 @@ import Testing
 @testable import HitSlopWasm
 
 extension LoroClientTests {
-  @Test @MainActor func bundledExamplesRenderInNativeWindows() async throws {
+  @Test @MainActor func nativeWindowExportsLiveEditsAndReleasesOwnership() async throws {
     _ = NSApplication.shared
-    for name in ["quick-checklist", "small-expenses"] {
-      let root = try fixture(name)
+    do {
+      let root = try contractFixture()
       defer { try? FileManager.default.removeItem(at: root) }
       let controller = try await SlopDocumentWindowController.open(packageURL: root)
       try await controller.session.waitUntilReady()

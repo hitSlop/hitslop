@@ -2,6 +2,18 @@
 
 Launch includes the signed/notarized Apple silicon Mac app and matching `@hitslop/schema`, `@hitslop/document`, and `@hitslop/cli` packages. Hosted template publication, catalog services, accounts, and collaboration remain deferred. npm publication is a separate maintainer-run action after the matching Mac app is available.
 
+## Release sequence
+
+The initial v1 SDK release is npm **1.0.0**, paired with Mac **1.0.6 (24)** and tag `macos-v1.0.6`. The Mac and npm version sequences are independent. Runtime contract **1**, revision **1** is already sealed; keep its existing ledger checksum unchanged.
+
+1. Finish release preparation and commit a clean tree. Check package versions, dependency pins, Apple version/build, and runtime provenance together. Confirm the intended npm versions and Mac tag have not already shipped.
+2. Run the complete local gate below on that final commit and record manual acceptance results. A report from a dirty checkout or another commit does not validate the release candidate.
+3. Push `master` and wait for `fast`, `native`, `release`, and the full-history secret scan to pass for the exact commit. Tag that commit `macos-v1.0.6` and push the tag; this triggers `.github/workflows/macos-release.yml`.
+4. Monitor signing, notarization, Gatekeeper verification, and GitHub Release publication. Verify downloaded artifacts and complete signed-install/Sparkle acceptance. Retain the release record and checksums.
+5. Download and verify the release's tested npm tarballs, then publish schema, document, and CLI in that order using the procedure below. Finish with fresh registry consumer checks.
+
+If a gate fails, fix and validate the candidate before publication. Never move a published release tag or overwrite released artifacts. After partial npm publication, verify registry state and resume only missing packages.
+
 ## Validate one commit
 
 Use the pinned Bun release, Xcode, and XcodeGen on macOS:
@@ -9,7 +21,7 @@ Use the pinned Bun release, Xcode, and XcodeGen on macOS:
 ```sh
 bun install --frozen-lockfile
 bun install --cwd apps/landing --frozen-lockfile
-bun run test:local
+bun run release:check
 ```
 
 `bun run hygiene` runs only repository hygiene and does not establish release readiness.
@@ -18,23 +30,33 @@ The complete gate checks hygiene; builds runtime, helper, and all active templat
 
 Bundled selection comes from `examples/slops/bundled.json`. Every selected package must be present in the app with no unexpected stale starters. Every package is checked for matching build bytes, valid manifest/schema/initial data, runtime requirements, immutable contents, and preview/icon artwork. Installed create/schema/get/reopen/PNG/PDF checks run on Quick Checklist and Small Expenses. Set `HITSLOP_TEMPLATE_EXHAUSTIVE=1` to run those installed checks on every bundled template. Schema-specific mutation/crash probes use known fixtures separately. Packed consumer tests also compile the public getting-started tutorial; its code is an executable contract.
 
-### GitHub template cache and optional walkthroughs
+### CI tiers and caches
 
-GitHub CI and tagged releases restore completed template packages before `bun run build`. Each package has an input fingerprint and output checksum. Template changes rebuild that template; shared SDK, renderer, runtime, dependency, build-script, or toolchain changes invalidate all entries. Missing or damaged entries rebuild automatically. Inventory is regenerated each run, and removed templates are pruned. Cache snapshots are saved after a successful build, before later validation steps. A first run or evicted cache still performs a complete build.
+Every push/PR runs Bun-only `fast` on Ubuntu. The always-reporting `native` job uses an in-job path filter; relevant changes run Swift, native helper/rendering and crash checks on macOS. Require both checks in branch protection. Master, manual runs and release tags run the full `release:check`. See [testing](../testing.md).
 
-Only the workflows set `HITSLOP_TEMPLATE_CACHE_DIR=.hitslop/template-cache`; ordinary local builds remain uncached. Unset that variable to force fresh template builds. The workflows run hygiene/build explicitly followed by `bun run test:built`; local `bun run test:local` runs the same stages together. Runtime generation, native compilation, compatibility checks, and signing are never skipped by the template cache.
+CI restores SwiftPM `.build` by toolchain, lockfile and source identity, with a compatible restore prefix. The template cache reuses complete, fingerprinted packages; damaged entries rebuild, shared runtime/renderer inputs invalidate entries, and removed templates are pruned. Local and CI template builds default to `.hitslop/template-cache`; `HITSLOP_TEMPLATE_CACHE_DIR` can override the location. `build` prepares the runtime/helper, while `build:templates` prepares the complete artwork corpus. Native PNG/QuickLook rendering remains outside the fast job.
 
-Default native tests retain host/runtime, persistence, locking, attachment, file picker cancellation, and export coverage. Detailed Habit Heatmap, Pocket Sheet, and Soma Amp walkthroughs are opt-in:
+Bundled templates are black boxes: every one compiles, opens and reopens in Bun, then renders PNG/PDF and reopens in the native smoke. Conformance fixtures and native boundary tests cover platform edits, picker cancellation, persistence and exports. Application-specific walkthroughs are removed. The gate retains PNG/PDF evidence without visual snapshot comparison.
+
+`release:check` writes `.hitslop/v1-evidence/release-check.json`, including failed stages. Two fresh compatibility replays must give identical logical state hashes. Review the report and render artifacts; a partial report is not release approval.
+
+### Seal bundled templates as fixtures
+
+After building and validating the candidate, verify its existing runtime seal or seal a new revision with the versioning procedure below. Then preview and explicitly preserve new bundled package bytes:
 
 ```sh
-HITSLOP_TEMPLATE_INTEGRATION=1 bun run swift:test
-# On hardware with working WebGL/audio, also exercise Soma Amp playback and visualization:
-HITSLOP_TEMPLATE_INTEGRATION=1 HITSLOP_MEDIA_TESTS=1 bun run swift:test --filter SomaAmpTests
+bun run fixtures:seal
+bun run fixtures:seal --write
+bun run test
+bun run test:native
+bun run test:render
 ```
 
-These flags are off in both normal CI and tagged releases. Fast JavaScript app-logic tests remain in the default gate.
+The first command only lists new specimens. `--write` adds immutable `tests/compatibility/template-*/` specimens with runtime/source provenance, expected initial state and a package seal. Existing source hashes are skipped; existing destinations are never overwritten. Review and commit the new specimens before validating the final release commit. Ordinary builds and checks never regenerate fixtures. Template specimens need no generated edits: named conformance scenarios own runtime semantics.
 
-Inspect generated changes. Never regenerate preserved compatibility fixtures or rewrite release hashes to mask drift. See [versioning](../versioning.md). At shipment, after the release preparation is merged, run `bun scripts/v1/runtime-release.ts` after compatibility validation, commit the ledger change, and retain `generated/v1/runtime-releases/<contract>-<revision>/` permanently with release artifacts. Restore historical releases for cross-revision tests. Ordinary builds do not seal releases. Commit the ledger, validate that final commit, push master and wait for CI, then tag that exact commit. The release workflow rejects an unsealed runtime or a tag that disagrees with the Apple project version.
+Restore all older ledger runtimes with `bun run compatibility:restore` before validating on a fresh checkout. CI supplies an independent previous commit via `HITSLOP_COMPAT_BASE` to detect deleted or rewritten history, including a fixture and its hash changed together.
+
+Inspect generated changes. Never regenerate preserved compatibility fixtures or rewrite release hashes to mask drift. See [versioning](../versioning.md). For a new runtime revision, run `bun scripts/v1/runtime-release.ts` after compatibility validation and commit the new ledger entry before the final release gate. For an already sealed runtime, this command verifies and archives the same bytes without changing the ledger. Retain `generated/v1/runtime-releases/<contract>-<revision>/` permanently with release artifacts; the tagged workflow includes it in the GitHub Release. Restore historical releases for cross-revision tests. Ordinary builds do not seal releases. Validate the final commit, push master and wait for CI, then tag that exact commit. The release workflow rejects an unsealed runtime or a tag that disagrees with the Apple project version.
 
 ## Package the Mac app
 
@@ -46,9 +68,11 @@ scripts/package-macos-release.sh
 bun scripts/v1/release-artifact.ts /path/to/hitSlop.app
 ```
 
-Embedding ships the native executable and its required Runtime/Wasm resources. Verification checks matching host/helper runtime catalogs and exercises installed helpers with a system-only PATH, including PNG/PDF. Native editing needs no checkout, Node, or Bun. `HITSLOP_NATIVE_CLI` selects an explicit matching helper for authoring verification.
+Embedding ships the native executable and its HitSlopWasm resource bundle. The retired HitSlopRuntime placeholder resource bundle is not required. Verification checks matching host/helper runtime catalogs and exercises installed helpers with a system-only PATH, including PNG/PDF. Native editing needs no checkout, Node, or Bun. `HITSLOP_NATIVE_CLI` selects an explicit matching helper for authoring verification.
 
 Developer ID, notarization, provisioning, App Store Connect, and Sparkle private keys remain outside Git. The tagged GitHub workflow runs the full local gate before signing, notarizing, verifying DMG/ZIP artifacts, and publishing the Mac release. It does not publish npm packages. Release the exact tested commit.
+
+The workflow checks these repository secrets before installing/building: `MACOS_CERTIFICATE`, `MACOS_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD`, `ASC_API_KEY_ID`, `ASC_API_ISSUER_ID`, `ASC_API_KEY_P8`, and `SPARKLE_PRIVATE_KEY`. Their presence does not establish certificate validity or account access; signing and notarization must succeed. Temporary certificate/keychain files are cleaned up even after failure. The `release-evidence` workflow artifact retains the gate report, render evidence, packaging log, and any completed release record/checksums.
 
 ## Manual Mac acceptance
 
@@ -68,9 +92,9 @@ Use a disposable Release validation build to verify representative Analytics eve
 
 ## Publish the tested npm artifacts
 
-`bun run packages:pack` writes tarballs under `generated/v1/npm`. `bun run test:packed` installs those exact artifacts into a temporary directory with spaces and verifies initialization, authoring, registration, themes, exports, preview resources, and durable installed skill links after package-cache removal. It derives versions from package manifests. Consumer-only overrides connect unpublished tarballs; shipped manifests contain registry versions, never workspace/file dependencies.
+`bun run packages:pack` writes tarballs under `generated/v1/npm`. `bun run test:packed --native` installs those exact artifacts into a temporary directory with spaces and verifies initialization, authoring, registration, themes, exports, preview resources, and durable installed skill links after package-cache removal. It derives versions from package manifests. Consumer-only overrides connect unpublished tarballs; shipped manifests contain registry versions, never workspace/file dependencies.
 
-Keep the tested artifacts from the release commit. Confirm package versions/dependency pins and runtime provenance agree, and make the compatible signed Mac app available first. Download the three npm tarballs, `SHA256SUMS`, and `release-record.json` from the matching GitHub Release. Verify each tarball against its checksum and confirm the record identifies the tagged commit. The workflow retains the exact artifacts exercised by `test:packed`; do not repack them locally. It also archives the sealed runtime and ledger for future compatibility checks.
+Keep the tested artifacts from the release commit. Confirm package versions/dependency pins and runtime provenance agree, and make the compatible signed Mac app available first. Download the three npm tarballs, `SHA256SUMS`, and `release-record.json` from the matching GitHub Release. Verify each tarball against its checksum and confirm the record identifies the tagged commit. The workflow retains the exact artifacts exercised by `test:packed --native`; do not repack them locally. It also archives the sealed runtime and ledger for future compatibility checks.
 
 Authenticate locally with `npm login --registry=https://registry.npmjs.org`, then check the account with `npm whoami`. Keep credentials in your user configuration outside the repository. Publication may require an interactive 2FA challenge; Bun supports browser authentication and `--otp` for supported OTP challenges. See [npm authentication](https://docs.npmjs.com/accessing-npm-using-2fa/) and [Bun publishing](https://bun.sh/docs/pm/cli/publish). Never put tokens or OTPs in Git.
 

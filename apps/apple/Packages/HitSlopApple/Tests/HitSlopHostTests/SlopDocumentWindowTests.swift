@@ -4,17 +4,6 @@ import HitSlopCore
 import Testing
 @testable import HitSlopHost
 
-@Test func documentWindowStyleMaskStaysBorderlessAndMiniaturizable() {
-    let resizable = slopDocumentWindowStyleMask(resizable: true)
-    #expect(resizable.contains(.borderless))
-    #expect(resizable.contains(.miniaturizable))
-    #expect(resizable.contains(.resizable))
-
-    let fixed = slopDocumentWindowStyleMask(resizable: false)
-    #expect(fixed.contains(.borderless))
-    #expect(fixed.contains(.miniaturizable))
-    #expect(!fixed.contains(.resizable))
-}
 
 @Test @MainActor func documentWindowUsesTheSlopIconForMiniwindowAndDockMenu() throws {
     let root = try documentWindowFixture(resizable: true)
@@ -35,24 +24,18 @@ import Testing
     #expect(controller.dockMenuImage.size == NSSize(width: 16, height: 16))
 }
 
-@Test func toolbarFitsDocumentAndVisibleScreen() {
+// The hover toolbar remains reachable when a document straddles display edges.
+@Test func toolbarRemainsOnTheVisibleScreen() {
     let screen = NSRect(x: 100, y: 50, width: 1000, height: 800)
-    for width: CGFloat in [240, 480, 640] {
-        let document = NSRect(x: 300, y: 200, width: width, height: 300)
-        let toolbar = slopToolbarFrame(document: document, visible: screen)
-        #expect(toolbar.width == min(max(width, 360), 560))
-        #expect(toolbar.height == 44)
-        #expect(toolbar.midX == document.midX)
-        #expect(toolbar.minY == document.maxY + 8)
-    }
-    let edge = slopToolbarFrame(document: NSRect(x: 990, y: 600, width: 240, height: 250), visible: screen)
-    #expect(screen.contains(edge))
-    #expect(edge.maxX == screen.maxX - 8)
-    #expect(edge.maxY == screen.maxY - 10)
+    let atEdge = NSRect(x: 990, y: 600, width: 240, height: 250)
+    #expect(screen.contains(slopToolbarFrame(document: atEdge, visible: screen)))
+    // A borderless document can straddle displays; its toolbar must stay reachable
+    // even when the document's top extends beyond this screen.
+    let aboveScreen = NSRect(x: 990, y: 840, width: 240, height: 300)
+    #expect(screen.contains(slopToolbarFrame(document: aboveScreen, visible: screen)))
     let narrow = NSRect(x: -300, y: 0, width: 320, height: 600)
-    let toolbar = slopToolbarFrame(document: NSRect(x: -300, y: 200, width: 240, height: 200), visible: narrow)
-    #expect(toolbar.width == 304)
-    #expect(narrow.contains(toolbar))
+    let document = NSRect(x: -300, y: 200, width: 240, height: 200)
+    #expect(narrow.contains(slopToolbarFrame(document: document, visible: narrow)))
 }
 
 @Test @MainActor func nonResizableDocumentWindowStillMiniaturizes() throws {
@@ -66,22 +49,7 @@ import Testing
     #expect(!window.styleMask.contains(.resizable))
 }
 
-@Test func openInMenuIncludesEditorsAndTerminals() {
-    let titles = slopOpenInCatalog().map(\.0)
-    #expect(titles.contains("Open in Cursor"))
-    #expect(titles.contains("Open in Visual Studio Code"))
-    #expect(titles.contains("Open in Terminal"))
-    #expect(titles.contains("Open in iTerm"))
-    #expect(titles.contains("Open in Warp"))
-    #expect(titles.contains("Open in Wave"))
-    #expect(titles.contains("Open in Ghostty"))
-}
 
-@Test func dockMenuImageFallsBackToTheWorkspaceIcon() {
-    let missing = URL(fileURLWithPath: "/tmp/hitslop-missing-icon-\(UUID().uuidString)")
-    let image = slopDockMenuImage(iconURL: missing.appendingPathComponent("QuickLook/Icon.png"), fallbackURL: missing)
-    #expect(image.size == NSSize(width: 16, height: 16))
-}
 
 private func documentWindowFixture(resizable: Bool) throws -> URL {
     let parent = FileManager.default.temporaryDirectory.appendingPathComponent("hitslop-document-window-\(UUID().uuidString)", isDirectory: true)

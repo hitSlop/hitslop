@@ -94,10 +94,12 @@ extension LoroClientTests {
 
   @Test @MainActor func openingStaysHiddenUntilReadyAndHandsOffFocus() async throws {
     _ = NSApplication.shared
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let previewURL = root.appendingPathComponent("QuickLook/Preview.png")
-    let before = try Data(contentsOf: previewURL)
+    try FileManager.default.createDirectory(at: previewURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+    let before = Data("optional preview is untouched during open".utf8)
+    try before.write(to: previewURL)
     let controller = try await SlopDocumentWindowController.open(packageURL: root)
     controller.showWindow(nil)
     #expect(controller.isLoading)
@@ -117,11 +119,13 @@ extension LoroClientTests {
   @Test @MainActor func previewIsNotNeededAndCloseCancelsHiddenOpening() async throws {
     _ = NSApplication.shared
     for invalid in [false, true] {
-      let root = try fixture()
+      let root = try contractFixture()
       defer { try? FileManager.default.removeItem(at: root) }
       let preview = root.appendingPathComponent("QuickLook/Preview.png")
-      if invalid { try Data("not an image".utf8).write(to: preview) }
-      else { try FileManager.default.removeItem(at: preview) }
+      if invalid {
+        try FileManager.default.createDirectory(at: preview.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("not an image".utf8).write(to: preview)
+      }
       let controller = try await SlopDocumentWindowController.open(packageURL: root)
       controller.showWindow(nil)
       #expect(controller.window?.isVisible == false)
@@ -139,7 +143,7 @@ extension LoroClientTests {
 
   @Test @MainActor func startupFailureRevealsNativeError() async throws {
     _ = NSApplication.shared
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let script = root.appendingPathComponent("assets/main.js")
     let original = try Data(contentsOf: script)
@@ -170,7 +174,7 @@ extension LoroClientTests {
 
   @Test @MainActor func hiddenOpenDoesNotPresentProgressOrDocument() async throws {
     _ = NSApplication.shared
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let controller = try await SlopDocumentWindowController.open(packageURL: root)
     await controller.waitForPresentation()
@@ -183,7 +187,7 @@ extension LoroClientTests {
 
   @Test @MainActor func progressCancelClosesPendingDocumentWithoutRevealingIt() async throws {
     _ = NSApplication.shared
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let script = root.appendingPathComponent("assets/main.js")
     let original = try String(contentsOf: script, encoding: .utf8)
@@ -205,7 +209,7 @@ extension LoroClientTests {
 
   @Test @MainActor func closeDuringFontLoadingCancelsPresentationAndExport() async throws {
     _ = NSApplication.shared
-    let root = try fixture()
+    let root = try contractFixture()
     let output = root.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + ".png")
     defer {
       try? FileManager.default.removeItem(at: root)
@@ -234,18 +238,22 @@ extension LoroClientTests {
   }
 }
 
+// Completing the delay releases feedback; completing the open cancels it even if
+// an already-delivered timer callback arrives. No minimum wall-clock duration.
 @Test @MainActor func openingProgressIsDelayedAndFastCompletionNeverShowsIt() async throws {
   _ = NSApplication.shared
-  let fast = SlopOpeningProgress()
+  let fastDelay = OpeningDelay()
+  let fast = SlopOpeningProgress(wait: { _ in await fastDelay.wait() })
+  await fastDelay.started()
   #expect(fast.panel == nil)
   fast.finish()
-  let start = ContinuousClock.now
-  let slow = SlopOpeningProgress()
+  await fastDelay.release()
+  let slowDelay = OpeningDelay()
+  let slow = SlopOpeningProgress(wait: { _ in await slowDelay.wait() })
+  await slowDelay.started()
   #expect(slow.panel == nil)
-  for _ in 0..<500 where slow.panel == nil {
-    try await Task.sleep(for: .milliseconds(10))
-  }
-  #expect(start.duration(to: .now) >= .seconds(1))
+  await slowDelay.release()
+  await slow.waitForFeedback()
   #expect(fast.panel == nil)
   #expect(slow.panel?.isVisible == true)
   var cancelled = false
@@ -253,4 +261,40 @@ extension LoroClientTests {
   slow.cancelOpening()
   #expect(cancelled)
   #expect(slow.panel == nil)
+}
+
+private actor OpeningDelay {
+  private var continuation: CheckedContinuation<Void, Never>?
+  private var entered: CheckedContinuation<Void, Never>?
+  func wait() async {
+    await withCheckedContinuation { continuation = $0; entered?.resume(); entered = nil }
+  }
+  func started() async {
+    if continuation != nil { return }
+    await withCheckedContinuation { entered = $0 }
+  }
+  func release() { continuation?.resume(); continuation = nil }
+}
+
+extension LoroClientTests {
+  // Gap: installing telemetry only after open returns loses early guest startup failures.
+  // A disposable fixture throws before mounting; expect one sanitized authored incident.
+  @Test @MainActor func startupTelemetryIsInstalledBeforeAuthoredCodeRuns() async throws {
+    let root = try contractFixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    try Data("<!doctype html><script src='/assets/startup-failure.js'></script>".utf8)
+      .write(to: root.appendingPathComponent("app.html"))
+    try Data("throw new Error('private startup contents');".utf8)
+      .write(to: root.appendingPathComponent("assets/startup-failure.js"))
+    var failures: [SlopFailureContext] = []
+    let controller = try await SlopDocumentWindowController.open(packageURL: root,
+      telemetry: SlopTelemetry { if case .failed(_, let context) = $0 { failures.append(context) } })
+    await controller.waitForPresentation()
+    #expect(!controller.isContentReady)
+    #expect(failures.count == 1)
+    #expect(failures.first?.classification == .authored)
+    #expect(failures.first?.reason == .authoredException)
+    #expect(failures.first?.runtime?.contract == 1)
+    try await controller.session.finish()
+  }
 }

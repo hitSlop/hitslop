@@ -1,3 +1,4 @@
+import type { BridgeMethod as Method, BridgeRequest as Message, BridgeReply as Result } from "@hitslop/schema/bridge";
 export type ThemeValues = Record<string, string>;
 export class ThemeController {
   private overrides: ThemeValues = {};
@@ -59,7 +60,7 @@ export async function openTheme(native: boolean) {
   const response = await fetch("/assets/theme.json");
   if (!response.ok) throw new Error("Missing theme defaults");
   const defaults = await response.json();
-  const call = (args: Record<string, unknown>) =>
+  const call = <M extends Method>(args: Message<M>): Promise<Result<M>> =>
     (globalThis as any).webkit.messageHandlers.storage.postMessage(args);
   const theme = new ThemeController(
     defaults,

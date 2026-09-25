@@ -5,8 +5,11 @@ import { Check } from "typebox/value";
 import { RuntimeRequirementsSchema } from "../../packages/schema/src/runtime";
 import { catalog, digest, releases, repository, runtimeDestinations } from "./runtime-artifacts";
 
-export async function checkCompatibility() {
-  const installed = await catalog(runtimeDestinations[0]!);
+export async function checkCompatibility(
+  runtimeRoot = runtimeDestinations[0]!,
+  checkTemplates = true,
+) {
+  const installed = await catalog(runtimeRoot);
   const root = join(repository, "tests/compatibility");
   const covered = new Set<number>();
   for (const name of await readdir(root)) {
@@ -45,6 +48,7 @@ export async function checkCompatibility() {
         `Restore the immutable runtime release ${release.runtimeContract}-${release.runtimeRevision} for compatibility testing`,
       );
   }
+  if (!checkTemplates) return;
   const inventory = await builtTemplates();
   const packages = inventory.templates.map(({ slug }) =>
     join(repository, "generated/v1/templates", slug + ".slop"),

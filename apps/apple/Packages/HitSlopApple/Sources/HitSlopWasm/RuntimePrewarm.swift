@@ -7,47 +7,63 @@ import Foundation
 @MainActor public final class RuntimePrewarm: NSObject, WKScriptMessageHandler {
   private static var started = false
   private static var current: RuntimePrewarm?
-  static var isRunning: Bool { current != nil }
-  /// "ready", or the runtime error that stopped warming (diagnostics and tests).
-  private(set) static var outcome: String?
-  private var webView: WKWebView?
+  private(set) var webView: WKWebView?
+  private var completed = false
+  private var result: String?
+  private var waiters: [CheckedContinuation<String?, Never>] = []
   private var timeout: Task<Void, Never>?
 
   /// Runs at most once per process.
   public static func start() {
     guard !started, let runtime = try? RuntimeCatalog.bundled().currentRuntime else { return }
     started = true
-    let prewarm = RuntimePrewarm()
-    current = prewarm
+    current = RuntimePrewarm(runtime: runtime)
+  }
+
+  init(runtime: URL) {
+    super.init()
     let configuration = WKWebViewConfiguration()
     configuration.websiteDataStore = .nonPersistent()
     configuration.setURLSchemeHandler(
       SchemeHandler(root: nil, runtime: runtime), forURLScheme: "slop")
-    configuration.userContentController.add(prewarm, name: "prewarm")
+    configuration.userContentController.add(self, name: "prewarm")
     let view = WKWebView(frame: CGRect(x: 0, y: 0, width: 1, height: 1), configuration: configuration)
-    prewarm.webView = view
-    prewarm.timeout = Task { @MainActor in
-      try? await Task.sleep(for: .seconds(10))
-      finish()
+    webView = view
+    timeout = Task { @MainActor [weak self] in
+      do { try await Task.sleep(for: .seconds(10)) } catch { return }
+      self?.complete(nil)
     }
     view.load(URLRequest(url: URL(string: "slop://app/")!))
   }
 
   /// Releases the warm-up WebView; a real open takes priority over finishing it.
   public static func finish() {
-    guard let prewarm = current else { return }
-    current = nil
-    prewarm.timeout?.cancel()
-    prewarm.webView?.configuration.userContentController.removeScriptMessageHandler(forName: "prewarm")
-    prewarm.webView?.stopLoading()
-    prewarm.webView = nil
+    current?.complete(nil)
+  }
+
+  func waitUntilFinished() async -> String? {
+    if completed { return result }
+    return await withCheckedContinuation { waiters.append($0) }
+  }
+
+  private func complete(_ result: String?) {
+    guard !completed else { return }
+    completed = true
+    self.result = result
+    if Self.current === self { Self.current = nil }
+    timeout?.cancel()
+    webView?.configuration.userContentController.removeScriptMessageHandler(forName: "prewarm")
+    webView?.stopLoading()
+    webView = nil
+    let pending = waiters
+    waiters.removeAll()
+    for waiter in pending { waiter.resume(returning: result) }
   }
 
   public func userContentController(
     _ controller: WKUserContentController, didReceive message: WKScriptMessage
   ) {
     guard message.webView === webView else { return }
-    Self.outcome = message.body as? String
-    Self.finish()
+    complete(message.body as? String)
   }
 }

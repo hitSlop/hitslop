@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import SQLite3
 import Testing
 @testable import HitSlopCore
 
@@ -48,6 +49,44 @@ import Testing
     #expect((destinationMode?.intValue ?? 0) & 0o200 != 0)
     try FileManager.default.createDirectory(at: destination.appendingPathComponent("state"), withIntermediateDirectories: true)
     try Data(#"{}"#.utf8).write(to: destination.appendingPathComponent("state/theme.json"))
+}
+
+// Package validation precedes copying; the SQLite open must also reject a source
+// swapped to a symlink after validation, while still copying ordinary databases.
+@Test func databaseBackupRejectsSymlinkSource() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let state = folder.appendingPathComponent("state")
+    try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
+    let source = folder.appendingPathComponent("source.sqlite")
+    let link = state.appendingPathComponent("document.sqlite")
+    let destination = folder.appendingPathComponent("copy.sqlite")
+    var db: OpaquePointer?
+    try #require(sqlite3_open(source.path, &db) == SQLITE_OK)
+    try #require(sqlite3_exec(db, "CREATE TABLE marker(value TEXT); INSERT INTO marker VALUES('preserved');", nil, nil, nil) == SQLITE_OK)
+    sqlite3_close(db)
+    try FileManager.default.createSymbolicLink(at: link, withDestinationURL: source)
+    #expect(throws: SlopPackageError.self) { try SlopDuplicator.backup(folder, to: destination) }
+    #expect(!FileManager.default.fileExists(atPath: destination.path))
+    try FileManager.default.removeItem(at: link)
+    try FileManager.default.moveItem(at: source, to: link)
+    // Also reject a swapped state directory without following it during canonicalization.
+    let savedState = folder.appendingPathComponent("saved-state")
+    try FileManager.default.moveItem(at: state, to: savedState)
+    try FileManager.default.createSymbolicLink(at: state, withDestinationURL: savedState)
+    #expect(throws: SlopPackageError.self) { try SlopDuplicator.backup(folder, to: destination) }
+    #expect(!FileManager.default.fileExists(atPath: destination.path))
+    try FileManager.default.removeItem(at: state)
+    try FileManager.default.moveItem(at: savedState, to: state)
+    try SlopDuplicator.backup(folder, to: destination)
+    try #require(sqlite3_open_v2(destination.path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK)
+    defer { sqlite3_close(db) }
+    var statement: OpaquePointer?
+    try #require(sqlite3_prepare_v2(db, "SELECT value FROM marker", -1, &statement, nil) == SQLITE_OK)
+    defer { sqlite3_finalize(statement) }
+    try #require(sqlite3_step(statement) == SQLITE_ROW)
+    #expect(String(cString: sqlite3_column_text(statement, 0)) == "preserved")
 }
 
 @Test func rejectsInvalidSchemaMetadataAndMutableThemeStores() throws {

@@ -15,7 +15,15 @@ import Testing
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(
       UUID().uuidString + ".slop")
     try FileManager.default.copyItem(
-      at: URL(fileURLWithPath: repository + "/generated/v1/templates/\(name).slop"), to: root)
+      at: URL(fileURLWithPath: repository + "/generated/v1/native-fixtures/\(name).slop"), to: root)
+    return root
+  }
+
+  /// Dedicated frozen contract app; disposable copies are safe for platform probes.
+  func contractFixture() throws -> URL {
+    let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
+    try FileManager.default.copyItem(atPath: repository + "/tests/compatibility/1-1/document", toPath: root.path)
     return root
   }
 
@@ -52,7 +60,7 @@ import Testing
 extension LoroClientTests {
   /// Small authored app for draft/capture contracts, independent of example UI copy.
   func captureFixture() throws -> URL {
-    let root = try fixture()
+    let root = try contractFixture()
     let html = #"""
     <!doctype html><html><head><style>
     body { margin: 0; font: 18px sans-serif; }

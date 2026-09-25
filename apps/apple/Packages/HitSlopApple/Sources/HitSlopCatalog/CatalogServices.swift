@@ -32,13 +32,12 @@ import HitSlopRuntime
             recents: { [self] in await recents() },
             chooseDestination: { [self] entry in
                 do { return try await destination(for: entry) }
-                catch let error as CancellationError { throw error }
-                catch { await telemetry.send(.failed(.create)); throw error }
+                catch { await telemetry.failure(.create, error: error); throw error }
             },
             create: { [self] entry, url in
+                await telemetry.send(.breadcrumb(.create, .started))
                 do { return try await create(entry, at: url) }
-                catch let error as CancellationError { throw error }
-                catch { await telemetry.send(.failed(.create)); throw error }
+                catch { await telemetry.failure(.create, error: error); throw error }
             }
         )
     }
@@ -47,12 +46,16 @@ import HitSlopRuntime
         let bundled: LocalTemplateSnapshot
         if let bundledRoot, FileManager.default.fileExists(atPath: bundledRoot.path) {
             do { bundled = try await scanner.local(at: bundledRoot, makeImmutable: false) }
-            catch { bundled = LocalTemplateSnapshot(issues: ["Could not load built-in templates: \(error.localizedDescription)"]) }
+            catch { bundled = LocalTemplateSnapshot(issues: ["Could not load built-in templates: \(error.localizedDescription)"], diagnostics: [.classify(error)]) }
         } else { bundled = LocalTemplateSnapshot() }
         let store = LocalTemplateStore(templatesURL: templatesURL)
         localStore = store
         return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
-            let token = store.$snapshot.sink { snapshot in
+            var reported = Set<Int>()
+            let token = store.$snapshot.sink { [telemetry] snapshot in
+                for diagnostic in bundled.diagnostics + snapshot.diagnostics {
+                    if reported.insert(diagnostic.code(for: .catalog)).inserted { telemetry.send(.failed(.catalog, diagnostic)) }
+                }
                 let starters = bundled.templates.map { template in
                     var entry = Self.localEntry(template)
                     entry.isBundled = true
@@ -67,13 +70,16 @@ import HitSlopRuntime
 
     func recents() async -> [CatalogEntry] {
         let urls = NSDocumentController.shared.recentDocumentURLs
-        return (try? await scanner.recents(urls, templatesRoot: templatesURL)) ?? []
+        do { return try await scanner.recents(urls, templatesRoot: templatesURL) }
+        catch { telemetry.failure(.catalog, error: error); return [] }
     }
 
     private func destination(for entry: CatalogEntry) async throws -> URL? {
         guard case .local(let source) = entry.source else { return nil }
         let slug = try await SlopPreparation.run { try SlopPackage(rootURL: source).manifest.slug }
-        return await chooseDestination(slug)
+        let destination = await chooseDestination(slug)
+        if destination == nil { telemetry.send(.breadcrumb(.create, .cancelled)) }
+        return destination
     }
 
     private func create(_ entry: CatalogEntry, at url: URL) async throws -> URL {
@@ -81,6 +87,7 @@ import HitSlopRuntime
         let factory = DocumentFactory(templatesRoot: templatesURL)
         try await factory.createLocal(from: source, at: url)
         await SlopPreviewWriter.installExistingPreviewAsync(for: url)
+        telemetry.send(.breadcrumb(.create, .completed))
         telemetry.send(.created(entry.isBundled ? .bundled : .installed))
         recordRecent(url)
         return url.standardizedFileURL.resolvingSymlinksInPath()

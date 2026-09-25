@@ -14,6 +14,7 @@
     "./identity": "./src/runtime-identity.json"
   },
   "dependencies": {
+    "@hitslop/schema": "1.0.0",
     "loro-crdt": "1.16.1"
   },
   "peerDependencies": {

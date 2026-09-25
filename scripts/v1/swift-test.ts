@@ -1,7 +1,7 @@
-import { buildPresentationFixtures } from "./presentation-fixtures";
+import { prepareNativeFixtures } from "./native-fixtures";
 import { repository } from "./templates";
 if (process.platform !== "darwin") throw new Error("Native tests require macOS.");
-const fixtures = await buildPresentationFixtures();
+const fixtures = await prepareNativeFixtures();
 const child = Bun.spawn(
   [
     "swift",

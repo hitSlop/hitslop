@@ -11,7 +11,7 @@ import Testing
 extension LoroClientTests {
   @Test @MainActor func themeOverridesSurviveReloadDuplicateAndClosedEditing() async throws {
     _ = NSApplication.shared
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let controller = try await SlopDocumentWindowController.open(packageURL: root)
     try await controller.session.waitUntilReady()
@@ -30,13 +30,14 @@ extension LoroClientTests {
     #expect(controller.window?.attachedSheet === issueSheet)
     controller.window?.endSheet(issueSheet, returnCode: .alertSecondButtonReturn)
     issueSheet.orderOut(nil)
-    let values = try JSONSerialization.data(withJSONObject: ["accent": "#123456"])
+    let baseline = try await DocumentCommand.run(method: "theme.get", url: root)
+    let values = try JSONSerialization.data(withJSONObject: ["accent": "#654321"])
     let theme = try await DocumentCommand.run(method: "theme.set", url: root, themeValues: values)
-    #expect(String(decoding: theme, as: UTF8.self).contains("#123456"))
+    #expect(String(decoding: theme, as: UTF8.self).contains("#654321"))
     let css = try await controller.session.webView.callAsyncJavaScript(
       "return getComputedStyle(document.documentElement).getPropertyValue('--slop-accent').trim()",
       arguments: [:], in: nil, contentWorld: .page)
-    #expect(css as? String == "#123456")
+    #expect(css as? String == "#654321")
     await #expect(throws: (any Error).self) {
       _ = try await DocumentCommand.run(
         method: "theme.set", url: root, themeValues: Data("{\"unknown\":\"red\"}".utf8))
@@ -66,14 +67,14 @@ extension LoroClientTests {
     #expect(reopened == theme)
     _ = try await DocumentCommand.run(method: "theme.reset", url: root, themeToken: "accent")
     let reset = try await DocumentCommand.run(method: "theme.get", url: root)
-    #expect(!String(decoding: reset, as: UTF8.self).contains("#123456"))
+    #expect(try JSONSerialization.jsonObject(with: reset) as? NSDictionary == JSONSerialization.jsonObject(with: baseline) as? NSDictionary)
   }
 
   #if DEBUG
   // These cases require fault-injection hooks that are absent from production builds.
   @Test @MainActor func committedWriteSurvivesRendererDeathBeforeAcknowledgement() async throws {
     _ = NSApplication.shared
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let controller = try await SlopDocumentWindowController.open(packageURL: root)
     try await controller.session.waitUntilReady()
@@ -81,10 +82,10 @@ extension LoroClientTests {
     let epoch = engine.epoch
     weak var oldWebView = engine.webView
     let pid = try #require(engine.webView.value(forKey: "_webProcessIdentifier") as? Int32)
-    engine.storageReplyForTesting = { _ in
-      engine.storageReplyForTesting = nil
+    engine.storageBridge.afterWrite = { _ in
+      engine.storageBridge.afterWrite = nil
       Darwin.kill(pid, SIGKILL)
-      return true
+      throw NSError(domain: "StorageFault", code: 1, userInfo: [NSLocalizedDescriptionKey: "Lost storage acknowledgement"])
     }
     await #expect(throws: (any Error).self) {
       _ = try await DocumentCommand.run(
@@ -110,14 +111,14 @@ extension LoroClientTests {
 
   @Test @MainActor func lostAppendReplyIsRecoveredByGetWithoutReplayingIntent() async throws {
     _ = NSApplication.shared
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let controller = try await SlopDocumentWindowController.open(packageURL: root)
     try await controller.session.waitUntilReady()
     let engine = controller.session.engine
-    engine.storageReplyForTesting = { _ in
-      engine.storageReplyForTesting = nil
-      return true
+    engine.storageBridge.afterWrite = { _ in
+      engine.storageBridge.afterWrite = nil
+      throw NSError(domain: "StorageFault", code: 1, userInfo: [NSLocalizedDescriptionKey: "Lost storage acknowledgement"])
     }
     await #expect(throws: (any Error).self) {
       _ = try await DocumentCommand.run(
@@ -131,23 +132,35 @@ extension LoroClientTests {
   }
 
   @Test @MainActor func failedSaveRetainsOwnershipAndRendererDeathReleasesOnClose() async throws {
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let controller = try await SlopDocumentWindowController.open(packageURL: root)
     try await controller.session.waitUntilReady()
-    controller.session.engine.onStatus = nil  // suppress sheets in this failure harness
+    var operations: [SlopTelemetryEvent.Failure] = []
+    controller.telemetry = SlopTelemetry { if case .failed(let operation, _) = $0 { operations.append(operation) } }
+    controller.session.engine.onStatus = { [weak controller] status in
+      guard let controller else { return }
+      // Preserve production status handling, without displaying a sheet in the test harness.
+      controller.runtimeSession(controller.session, saveStatus: WasmSaveStatus(status: status.status, error: nil))
+    }
     controller.session.engine.onError = nil
-    controller.session.engine.failWritesForTesting = true
+    controller.session.engine.storageBridge.beforeWrite = { _ in
+      throw NSError(domain: "StorageFault", code: 2, userInfo: [NSLocalizedDescriptionKey: "Injected save failure"])
+    }
     do {
       _ = try await DocumentCommand.run(
         method: "apply", url: root, operation: replace("Recovered edit"))
       Issue.record("Injected write succeeded")
     } catch { #expect(error.localizedDescription.contains("Run slop get")) }
     do {
-      try await controller.session.finish()
+      try await controller.prepareToClose(operation: .quit)
+      try await controller.finishClose(operation: .quit)
       Issue.record("Failed save allowed close")
     } catch {}
-    controller.session.engine.failWritesForTesting = false
+    // Gap: propagated close/quit errors must not duplicate the storage incident.
+    #expect(operations == [.save])
+    #expect(throws: (any Error).self) { _ = try DocumentWriterLock(root: root) }
+    controller.session.engine.storageBridge.beforeWrite = nil
     try await controller.session.flush()
     let pid = try #require(
       controller.session.webView.value(forKey: "_webProcessIdentifier") as? Int32)
@@ -169,20 +182,85 @@ extension LoroClientTests {
 
 extension LoroClientTests {
   @Test @MainActor func saveTelemetryReportsOneFailureUntilRecovery() async throws {
-    let root = try fixture()
+    let root = try contractFixture()
     defer { try? FileManager.default.removeItem(at: root) }
     let controller = try await SlopDocumentWindowController.open(packageURL: root)
     try await controller.session.waitUntilReady()
     var events: [SlopTelemetryEvent] = []
-    controller.telemetry = SlopTelemetry { events.append($0) }
+    controller.telemetry = SlopTelemetry { if case .failed = $0 { events.append($0) } }
     // Status reporting is separate from the existing real failed-save/ownership test.
     let failed = WasmSaveStatus(status: "save-failed", error: nil)
     controller.runtimeSession(controller.session, saveStatus: failed)
     controller.runtimeSession(controller.session, saveStatus: failed)
-    #expect(events == [.failed(.save)])
+    #expect(events == [.failed(.save, .init(reason: .storage, runtime: controller.session.engine.telemetryRuntime))])
     controller.runtimeSession(controller.session, saveStatus: WasmSaveStatus(status: "saved", error: nil))
     controller.runtimeSession(controller.session, saveStatus: failed)
-    #expect(events == [.failed(.save), .failed(.save)])
+    #expect(events == Array(repeating: .failed(.save, .init(reason: .storage, runtime: controller.session.engine.telemetryRuntime)), count: 2))
+    try await controller.session.finish()
+  }
+}
+
+extension LoroClientTests {
+  // Gap: guest diagnostics are displayed but never reported. Expect a fixed category,
+  // with neither the guest's message nor its arbitrary code in the uploaded fields.
+  @Test @MainActor func authoredTelemetryUsesOnlyFixedCategories() async throws {
+    let root = try contractFixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let controller = try await SlopDocumentWindowController.open(packageURL: root)
+    await controller.waitForPresentation()
+    var failures: [SlopFailureContext] = []
+    controller.telemetry = SlopTelemetry {
+      if case .failed(_, let context) = $0 { failures.append(context) }
+    }
+    controller.runtimeSession(controller.session, didReport: SlopRuntimeIssue(
+      source: .unhandled, code: "private-code", message: "secret document /private/example/document.slop"))
+    #expect(failures.count == 1)
+    #expect(failures.first?.classification == .authored)
+    #expect(failures.first?.reason == .authoredException)
+    #expect(failures.first?.fields(for: .renderer).values.contains(where: { $0.contains("private") || $0.contains("secret") }) == false)
+    try await controller.session.finish()
+  }
+
+  // Gap: readiness and WebKit callbacks can report the same renderer failure twice.
+  // Expect one incident until a new renderer is ready, then permit another incident.
+  @Test @MainActor func rendererTelemetryDeduplicatesUntilReady() async throws {
+    let root = try contractFixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let controller = try await SlopDocumentWindowController.open(packageURL: root)
+    await controller.waitForPresentation()
+    var failures = 0
+    controller.telemetry = SlopTelemetry { if case .failed = $0 { failures += 1 } }
+    let error = CocoaError(.fileReadUnknown)
+    controller.runtimeSession(controller.session, didFail: error)
+    controller.runtimeSession(controller.session, didFail: error)
+    #expect(failures == 1)
+    controller.runtimeSessionDidBecomeReady(controller.session)
+    controller.runtimeSession(controller.session, didFail: error)
+    #expect(failures == 2)
+    try await controller.session.finish()
+  }
+}
+
+extension LoroClientTests {
+  // Gap: duplication has success analytics but no error reporting. A rejected destination
+  // must report once, cancellation must not fail, and the source must remain usable.
+  @Test @MainActor func duplicateTelemetryReportsRejectedDestinationWithoutLosingSource() async throws {
+    let root = try contractFixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let controller = try await SlopDocumentWindowController.open(packageURL: root)
+    await controller.waitForPresentation()
+    var failures: [SlopFailureContext] = []
+    controller.telemetry = SlopTelemetry {
+      if case .failed(.duplicate, let context) = $0 { failures.append(context) }
+    }
+    #expect(try await controller.duplicateDocument(to: nil) == nil)
+    #expect(failures.isEmpty)
+    await #expect(throws: (any Error).self) { _ = try await controller.duplicateDocument(to: root) }
+    #expect(failures.count == 1)
+    #expect(failures.first?.reason == .destinationExists)
+    #expect(failures.first?.classification == .rejection)
+    #expect(throws: (any Error).self) { _ = try DocumentWriterLock(root: root) }
+    try await controller.session.flush()
     try await controller.session.finish()
   }
 }

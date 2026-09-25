@@ -13,7 +13,9 @@ extension LoroClientTests {
     let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
     let fixtures = URL(fileURLWithPath: repository + "/tests/compatibility")
     let entries = try FileManager.default.contentsOfDirectory(at: fixtures, includingPropertiesForKeys: nil)
-      .filter { FileManager.default.fileExists(atPath: $0.appendingPathComponent("fixture.json").path) }
+      // This preserved app owns the #edit/input authored scenario below. Every
+      // corpus package also runs through the generic Bun and native smoke runners.
+      .filter { $0.lastPathComponent == "1-1" }
     #expect(!entries.isEmpty)
     for fixture in entries {
       let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
@@ -60,32 +62,11 @@ extension LoroClientTests {
       #expect(NSBitmapImageRep(data: png) != nil)
       let pdf = try await SlopRenderer.exportPDFData(session: session)
       #expect((PDFDocument(data: pdf)?.pageCount ?? 0) > 0)
-      try await session.closeAndWait()
+      try await session.finish()
 
-      // A document keeps its minimum revision after new writes. Its historical
-      // reader must therefore still understand candidate checkpoints and updates.
-      let release = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: fixture.appendingPathComponent("fixture.json"))) as? [String: Any])
-      let contract = try #require(release["runtimeContract"] as? Int)
-      let published = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: repository + "/runtimes/releases.json"))) as? [[String: Any]])
-      let minimum = try #require(release["runtimeRevision"] as? Int)
-      for entry in published where entry["runtimeContract"] as? Int == contract && (entry["runtimeRevision"] as? Int ?? 0) >= minimum {
-        let revision = try #require(entry["runtimeRevision"] as? Int)
-        let bundled = try RuntimeCatalog.bundled()
-        let current = bundled.identities.first { $0["runtimeContract"] as? Int == contract }
-        let historical: RuntimeCatalog
-        if current?["runtimeRevision"] as? Int == revision {
-          historical = bundled
-        } else {
-          historical = try RuntimeCatalog(root: URL(fileURLWithPath: repository + "/generated/v1/runtime-releases/\(contract)-\(revision)"))
-        }
-        let reader = try WasmSession(package: SlopPackage(rootURL: root), headless: true, catalog: historical)
-        reader.load()
-        try await reader.waitUntilReady()
-        let reply = await reader.request(["id": "historical", "method": "get", "documentPath": root.path])
-        #expect(reply["ok"] as? Bool == true)
-        #expect(reply["state"] as? NSDictionary == (try JSONSerialization.jsonObject(with: saved) as? NSDictionary))
-        try await reader.close()
-      }
+      // SQLite replay, updates/checkpoints and historical reader combinations run
+      // in Bun. This test retains the frozen app's WebKit binding/theme/export boundary.
+
     }
   }
 }

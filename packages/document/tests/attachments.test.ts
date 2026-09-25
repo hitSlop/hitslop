@@ -1,5 +1,11 @@
+// Guards durable immutable blobs, reference ordering, quotas, retry and close during imports.
 import { expect, test } from "bun:test";
-import { AttachmentController, HostAttachments, MemoryAttachments, attachmentLimits } from "../src/attachments";
+import {
+  AttachmentController,
+  HostAttachments,
+  MemoryAttachments,
+  attachmentLimits,
+} from "../src/attachments";
 import { OperationRejectedError } from "../src/errors";
 import { defineDocument, s } from "../src/schema";
 import { Document } from "../src/document";
@@ -10,14 +16,20 @@ import { base64 } from "../src/bridge";
 const schema = defineDocument({ skin: s.optional(s.string()), title: s.text() });
 const initial = { title: "Receiver" };
 test("attachments persist before references and deduplicate without exposing mutable bytes", async () => {
-  const bytes = new MemoryAttachments(), store = new MemoryStore();
+  const bytes = new MemoryAttachments(),
+    store = new MemoryStore();
   const doc = await Document.open(schema, store, initial);
   const attachments = new AttachmentController(doc, bytes);
   const file = new File(["classic skin"], "classic.wsz");
-  const ref = await attachments.import(file, { commit(ref) { doc.fields.skin.set(ref.id); } });
+  const ref = await attachments.import(file, {
+    commit(ref) {
+      doc.fields.skin.set(ref.id);
+    },
+  });
   expect(ref.name).toBe("classic.wsz");
   expect(await (await attachments.read(ref.id)).text()).toBe("classic skin");
-  const copy = await bytes.read(ref.id); copy.fill(0);
+  const copy = await bytes.read(ref.id);
+  copy.fill(0);
   await attachments.import(file, { commit() {} });
   expect(await attachments.list()).toHaveLength(1);
   await doc.close();
@@ -27,14 +39,24 @@ test("attachments persist before references and deduplicate without exposing mut
   await reopened.close();
 });
 test("close waits for accepted imports, permits their commit, and rejects new edits", async () => {
-  const bytes = new MemoryAttachments(), store = new MemoryStore();
+  const bytes = new MemoryAttachments(),
+    store = new MemoryStore();
   const doc = await Document.open(schema, store, initial);
   const attachments = new AttachmentController(doc, bytes);
   const put = bytes.put.bind(bytes);
   let release!: () => void;
-  const gate = new Promise<void>(resolve => { release = resolve; });
-  bytes.put = async data => { await gate; return put(data); };
-  const importing = attachments.import(new File(["bytes"], "a.wsz"), { commit(ref) { doc.fields.skin.set(ref.id); } });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  bytes.put = async (data) => {
+    await gate;
+    return put(data);
+  };
+  const importing = attachments.import(new File(["bytes"], "a.wsz"), {
+    commit(ref) {
+      doc.fields.skin.set(ref.id);
+    },
+  });
   const closing = doc.close();
   expect(() => doc.fields.title.replace("late edit")).toThrow();
   await expect(attachments.import(new File(["b"], "b.wsz"), { commit() {} })).rejects.toThrow();
@@ -46,12 +68,22 @@ test("close waits for accepted imports, permits their commit, and rejects new ed
   await reopened.close();
 });
 test("failed attachment writes retain the operation for native retry without dangling references", async () => {
-  const bytes = new MemoryAttachments(), doc = await Document.open(schema, new MemoryStore(), initial);
+  const bytes = new MemoryAttachments(),
+    doc = await Document.open(schema, new MemoryStore(), initial);
   const attachments = new AttachmentController(doc, bytes);
   const put = bytes.put.bind(bytes);
-  bytes.put = async () => { throw new Error("disk full"); };
+  bytes.put = async () => {
+    throw new Error("disk full");
+  };
   let commits = 0;
-  await expect(attachments.import(new File(["skin"], "skin.wsz"), { commit(ref) { commits++; doc.fields.skin.set(ref.id); } })).rejects.toThrow("disk full");
+  await expect(
+    attachments.import(new File(["skin"], "skin.wsz"), {
+      commit(ref) {
+        commits++;
+        doc.fields.skin.set(ref.id);
+      },
+    }),
+  ).rejects.toThrow("disk full");
   expect(doc.current.skin).toBeUndefined();
   expect(doc.status).toBe("save-failed");
   await expect(doc.prepareClose()).rejects.toThrow("disk full");
@@ -62,14 +94,33 @@ test("failed attachment writes retain the operation for native retry without dan
   await doc.close();
 });
 test("lost blob acknowledgement retries by content hash; checkpoint retry does not repeat commit", async () => {
-  const bytes = new MemoryAttachments(), store = new MemoryStore();
+  const bytes = new MemoryAttachments(),
+    store = new MemoryStore();
   const doc = await Document.open(schema, store, initial);
   const attachments = new AttachmentController(doc, bytes);
-  const put = bytes.put.bind(bytes), append = store.append.bind(store);
-  let loseReply = true, commits = 0;
-  bytes.put = async data => { const ref = await put(data); if (loseReply) { loseReply = false; throw new Error("lost reply"); } return ref; };
-  await expect(attachments.import(new File(["skin"], "s.wsz"), { commit(ref) { commits++; doc.fields.skin.set(ref.id); } })).rejects.toThrow();
-  store.append = async () => { throw new Error("disk full"); };
+  const put = bytes.put.bind(bytes),
+    append = store.append.bind(store);
+  let loseReply = true,
+    commits = 0;
+  bytes.put = async (data) => {
+    const ref = await put(data);
+    if (loseReply) {
+      loseReply = false;
+      throw new Error("lost reply");
+    }
+    return ref;
+  };
+  await expect(
+    attachments.import(new File(["skin"], "s.wsz"), {
+      commit(ref) {
+        commits++;
+        doc.fields.skin.set(ref.id);
+      },
+    }),
+  ).rejects.toThrow();
+  store.append = async () => {
+    throw new Error("disk full");
+  };
   await expect(doc.flush()).rejects.toThrow();
   expect(commits).toBe(1);
   store.append = append;
@@ -79,30 +130,53 @@ test("lost blob acknowledgement retries by content hash; checkpoint retry does n
   await doc.close();
 });
 test("attachment limits, invalid IDs and session epochs are enforced", async () => {
-  const bytes = new MemoryAttachments(), doc = await Document.open(schema, new MemoryStore(), initial);
+  const bytes = new MemoryAttachments(),
+    doc = await Document.open(schema, new MemoryStore(), initial);
   const attachments = new AttachmentController(doc, bytes);
-  await expect(attachments.import(new File([new Uint8Array(attachmentLimits.file + 1)], "large"), { commit() {} })).rejects.toThrow("10 MiB");
+  await expect(
+    attachments.import(new File([new Uint8Array(attachmentLimits.file + 1)], "large"), {
+      commit() {},
+    }),
+  ).rejects.toThrow("10 MiB");
   await expect(bytes.read("../document.sqlite")).rejects.toThrow("Invalid attachment ID");
   await expect(bytes.read("a".repeat(64))).rejects.toThrow("not found");
   const session = new Session(doc, "epoch", undefined, attachments);
-  const request = { id: "one", documentPath: "test", method: "attachments.put" as const, bytes: base64.encode(new Uint8Array([1, 2, 3])) };
+  const request = {
+    id: "one",
+    documentPath: "test",
+    method: "attachments.put" as const,
+    bytes: base64.encode(new Uint8Array([1, 2, 3])),
+  };
   expect((await session.handle({ ...request, epoch: "wrong" })).ok).toBe(false);
   const stale = await session.handle({ ...request, epoch: "wrong" });
   expect(stale.code).toBe("session_changed");
   const reply = await session.handle({ ...request, epoch: "epoch" });
   expect(reply.ok).toBe(true);
   const id = (reply.state as { id: string }).id;
-  const read = await session.handle({ id: "two", documentPath: "test", method: "attachments.read", attachmentID: id });
+  const read = await session.handle({
+    id: "two",
+    documentPath: "test",
+    method: "attachments.read",
+    attachmentID: id,
+  });
   expect(read.state).toEqual({ bytes: request.bytes });
   await session.close();
 });
 test("a throwing commit is final: the blob stays, the reference is not written, and saving continues", async () => {
-  const bytes = new MemoryAttachments(), doc = await Document.open(schema, new MemoryStore(), initial);
+  const bytes = new MemoryAttachments(),
+    doc = await Document.open(schema, new MemoryStore(), initial);
   const attachments = new AttachmentController(doc, bytes);
   let commits = 0;
-  const importing = attachments.import(new File(["skin"], "s.wsz"), { commit() { commits++; throw new Error("bad field"); } });
+  const importing = attachments.import(new File(["skin"], "s.wsz"), {
+    commit() {
+      commits++;
+      throw new Error("bad field");
+    },
+  });
   await expect(importing).rejects.toBeInstanceOf(OperationRejectedError);
-  await expect(attachments.import(new File(["x"], "x.wsz"), { commit: (async () => {}) as any })).rejects.toThrow("synchronous");
+  await expect(
+    attachments.import(new File(["x"], "x.wsz"), { commit: (async () => {}) as any }),
+  ).rejects.toThrow("synchronous");
   expect(doc.status).not.toBe("save-failed");
   doc.fields.title.replace("after");
   await doc.flush();
@@ -114,20 +188,32 @@ test("a throwing commit is final: the blob stays, the reference is not written, 
 test("reads carry the requested MIME type", async () => {
   const doc = await Document.open(schema, new MemoryStore(), initial);
   const attachments = new AttachmentController(doc, new MemoryAttachments());
-  const ref = await attachments.import(new File(["<svg/>"], "a.svg", { type: "image/svg+xml" }), { commit() {} });
+  const ref = await attachments.import(new File(["<svg/>"], "a.svg", { type: "image/svg+xml" }), {
+    commit() {},
+  });
   expect((await attachments.read(ref.id, { type: ref.mimeType })).type).toBe("image/svg+xml");
   expect((await attachments.read(ref.id)).type).toBe("");
   await doc.close();
 });
 test("host rejections become OperationRejectedError; host faults stay retryable", async () => {
-  const handler = { postMessage: async (_: unknown): Promise<unknown> => ({ rejected: "Document attachment limit reached" }) };
+  const handler = {
+    postMessage: async (_: unknown): Promise<unknown> => ({
+      rejected: "Document attachment limit reached",
+    }),
+  };
   const previous = (globalThis as any).webkit;
   (globalThis as any).webkit = { messageHandlers: { storage: handler } };
   try {
-    await expect(new HostAttachments().put(new Uint8Array([1]))).rejects.toBeInstanceOf(OperationRejectedError);
-    handler.postMessage = async () => { throw new Error("disk full"); };
+    await expect(new HostAttachments().put(new Uint8Array([1]))).rejects.toBeInstanceOf(
+      OperationRejectedError,
+    );
+    handler.postMessage = async () => {
+      throw new Error("disk full");
+    };
     const fault = new HostAttachments().put(new Uint8Array([1]));
     await expect(fault).rejects.toThrow("disk full");
     await expect(fault).rejects.not.toBeInstanceOf(OperationRejectedError);
-  } finally { (globalThis as any).webkit = previous; }
+  } finally {
+    (globalThis as any).webkit = previous;
+  }
 });

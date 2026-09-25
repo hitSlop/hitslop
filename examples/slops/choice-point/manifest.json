@@ -7,11 +7,11 @@
   },
   "slug": "choice-point",
   "title": "Choice Point",
-  "description": "Russ Harris’s ACT fork-in-the-road worksheet: name the moment, map away vs towards, STOP, and pick one tiny move.",
+  "description": "Russ Harris’s ACT Choice Point: notice what hooks you, map away and towards moves, and pick one towards move.",
   "categories": ["personal", "education"],
   "presentation": {
     "width": 760,
-    "height": 980,
+    "height": 860,
     "shape": "rounded"
   }
 }

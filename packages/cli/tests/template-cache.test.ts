@@ -1,8 +1,45 @@
 import { expect, test } from "bun:test";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { fingerprint, TemplateCache, validateTemplate } from "../../../scripts/v1/template-cache";
+
+import identity from "../../document/src/runtime-identity.json";
+import { defineDocument, s } from "../../document/src/schema";
+
+// Cache behavior needs a valid package, not a native-generated template collection.
+async function writePackage(output: string, slug = "quick-checklist") {
+  await mkdir(join(output, "assets"), { recursive: true });
+  await mkdir(join(output, "QuickLook"));
+  const manifest = {
+    $schema: "https://api.hitslop.com/schemas/v1/manifest.schema.json",
+    runtime: "hitslop-v1",
+    slug,
+    title: "Cache fixture",
+    description: "Cache contract",
+    author: { name: "hitSlop" },
+    categories: ["utilities"],
+    presentation: { width: 320, height: 240 },
+  };
+  const files = {
+    "manifest.json": manifest,
+    "state.schema.json": defineDocument({ title: s.text() }).descriptor,
+    "initial.json": { title: "Cache fixture" },
+    "assets/runtime.json": {
+      runtimeContract: identity.runtimeContract,
+      minRuntimeRevision: identity.runtimeRevision,
+      sdkVersion: identity.sdkVersion,
+    },
+  };
+  for (const [name, value] of Object.entries(files))
+    await writeFile(join(output, name), JSON.stringify(value));
+  await writeFile(join(output, "app.html"), "<!doctype html><title>Cache fixture</title>");
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ioAAAAASUVORK5CYII=",
+    "base64",
+  );
+  await writeFile(join(output, "QuickLook/Preview.png"), png);
+}
 
 test("template cache reuses matching artifacts and rebuilds changed or damaged entries", async () => {
   const root = await mkdtemp(join(tmpdir(), "hitslop-template-cache-"));
@@ -15,7 +52,7 @@ test("template cache reuses matching artifacts and rebuilds changed or damaged e
     let builds = 0;
     const build = async () => {
       builds++;
-      await cp(resolve("generated/v1/templates/quick-checklist.slop"), output, { recursive: true });
+      await writePackage(output);
     };
     const cache = new TemplateCache(directory, "shared-a");
     const run = async (current = cache) => {
@@ -75,7 +112,7 @@ test("changing one template preserves another template's cache entry", async () 
       await rm(output, { recursive: true, force: true });
       return cache.build(join(root, slug), slug, output, async () => {
         builds.push(slug);
-        await cp(resolve("generated/v1/templates", slug + ".slop"), output, { recursive: true });
+        await writePackage(output, slug);
       });
     };
     await run("quick-checklist");
@@ -103,7 +140,7 @@ test("failed builds never publish cache entries; cached packages reject state an
       }),
     ).rejects.toThrow("render failed");
     expect(await Bun.file(join(directory, "quick-checklist/entry.json")).exists()).toBe(false);
-    await cp(resolve("generated/v1/templates/quick-checklist.slop"), output, { recursive: true });
+    await writePackage(output);
     await validateTemplate(output, "quick-checklist");
     await mkdir(join(output, "state"));
     await expect(validateTemplate(output, "quick-checklist")).rejects.toThrow(

@@ -1,41 +1,106 @@
-name: macOS client and Loro runtime
+name: Runtime contracts
 on:
   pull_request:
   push:
-    branches: [master, refactor]
+    branches: ["**"]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: read
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  foundation:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/prepare-checks
+      - run: bun run hygiene
+      - run: bun run check
+      - run: bun run test
+      - run: bun install --cwd apps/landing --frozen-lockfile
+      - run: bun run landing:check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fast-evidence
+          path: .hitslop/v1-evidence
+          include-hidden-files: true
+  native:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-      - uses: oven-sh/setup-bun@v2
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v4
+        id: paths
         with:
-          bun-version: "1.4.2"
-      - run: bun install --frozen-lockfile
-      - run: bun install --cwd apps/landing --frozen-lockfile
-      - run: brew install xcodegen
-      - run: bun run hygiene
-      - name: Restore template cache
-        uses: actions/cache/restore@v6
-        with:
-          path: .hitslop/template-cache
-          key: templates-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: templates-v1-${{ runner.os }}-${{ runner.arch }}-
-      - name: Build runtime, helper, and templates
-        id: templates
-        run: bun run build
+          filters: |
+            native:
+              - 'apps/apple/**'
+              - 'packages/document/src/**'
+              - 'packages/schema/src/**'
+              - 'packages/cli/src/**'
+              - 'packages/cli/templates/**'
+              - 'packages/cli/tests/fixtures/**'
+              - 'packages/*/tests/**/*.native.test.ts'
+              - 'packages/*/package.json'
+              - 'scripts/**'
+              - 'tests/**'
+              - 'runtimes/**'
+              - 'examples/slops/**'
+              - '.github/**'
+              - 'bun.lock'
+              - 'package.json'
+              - 'tsconfig*.json'
+      - uses: ./.github/actions/prepare-checks
+        if: steps.paths.outputs.native == 'true'
+      - uses: ./.github/actions/native-cache
+        if: steps.paths.outputs.native == 'true'
+      - name: Validate native boundaries
+        if: steps.paths.outputs.native == 'true'
         env:
           HITSLOP_TEMPLATE_CACHE_DIR: .hitslop/template-cache
-      - name: Save completed template cache
-        uses: actions/cache/save@v6
+        run: |
+          bun run build
+          bun run build:templates
+          bun run check:built
+          bun run swift:test
+          bun run test:native
+          bun run test:render
+          bun run test:native-helper
+          bun run test:storage
+          bun scripts/v1/crash-matrix.ts --native
+      - name: Native unaffected
+        if: steps.paths.outputs.native == 'false'
+        run: echo 'No native inputs changed'
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.paths.outputs.native == 'true'
         with:
-          path: .hitslop/template-cache
-          key: templates-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: Validate built artifacts
-        run: bun run test:built
+          name: native-evidence
+          path: .hitslop/v1-evidence
+          include-hidden-files: true
+  release:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    needs: [fast, native]
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/prepare-checks
+      - uses: ./.github/actions/native-cache
+      - run: brew install xcodegen
+      - run: bun install --cwd apps/landing --frozen-lockfile
+      - run: bun run release:check
+        env:
+          HITSLOP_TEMPLATE_CACHE_DIR: .hitslop/template-cache
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-evidence
+          path: .hitslop/v1-evidence
+          include-hidden-files: true

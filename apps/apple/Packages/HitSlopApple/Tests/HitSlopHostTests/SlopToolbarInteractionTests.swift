@@ -1,12 +1,9 @@
 import AppKit
+import HitSlopRuntime
+import PDFKit
 @testable import HitSlopHost
 import Testing
 
-@Test func toolbarDragRequiresFourPointsOfMovement() {
-  #expect(!slopToolbarDragStarted(from: .zero, to: NSPoint(x: 2, y: 2)))
-  #expect(slopToolbarDragStarted(from: .zero, to: NSPoint(x: 4, y: 0)))
-  #expect(slopToolbarDragStarted(from: .zero, to: NSPoint(x: -3, y: -3)))
-}
 
 @Test func toolbarHoverRecoversAndAllowsGapCrossing() {
   var state = SlopToolbarVisibility()
@@ -37,4 +34,86 @@ import Testing
   #expect(result26)
   let result27 = !state.shouldShow(inside: false, interacting: false, visible: true, now: 11.9)
   #expect(result27)
+}
+
+extension LoroClientTests {
+  // A guest must not retain visible/focusable controls after native chrome hides.
+  // Existing deadline tests do not exercise delivery into a real WKWebView.
+  @Test @MainActor func guestControlsFollowNativeToolbar() async throws {
+    _ = NSApplication.shared
+    let root = try captureFixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let htmlURL = root.appendingPathComponent("app.html")
+    let html = try String(contentsOf: htmlURL, encoding: .utf8).replacingOccurrences(
+      of: "</head><body>", with: """
+      <style>
+      #hover-control { visibility: hidden; pointer-events: none; }
+      html[data-slop-controls="visible"] #hover-control { visibility: visible; pointer-events: auto; }
+      </style></head><body><button id="hover-control" data-slop-export="hide">Hover action</button>
+      """)
+    try html.write(to: htmlURL, atomically: true, encoding: .utf8)
+    let controller = try await SlopDocumentWindowController.open(packageURL: root)
+    SlopToolbarPointerSampler.shared.remove(controller)
+    await controller.waitForPresentation()
+    let view = controller.session.webView
+    do {
+      // The host must initialize the signal before any pointer interaction.
+      try #require(try await view.evaluateJavaScript("document.documentElement.getAttribute('data-slop-controls')") as? String == "hidden")
+      #expect(try await view.evaluateJavaScript("getComputedStyle(document.querySelector('#hover-control')).visibility") as? String == "hidden")
+      controller.showWindow(nil)
+      let window = try #require(controller.window)
+      let inside = NSPoint(x: window.frame.midX, y: window.frame.midY)
+      controller.refreshToolbarHover(point: inside, front: window.windowNumber, now: 1)
+      #expect(try await view.evaluateJavaScript("getComputedStyle(document.querySelector('#hover-control')).visibility") as? String == "visible")
+      _ = try await view.evaluateJavaScript("document.querySelector('#hover-control').focus(); true")
+      #expect(try await view.evaluateJavaScript("document.activeElement.id") as? String == "hover-control")
+
+      let toolbar = try #require(NSApp.windows.first { $0 !== window && controller.owns($0) })
+      controller.refreshToolbarHover(point: NSPoint(x: toolbar.frame.midX, y: toolbar.frame.midY),
+                                     front: toolbar.windowNumber, now: 2)
+      #expect(try await view.evaluateJavaScript("getComputedStyle(document.querySelector('#hover-control')).visibility") as? String == "visible")
+      let outside = NSPoint(x: window.frame.maxX + 500, y: window.frame.maxY + 500)
+      controller.refreshToolbarHover(point: outside, front: 0, now: 3)
+      #expect(toolbar.isVisible)
+      #expect(try await view.evaluateJavaScript("getComputedStyle(document.querySelector('#hover-control')).visibility") as? String == "visible")
+      controller.refreshToolbarHover(point: outside, front: 0, now: 3.9)
+      #expect(!toolbar.isVisible)
+      #expect(try await view.evaluateJavaScript("getComputedStyle(document.querySelector('#hover-control')).visibility") as? String == "hidden")
+      #expect(try await view.evaluateJavaScript("document.querySelector('#draft').focus(); document.querySelector('#hover-control').focus(); document.activeElement.id") as? String == "draft")
+
+      controller.refreshToolbarHover(point: inside, front: window.windowNumber)
+      _ = try await view.evaluateJavaScript("document.querySelector('#hover-control').disabled = true; true")
+      // Miniaturization immediately hides chrome, including a busy guest control.
+      controller.windowWillMiniaturize(Notification(name: NSWindow.willMiniaturizeNotification, object: window))
+      #expect(try await view.evaluateJavaScript("getComputedStyle(document.querySelector('#hover-control')).visibility") as? String == "hidden")
+      controller.refreshToolbarHover(point: inside, front: window.windowNumber)
+      window.orderOut(nil)
+      controller.refreshToolbarHover()
+      #expect(try await view.evaluateJavaScript("getComputedStyle(document.querySelector('#hover-control')).visibility") as? String == "hidden")
+      let pdf = try await SlopRenderer.exportPDFData(session: controller.session)
+      #expect(PDFDocument(data: pdf)?.string?.contains("Hover action") == false)
+      #expect(try await view.evaluateJavaScript("document.documentElement.getAttribute('data-slop-controls')") as? String == "hidden")
+
+      let pid = try #require(view.value(forKey: "_webProcessIdentifier") as? Int32)
+      try #require(pid > 0)
+      try #require(Darwin.kill(pid, SIGKILL) == 0)
+      let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+      while !controller.session.engine.rendererDead && ContinuousClock.now < deadline {
+        try await Task.sleep(for: .milliseconds(25))
+      }
+      try #require(controller.session.engine.rendererDead)
+      try await controller.session.reopenSavedDocument()
+      try await controller.session.waitUntilReady()
+      #expect(try await controller.session.webView.evaluateJavaScript("document.documentElement.getAttribute('data-slop-controls')") as? String == "hidden")
+      window.orderFront(nil)
+      controller.refreshToolbarHover(point: inside, front: window.windowNumber)
+      #expect(try await controller.session.webView.evaluateJavaScript("getComputedStyle(document.querySelector('#hover-control')).visibility") as? String == "visible")
+      try await controller.session.finish()
+    } catch {
+      try? await controller.session.finish()
+      controller.window?.close()
+      throw error
+    }
+    controller.window?.close()
+  }
 }

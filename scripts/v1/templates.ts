@@ -53,6 +53,6 @@ export async function builtTemplates(): Promise<TemplateInventory> {
     await readFile(join(repository, "generated/v1/templates/inventory.json"), "utf8"),
   );
   if (JSON.stringify(actual) !== JSON.stringify(expected))
-    throw new Error("Template inventory is stale. Run bun run build.");
+    throw new Error("Template inventory is stale. Run bun run build:templates.");
   return expected;
 }

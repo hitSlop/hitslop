@@ -8,23 +8,14 @@ import HitSlopCore
         self.templatesRoot = templatesRoot
     }
 
-    nonisolated public static var defaultTemplatesRoot: URL {
-        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".hitslop/templates", isDirectory: true)
-    }
+    nonisolated public static var defaultTemplatesRoot: URL { SlopTemplateLocation.defaultTemplatesRoot }
 
     public func isManagedTemplatePackage(_ url: URL) -> Bool {
         Self.isManagedTemplatePackage(url, templatesRoot: templatesRoot)
     }
 
-    /// Catalog masters live under the templates root. Resolve POSIX symlinks so
-    /// a link outside the tree cannot open one as a document.
     nonisolated public static func isManagedTemplatePackage(_ url: URL, templatesRoot: URL = defaultTemplatesRoot) -> Bool {
-        let candidate = url.standardizedFileURL.resolvingSymlinksInPath().pathComponents
-        let root = templatesRoot.standardizedFileURL.resolvingSymlinksInPath().pathComponents
-        if let bundled = Bundle.main.resourceURL?.appendingPathComponent("StarterTemplates").standardizedFileURL.resolvingSymlinksInPath().pathComponents,
-           candidate.count > bundled.count, zip(bundled, candidate).allSatisfy({ $0.caseInsensitiveCompare($1) == .orderedSame }) { return true }
-        guard candidate.count > root.count else { return false }
-        return zip(root, candidate).allSatisfy { $0.caseInsensitiveCompare($1) == .orderedSame }
+        SlopTemplateLocation.isManagedTemplatePackage(url, templatesRoot: templatesRoot)
     }
 
     nonisolated public func create(fromLocalPackage packageURL: URL, at destination: URL) throws {

@@ -1,3 +1,4 @@
+// Guards invalid persisted data rejection and host byte/envelope decoding.
 import { describe, test, expect } from "bun:test";
 import { LoroDoc, LoroMap, LoroMovableList, LoroText } from "loro-crdt";
 import { defineDocument, s, schemaKey } from "../src/schema";
@@ -55,7 +56,9 @@ describe("opening stored documents", () => {
     await expect(
       openStored((data) => {
         data.setContainer("title", new LoroText());
-        const row = data.setContainer("tasks", new LoroMovableList()).insertContainer(0, new LoroMap());
+        const row = data
+          .setContainer("tasks", new LoroMovableList())
+          .insertContainer(0, new LoroMap());
         row.setContainer("text", new LoroText());
         row.set("done", "yes");
       }),

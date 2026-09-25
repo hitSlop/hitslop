@@ -1,3 +1,4 @@
+import { checkHistory } from "./compatibility-history";
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -102,31 +103,13 @@ export async function releases(): Promise<Release[]> {
       throw new Error("Invalid runtime release ledger");
     seen.add(key);
   }
-  const git = Bun.spawn(["/usr/bin/git", "show", "HEAD:runtimes/releases.json"], {
-    cwd: repository,
-    stdout: "pipe",
-    stderr: "ignore",
-  });
-  const previous = await new Response(git.stdout).text();
-  if ((await git.exited) === 0) {
-    for (const release of JSON.parse(previous) as Release[])
-      if (
-        // This exact development baseline was sealed before the first shipment.
-        // It is not a published release. No other identity/hash may be removed.
-        !(release.runtimeContract === 1 && release.runtimeRevision === 1 &&
-          release.sha256 === "1b9504af7d8b39866b507884e124104398dc5dd373cf028d1b2d1c9dfc1e5dcd") &&
-        !values.some(
-          (value) =>
-            value.runtimeContract === release.runtimeContract &&
-            value.runtimeRevision === release.runtimeRevision &&
-            value.sha256 === release.sha256,
-        )
-      )
-        throw new Error("Published runtime release records are immutable");
-  }
+  await checkHistory();
   return values;
 }
-export async function verifyReleasedIdentities(values: Awaited<ReturnType<typeof catalog>>, published?: Release[]) {
+export async function verifyReleasedIdentities(
+  values: Awaited<ReturnType<typeof catalog>>,
+  published?: Release[],
+) {
   published ??= await releases();
   for (const release of published) {
     const installed = values[String(release.runtimeContract)];

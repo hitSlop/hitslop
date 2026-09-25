@@ -1,3 +1,4 @@
+// Guards command serialization, stale epochs, known rejection versus unknown outcome, and close ordering.
 import { test, expect } from "bun:test";
 import { Document } from "../src/document";
 import { defineDocument, s } from "../src/schema";
@@ -21,7 +22,10 @@ test("hello returns only lifetime identity and stale sessions fail", async () =>
   expect(rejected.error).toContain("Session changed");
   expect(rejected.code).toBe("session_changed");
   const invalid = await session.handle({
-    ...base, method: "apply", epoch: "current", op: { type: "set", path: ["missing"], value: 1 } as any,
+    ...base,
+    method: "apply",
+    epoch: "current",
+    op: { type: "set", path: ["missing"], value: 1 } as any,
   });
   expect(invalid).toMatchObject({ ok: false, code: "rejected" });
   await session.close();

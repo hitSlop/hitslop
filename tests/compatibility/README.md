@@ -1,8 +1,9 @@
 # Preserved runtime fixtures
 
 `1-1/document` is a compiled contract-1/revision-1 app with a SQLite checkpoint
-and an uncheckpointed update. It covers all v1 value kinds, Unicode text, list
-identity/movement, transactions, bindings, themes and export. `expected.json`
+and an uncheckpointed update. It covers text, optional strings, enums, nested number/boolean fields, and object
+lists, including Unicode, list identity/movement, transactions, bindings, themes
+and export. It does not cover every v1 value kind. `expected.json`
 records its saved state. Swift tests always edit disposable copies.
 
 These are release baselines, not generated examples. Do not rebuild or replace

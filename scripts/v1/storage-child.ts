@@ -1,8 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { Document } from "../../packages/document/src/document";
-import { SQLiteStore } from "../../packages/document/src/sqlite";
-import { checklist } from "../../examples/slops/quick-checklist/schema";
-import initial from "../../examples/slops/quick-checklist/initial";
+import { SQLiteStore } from "../../packages/document/test-support/sqlite";
+import { crashSchema as checklist, crashInitial as initial } from "./crash-matrix";
 const [root, phase, marker] = process.argv.slice(2) as [string, string, string];
 const io = await SQLiteStore.open(root, (at) => {
   if (at === phase) {

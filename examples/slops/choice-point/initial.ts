@@ -13,17 +13,11 @@ function todayStr(): string {
 export default {
   date: todayStr(),
   situation: "Feedback landed hard in the team review.",
-  hooks: ["I should already know this", "A flush of embarrassment", "Urge to shut down"],
-  values: ["Craft", "Humility", "Collaboration"],
-  awayMoves: [{ text: "Avoid the revision" }, { text: "Get sharp with my teammates" }],
-  towardsMoves: [
-    { text: "Thank them for catching it" },
-    { text: "Take a breath, then pair on the fix" },
-  ],
-  stop: { slow: true, takeNote: true, openUp: false, pursue: false },
+  hooks: [{ text: "“I should already know this”" }, { text: "Hot face, tight chest" }, { text: "Urge to shut down" }],
+  awayMoves: [{ text: "Put off the revision" }, { text: "Get short with my teammates" }],
+  towardsMoves: [{ text: "Thank them for catching it" }, { text: "Pair on the first fix" }],
+  helpers: [{ text: "Craft" }, { text: "Humility" }, { text: "Three slow breaths" }, { text: "Name it: “here’s the not-good-enough story”" }],
   nextMove: "Thank them, then pair on the first fix.",
   nextWhen: "Right after this meeting",
   nextDone: false,
-  introDismissed: false,
-  theme: "light",
 } satisfies Input<typeof schema.fields.node>;

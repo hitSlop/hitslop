@@ -17,7 +17,7 @@ import WebKit
   @Test @MainActor func blobDownloadSavesOnlyAfterConfirmationAndHonorsGuards() async throws {
     _ = NSApplication.shared
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
-    try SlopDuplicator.duplicate(from: URL(fileURLWithPath: repository + "/generated/v1/templates/quick-checklist.slop"), to: root)
+    try SlopDuplicator.duplicate(from: URL(fileURLWithPath: repository + "/generated/v1/native-fixtures/quick-checklist.slop"), to: root)
     let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: folder) }
@@ -123,11 +123,23 @@ import WebKit
       try DocumentFileSaver.install(staging, at: target.appendingPathComponent("impossible"))
     }
     #expect(try Data(contentsOf: target) == Data("old".utf8))
+    // A quarantine write failure must happen before any destination is replaced.
+    for destination in [target, folder.appendingPathComponent("unpublished")] {
+      #expect(throws: CocoaError.self) {
+        try DocumentFileSaver.install(staging, at: destination, quarantine: { _ in
+          throw CocoaError(.fileWriteNoPermission)
+        })
+      }
+    }
+    #expect(try Data(contentsOf: target) == Data("old".utf8))
+    #expect(!manager.fileExists(atPath: folder.appendingPathComponent("unpublished").path))
     try DocumentFileSaver.install(staging, at: target)
     #expect(try Data(contentsOf: target) == Data("new contents".utf8))
+    #expect(try target.resourceValues(forKeys: [.quarantinePropertiesKey]).quarantineProperties != nil)
     let fresh = folder.appendingPathComponent("fresh")
     try DocumentFileSaver.install(staging, at: fresh)
     #expect(try Data(contentsOf: fresh) == Data("new contents".utf8))
+    #expect(try fresh.resourceValues(forKeys: [.quarantinePropertiesKey]).quarantineProperties != nil)
   }
 
   @Test func suggestedNamesStayPlainFileNames() {

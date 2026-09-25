@@ -91,12 +91,14 @@ and PDF behavior.
   to restyle or re-theme at runtime.
 - Keep structural styles in plain `styles.css`, imported by `main.ts`. Define public
   tokens in `theme.ts` using `defineTheme` from `@hitslop/document/theme`.
-  The builder emits `assets/theme.css`; use `var(--slop-TOKEN)` in CSS.
+  The builder emits defaults in `assets/theme.json`; the runtime applies them before
+  mounting the app. Use `var(--slop-TOKEN)` in CSS.
 - Group base rules, states, descendants, and responsive rules together. Use
   app-prefixed classes, including explicit classes on Bits UI portal content.
   Read [references/css.md](references/css.md) for the authoring pattern.
-- Owners change declared tokens through `slop theme set/reset`. Overrides live in
-  `state/theme.json`; never write arbitrary CSS or `stores/theme.css`.
+- Owners inspect and change declared tokens through `slop theme get/set/reset`.
+  The host writes overrides to `state/theme.json`; never edit it or compiled assets
+  directly. Layout changes require authoring source and a rebuild.
 - Keep exportable content in normal flow. Without an `exportView`, mark
   editing-only UI with `data-slop-export="hide"`; with one, the editor is never
   captured.

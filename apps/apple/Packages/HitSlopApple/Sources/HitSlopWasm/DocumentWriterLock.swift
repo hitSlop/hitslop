@@ -1,9 +1,11 @@
 import Darwin
 import Foundation
+import HitSlopCore
 
 /// One permanent lock inode is shared by editing and closed-document snapshots.
 public final class DocumentWriterLock {
-  public struct Busy: LocalizedError {
+  public struct Busy: LocalizedError, SlopDiagnosticProviding {
+    public var diagnostic: SlopFailureContext { .init(.rejection, reason: .busy) }
     public var errorDescription: String? { "Document has a live writer; retry through its socket" }
   }
   private var fd: Int32 = -1

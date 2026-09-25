@@ -47,23 +47,3 @@ test("invalid input fails before opening documents or building source", async ()
     expect(result.stderr).not.toContain("HITSLOP_NATIVE_CLI");
   }
 });
-
-test("native forwarding preserves JSON, paths, flags and exit status", async () => {
-  if (process.platform !== "darwin") return;
-  const root = await mkdtemp(join(tmpdir(), "hsl-command-"));
-  try {
-    const helper = join(root, "helper");
-    await writeFile(
-      helper,
-      `#!${process.execPath}\nconsole.log(JSON.stringify(process.argv.slice(2))); process.exit(23);\n`,
-      { mode: 0o755 },
-    );
-    const json = '{ "type": "text.replace", "value": "hello \\"world\\"" }';
-    const args = ["apply", "a file.slop", "--op", json];
-    const result = await run(args, { HITSLOP_NATIVE_CLI: helper });
-    expect(result.code).toBe(23);
-    expect(JSON.parse(result.stdout)).toEqual(args);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});

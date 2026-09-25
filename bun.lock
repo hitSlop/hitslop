@@ -57,6 +57,7 @@
       "name": "@hitslop/document",
       "version": "1.0.0",
       "dependencies": {
+        "@hitslop/schema": "1.0.0",
         "loro-crdt": "1.16.1",
       },
       "peerDependencies": {

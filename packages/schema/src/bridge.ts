@@ -40,3 +40,40 @@ export const BridgeMethods = {
   }),
 } as const;
 export const BridgeRequestSchema = T.Union(Object.values(BridgeMethods));
+
+export type BridgeMethod = keyof typeof BridgeMethods;
+export type BridgeRequest<M extends BridgeMethod = BridgeMethod> = {
+  [K in BridgeMethod]: T.Static<(typeof BridgeMethods)[K]>;
+}[M] & { method: M };
+
+const attachmentInfo = T.Object({ id: AttachmentIDSchema, byteLength: T.Integer() });
+/** Successful host replies. Refusals are handled by hostCall before returning. */
+export const BridgeReplies = {
+  config: T.Object({
+    epoch: T.String(),
+    presentation: T.Object({
+      width: T.Number(), height: T.Number(), resizable: T.Boolean(),
+      shape: T.Enum(["rounded", "ellipse", "capsule"]),
+      mode: T.Enum(["standard", "transparent", "skin"]),
+    }),
+  }),
+  load: T.Object({
+    checkpoint: T.Union([T.String(), T.Null()]),
+    schemaKey: T.Union([T.String(), T.Null()]),
+    generation: T.String(), updates: T.Array(T.String()),
+  }),
+  append: T.Object({ generation: T.String() }),
+  checkpoint: T.Object({ generation: T.String() }),
+  "attachments.put": attachmentInfo,
+  "attachments.read": T.Object({ bytes: T.String() }),
+  "attachments.list": T.Object({ files: T.Array(attachmentInfo) }),
+  "theme.load": T.Object({ values: ThemeValuesSchema }),
+  "window.resize": T.Object({ width: T.Number(), height: T.Number() }),
+  "theme.save": T.Object({}),
+  runtimeRecovered: T.Object({}),
+  ready: T.Object({}),
+  status: T.Object({}),
+  failed: T.Object({}),
+  runtimeError: T.Object({}),
+} satisfies Record<BridgeMethod, T.TObject>;
+export type BridgeReply<M extends BridgeMethod> = T.Static<(typeof BridgeReplies)[M]>;

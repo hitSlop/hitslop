@@ -11,7 +11,7 @@ import {
   verifyReleasedIdentities,
 } from "./runtime-artifacts";
 
-export async function buildRuntime() {
+export async function buildRuntime(destinations = runtimeDestinations) {
   await verifyProvenance();
   const stage = await mkdtemp(join(tmpdir(), "hitslop-runtimes-"));
   try {
@@ -55,7 +55,7 @@ export async function buildRuntime() {
       });
     }
     await verifyReleasedIdentities(await catalog(stage));
-    for (const destination of runtimeDestinations) {
+    for (const destination of destinations) {
       await mkdir(dirname(destination), { recursive: true });
       const ready = destination + ".building";
       await rm(ready, { recursive: true, force: true });

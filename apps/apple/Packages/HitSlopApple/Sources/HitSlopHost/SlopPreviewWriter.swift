@@ -20,8 +20,8 @@ public extension Notification.Name {
         installExistingPreview(for: package)
     }
 
-    public static func installExistingPreview(for package: SlopPackage) {
-        installFinderIcon(for: package.rootURL)
+    public static func installExistingPreview(for package: SlopPackage, telemetry: SlopTelemetry = .disabled) {
+        installFinderIcon(for: package.rootURL, telemetry: telemetry)
         announce(package.rootURL)
     }
 
@@ -32,11 +32,11 @@ public extension Notification.Name {
     }
 
     public static func installFinderIconAsync(
-        _ png: Data, for packageURL: URL, isCurrent: () -> Bool = { true }
+        _ png: Data, for packageURL: URL, isCurrent: () -> Bool = { true }, telemetry: SlopTelemetry = .disabled
     ) async {
         guard let package = try? await SlopPreparation.run({ try SlopPackage(rootURL: packageURL) }),
               !Task.isCancelled, isCurrent() else { return }
-        installFinderIcon(png, for: package)
+        installFinderIcon(png, for: package, telemetry: telemetry)
     }
 
     public static func installFinderIcon(_ png: Data, for packageURL: URL) {
@@ -44,14 +44,14 @@ public extension Notification.Name {
         installFinderIcon(png, for: package)
     }
 
-    private static func installFinderIcon(_ png: Data, for package: SlopPackage) {
+    private static func installFinderIcon(_ png: Data, for package: SlopPackage, telemetry: SlopTelemetry = .disabled) {
         let packageURL = package.rootURL
         guard let image = NSImage(data: png) else {
-            print("[hitSlop preview] Could not decode icon PNG for \(packageURL.lastPathComponent)")
+            telemetry.send(.failed(.artwork, .init(reason: .icon)))
             return
         }
         if !NSWorkspace.shared.setIcon(image, forFile: packageURL.path, options: []) {
-            print("[hitSlop preview] Finder rejected custom icon for \(packageURL.lastPathComponent)")
+            telemetry.send(.failed(.artwork, .init(reason: .icon)))
         }
         announce(packageURL)
     }
@@ -60,7 +60,7 @@ public extension Notification.Name {
     /// Quick Look preview. Keep that macOS-only metadata derived from the
     /// immutable author-supplied icon until an authored close-time icon is
     /// rendered. Never use the live full-document preview.
-    private static func installFinderIcon(for packageURL: URL) {
+    private static func installFinderIcon(for packageURL: URL, telemetry: SlopTelemetry = .disabled) {
         let finderMetadataURL = packageURL.appendingPathComponent("Icon\r")
         guard !FileManager.default.fileExists(atPath: finderMetadataURL.path) else { return }
         let iconURL = packageURL
@@ -68,7 +68,7 @@ public extension Notification.Name {
             .appendingPathComponent("Icon.png")
         guard let image = NSImage(contentsOf: iconURL) else { return }
         if !NSWorkspace.shared.setIcon(image, forFile: packageURL.path, options: []) {
-            print("[hitSlop preview] Finder rejected package icon for \(packageURL.lastPathComponent)")
+            telemetry.send(.failed(.artwork, .init(reason: .icon)))
         }
     }
 

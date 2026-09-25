@@ -33,7 +33,12 @@ actor CatalogScanner {
                     createdAt: values?.creationDate, updatedAt: values?.contentModificationDate
                 ))
             } catch is CancellationError { throw CancellationError() }
-            catch { result.issues.append("\(child.lastPathComponent): \(error.localizedDescription)") }
+            catch {
+                result.issues.append("\(child.lastPathComponent): \(error.localizedDescription)")
+                let diagnostic = error is SlopPackageError || error is DecodingError
+                  ? SlopFailureContext(.rejection, reason: .invalidPackage) : .classify(error)
+                if !result.diagnostics.contains(diagnostic) { result.diagnostics.append(diagnostic) }
+            }
             await Task.yield()
         }
         return result

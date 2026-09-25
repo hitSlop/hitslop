@@ -46,22 +46,27 @@ final class SchemeHandler: NSObject, WKURLSchemeHandler {
         isRuntime
         ? String(url.path.dropFirst("/__runtime__/".count))
         : (url.path == "/" ? "app.html" : String(url.path.dropFirst()))
+      // URL.path decodes escaped separators and dots. Reject aliases before
+      // normalization so assets/../state can never inherit asset permissions.
+      guard SlopPackage.isSafeRelativePath(relative), !relative.hasSuffix("/")
+      else { throw failure("Unsafe resource path") }
+      let file = base.appendingPathComponent(relative).standardizedFileURL
+      guard file.path.hasPrefix(base.path + "/") else { throw failure("Resource outside package") }
+      let resource = String(file.path.dropFirst(base.path.count + 1))
       // Serve only authored resources, never state databases or discovery files.
       if !isRuntime
-        && !(relative == "app.html" || relative == "state.schema.json" || relative == "initial.json"
-          || relative.hasPrefix("assets/"))
+        && !(resource == "app.html" || resource == "state.schema.json" || resource == "initial.json"
+          || resource.hasPrefix("assets/"))
       {
         throw failure("Resource not exposed")
       }
-      let file = base.appendingPathComponent(relative).standardizedFileURL
-      guard file.path.hasPrefix(base.path + "/") else { throw failure("Resource outside package") }
       let data: Data
-      if headless && relative == "app.html" {
+      if headless && resource == "app.html" {
         data = Data(
           "<html><head><script type=\"module\" src=\"/__runtime__/headless.js\"></script></head><body></body></html>"
             .utf8)
       } else {
-        guard !headless || isRuntime || ["state.schema.json", "initial.json", "assets/theme.json"].contains(relative)
+        guard !headless || isRuntime || ["state.schema.json", "initial.json", "assets/theme.json"].contains(resource)
         else { throw failure("App resources unavailable to headless engine") }
         data = isRuntime ? try Self.runtimeFile(file, within: base) : try SlopFile.read(file, within: base)
       }

@@ -69,10 +69,10 @@ struct RuntimeCatalog {
     }
     guard let installed = identities.first(where: { $0["runtimeContract"] as? Int == contract }) else {
       let supported = identities.map { String($0["runtimeContract"] as! Int) }.joined(separator: ", ")
-      throw failure("This slop requires runtime contract \(contract); this app supports \(supported). Update hitSlop.app.")
+      throw SlopDiagnosticError(failure("This slop requires runtime contract \(contract); this app supports \(supported). Update hitSlop.app."), diagnostic: .init(.rejection, reason: .unsupportedRuntime))
     }
     guard (installed["runtimeRevision"] as! Int) >= revision else {
-      throw failure("This slop requires runtime contract \(contract), revision \(revision) or newer. Update hitSlop.app.")
+      throw SlopDiagnosticError(failure("This slop requires runtime contract \(contract), revision \(revision) or newer. Update hitSlop.app."), diagnostic: .init(.rejection, reason: .unsupportedRuntime))
     }
     return root.appendingPathComponent(String(contract), isDirectory: true)
   }

@@ -66,6 +66,7 @@ export async function runAuthoring(
     const out = await buildProject(target, join(temporary, "preview.slop"));
     const frame = previewFrame(JSON.parse(await readFile(join(out, "manifest.json"), "utf8")));
     const server = Bun.serve({
+      hostname: "127.0.0.1",
       port,
       async fetch(request) {
         const url = new URL(request.url),
@@ -81,10 +82,7 @@ export async function runAuthoring(
           });
         const runtime = relative.startsWith("/__runtime__/");
         const base = runtime ? runtimeDirectory : out;
-        const path = resolve(
-          base,
-          relative.slice(runtime ? 13 : 1),
-        );
+        const path = resolve(base, relative.slice(runtime ? 13 : 1));
         if (!path.startsWith(base + "/")) return new Response("Forbidden", { status: 403 });
         const file = Bun.file(path);
         if (!(await file.exists())) return new Response("Not found", { status: 404 });

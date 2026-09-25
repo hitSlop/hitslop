@@ -5,30 +5,6 @@ import HitSlopRuntime
 import HitSlopWasm
 import WebKit
 
-@MainActor private final class SlopDevelopmentWindowBridge: NSObject, WKScriptMessageHandlerWithReply {
-    weak var window: NSWindow?
-
-    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping @MainActor @Sendable (Any?, String?) -> Void) {
-        guard let body = message.body as? [String: Any] else {
-            replyHandler(nil, "Window request must be an object"); return
-        }
-        guard let width = body["width"] as? NSNumber,
-              let height = body["height"] as? NSNumber else {
-            replyHandler(nil, "Window resize needs numeric width and height"); return
-        }
-        let requested = NSSize(width: width.doubleValue, height: height.doubleValue)
-        guard requested.width.isFinite, requested.height.isFinite,
-              requested.width.rounded() == requested.width, requested.height.rounded() == requested.height,
-              (240...4096).contains(requested.width), (180...4096).contains(requested.height),
-              let window else {
-            replyHandler(nil, "Window dimensions must be whole pixels between 240x180 and 4096x4096"); return
-        }
-        let frame = dynamicSlopWindowFrame(current: window.frame, requested: requested, visible: window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame)
-        window.setFrame(frame, display: true, animate: true)
-        replyHandler(["width": frame.width, "height": frame.height], nil)
-    }
-}
-
 public enum SlopRenderTarget: String, Sendable {
     case icon
 }
@@ -60,41 +36,37 @@ struct SlopDocumentAssets: Sendable {
     public static func exportPNGData(session: SlopRuntimeSession) async throws -> Data { try await capture(session: session, output: .exportPNG) }
     public static func exportPDFData(session: SlopRuntimeSession) async throws -> Data { try await capture(session: session, output: .pdf) }
 
-    static func documentAssetsPNGData(packageURL: URL) async throws -> SlopDocumentAssets {
-        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
-        defer { snapshot.remove() }
-        return try await documentAssetsPNGData(snapshot: snapshot)
-    }
-
-    static func documentAssetsPNGData(snapshot: SlopRenderSnapshot) async throws -> SlopDocumentAssets {
-        try await withCaptureSession(snapshot: snapshot, renderTargetsEnabled: true) { session in
+    static func documentAssetsPNGData(packageURL: URL, telemetry: SlopTelemetry = .disabled) async throws -> SlopDocumentAssets {
+        try await withRenderSession(packageURL: packageURL, renderTargetsEnabled: true) { session in
             var preview: Data?, icon: Data?
             do { preview = try await capture(session: session, output: .previewPNG) }
-            catch { print("[hitSlop assets] Preview failed: \(error.localizedDescription)") }
+            catch { if !SlopFailureContext.isCancellation(error) { telemetry.send(.failed(.artwork, .init(reason: .preview, runtime: session.engine.telemetryRuntime))) } }
             try Task.checkCancellation()
             do { icon = try await targetPNGData(session: session, target: .icon) }
-            catch { print("[hitSlop assets] Icon failed: \(error.localizedDescription)") }
+            catch { if !SlopFailureContext.isCancellation(error) { telemetry.send(.failed(.artwork, .init(reason: .icon, runtime: session.engine.telemetryRuntime))) } }
             try Task.checkCancellation()
             return SlopDocumentAssets(previewPNG: preview, finderIconPNG: icon)
         }
     }
 
-    /// The snapshot remains leased until all native storage and engine resources
-    /// have closed, including when readiness/capture throws or is cancelled.
-    static func withCaptureSession<T>(
-        snapshot: SlopRenderSnapshot, renderTargetsEnabled: Bool = false,
+    /// Background renders read the saved document into memory storage. They take
+    /// no ownership and never write inside the package, so no copy is needed.
+    /// `inputReady` runs once that snapshot exists (or opening failed), before rendering.
+    static func withRenderSession<T>(
+        packageURL: URL, renderTargetsEnabled: Bool = false,
         readinessTimeout: Duration = .seconds(15),
+        inputReady: @MainActor () -> Void = {},
         _ capture: @MainActor (SlopRuntimeSession) async throws -> T
     ) async throws -> T {
-        try snapshot.beginUse()
         let session: SlopRuntimeSession
         do {
             session = try await SlopRuntimeSession.open(
-                packageURL: snapshot.url, renderTargetsEnabled: renderTargetsEnabled, purpose: .backgroundRender)
+                packageURL: packageURL, renderTargetsEnabled: renderTargetsEnabled, purpose: .backgroundRender)
         } catch {
-            snapshot.endUse(teardownSucceeded: !(error is SlopRuntimeTeardownError))
+            inputReady()
             throw error
         }
+        inputReady()
         let window = hiddenWindow(session)
         let result: Result<T, Error>
         do {
@@ -104,12 +76,7 @@ struct SlopDocumentAssets: Sendable {
             result = .success(try await capture(session))
         } catch { result = .failure(error) }
         window.contentView = nil
-        do { try await session.closeAndWait() }
-        catch {
-            snapshot.endUse(teardownSucceeded: false)
-            throw error
-        }
-        snapshot.endUse(teardownSucceeded: true)
+        try await session.finish()
         return try result.get()
     }
 
@@ -121,9 +88,7 @@ struct SlopDocumentAssets: Sendable {
     }
 
     public static func targetPNGData(packageURL: URL, target: SlopRenderTarget) async throws -> Data? {
-        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
-        defer { snapshot.remove() }
-        return try await withCaptureSession(snapshot: snapshot, renderTargetsEnabled: true) { session in
+        try await withRenderSession(packageURL: packageURL, renderTargetsEnabled: true) { session in
             try await targetPNGData(session: session, target: target)
         }
     }
@@ -160,7 +125,8 @@ struct SlopDocumentAssets: Sendable {
             session.webView.frame = originalFrame
             try await restore(session.webView, token: token)
             WebViewBackground.set(background, on: session.webView)
-            return try await SlopPNG.optimized(data)
+            try Task.checkCancellation()
+            return data
         } catch {
             session.webView.frame = originalFrame
             try? await restore(session.webView, token: token)
@@ -169,9 +135,7 @@ struct SlopDocumentAssets: Sendable {
     }
 
     private static func render(packageURL: URL, output: CaptureOutput) async throws -> Data {
-        let snapshot = try await SlopRenderSnapshot.prepare(packageURL: packageURL)
-        defer { snapshot.remove() }
-        return try await withCaptureSession(snapshot: snapshot) { session in
+        try await withRenderSession(packageURL: packageURL) { session in
             try await capture(session: session, output: output)
         }
     }
@@ -196,6 +160,9 @@ struct SlopDocumentAssets: Sendable {
             // Re-measure after resizing; reject viewport-dependent layouts that never settle.
             // PDF captures offscreen content directly; avoid an enormous backing view.
             if isPreview && dedicated {
+                // Previews show the top of long exports: at most 3:1 portrait (or the window height).
+                // Designed compositions stay whole; PNG/PDF export keeps the full length.
+                func previewHeight(_ box: CGRect) -> CGFloat { max(originalFrame.height, 3 * max(box.width, 1)) }
                 var box = try geometry(measurement)
                 var viewWidth = originalFrame.width
                 var viewHeight = originalFrame.height
@@ -204,18 +171,18 @@ struct SlopDocumentAssets: Sendable {
                     if max(0, box.width - viewWidth, ceil(box.maxX) - viewWidth) >= 48 {
                         viewWidth = max(viewWidth, box.width, ceil(box.maxX))
                     }
+                    let heightLimit = max(originalFrame.height, ceil(max(0, box.minY)) + previewHeight(box))
                     if max(0, box.height - viewHeight, ceil(box.maxY) - viewHeight) >= 1 {
-                        viewHeight = max(viewHeight, box.height, ceil(box.maxY))
+                        viewHeight = min(max(viewHeight, box.height, ceil(box.maxY)), heightLimit)
                     }
                     try validateSize(width: max(min(box.width, viewWidth), 1), height: max(min(box.height, viewHeight), 1), output: output, scale: 2)
-                    session.webView.frame.size = CGSize(width: viewWidth, height: viewHeight)
-                    _ = try await session.webView.callAsyncJavaScript("await window.__hitslopCapture.settle(token)", arguments: ["token": token], in: nil, contentWorld: .page)
-                    measurement = try await measure(session.webView, token: token)
+                    try await resizeAndSettle(session.webView, to: CGSize(width: viewWidth, height: viewHeight), token: token, measurement: &measurement)
                     let next = try geometry(measurement)
                     let bounds = CGRect(x: 0, y: 0, width: viewWidth, height: viewHeight)
                     let visible = next.intersection(bounds)
+                    // Content continuing below a height-limited viewport is expected.
                     if next.minX >= -0.5, next.minY >= -0.5,
-                       next.maxX <= viewWidth + 48, next.maxY <= viewHeight + 48,
+                       next.maxX <= viewWidth + 48, next.maxY <= viewHeight + 48 || viewHeight >= heightLimit,
                        visible.width >= 8, visible.height >= 8 {
                         settled = true
                         box = visible
@@ -225,15 +192,13 @@ struct SlopDocumentAssets: Sendable {
                 }
                 guard settled else { throw SlopPackageError.invalid("Preview export layout keeps changing with viewport size; use normal flow in Export.svelte") }
                 width = max(box.width, 1)
-                height = max(box.height, 1)
+                height = max(min(box.height, previewHeight(box)), 1)
                 rect = CGRect(x: box.minX, y: box.minY, width: width, height: height)
             } else if output == .exportPNG {
                 var settled = false
                 for _ in 0..<4 {
                     try validateSize(width: width, height: height, output: output, scale: 2)
-                    session.webView.frame.size = CGSize(width: width, height: height)
-                    _ = try await session.webView.callAsyncJavaScript("await window.__hitslopCapture.settle(token)", arguments: ["token": token], in: nil, contentWorld: .page)
-                    measurement = try await measure(session.webView, token: token)
+                    try await resizeAndSettle(session.webView, to: CGSize(width: width, height: height), token: token, measurement: &measurement)
                     let next = max(dedicated ? 1 : originalFrame.height, try geometry(measurement).height)
                     if abs(next - height) < 1 { settled = true; break }
                     height = next
@@ -261,7 +226,8 @@ struct SlopDocumentAssets: Sendable {
             session.webView.frame = originalFrame
             try await restore(session.webView, token: token)
             WebViewBackground.set(background, on: session.webView)
-            return output == .pdf ? data : try await SlopPNG.optimized(data)
+            try Task.checkCancellation()
+            return data
         } catch {
             session.webView.frame = originalFrame
             try? await restore(session.webView, token: token)
@@ -325,6 +291,13 @@ struct SlopDocumentAssets: Sendable {
         guard let value = try await view.callAsyncJavaScript("return await window.__hitslopCapture.begin(token, mode)", arguments: ["token": token, "mode": mode], in: nil, contentWorld: .page) as? [String: Any] else { throw SlopPackageError.invalid("Could not prepare capture") }
         return value
     }
+    /// `begin` has already settled at the current size; only a resize needs another settle.
+    private static func resizeAndSettle(_ view: WKWebView, to size: CGSize, token: String, measurement: inout [String: Any]) async throws {
+        guard view.frame.size != size else { return }
+        view.frame.size = size
+        _ = try await view.callAsyncJavaScript("await window.__hitslopCapture.settle(token)", arguments: ["token": token], in: nil, contentWorld: .page)
+        measurement = try await measure(view, token: token)
+    }
     private static func measure(_ view: WKWebView, token: String) async throws -> [String: Any] {
         guard let value = try await view.callAsyncJavaScript("return window.__hitslopCapture.measure(token)", arguments: ["token": token], in: nil, contentWorld: .page) as? [String: Any] else { throw SlopPackageError.invalid("Could not measure capture") }
         return value
@@ -333,17 +306,4 @@ struct SlopDocumentAssets: Sendable {
         _ = try await view.callAsyncJavaScript("await window.__hitslopCapture.restore(token)", arguments: ["token": token], in: nil, contentWorld: .page)
     }
 
-    public static func openDevelopmentURL(_ url: URL, size: CGSize) {
-        let configuration = WKWebViewConfiguration()
-        let bridge = SlopDevelopmentWindowBridge()
-        configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "hitslopDevWindow")
-        let view = WKWebView(frame: .init(origin: .zero, size: size), configuration: configuration)
-        let window = NSWindow(contentRect: view.frame, styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        bridge.window = window
-        window.title = "hitSlop Dev"
-        window.contentView = view
-        view.load(URLRequest(url: url))
-        window.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate(ignoringOtherApps: true)
-    }
 }

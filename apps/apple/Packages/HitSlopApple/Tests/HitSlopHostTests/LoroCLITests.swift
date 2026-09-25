@@ -92,6 +92,19 @@ extension LoroClientTests {
     let old = try await cli(["apply", root.path, "--op", op, "--id", "original", "--epoch", "old"])
     #expect(old.0 != 0)
     #expect(!old.2.contains("Retry identity:"))
+    // Removed CLI flags never reach transport. Send a stale envelope over the actual live socket.
+    let documentRoot = controller.session.engine.package.rootURL
+    let before = try await DocumentCommand.run(method: "get", url: root)
+    let path = try DocumentCommand.liveSocket(for: documentRoot)
+    let stale = try JSONSerialization.data(withJSONObject: [
+      "id": "stale", "method": "apply", "documentPath": documentRoot.path, "epoch": "old",
+      "op": try JSONSerialization.jsonObject(with: replace("must not apply")),
+    ])
+    let response = try await Task.detached { try SocketClient.call(path: path, request: stale) }.value
+    let refusal = try #require(try JSONSerialization.jsonObject(with: response) as? [String: Any])
+    #expect(refusal["ok"] as? Bool == false)
+    #expect(refusal["code"] as? String == "session_changed")
+    #expect(try await DocumentCommand.run(method: "get", url: root) == before)
     try await controller.session.finish()
     let ended = try await cli([
       "apply", root.path, "--op", op, "--id", "original", "--epoch", "old",
@@ -105,6 +118,41 @@ extension LoroClientTests {
     #expect(busy.0 != 0)
     #expect(busy.2.contains("busy"))
     #expect(!FileManager.default.fileExists(atPath: output.path))
+  }
+
+  @Test @MainActor func socketRefusalCodesPreserveCLIRetryGuidance() async throws {
+    // A controlled peer at the real transport boundary supplies independently specified wire codes.
+    let root = try fixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let canonical = try SlopPackage(rootURL: root).rootURL
+    let lock = try DocumentWriterLock(root: canonical)
+    defer { lock.close() }
+    let cases: [(String?, String)] = [
+      ("rejected", "Not applied."), ("unavailable", "Not applied."),
+      ("session_changed", "Not applied. Run slop get before issuing another edit."),
+      ("closing", "Not applied. Run slop get before issuing another edit."),
+      ("failed", "Outcome unknown. Run slop get before issuing another edit."),
+      (nil, "Outcome unknown. Run slop get before issuing another edit."),
+    ]
+    for (code, expected) in cases {
+      var envelope: [String: Any] = ["ok": false, "error": "Peer refusal"]
+      envelope["code"] = code
+      let refusal = envelope
+      let server = try SocketServer { request, _, respond in
+        if case .hello = request { respond(.init(ok: true, epoch: "peer")); return }
+        do { respond(try SocketReply(json: refusal)) }
+        catch { respond(.init(ok: false, error: "Invalid peer reply")) }
+      }
+      defer { server.stop() }
+      try JSONSerialization.data(withJSONObject: [
+        "socket": server.path, "epoch": "peer", "pid": ProcessInfo.processInfo.processIdentifier,
+        "documentPath": canonical.path,
+      ]).write(to: canonical.appendingPathComponent("state/host.lock"))
+      let result = try await cli(["apply", root.path, "--op", String(decoding: replace("refused"), as: UTF8.self)])
+      #expect(result.0 != 0)
+      #expect(result.2.contains("Peer refusal\n" + expected), "\(result.2)")
+    }
+    #expect(!FileManager.default.fileExists(atPath: canonical.appendingPathComponent("state/document.sqlite").path))
   }
 
   @Test @MainActor func oldRuntimeFailsBeforeCreatingState() async throws {

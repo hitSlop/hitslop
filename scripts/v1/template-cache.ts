@@ -150,7 +150,7 @@ export async function validateTemplate(path: string, slug: string) {
   return checksum;
 }
 
-/** Only workflows opt into this cache. A miss always falls back to the ordinary builder. */
+/** Local and CI builds share this validated cache. A miss uses the ordinary builder. */
 export class TemplateCache {
   constructor(
     readonly directory: string,

@@ -72,8 +72,10 @@ fi
 # SwiftPM executables locate Bundle.module resources beside the executable.
 # Host resources are not visible to this independently-built helper.
 /bin/mkdir -p "$app/Contents/Helpers"
-# Remove the retired skill bundle from incremental build artifacts.
-/bin/rm -rf "$app/Contents/Helpers/HitSlopApple_HitSlopCore.bundle" "$app/Contents/Resources/HitSlopApple_HitSlopCore.bundle"
+# Remove retired skill and placeholder bridge bundles from incremental artifacts.
+for module in HitSlopCore HitSlopRuntime; do
+  /bin/rm -rf "$app/Contents/Helpers/HitSlopApple_${module}.bundle" "$app/Contents/Resources/HitSlopApple_${module}.bundle"
+done
 /bin/cp "$helper" "$app/Contents/Helpers/hitslop-native"
 /bin/chmod 755 "$app/Contents/Helpers/hitslop-native"
 
@@ -81,7 +83,7 @@ fi
 # its resolved identity for normal builds and an ad-hoc signature when signing
 # is disabled; distribution packaging replaces both signatures as needed.
 signing_identity=${EXPANDED_CODE_SIGN_IDENTITY:--}
-for module in HitSlopRuntime HitSlopWasm; do
+for module in HitSlopWasm; do
   resource_bundle="$native_bin/HitSlopApple_${module}.bundle"
   if [ ! -d "$resource_bundle" ]; then
     echo "hitslop-native resource bundle is missing at $resource_bundle" >&2

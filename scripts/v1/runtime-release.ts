@@ -1,3 +1,4 @@
+import { checkHistory } from "./compatibility-history";
 /** Explicit release sealing. Ordinary builds never rewrite baselines. */
 import { cp, mkdir, writeFile, mkdtemp, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -12,6 +13,7 @@ import {
   digest,
 } from "./runtime-artifacts";
 import identity from "../../packages/document/src/runtime-identity.json";
+await checkHistory();
 await verifyProvenance();
 const values = await verifyCopies(runtimeDestinations);
 verifyCurrentRuntime(values);

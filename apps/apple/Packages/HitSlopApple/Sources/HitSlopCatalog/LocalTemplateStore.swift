@@ -18,6 +18,7 @@ public struct LocalTemplate: Identifiable, Sendable {
 public struct LocalTemplateSnapshot: Sendable {
     public var templates: [LocalTemplate] = []
     public var issues: [String] = []
+    public var diagnostics: [SlopFailureContext] = []
 }
 
 @MainActor public final class LocalTemplateStore: ObservableObject {
@@ -75,7 +76,7 @@ public struct LocalTemplateSnapshot: Sendable {
             let result: LocalTemplateSnapshot
             do { result = try await scan(templatesURL) }
             catch is CancellationError { return }
-            catch { result = LocalTemplateSnapshot(issues: [error.localizedDescription]) }
+            catch { result = LocalTemplateSnapshot(issues: [error.localizedDescription], diagnostics: [.classify(error)]) }
             guard !Task.isCancelled, let self, self.generation == requestedGeneration else { return }
             self.snapshot = result
             self.scanTask = nil

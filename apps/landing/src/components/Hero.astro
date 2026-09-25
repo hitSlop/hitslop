@@ -130,7 +130,7 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
     <p class="hero-lede">Each <code class="hero-slop">.slop</code> bundles the app and saved data into one portable file. Keep it local, no account required. Start with Quick Checklist or Small Expenses, then export your work as PNG or PDF.</p>
     <div class="hero-actions">
       <a class="hero-primary hero-action" href={SITE_LINKS.download}><AppleIcon /> Download for Apple silicon <svg class="hero-action-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" /></svg></a>
-      <a class="hero-secondary hero-action" href="#objects">Try the slops <svg class="hero-action-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></a>
+      <button class="hero-secondary hero-action" id="make-slop-trigger" type="button" aria-haspopup="dialog" aria-controls="make-slop-modal">Make my own slop <svg class="hero-action-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></button>
     </div>
     <p class="hero-meta"><span>macOS 14+ · Signed &amp; notarized</span><span class="hero-later">Windows + iOS coming later</span></p>
     <ul class="hero-benefits" aria-label="Key hitSlop features">
@@ -378,6 +378,7 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
 }
 
 .hero-secondary {
+  cursor: pointer;
   border-color: #dbd0fd;
   color: #10132c;
   background: #ffffffde;
@@ -711,6 +712,44 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
   right: -34px;
   bottom: 26%;
   stroke-width: 2;
+}
+
+/* A small, occasional wiggle keeps the drawn accents feeling handmade.
+   Individual transforms preserve their existing hand-placed rotations. */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-doodle,
+  .hero-arrow,
+  .hero-little-underline,
+  .hero-big::before {
+    --wiggle-angle: 2deg;
+    --wiggle-lift: -1px;
+    transform-origin: center;
+    animation: hero-ink-wiggle 7s cubic-bezier(.37, 0, .63, 1) infinite;
+  }
+
+  .hero-rays { animation-delay: -1.2s; }
+  .hero-burst { animation-delay: -4.8s; }
+  .hero-stars-top { animation-delay: -3.4s; }
+  .hero-stars-bottom { animation-delay: -5.6s; }
+  .hero-arrow { animation-delay: -2.5s; }
+  .hero-note-arrow { animation-delay: -.5s; }
+
+  .hero-little-underline,
+  .hero-big::before {
+    --wiggle-angle: .7deg;
+    --wiggle-lift: -.5px;
+    transform-origin: left center;
+  }
+
+  .hero-little-underline { animation-delay: -4s; }
+  .hero-big::before { animation-delay: -1.8s; }
+
+  @keyframes hero-ink-wiggle {
+    0%, 64%, 100% { rotate: 0deg; translate: 0 0; }
+    73% { rotate: calc(-1 * var(--wiggle-angle)); translate: 0 var(--wiggle-lift); }
+    82% { rotate: var(--wiggle-angle); translate: 0 0; }
+    91% { rotate: calc(-.4 * var(--wiggle-angle)); translate: 0 var(--wiggle-lift); }
+  }
 }
 
 @media (max-width: 1199px) {

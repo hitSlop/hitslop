@@ -7,7 +7,8 @@ import Testing
   func fixture() throws -> URL {
     let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
-    try FileManager.default.copyItem(atPath: repository + "/generated/v1/templates/quick-checklist.slop", toPath: root.path)
+    try FileManager.default.copyItem(atPath: repository + "/tests/compatibility/1-1/document", toPath: root.path)
+    try FileManager.default.removeItem(at: root.appendingPathComponent("state"))
     return root
   }
 
@@ -32,30 +33,20 @@ import Testing
     }
   }
 
-  @Test @MainActor func cancelledQueuedPreparationReleasesOwnership() async throws {
+  @Test @MainActor func cancelledPreparedOpenReleasesOwnership() async throws {
     let root = try fixture()
     defer { try? FileManager.default.removeItem(at: root) }
-    let started = AsyncStream<Void>.makeStream()
-    let release = DispatchSemaphore(value: 0)
-    let blocker = Task {
-      try await SlopPreparation.run {
-        started.continuation.yield(())
-        release.wait()
-      }
-    }
-    for await _ in started.stream { break }
-    var enqueued = false
+    let prepared = try await WasmSession.prepare(packageURL: root)
+    #expect(throws: (any Error).self) { _ = try DocumentWriterLock(root: root) }
+    // Preparation has acquired the actual lease. This actor cannot start the
+    // child until after cancellation, so no shared queue or scheduling guess is needed.
     let opening = Task { @MainActor in
-      enqueued = true
-      return try await WasmSession.open(packageURL: root, headless: true)
+      try await WasmSession.finishOpening(prepared, headless: true)
     }
-    while !enqueued { await Task.yield() }
     opening.cancel()
-    release.signal()
-    try await blocker.value
     await #expect(throws: CancellationError.self) { try await opening.value }
-    // Queued work still acquired storage; cancellation must explicitly release it.
-    #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent("state/document.sqlite").path))
+    let ownership = try DocumentWriterLock(root: root)
+    ownership.close()
     let reopened = try await WasmSession.open(packageURL: root, headless: true)
     try await reopened.close()
   }
@@ -108,11 +99,8 @@ import Testing
 }
 
 @Test @MainActor func runtimePrewarmCompilesRuntimeAndReleasesItsWebView() async throws {
-  RuntimePrewarm.start()
-  #expect(RuntimePrewarm.isRunning)
-  for _ in 0..<500 where RuntimePrewarm.isRunning { try await Task.sleep(for: .milliseconds(10)) }
-  #expect(!RuntimePrewarm.isRunning)
-  #expect(RuntimePrewarm.outcome == "ready")
-  RuntimePrewarm.start()
-  #expect(!RuntimePrewarm.isRunning)  // Once per process.
+  let prewarm = try RuntimePrewarm(runtime: RuntimeCatalog.bundled().currentRuntime)
+  weak var view = prewarm.webView
+  #expect(await prewarm.waitUntilFinished() == "ready")
+  #expect(view == nil)
 }

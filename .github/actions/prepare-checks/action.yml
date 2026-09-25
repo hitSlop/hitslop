@@ -1,0 +1,19 @@
+name: Prepare checks
+description: Install pinned tools and restore immutable historical readers
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: "1.4.2"
+    - run: bun install --frozen-lockfile
+      shell: bash
+    - run: bun scripts/v1/ci-baseline.ts
+      shell: bash
+    - run: bun run compatibility:restore
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}

@@ -8,11 +8,13 @@ import AppKit
   private var finished = false
   var onCancel: (() -> Void)?
 
-  init(started: ContinuousClock.Instant = .now) {
+  init(started: ContinuousClock.Instant = .now, wait: @escaping @Sendable (ContinuousClock.Instant) async throws -> Void = { deadline in
+    try await Task.sleep(until: deadline, clock: .continuous)
+  }) {
     super.init()
     let deadline = started.advanced(by: .seconds(1))
     timer = Task { @MainActor [weak self] in
-      do { try await Task.sleep(until: deadline, clock: .continuous) } catch { return }
+      do { try await wait(deadline) } catch { return }
       self?.show()
     }
   }
@@ -46,6 +48,8 @@ import AppKit
     finish()
     action?()
   }
+
+  func waitForFeedback() async { await timer?.value }
 
   func focus() { panel?.makeKeyAndOrderFront(nil) }
 

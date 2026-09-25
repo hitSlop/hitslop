@@ -1,1 +1,0 @@
-* should we use swift cli with socket communication for the llms?

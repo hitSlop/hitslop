@@ -8,9 +8,6 @@ public struct WasmSaveStatus: Sendable {
   public let error: String?
 }
 
-/// Storage replies contain only JSON values and move from the storage queue to main once.
-private struct StorageReply: @unchecked Sendable { let value: [String: Any] }
-
 /// A package lease outlives its renderer. Only JS interprets the stored Loro bytes.
 @MainActor
 public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNavigationDelegate, WKUIDelegate {
@@ -23,6 +20,9 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   public private(set) var epoch = UUID().uuidString
   public private(set) var isReady = false
   public private(set) var rendererDead = false
+  public private(set) var failureReason: SlopFailureContext.Reason?
+  public private(set) var failureClassification: SlopFailureContext.Classification = .platform
+  public let telemetryRuntime: SlopTelemetryRuntime
   public var onResize: ((CGSize) throws -> CGSize)?
   public var onExport: ((String, URL, NativeCommandDeadline) async throws -> Void)?
   public var capturing = false
@@ -36,12 +36,10 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   public var onRecovered: (() -> Void)?
   public var onReady: (() -> Void)?
   public var onStatus: ((WasmSaveStatus) -> Void)?
+  public var onStorageFailure: ((SlopFailureContext) -> Void)?
   public var onIssue: ((String, Bool) -> Void)?
   public var onError: ((String) -> Void)?
-  #if DEBUG
-    var failWritesForTesting = false
-    var storageReplyForTesting: ((String) -> Bool)?
-  #endif
+  let storageBridge: StorageBridge
   private let storage: Storage
   private let headless: Bool
   private var server: SocketServer?
@@ -52,20 +50,30 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   private var waiters: [UUID: CheckedContinuation<Void, Error>] = [:]
   public let webViewResources: URL
 
-  public convenience init(package: SlopPackage, headless: Bool = false) throws {
-    try self.init(package: package, headless: headless, catalog: RuntimeCatalog.bundled())
+  public convenience init(
+    package: SlopPackage, headless: Bool = false, storage mode: StorageMode = .document
+  ) throws {
+    try self.init(
+      prepared: Prepared(package: package, catalog: RuntimeCatalog.bundled(), storage: mode),
+      headless: headless)
   }
 
-  private struct Prepared: Sendable {
+  struct Prepared: Sendable {
     let package: SlopPackage
     let runtime: URL
+    let telemetryRuntime: SlopTelemetryRuntime
     let storage: Storage
 
-    init(package: SlopPackage, catalog: RuntimeCatalog) throws {
+    init(package: SlopPackage, catalog: RuntimeCatalog, storage mode: StorageMode = .document) throws {
       self.package = package
       // Refuse unsupported runtimes before acquiring ownership or creating state.
       runtime = try catalog.resolve(package: package)
-      storage = try Storage(root: package.rootURL)
+      // Resolve already validated this identity and the package's compatibility requirements.
+      guard let contract = Int(runtime.lastPathComponent),
+        let identity = catalog.identities.first(where: { $0["runtimeContract"] as? Int == contract }),
+        let revision = identity["runtimeRevision"] as? Int else { throw failure("Missing resolved runtime identity") }
+      telemetryRuntime = SlopTelemetryRuntime(contract: contract, revision: revision)
+      storage = try Storage(root: package.rootURL, mode: mode)
     }
   }
 
@@ -76,18 +84,36 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   private init(prepared: Prepared, headless: Bool) {
     package = prepared.package
     webViewResources = prepared.runtime
+    telemetryRuntime = prepared.telemetryRuntime
     storage = prepared.storage
+    storageBridge = StorageBridge(storage: prepared.storage)
     self.headless = headless
     if !headless { RuntimePrewarm.finish() }
     super.init()
+    storageBridge.onFailure = { [weak self] diagnostic in self?.onStorageFailure?(diagnostic) }
     makeWebView()
   }
 
-  public static func open(packageURL: URL, headless: Bool = false) async throws -> WasmSession {
-    let prepared = try await SlopPreparation.run {
+  public static func open(
+    packageURL: URL, headless: Bool = false, storage mode: StorageMode = .document
+  ) async throws -> WasmSession {
+    let prepared = try await prepare(packageURL: packageURL, storage: mode)
+    return try await finishOpening(prepared, headless: headless)
+  }
+
+  static func prepare(packageURL: URL, storage mode: StorageMode = .document) async throws -> Prepared {
+    try await SlopPreparation.run {
       try SlopLocalDocument.requireLocal(packageURL)
-      return try Prepared(package: SlopPackage(rootURL: packageURL), catalog: RuntimeCatalog.bundled())
+      let package: SlopPackage
+      do { package = try SlopPackage(rootURL: packageURL) }
+      catch let error as SlopPackageError {
+        throw SlopDiagnosticError(error, diagnostic: .init(.rejection, reason: .invalidPackage))
+      }
+      return try Prepared(package: package, catalog: RuntimeCatalog.bundled(), storage: mode)
     }
+  }
+
+  static func finishOpening(_ prepared: Prepared, headless: Bool) async throws -> WasmSession {
     if Task.isCancelled {
       // No renderer has used storage yet. Release the lease before reporting cancellation.
       await withCheckedContinuation { continuation in
@@ -126,6 +152,11 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     configuration.userContentController.addUserScript(
       WKUserScript(
         source: """
+          (() => {
+            const hideControls = () => document.documentElement.setAttribute('data-slop-controls', 'hidden');
+            if (document.documentElement) hideControls();
+            else document.addEventListener('DOMContentLoaded', hideControls, {once: true});
+          })();
           for (const type of ['error','unhandledrejection']) addEventListener(type,e=> {
             webkit.messageHandlers.storage.postMessage({method:'runtimeError',kind:'application',error:String(e.error?.stack ?? e.reason?.stack ?? e.error?.message ?? e.reason ?? e.message).slice(0,4096)}).catch(()=>{});
           });
@@ -186,16 +217,17 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     guard !closed, message.webView === liveWebView, message.frameInfo.isMainFrame,
       message.frameInfo.securityOrigin.protocol == "slop",
       message.frameInfo.securityOrigin.host == "app",
-      let args = message.body as? [String: Any], let method = args["method"] as? String,
+      let args = message.body as? [String: Any],
       let encoded = try? JSONSerialization.data(withJSONObject: args),
       encoded.count <= 48 * 1024 * 1024,
-      PlatformContract.valid(args, against: bridgeValidationSchema)
+      PlatformContract.valid(args, against: bridgeValidationSchema),
+      let rawMethod = args["method"] as? String, let method = BridgeMethod(rawValue: rawMethod)
     else {
       replyHandler(nil, "Invalid bridge request")
       return
     }
     switch method {
-    case "config":
+    case .config:
       let spec = package.manifest.presentation
       replyHandler(
         [
@@ -207,29 +239,27 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
               ? "skin" : package.usesTransparentBackground ? "transparent" : "standard",
           ],
         ], nil)
-    case "window.resize":
+    case .windowResize:
       do {
-        guard !headless, !package.isSkinned, let onResize,
+        guard !headless, package.isResizable, let onResize,
           let width = args["width"] as? Double, let height = args["height"] as? Double
         else { throw failure("Window resizing unavailable") }
         let size = try onResize(CGSize(width: width, height: height))
         replyHandler(["width": size.width, "height": size.height], nil)
       } catch { replyHandler(nil, error.localizedDescription) }
-    case "ready":
+    case .ready:
       do {
-        if !headless && server == nil {
+        if !headless && server == nil && storage.mode == .document {
           server = try SocketServer { [weak self] request, deadline, reply in
             guard let self else {
-              reply(["ok": false, "error": "Document closed", "code": "unavailable"])
+              reply(.init(ok: false, error: "Document closed", code: .unavailable))
               return
             }
             Task { reply(await self.request(request, deadline: deadline)) }
           }
-          let discovery: [String: Any] = [
-            "socket": server!.path, "epoch": epoch,
-            "pid": ProcessInfo.processInfo.processIdentifier, "documentPath": package.rootURL.path,
-          ]
-          try JSONSerialization.data(withJSONObject: discovery).write(
+          let discovery = SocketDiscovery(socket: server!.path, epoch: epoch,
+            pid: Int(ProcessInfo.processInfo.processIdentifier), documentPath: package.rootURL.path)
+          try JSONSerialization.data(withJSONObject: discovery.json).write(
             to: package.rootURL.appendingPathComponent("state/host.lock"), options: .atomic)
         }
         isReady = true
@@ -240,85 +270,56 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
         failOpening(error.localizedDescription)
         replyHandler(nil, error.localizedDescription)
       }
-    case "runtimeRecovered":
+    case .runtimeRecovered:
       onRecovered?()
       replyHandler([:], nil)
-    case "status":
+    case .status:
       onStatus?(
         WasmSaveStatus(
           status: args["status"] as? String ?? "saving", error: args["error"] as? String))
       replyHandler([:], nil)
-    case "failed", "runtimeError":
+    case .failed, .runtimeError:
       let error = args["error"] as? String ?? "Runtime error"
-      if method == "runtimeError" && isReady {
+      if method == .runtimeError && isReady {
         onIssue?(error, args["kind"] as? String == "operation")
       } else {
-        failOpening(error)
+        let authored = method == .runtimeError
+        failOpening(error, reason: authored ? .authoredException : .startup,
+                    classification: authored ? .authored : .platform)
       }
       replyHandler([:], nil)
-    default:
-      #if DEBUG
-        if failWritesForTesting && ["append", "checkpoint", "attachments.put"].contains(method) {
-          replyHandler(nil, "Injected save failure")
-          return
-        }
-      #endif
-      storage.queue.async { [storage, weak self] in
-        let result: Result<StorageReply, Error> = Result {
-          guard let request = try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
-          else {
-            throw failure("Invalid storage envelope")
-          }
-          return StorageReply(value: try storage.call(request))
-        }
-        DispatchQueue.main.async { [weak self] in
-          #if DEBUG
-            if ["append", "checkpoint", "attachments.put"].contains(method),
-              self?.storageReplyForTesting?(method) == true
-            {
-              replyHandler(nil, "Injected lost storage acknowledgement")
-              return
-            }
-          #endif
-          do { replyHandler(try result.get().value, nil) } catch let error as SlopRejection {
-            replyHandler(["rejected": error.localizedDescription], nil)
-          } catch {
-            replyHandler(nil, error.localizedDescription)
-          }
-        }
-      }
+    case .attachmentsPut, .attachmentsRead, .attachmentsList, .themeLoad, .themeSave,
+      .load, .append, .checkpoint:
+      storageBridge.call(encoded, method: method.rawValue, reply: replyHandler)
     }
   }
 
   public func request(
-    _ request: [String: Any], deadline: NativeCommandDeadline = NativeCommandDeadline()
-  ) async -> [String: Any] {
-    guard PlatformContract.valid(request, against: socketRequestSchema) else {
-      return ["ok": false, "error": "Invalid socket request", "code": "rejected"]
+    _ request: SocketRequest, deadline: NativeCommandDeadline = NativeCommandDeadline()
+  ) async -> SocketReply {
+    guard PlatformContract.valid(request.json, against: socketRequestSchema) else {
+      return .init(ok: false, error: "Invalid socket request", code: .rejected)
     }
     guard isReady, !closed, !closing, !capturing, !rendererDead,
-      request["documentPath"] as? String == package.rootURL.path
+      request.documentPath == package.rootURL.path
     else {
-      return [
-        "ok": false, "epoch": epoch, "error": "Document unavailable or path mismatch",
-        "code": "unavailable",
-      ]
+      return .init(ok: false, epoch: epoch, error: "Document unavailable or path mismatch", code: .unavailable)
     }
     do {
       try deadline.check()
-      if request["method"] as? String == "export" {
-        guard let onExport, let format = request["format"] as? String,
-          let output = request["output"] as? String,
-          request["epoch"] as? String == epoch
+      if case .export(let export) = request {
+        guard let onExport, export.epoch == epoch
         else { throw failure("Export unavailable or session changed") }
-        try await onExport(format, URL(fileURLWithPath: output), deadline)
-        return ["ok": true, "output": output]
+        try await onExport(export.format.rawValue, URL(fileURLWithPath: export.output), deadline)
+        return .init(ok: true, output: export.output)
       }
-      return try await webView.callAsyncJavaScript(
+      guard let reply = try await webView.callAsyncJavaScript(
         "return await globalThis.__slop.request(request)",
-        arguments: ["request": request], in: nil, contentWorld: .page) as? [String: Any]
-        ?? ["ok": false, "error": "Invalid runtime reply"]
-    } catch { return ["ok": false, "epoch": epoch, "error": error.localizedDescription] }
+        arguments: ["request": request.json], in: nil, contentWorld: .page) as? [String: Any],
+        PlatformContract.valid(reply, against: socketReplySchema)
+      else { return .init(ok: false, error: "Invalid runtime reply") }
+      return try SocketReply(json: reply)
+    } catch { return .init(ok: false, epoch: epoch, error: error.localizedDescription) }
   }
 
   public func flush() async throws {
@@ -402,6 +403,8 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     destroyWebView()
     epoch = UUID().uuidString
     rendererDead = false
+    failureClassification = .platform
+    failureReason = nil
     openingError = nil
     isReady = false
     closing = false
@@ -425,11 +428,16 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   private func stopDiscovery() {
     server?.stop()
     server = nil
+    // Snapshot sessions do not own the package and never publish discovery.
+    guard storage.mode == .document else { return }
     try? FileManager.default.removeItem(
       at: package.rootURL.appendingPathComponent("state/host.lock"))
   }
 
-  private func failOpening(_ message: String) {
+  private func failOpening(_ message: String, reason: SlopFailureContext.Reason = .startup,
+                           classification: SlopFailureContext.Classification = .platform) {
+    failureClassification = classification
+    failureReason = reason
     openingError = message
     completeWaiters(.failure(failure(message)))
     onError?(message)
@@ -442,7 +450,8 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     isReady = false
     stopDiscovery()
     failOpening(
-      "The document renderer stopped. Reopen the saved document to continue. Unsaved edits could not be recovered."
+      "The document renderer stopped. Reopen the saved document to continue. Unsaved edits could not be recovered.",
+      reason: .webContentTerminated
     )
   }
 
@@ -473,7 +482,9 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
     withError error: Error
   ) {
-    failOpening(error.localizedDescription)
+    guard webView === liveWebView, !closed, !closing,
+          !SlopFailureContext.isCancellation(error) else { return }
+    failOpening(error.localizedDescription, reason: .navigation)
   }
 
   public func webView(

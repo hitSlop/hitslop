@@ -26,36 +26,31 @@ jobs:
       HITSLOP_CODESIGN_IDENTITY: "Developer ID Application: Mushroom DAO Holdings Corp. (78UAXU8QG8)"
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-      - run: bun install --frozen-lockfile
+          fetch-depth: 0
+      - name: Validate release secrets
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in MACOS_CERTIFICATE MACOS_CERTIFICATE_PASSWORD KEYCHAIN_PASSWORD ASC_API_KEY_ID ASC_API_ISSUER_ID ASC_API_KEY_P8 SPARKLE_PRIVATE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing release secret: $name"
+              exit 1
+            fi
+          done
+      - uses: ./.github/actions/prepare-checks
+      - uses: ./.github/actions/native-cache
       - name: Check release identity
         run: bun scripts/v1/release-bundle.ts --preflight
       - run: bun install --cwd apps/landing --frozen-lockfile
-      - name: Install XcodeGen
-        run: brew install xcodegen
-      - run: bun run hygiene
-      - name: Restore template cache
-        uses: actions/cache/restore@v6
-        with:
-          path: .hitslop/template-cache
-          key: templates-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: templates-v1-${{ runner.os }}-${{ runner.arch }}-
-      - name: Build runtime, helper, and templates
-        run: bun run build
+      - run: brew install xcodegen
+      - name: Validate tagged artifacts
+        run: bun run release:check
         env:
           HITSLOP_TEMPLATE_CACHE_DIR: .hitslop/template-cache
-      - name: Save completed template cache
-        uses: actions/cache/save@v6
-        with:
-          path: .hitslop/template-cache
-          key: templates-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
-      - name: Validate tagged artifacts
-        run: bun run test:built
       - name: Import Developer ID certificate
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
@@ -63,9 +58,6 @@ jobs:
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$MACOS_CERTIFICATE"
-          test -n "$MACOS_CERTIFICATE_PASSWORD"
-          test -n "$KEYCHAIN_PASSWORD"
           CERTIFICATE_PATH="$RUNNER_TEMP/hitslop-certificate.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/hitslop-signing.keychain-db"
           printf '%s' "$MACOS_CERTIFICATE" | base64 -D > "$CERTIFICATE_PATH"
@@ -75,15 +67,11 @@ jobs:
           security import "$CERTIFICATE_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
-      - name: Validate secrets
+      - name: Package notarized DMG
         run: |
           set -euo pipefail
-          test -n "$ASC_API_KEY_ID"
-          test -n "$ASC_API_ISSUER_ID"
-          test -n "$ASC_API_KEY_P8"
-          test -n "$SPARKLE_PRIVATE_KEY"
-      - name: Package notarized DMG
-        run: scripts/package-macos-release.sh
+          mkdir -p .hitslop/v1-evidence
+          scripts/package-macos-release.sh 2>&1 | tee .hitslop/v1-evidence/packaging.log
       - name: Verify Gatekeeper
         run: |
           set -euo pipefail
@@ -140,3 +128,21 @@ jobs:
             dist/macos/runtime-*.tar.gz \
             dist/macos/runtime-releases.json \
             dist/macos/release-record.json
+      - name: Remove temporary signing credentials
+        if: always()
+        run: |
+          set -euo pipefail
+          trap 'rm -f "$RUNNER_TEMP/hitslop-certificate.p12"' EXIT
+          KEYCHAIN_PATH="$RUNNER_TEMP/hitslop-signing.keychain-db"
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-evidence
+          path: |
+            .hitslop/v1-evidence
+            dist/macos/release-record.json
+            dist/macos/SHA256SUMS
+          include-hidden-files: true

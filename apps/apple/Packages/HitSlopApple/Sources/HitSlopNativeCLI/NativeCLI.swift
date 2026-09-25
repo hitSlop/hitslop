@@ -10,10 +10,18 @@ import HitSlopWasm
   static let configuration = CommandConfiguration(
     commandName: "hitslop-native", abstract: "Read, edit, open, and export hitSlop documents.",
     subcommands: [
-      RuntimeInfo.self, Theme.self, Attachments.self, StorageProbe.self, Screenshot.self, Export.self, OpenDev.self,
+      RuntimeInfo.self, Theme.self, Attachments.self, Screenshot.self, Export.self,
       Get.self, Schema.self,
       Apply.self, Batch.self, Compact.self, Create.self, Open.self,
-    ])
+    ] + debugCommands)
+
+  private static var debugCommands: [ParsableCommand.Type] {
+    #if DEBUG
+    [StorageProbe.self]
+    #else
+    []
+    #endif
+  }
 }
 
 struct Screenshot: AsyncParsableCommand {
@@ -129,21 +137,7 @@ struct Open: AsyncParsableCommand {
   }
 }
 
-struct OpenDev: AsyncParsableCommand {
-  @Argument var address: String
-  @Option var width: Double = 800
-  @Option var height: Double = 600
-  func run() async throws {
-    guard let url = URL(string: address) else { throw ValidationError("Invalid development URL") }
-    await MainActor.run {
-      let application = NSApplication.shared
-      application.setActivationPolicy(.regular)
-      SlopRenderer.openDevelopmentURL(url, size: .init(width: width, height: height))
-      application.run()
-    }
-  }
-}
-
+#if DEBUG
 struct StorageProbe: ParsableCommand {
   static let configuration = CommandConfiguration(shouldDisplay: false)
   @Argument var root: String
@@ -151,13 +145,11 @@ struct StorageProbe: ParsableCommand {
   @Argument var marker: String
   @Argument var payload: String
   func run() throws {
-    #if DEBUG
-      try DebugStorageProbe.run([root, phase, marker, payload])
-    #else
-      throw ValidationError("Debug-only probe")
-    #endif
+    try DebugStorageProbe.run([root, phase, marker, payload])
   }
 }
+
+#endif
 
 struct RuntimeInfo: AsyncParsableCommand {
   static let configuration = CommandConfiguration(commandName: "runtime-info")

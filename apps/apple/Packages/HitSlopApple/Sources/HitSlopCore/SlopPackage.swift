@@ -118,8 +118,6 @@ public struct SlopPackage: Sendable {
   public var isResizable: Bool { isSkinned ? false : manifest.presentation.resizable ?? true }
   public var shape: Shape { manifest.presentation.shape ?? .rounded }
 
-  public func skinURL() throws -> URL? { try skin()?.url }
-
   /// Validates and decodes the window skin once for callers that also need its pixels.
   public func skin() throws -> (url: URL, image: CGImage)? {
     if let validatedSkin { return validatedSkin }

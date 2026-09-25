@@ -117,7 +117,7 @@ private func makeIconPNG() throws -> Data {
     var recent: URL?
     var destination: URL?
     let services = CatalogServices(templatesURL: templates, bundledRoot: nil,
-        telemetry: SlopTelemetry { events.append($0) },
+        telemetry: SlopTelemetry { if case .breadcrumb = $0 { return }; events.append($0) },
         chooseDestination: { _ in destination }, recordRecent: { recent = $0 })
     #expect(try await services.client.chooseDestination(entry) == nil)
     #expect(events.isEmpty && recent == nil)
@@ -130,7 +130,7 @@ private func makeIconPNG() throws -> Data {
     #expect(!FileManager.default.fileExists(atPath: source.appendingPathComponent("state").path))
     // Existing destinations fail without emitting another creation.
     await #expect(throws: (any Error).self) { _ = try await services.client.create(entry, chosen) }
-    #expect(events == [.created(.installed), .failed(.create)])
+    #expect(events == [.created(.installed), .failed(.create, .init(.rejection, reason: .destinationExists))])
 }
 
 @Test @MainActor func templateFolderChangesRefreshTheExistingStore() async throws {

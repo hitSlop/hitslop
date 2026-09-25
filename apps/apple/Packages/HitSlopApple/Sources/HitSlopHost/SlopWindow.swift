@@ -4,6 +4,7 @@ import HitSlopRuntime
 import HitSlopWasm
 import SwiftUI
 import UniformTypeIdentifiers
+import WebKit
 
 private final class FramelessDocumentWindow: NSWindow {
   override var canBecomeKey: Bool { true }
@@ -84,9 +85,9 @@ private final class ShapedView: HoverView {
 
 @MainActor enum SlopDocumentAssetRefreshQueue {
   private struct Job {
-    let snapshot: SlopRenderSnapshot
     let destination: URL
     let generation: UUID
+    let telemetry: SlopTelemetry
   }
   private static var generations: [URL: UUID] = [:]
   private static var pending: [Job] = []
@@ -98,11 +99,11 @@ private final class ShapedView: HoverView {
     generations[key] = UUID()
     pending.removeAll { $0.destination == key }
   }
-  static func schedule(snapshot: SlopRenderSnapshot, presentedURL: URL) {
+  static func schedule(presentedURL: URL, telemetry: SlopTelemetry = .disabled) {
     let key = presentedURL.standardizedFileURL
     invalidate(key)
     let generation = generations[key]!
-    pending.append(Job(snapshot: snapshot, destination: key, generation: generation))
+    pending.append(Job(destination: key, generation: generation, telemetry: telemetry))
     startWorkerIfNeeded()
   }
   private static func startWorkerIfNeeded() {
@@ -118,19 +119,22 @@ private final class ShapedView: HoverView {
         rendering = true
         defer { rendering = false }
         do {
-          let assets = try await SlopRenderer.documentAssetsPNGData(snapshot: job.snapshot)
+          let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: job.destination, telemetry: job.telemetry)
           guard !Task.isCancelled, generations[job.destination] == job.generation else { continue }
           if let preview = assets.previewPNG {
             do { try SlopPreviewWriter.write(preview, to: job.destination) } catch {
-              print("[hitSlop assets] Preview write failed: \(error.localizedDescription)")
+              job.telemetry.failure(.artwork, error: error)
             }
           }
           if let icon = assets.finderIconPNG {
             await SlopPreviewWriter.installFinderIconAsync(
               icon, for: job.destination,
-              isCurrent: { generations[job.destination] == job.generation && !Task.isCancelled })
+              isCurrent: { generations[job.destination] == job.generation && !Task.isCancelled },
+              telemetry: job.telemetry)
           }
-        } catch { print("[hitSlop assets] Refresh failed: \(error.localizedDescription)") }
+        } catch {
+          if !Task.isCancelled, generations[job.destination] == job.generation { job.telemetry.failure(.artwork, error: error) }
+        }
       }
     }
   }
@@ -169,19 +173,20 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   public let packageURL: URL
   public let session: SlopRuntimeSession
   public var onClose: (() -> Void)?
-  public var onPrepareClose: (() async -> Void)?
-  public var onCloseCancelled: (() -> Void)?
-  public var onOpenDocument: ((URL) -> Void)?
   public var onCommand: ((SlopDocumentCommand) -> Void)?
   public var onRuntimeReady: (() -> Void)?
   public var telemetry: SlopTelemetry = .disabled
   private var reportedSaveFailure = false
+  private var reportedRendererFailure = false
+  private var reportedGuestSources = Set<SlopRuntimeIssue.Source>()
   public var onRuntimeFailure: ((String) -> Void)?
   private let opened: SlopOpenedDocument
   private var toolbar: NSPanel?, toolbarHost: NSHostingView<SlopToolbar>?
   private var toolbarMenuTracking = false
   private var toolbarInteracting = false
   private var toolbarVisibility = SlopToolbarVisibility()
+  private weak var controlsWebView: WKWebView?
+  private var publishedControlsVisible: Bool?
   private var failedOverlay: NSHostingView<FailureOverlay>?
   private var presentedRuntimeError: String?
   private var documentAttention: NSPanel?
@@ -208,7 +213,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     preparingProgress[url.standardizedFileURL]?.focus()
   }
 
-  public static func open(packageURL: URL, presentsWindow: Bool = false) async throws -> SlopDocumentWindowController {
+  public static func open(packageURL: URL, presentsWindow: Bool = false, telemetry: SlopTelemetry = .disabled) async throws -> SlopDocumentWindowController {
     let started = ContinuousClock.now
     let progress = presentsWindow ? SlopOpeningProgress(started: started) : nil
     let key = packageURL.standardizedFileURL
@@ -218,9 +223,9 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
       let opened = try await SlopOpenedDocument.open(presentedURL: packageURL)
       do {
         try Task.checkCancellation()
-        return try SlopDocumentWindowController(opened: opened, started: started)
+        return try SlopDocumentWindowController(opened: opened, started: started, telemetry: telemetry)
       } catch {
-        try await opened.session.closeAndWait()
+        try await opened.session.finish()
         throw error
       }
     }
@@ -246,7 +251,8 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     }
   }
 
-  private init(opened: SlopOpenedDocument, started: ContinuousClock.Instant) throws {
+  private init(opened: SlopOpenedDocument, started: ContinuousClock.Instant, telemetry: SlopTelemetry = .disabled) throws {
+    self.telemetry = telemetry
     startupStarted = started
     self.opened = opened
     self.packageURL = opened.presentedURL
@@ -254,7 +260,6 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     // Start WebKit before building native chrome; bridge messages arrive only
     // after this initializer returns to the run loop.
     session.load()
-    SlopRenderer.installCLIExport(on: session)
     let windowMask = try SlopWindowMask(package: session.package)
     let spec = session.package.manifest.presentation
     let size = NSSize(width: spec.width, height: spec.height)
@@ -284,6 +289,9 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     super.init(window: window)
     window.delegate = self
     session.delegate = self
+    SlopRenderer.installCLIExport(on: session,
+      telemetry: SlopTelemetry { [weak self] in self?.telemetry.send($0) },
+      onFailure: { [weak self] error, format in self?.reportLifecycleFailure(.export, error: error, format: format) })
     container.changed = { [weak self] _ in self?.refreshToolbarHover() }
     SlopToolbarPointerSampler.shared.add(self, window: window) { [weak self] point, front in
       self?.refreshToolbarHover(point: point, front: front)
@@ -295,7 +303,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     Task { @MainActor [weak self, package = session.package] in
       await self?.waitForPresentation()
       guard self?.isContentReady == true else { return }
-      SlopPreviewWriter.installExistingPreview(for: package)
+      SlopPreviewWriter.installExistingPreview(for: package, telemetry: self?.telemetry ?? .disabled)
     }
   }
   required init?(coder: NSCoder) { nil }
@@ -306,6 +314,9 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   }
 
   public func runtimeSessionDidBecomeReady(_ session: SlopRuntimeSession) {
+    publishControlsVisibility(toolbar?.isVisible == true, force: true)
+    if reportedRendererFailure { telemetry.send(.breadcrumb(.renderer, .recovered)) }
+    reportedRendererFailure = false
     recordStartup("runtime-ready")
     #if DEBUG
     if ProcessInfo.processInfo.environment["HITSLOP_STARTUP_TIMINGS"] == "1" {
@@ -332,7 +343,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     isContentReady = false
     isLoading = true
     window?.orderOut(nil)
-    toolbar?.orderOut(nil)
+    hideToolbar()
     loadingWebView = session.webView
     session.webView.setAccessibilityHidden(true)
     toolbarHost?.rootView = toolbarView()
@@ -434,7 +445,15 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   public func runtimeSession(_ session: SlopRuntimeSession, didFail error: Error) {
     isContentReady = false
     stopLoading()
-    telemetry.send(.failed(.renderer))
+    if !reportedRendererFailure {
+      reportedRendererFailure = true
+      let diagnostic = (error as? any SlopDiagnosticProviding)?.diagnostic
+        ?? SlopFailureContext(reason: session.engine.failureReason ?? .presentation)
+      telemetry.send(.breadcrumb(.renderer, .failed))
+      var context = diagnostic
+      context.runtime = session.engine.telemetryRuntime
+      if !reportedSaveFailure || context.reason == .webContentTerminated { telemetry.send(.failed(.renderer, context)) }
+    }
     if let onRuntimeFailure {
       onRuntimeFailure(error.localizedDescription)
     } else {
@@ -443,16 +462,32 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   }
 
   public func runtimeSession(_ session: SlopRuntimeSession, didReport issue: SlopRuntimeIssue) {
+    if reportedGuestSources.insert(issue.source).inserted {
+      let rejection = issue.source == .document
+      telemetry.send(.failed(.renderer, .init(rejection ? .rejection : .authored,
+        reason: rejection ? .operationRejected : .authoredException, runtime: session.engine.telemetryRuntime)))
+    }
     guard guestIssue?.message != issue.message else { return }
     issueGeneration += 1
     guestIssue = issue
     showDocumentAttention()
   }
+  public func runtimeSession(_ session: SlopRuntimeSession, storageFailure: SlopFailureContext) {
+    guard !reportedSaveFailure else { return }
+    reportedSaveFailure = true
+    var context = storageFailure
+    context.runtime = session.engine.telemetryRuntime
+    telemetry.send(.breadcrumb(.save, .failed))
+    telemetry.send(.failed(.save, context))
+  }
+
   public func runtimeSession(_ session: SlopRuntimeSession, saveStatus: WasmSaveStatus) {
-    if saveStatus.status == "save-failed", !reportedSaveFailure {
-      reportedSaveFailure = true
-      telemetry.send(.failed(.save))
-    } else if saveStatus.status == "saved" { reportedSaveFailure = false }
+    if saveStatus.status == "save-failed" {
+      runtimeSession(session, storageFailure: .init(reason: .storage))
+    } else if saveStatus.status == "saved" {
+      if reportedSaveFailure { telemetry.send(.breadcrumb(.save, .recovered)) }
+      reportedSaveFailure = false
+    }
     window?.isDocumentEdited = saveStatus.status != "saved"
     if let message = saveStatus.error {
       attentionMessage = message
@@ -468,7 +503,9 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
   private var guestIssue: SlopRuntimeIssue?
   private var issueGeneration = 0
   public func runtimeSessionRecovered(_ session: SlopRuntimeSession) {
+    if guestIssue != nil { telemetry.send(.breadcrumb(.recovery, .recovered)) }
     guestIssue = nil
+    publishControlsVisibility(toolbar?.isVisible == true, force: true)
   }
   private func showDocumentAttention() {
     guard let message = attentionMessage ?? guestIssue?.message else { return }
@@ -576,7 +613,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     showToolbar()
   }
   private func miniaturizeFromToolbar() {
-    toolbar?.orderOut(nil)
+    hideToolbar()
     window?.miniaturize(nil)
   }
   private func showToolbar() {
@@ -585,13 +622,44 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     guard let panel = toolbar else { return }
     panel.setFrame(slopToolbarFrame(document: window.frame, visible: window.screen?.visibleFrame), display: true)
     panel.orderFrontRegardless()
+    publishControlsVisibility(true)
   }
 
-  func refreshToolbarHover(point: NSPoint = NSEvent.mouseLocation, front: Int? = nil) {
+  private func hideToolbar() {
+    toolbar?.orderOut(nil)
+    publishControlsVisibility(false)
+  }
+
+  /// One native hover decision drives both the toolbar and opt-in authored controls.
+  /// Publish transitions only; the pointer sampler must not send JavaScript every tick.
+  private func publishControlsVisibility(_ visible: Bool, force: Bool = false) {
+    guard session.isReady, !session.engine.rendererDead else {
+      publishedControlsVisible = nil
+      return
+    }
+    let view = session.webView
+    guard force || controlsWebView !== view || publishedControlsVisible != visible else { return }
+    controlsWebView = view
+    publishedControlsVisible = visible
+    view.evaluateJavaScript(
+      "document.documentElement.setAttribute('data-slop-controls', '\(visible ? "visible" : "hidden")')",
+      in: nil, in: .defaultClient
+    ) { [weak self, weak view] result in
+      // A failed delivery can be retried by the next sample, without an old
+      // renderer's completion invalidating the replacement view's state.
+      if case .failure = result, let self, self.controlsWebView === view,
+         self.publishedControlsVisible == visible {
+        self.publishedControlsVisible = nil
+      }
+    }
+  }
+
+  func refreshToolbarHover(point: NSPoint = NSEvent.mouseLocation, front: Int? = nil,
+                           now: TimeInterval = ProcessInfo.processInfo.systemUptime) {
     guard let window else { return }
     guard window.isVisible, !window.isMiniaturized, window.isOnActiveSpace, !NSApp.isHidden, !isLoading else {
       toolbarVisibility = SlopToolbarVisibility()
-      toolbar?.orderOut(nil)
+      hideToolbar()
       return
     }
     let front = front ?? NSWindow.windowNumber(at: point, belowWindowWithWindowNumber: 0)
@@ -611,10 +679,11 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     let show = toolbarVisibility.shouldShow(
       inside: overDocument || overToolbar || nearToolbar,
       interacting: toolbarMenuTracking || toolbarInteracting,
-      visible: (toolbar?.isVisible == true), now: ProcessInfo.processInfo.systemUptime)
+      visible: (toolbar?.isVisible == true), now: now)
     if show {
       if !(toolbar?.isVisible == true) { showToolbar() }
-    } else { toolbar?.orderOut(nil) }
+    } else { hideToolbar() }
+    publishControlsVisibility(toolbar?.isVisible == true)
   }
   public var isPinned: Bool { window?.level == .floating }
   public var documentTitle: String { window?.title ?? SlopDocumentIdentity(url: packageURL).filename }
@@ -644,7 +713,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
       return
     }
     Task {
-      do { if let url = try await perform(command) { onOpenDocument?(url) } } catch {
+      do { _ = try await perform(command) } catch {
         present("Could not complete command", error)
       }
     }
@@ -667,13 +736,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
           panel.begin { continuation.resume(returning: $0) }
         }
       }
-      guard response == .OK, let target = panel.url else { return nil }
-      try await session.flush()
-      let source = session.package.rootURL
-      let destination = try await SlopPreparation.run {
-        try SlopDuplicator.duplicate(from: source, to: target)
-      }
-      return destination
+      return try await duplicateDocument(to: response == .OK ? panel.url : nil)
 
     case .exportPNG: try await export(.png)
     case .exportPDF: try await export(.pdf)
@@ -681,23 +744,26 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     case .copyPath: copyPath()
     case .openEditor(let app): try await openInEditor(app)
     case .retry:
-      if session.isReady && !session.engine.rendererDead {
-        try await session.engine.reloadInterface()
-      } else {
-        try await session.reopenSavedDocument()
-      }
-      if let content = window?.contentView {
-        session.webView.frame = content.bounds
-        session.webView.autoresizingMask = [.width, .height]
-        content.addSubview(session.webView, positioned: .below, relativeTo: failedOverlay)
-      }
-      updateRuntimeFailure(nil)
-      startLoading()
+      telemetry.send(.breadcrumb(.recovery, .started))
+      do {
+        if session.isReady && !session.engine.rendererDead {
+          try await session.engine.reloadInterface()
+        } else {
+          try await session.reopenSavedDocument()
+        }
+        if let content = window?.contentView {
+          session.webView.frame = content.bounds
+          session.webView.autoresizingMask = [.width, .height]
+          content.addSubview(session.webView, positioned: .below, relativeTo: failedOverlay)
+        }
+        updateRuntimeFailure(nil)
+        startLoading()
+        telemetry.send(.breadcrumb(.recovery, .completed))
+      } catch { reportLifecycleFailure(.recovery, error: error); throw error }
     case .close:
       try await prepareToClose()
-      do { try await session.finish() } catch {
+      do { try await finishClose() } catch {
         if isLoading { startLoading() }
-        onCloseCancelled?()
         throw error
       }
       closePrepared = true
@@ -706,6 +772,34 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     return nil
   }
   public func revealFromDock() { showWindow(nil) }
+
+  func duplicateDocument(to target: URL?) async throws -> URL? {
+    guard let target else { telemetry.send(.breadcrumb(.duplicate, .cancelled)); return nil }
+    telemetry.send(.breadcrumb(.duplicate, .started))
+    do { try await session.flush() }
+    catch { reportLifecycleFailure(.duplicate, error: error); throw error }
+    do {
+      let source = session.package.rootURL
+      let destination = try await SlopPreparation.run { try SlopDuplicator.duplicate(from: source, to: target) }
+      telemetry.send(.breadcrumb(.duplicate, .completed))
+      return destination
+    } catch { telemetry.failure(.duplicate, error: error, runtime: session.engine.telemetryRuntime); throw error }
+  }
+
+  /// Save status and renderer callbacks own their incidents; outer operations add only context.
+  private func reportLifecycleFailure(_ operation: SlopTelemetryEvent.Failure, error: Error,
+                                      format: SlopTelemetryEvent.ExportFormat? = nil) {
+    if SlopFailureContext.isCancellation(error) { telemetry.send(.breadcrumb(operation, .cancelled)); return }
+    if reportedSaveFailure || reportedRendererFailure { telemetry.send(.breadcrumb(operation, .failed)); return }
+    telemetry.failure(operation, error: error, runtime: session.engine.telemetryRuntime, format: format)
+  }
+
+  public func finishClose(operation: SlopTelemetryEvent.Failure = .close) async throws {
+    do {
+      try await session.finish()
+      telemetry.send(.breadcrumb(operation, .completed))
+    } catch { reportLifecycleFailure(operation, error: error); throw error }
+  }
 
   private func export(_ format: SlopTelemetryEvent.ExportFormat) async throws {
     let panel = NSSavePanel()
@@ -717,16 +811,18 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
 
   /// A cancelled picker has no output and emits no success event.
   func exportDocument(format: SlopTelemetryEvent.ExportFormat, to output: URL?) async throws {
-    guard let output else { return }
+    guard let output else { telemetry.send(.breadcrumb(.export, .cancelled)); return }
+    telemetry.send(.breadcrumb(.export, .started))
     await waitForPresentation()
     do {
       guard isContentReady, session.isReady, presentedRuntimeError == nil else {
         throw SlopPackageError.invalid("The document is not ready to export")
       }
       try await SlopRenderer.exportDocument(session: session, format: format.rawValue, output: output)
+      telemetry.send(.breadcrumb(.export, .completed))
       telemetry.send(.exported(format))
     } catch {
-      telemetry.send(.failed(.export))
+      reportLifecycleFailure(.export, error: error, format: format)
       throw error
     }
   }
@@ -780,32 +876,28 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     guard let window, windowShouldClose(window) else { return }
     super.close()
   }
-  public func prepareToClose() async throws {
+  public func prepareToClose(operation: SlopTelemetryEvent.Failure = .close) async throws {
+    telemetry.send(.breadcrumb(operation, .started))
     loadingTask?.cancel()
     openingProgress?.finish()
     if session.engine.rendererDead || !session.isReady { return }
     window?.makeFirstResponder(nil)
     do {
       try await session.engine.prepareClose()
-      await onPrepareClose?()
     } catch {
+      reportLifecycleFailure(operation, error: error)
       await cancelPreparedClose()
       throw error
     }
     // Nothing was editable during startup; closing an unfinished open does
     // not need to launch another WebView to refresh artwork.
     guard isContentReady else { return }
-    do {
-      let snapshot = try await SlopRenderSnapshot.prepare(packageURL: session.package.rootURL)
-      SlopDocumentAssetRefreshQueue.schedule(snapshot: snapshot, presentedURL: packageURL)
-    } catch {
-      print("[hitSlop assets] Could not snapshot saved document: \(error.localizedDescription)")
-    }
+    // The render reads the saved document into memory after this window closes.
+    SlopDocumentAssetRefreshQueue.schedule(presentedURL: packageURL, telemetry: telemetry)
   }
   public func cancelPreparedClose() async {
     await session.engine.cancelClose()
     if isLoading { startLoading() }
-    onCloseCancelled?()
   }
   public static func finishAssetRefreshesForTermination() async {
     await SlopDocumentAssetRefreshQueue.finishForTermination()
@@ -822,12 +914,11 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
       defer { preparingClose = false }
       do {
         try await prepareToClose()
-        try await session.finish()
+        try await finishClose()
         closePrepared = true
         sender.close()
       } catch {
         if isLoading { startLoading() }
-        onCloseCancelled?()
         present("Changes could not be saved", error)
       }
     }
@@ -837,7 +928,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     if toolbar?.isVisible == true { showToolbar() }
   }
   public func windowWillMiniaturize(_ notification: Notification) {
-    toolbar?.orderOut(nil)
+    hideToolbar()
   }
   public func windowWillClose(_ notification: Notification) {
     SlopToolbarPointerSampler.shared.remove(self)
@@ -845,7 +936,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     stopLoading()
     documentAttention?.close()
     documentAttention = nil
-    toolbar?.orderOut(nil)
+    hideToolbar()
     if let toolbar { window?.removeChildWindow(toolbar) }
     toolbar?.close()
     toolbar = nil

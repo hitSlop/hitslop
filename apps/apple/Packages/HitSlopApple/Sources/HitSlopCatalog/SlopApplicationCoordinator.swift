@@ -159,9 +159,9 @@ import SwiftUI
     var client: DocumentClient {
         DocumentClient(
             open: { [self] id, url in
+                await telemetry.send(.breadcrumb(.open, .started))
                 do { return try await open(id, url: url) }
-                catch let error as CancellationError { throw error }
-                catch { await telemetry.send(.failed(.open)); throw error }
+                catch { await telemetry.failure(.open, error: error); throw error }
             },
             focus: { [self] id in await focus(id) },
             perform: { [self] id, command in try await perform(id, command: command) },
@@ -183,20 +183,20 @@ import SwiftUI
         try Task.checkCancellation()
         preparingURLs[id] = url
         defer { preparingURLs[id] = nil }
-        let controller = try await SlopDocumentWindowController.open(packageURL: url, presentsWindow: presentsWindows)
-        controller.telemetry = telemetry
+        let controller = try await SlopDocumentWindowController.open(packageURL: url, presentsWindow: presentsWindows, telemetry: telemetry)
         controllers[id] = controller
         onOpened?(id, controller)
         if presentsWindows {
             NSDocumentController.shared.noteNewRecentDocumentURL(url); NSApp.activate(ignoringOtherApps: true)
         }
         onFocused?()
+        telemetry.send(.breadcrumb(.open, .completed))
         telemetry.send(.opened)
         return controller.documentTitle
     }
-    private func finishQuit(_ id: UUID) async throws { try await controller(id).session.finish() }
+    private func finishQuit(_ id: UUID) async throws { try await controller(id).finishClose(operation: .quit) }
     private func cancelQuit(_ id: UUID) async { await controllers[id]?.cancelPreparedClose() }
-    private func prepareToQuit(_ id: UUID) async throws { try await controller(id).prepareToClose() }
+    private func prepareToQuit(_ id: UUID) async throws { try await controller(id).prepareToClose(operation: .quit) }
     private func focus(_ id: UUID) {
         if presentsWindows {
             if let controller = controllers[id] { controller.revealFromDock() }

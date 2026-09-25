@@ -1,8 +1,21 @@
-const files = [...new Bun.Glob("packages/{document,cli,schema}/tests/**/*.test.ts").scanSync(".")];
+import { checkRuntime } from "./compatibility";
+const native = process.argv.includes("--native");
+if (native) await (await import("./native-fixtures")).prepareNativeFixtures();
+const files = [...new Bun.Glob("packages/{document,cli,schema}/tests/**/*.test.ts").scanSync(".")]
+  .filter((file) => file.endsWith(".native.test.ts") === native)
+  .sort();
 const child = Bun.spawn([process.execPath, "test", ...files.map((f) => "./" + f)], {
-  env: {...process.env,HITSLOP_NATIVE_CLI:process.env.HITSLOP_NATIVE_CLI ?? `${process.cwd()}/apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native`},
+  env: native
+    ? {
+        ...process.env,
+        HITSLOP_NATIVE_CLI:
+          process.env.HITSLOP_NATIVE_CLI ??
+          `${process.cwd()}/apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native`,
+      }
+    : process.env,
   stdout: "inherit",
   stderr: "inherit",
 });
-process.exit(await child.exited);
-export {};
+const code = await child.exited;
+if (code) process.exit(code);
+if (!native) await checkRuntime({ report: ".hitslop/v1-evidence/compatibility.json" });

@@ -3,7 +3,7 @@
   import { capture } from "@hitslop/document/capture";
   import { Slop, useDocument } from "@hitslop/document/svelte";
   import { onMount, tick } from "svelte";
-  import { Button, Tooltip } from "bits-ui";
+  import { Button } from "bits-ui";
   import { drawPetIcon } from "./icon-draw";
   import { parsePetArchive, parsePetPackage, validateSpriteImage, type PetMetadata } from "./pet-package";
   import schema from "./schema";
@@ -42,7 +42,6 @@
   let activeImage = $state.raw<HTMLImageElement | null>(null);
   let action = $state<PetAction>("idle");
   let frame = $state(0);
-  let status = $state("Drag me around");
   let error = $state<string | null>(null);
   let dragActive = $state(false);
   let importing = $state(false);
@@ -119,7 +118,6 @@
     await tick();
     if (generation !== loadGeneration) return;
     play("idle", Number.POSITIVE_INFINITY);
-    status = doc.current.package ? "Custom pet · drag me" : "Drag me around";
     scheduleAmbient();
   }
 
@@ -145,20 +143,17 @@
 
   async function importPackage(file: File | undefined): Promise<void> {
     if (!file || importing) return;
-    importing = true; error = null; status = "Checking pet ZIP…";
+    importing = true; error = null;
     try {
       const parsed = await parsePetPackage(file);
-      status = "Saving pet…";
       await attachments.import(file, { commit(ref) {
         doc.change((tx) => {
           tx.fields.package.set({ id: ref.id, name: ref.name, mimeType: ref.mimeType, byteLength: ref.byteLength });
           tx.fields.displayName.replace(parsed.displayName);
         });
       } });
-      status = "Pet saved · drag me";
     } catch (cause) {
       error = cause instanceof Error ? cause.message : String(cause);
-      status = "Import rejected";
     } finally { importing = false; }
   }
 
@@ -168,17 +163,7 @@
       tx.fields.package.clear();
       tx.fields.displayName.replace(STARTER.displayName);
     });
-    status = "Bubu is back";
     error = null;
-  }
-
-  function beginWindowDrag(event: PointerEvent): void {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    play("jumping", 1);
-    const idle = doc.current.package ? "Custom pet · drag me" : "Drag me around";
-    status = "Moving…";
-    window.setTimeout(() => { if (status === "Moving…") status = idle; }, 850);
   }
 
   function paintPortrait(target: HTMLCanvasElement | undefined): void {
@@ -223,28 +208,19 @@
 />
 
 <Slop>
-  <Tooltip.Provider delayDuration={250}>
-    <main class="pet-shell" aria-label={`${activePet.displayName}, animated desktop pet`} data-slop-selection="none">
-      <Tooltip.Root>
-        <Tooltip.Trigger class="pet-sprite" data-still={reducedMotion} aria-label={activePet.description} onpointerdown={beginWindowDrag}>
-          <canvas bind:this={canvas} width={CELL_WIDTH} height={CELL_HEIGHT} aria-hidden="true"></canvas>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content class="pet-tooltip" data-slop-export="hide" sideOffset={6}>Drag {activePet.displayName} to move the window</Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
-      {#if dragActive}<div class="pet-drop" data-slop-export="hide">DROP PET ZIP</div>{/if}
-      {#if error}<button class="pet-error" data-slop-export="hide" onclick={() => error = null} aria-label="Dismiss error">{error}</button>{/if}
-      <div class="pet-rail" data-slop-export="hide">
-        <span title={activePet.displayName}>{activePet.displayName}</span>
-        <small>{status}</small>
-        <Button.Root type="button" class="pet-zip" onclick={() => fileInput.click()} disabled={importing} aria-label="Import pet ZIP">{importing ? "…" : "ZIP"}</Button.Root>
-        {#if doc.current.package}<Button.Root type="button" class="pet-bubu" onclick={useStarter} aria-label="Restore Bubu">BUBU</Button.Root>{/if}
-      </div>
-      <a class="pet-market" href="https://codex-pets.net/" target="_blank" rel="noreferrer">find more pets ↗</a>
-      <input bind:this={fileInput} class="pet-file" type="file" accept=".zip,.codex-pet.zip,application/zip" onchange={event => { void importPackage(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />
-    </main>
-  </Tooltip.Provider>
+  <main class="pet-shell" aria-label={`${activePet.displayName}, animated desktop pet`} data-slop-selection="none">
+    <div class="pet-sprite" role="img" aria-label={activePet.description}>
+      <canvas bind:this={canvas} width={CELL_WIDTH} height={CELL_HEIGHT} aria-hidden="true"></canvas>
+    </div>
+    {#if dragActive}<div class="pet-drop" data-slop-export="hide">DROP PET ZIP</div>{/if}
+    {#if error}<button class="pet-error" data-slop-export="hide" onclick={() => error = null} aria-label="Dismiss error">{error}</button>{/if}
+    <div class="pet-rail" data-slop-export="hide">
+      <a class="pet-market" href="https://codex-pets.net/" target="_blank" rel="noreferrer">Find more pets ↗</a>
+      <Button.Root type="button" class="pet-zip" onclick={() => fileInput.click()} disabled={importing} aria-label="Import pet ZIP">{importing ? "Importing…" : "Import ZIP"}</Button.Root>
+      {#if doc.current.package}<Button.Root type="button" class="pet-bubu" onclick={useStarter}>Restore Bubu</Button.Root>{/if}
+    </div>
+    <input bind:this={fileInput} class="pet-file" type="file" tabindex="-1" aria-label="Pet ZIP file" accept=".zip,.codex-pet.zip,application/zip" onchange={event => { void importPackage(event.currentTarget.files?.[0]); event.currentTarget.value = ""; }} />
+  </main>
 
   {#snippet icon()}
     <div class="pet-icon" aria-hidden="true">

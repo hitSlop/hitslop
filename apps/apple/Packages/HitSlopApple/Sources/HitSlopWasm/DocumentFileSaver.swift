@@ -1,4 +1,5 @@
 import AppKit
+import CoreServices
 import UniformTypeIdentifiers
 @preconcurrency import WebKit
 
@@ -105,7 +106,9 @@ import UniformTypeIdentifiers
   }
 
   /// Copy to the destination volume before the final atomic replacement.
-  static func install(_ staging: URL, at destination: URL, limit: Int64 = maximumBytes) throws {
+  static func install(_ staging: URL, at destination: URL, limit: Int64 = maximumBytes,
+    quarantine: (URL) throws -> Void = applyQuarantine
+  ) throws {
     let manager = FileManager.default
     let attributes = try manager.attributesOfItem(atPath: staging.path)
     guard let size = attributes[.size] as? NSNumber, size.int64Value <= limit else {
@@ -117,11 +120,25 @@ import UniformTypeIdentifiers
     defer { try? manager.removeItem(at: replacement) }
     let ready = replacement.appendingPathComponent("download")
     try manager.copyItem(at: staging, to: ready)
+    // Authored bytes must be quarantined before they become visible at the
+    // chosen destination. A metadata failure must preserve any existing file.
+    try quarantine(ready)
     if manager.fileExists(atPath: destination.path) {
-      _ = try manager.replaceItemAt(destination, withItemAt: ready)
+      _ = try manager.replaceItemAt(destination, withItemAt: ready, options: .usingNewMetadataOnly)
     } else {
       try manager.moveItem(at: ready, to: destination)
     }
+  }
+
+  nonisolated private static func applyQuarantine(_ file: URL) throws {
+    var file = file
+    var values = URLResourceValues()
+    values.quarantineProperties = [
+      kLSQuarantineAgentNameKey as String: "hitSlop",
+      kLSQuarantineTypeKey as String: kLSQuarantineTypeOtherDownload,
+      kLSQuarantineTimeStampKey as String: Date(),
+    ]
+    try file.setResourceValues(values)
   }
 
   func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {

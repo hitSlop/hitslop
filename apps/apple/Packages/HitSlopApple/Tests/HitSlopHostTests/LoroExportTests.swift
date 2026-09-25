@@ -53,10 +53,10 @@ extension LoroClientTests {
         "getComputedStyle(document.querySelector('.checklist-shell')).backgroundImage") as? String
       #expect(editorBackground?.contains("gradient") == true)
     } catch {
-      try await session.closeAndWait()
+      try await session.finish()
       throw error
     }
-    try await session.closeAndWait()
+    try await session.finish()
   }
 
   @Test @MainActor func expiredExportCannotPublishOutput() throws {
@@ -118,8 +118,17 @@ extension LoroClientTests {
     #expect(PDFDocument(data: pdf)?.pageCount ?? 0 > 0)
     #expect(try await view.evaluateJavaScript(idle) as? Bool == true)
     #expect(try await DocumentCommand.run(method: "get", url: root) == filed)
-    try await session.closeAndWait()
+    try await session.finish()
+    let stateDirectory = root.appendingPathComponent("state")
+    func stateFiles() throws -> [String: Data] {
+      try Dictionary(uniqueKeysWithValues: FileManager.default.contentsOfDirectory(atPath: stateDirectory.path)
+        .map { ($0, try Data(contentsOf: stateDirectory.appendingPathComponent($0))) })
+    }
+    let saved = try stateFiles()
     let assets = try await SlopRenderer.documentAssetsPNGData(packageURL: root)
+    // Background renders read the saved document in place without copying or writing it.
+    #expect(try stateFiles() == saved)
+    #expect(!FileManager.default.fileExists(atPath: stateDirectory.appendingPathComponent("host.lock").path))
     let preview = try #require(assets.previewPNG)
     let icon = try #require(assets.finderIconPNG)
     try SlopPreviewWriter.write(preview, to: root)
@@ -129,6 +138,45 @@ extension LoroClientTests {
         atPath: root.appendingPathComponent("QuickLook/Preview.png").path))
     #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent("Icon\r").path))
     #expect(try Data(contentsOf: root.appendingPathComponent("QuickLook/Icon.png")) != icon)
+  }
+
+  @Test @MainActor func longDocumentPreviewIsCappedWhileExportKeepsFullLength() async throws {
+    _ = NSApplication.shared
+    let root = try fixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let tasks = (0..<300).map { index -> [String: Any] in
+      ["type": "insert", "path": ["tasks"], "value": ["text": "Long task \(index)", "done": false, "archived": false]]
+    }
+    _ = try await DocumentCommand.run(
+      method: "batch", url: root, operations: JSONSerialization.data(withJSONObject: tasks))
+    // Full length at 2x exceeds the PNG raster limit; the preview must not.
+    let preview = try #require(NSBitmapImageRep(data: try await SlopRenderer.previewPNGData(packageURL: root)))
+    #expect(preview.pixelsWide == 960 && preview.pixelsHigh == 960 * 3)  // 480pt wide at 2x, capped at 3:1
+    let pdf = try #require(PDFDocument(data: try await SlopRenderer.exportPDFData(packageURL: root)))
+    let page = try #require(pdf.page(at: 0))
+    #expect(page.bounds(for: .mediaBox).height > 5000)
+  }
+
+  @Test @MainActor func renderSnapshotIsTakenUnderOwnershipAndRendersWithoutIt() async throws {
+    _ = NSApplication.shared
+    let root = try fixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    // As in closed-document export: ownership is held until the snapshot exists.
+    var ownership: DocumentWriterLock? = try DocumentWriterLock(root: root)
+    let pdf = try await SlopRenderer.withRenderSession(
+      packageURL: root,
+      inputReady: {
+        #expect(throws: (any Error).self) { try DocumentWriterLock(root: root) }
+        ownership?.close()
+        ownership = nil
+      }
+    ) { session in
+      // Another writer may open the document while it renders from memory.
+      try DocumentWriterLock(root: root).close()
+      return try await SlopRenderer.exportPDFData(session: session)
+    }
+    #expect(ownership == nil)
+    #expect(PDFDocument(data: pdf)?.pageCount ?? 0 > 0)
   }
 
   @Test @MainActor func captureFailureRestoresEditorAndMissingIconIsOptional() async throws {
@@ -151,7 +199,7 @@ extension LoroClientTests {
         "!document.documentElement.hasAttribute('data-slop-capture')") as? Bool == true)
     _ = try await session.webView.evaluateJavaScript("globalThis.stopFailure()")
     #expect(NSImage(data: try await SlopRenderer.exportPNGData(session: session)) != nil)
-    try await session.closeAndWait()
+    try await session.finish()
   }
 }
 
@@ -163,7 +211,7 @@ extension LoroClientTests {
     let controller = try await SlopDocumentWindowController.open(packageURL: root)
     try await controller.session.waitUntilReady()
     var events: [SlopTelemetryEvent] = []
-    controller.telemetry = SlopTelemetry { events.append($0) }
+    controller.telemetry = SlopTelemetry { if case .breadcrumb = $0 { return }; events.append($0) }
     try await controller.exportDocument(format: .pdf, to: nil)
     #expect(events.isEmpty)
     try await controller.exportDocument(format: .pdf, to: output)
@@ -172,7 +220,15 @@ extension LoroClientTests {
     await #expect(throws: (any Error).self) {
       try await controller.exportDocument(format: .png, to: root.appendingPathComponent("private-name.png"))
     }
-    #expect(events == [.exported(.pdf), .failed(.export)])
+    #expect(events == [.exported(.pdf), .failed(.export, .init(.rejection, reason: .operationRejected, format: .png, runtime: controller.session.engine.telemetryRuntime))])
+    // The app-hosted CLI export callback must use the same reporting boundary.
+    let liveExport = try #require(controller.session.engine.onExport)
+    await #expect(throws: (any Error).self) {
+      try await liveExport("png", root.appendingPathComponent("private-cli-export.png"), .init())
+    }
+    #expect(events.count == 3)
+    #expect(events.last == .failed(.export, .init(.rejection, reason: .operationRejected,
+      format: .png, runtime: controller.session.engine.telemetryRuntime)))
     try await controller.session.finish()
   }
 }

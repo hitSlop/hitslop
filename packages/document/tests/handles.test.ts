@@ -1,4 +1,4 @@
-import { UndoManager } from "loro-crdt";
+// Guards stale handles, row identity, immutable snapshots, transaction rollback and binding lifecycle.
 import { describe, expect, test } from "bun:test";
 import { Document } from "../src/document";
 import { defineDocument, s, OperationRejectedError } from "../src/schema";
@@ -11,6 +11,27 @@ const schema = defineDocument({
   rows: s.list(s.object({ name: s.text(), done: s.boolean(), note: s.optional(s.string()) })),
 });
 const initial = { title: "List", rows: [] };
+
+test("record keys belong to their row and survive moves without cross-row edits", async () => {
+  const definition = defineDocument({
+    rows: s.list(s.object({ entries: s.record(s.integer({ min: 1, max: 1 })) })),
+  });
+  const store = new MemoryStore();
+  const doc = await Document.open(definition, store, { rows: [{ entries: {} }, { entries: {} }] });
+  const [first, second] = doc.current.rows;
+  doc.at(first!).entries.put("same-key", 1);
+  doc.at(second!).entries.put("same-key", 1);
+  doc.at(first!).entries.delete("same-key");
+  expect(() => doc.at(second!).entries.put("bad", 1.5)).toThrow();
+  doc.fields.rows.move(first!.$id, { after: second!.$id });
+  await doc.close();
+  const reopened = await Document.open(definition, store, { rows: [] });
+  expect<unknown>(reopened.current.rows).toEqual([
+    { $id: second!.$id, entries: { "same-key": 1 } },
+    { $id: first!.$id, entries: {} },
+  ]);
+  await reopened.close();
+});
 
 test("handles retain identity across moves and reject a remote deletion and document close", async () => {
   const io = new MemoryStore();
@@ -59,7 +80,11 @@ test("insert IDs work immediately on the staging fork and results escape only af
     return id;
   });
   expect(publications).toBe(1);
-  expect<unknown>(doc.current.rows[0]).toEqual({ $id: id, name: "Edited before commit", done: true });
+  expect<unknown>(doc.current.rows[0]).toEqual({
+    $id: id,
+    name: "Edited before commit",
+    done: true,
+  });
   expect(() => escaped.done.set(false)).toThrow("callback has ended");
   stop();
   await doc.flush();
@@ -279,22 +304,6 @@ describe("schema and transactions", () => {
     expect(r.current.note).toBe("Together");
     await r.close();
   });
-  test("same-peer staged batch is one engine undo unit (no public undo API)", async () => {
-    const d = await Document.open(schema, new MemoryStore(), initial);
-    const engine = (d as any).engine;
-    const undo = new UndoManager(engine, { mergeInterval: 0 });
-    d.transaction((tx) => {
-      tx.set(schema.fields.amount, 999);
-      tx.text(schema.fields.title).replace("Undo both");
-    });
-    expect(undo.undo()).toBe(true);
-    expect(engine.getMap("data").toJSON()).toEqual(initial);
-    expect(undo.undo()).toBe(false);
-    expect(undo.redo()).toBe(true);
-    expect(engine.getMap("data").toJSON().amount).toBe(999);
-    undo.free();
-    await d.close();
-  });
 });
 
 describe("author error semantics", () => {
@@ -359,4 +368,64 @@ describe("snapshot identity", () => {
     expect(doc.current.rows[0]).toBe(b);
     await doc.close();
   });
+});
+
+test("optional row lists and trees initialize, clear and recreate, including record entries", async () => {
+  const item = s.object({ label: s.text() });
+  const schema = defineDocument({
+    rows: s.optional(s.list(item)),
+    tree: s.optional(s.tree(item)),
+    lists: s.record(s.list(item)),
+    trees: s.record(s.tree(item)),
+  });
+  const store = new MemoryStore();
+  const initial = { lists: {}, trees: {} };
+  const doc = await Document.open(schema, store, initial);
+  doc.change((tx) => {
+    tx.fields.rows.set([{ label: "first" }]);
+    tx.fields.tree.set([{ label: "root", children: [{ label: "child" }] }]);
+    tx.fields.lists.put("a", [{ label: "row" }]);
+    tx.fields.trees.put("a", [{ label: "node" }]);
+  });
+  const first = doc.current.rows![0]!.$id;
+  doc.fields.rows.item(first).label.replace("edited");
+  expect(doc.current.rows![0]!.$id).toBe(first);
+  expect(() => doc.fields.rows.set([])).toThrow("identity");
+  expect(() => doc.fields.tree.set([])).toThrow("identity");
+  expect(() => doc.fields.lists.put("a", [])).toThrow("identity");
+  expect(() => doc.fields.trees.put("a", [])).toThrow("identity");
+  doc.fields.rows.clear();
+  doc.fields.rows.set([{ label: "new" }]);
+  expect(doc.current.rows![0]!.$id).not.toBe(first);
+  doc.fields.trees.delete("a");
+  doc.fields.trees.put("a", [{ label: "new node" }]);
+  const current = doc.current;
+  await doc.close();
+  const reopened = await Document.open(schema, store, initial);
+  expect(reopened.current).toEqual(current);
+  await reopened.close();
+});
+
+test("nested collection replacement rejects before any writes, including inside a caught transaction", async () => {
+  const item = s.object({ label: s.text() });
+  const block = s.object({ caption: s.text(), rows: s.list(item) });
+  const schema = defineDocument({ block: s.optional(block), blocks: s.record(block) });
+  const doc = await Document.open(schema, new MemoryStore(), { blocks: {} });
+  doc.fields.block.set({ caption: "original", rows: [{ label: "keep" }] });
+  doc.fields.blocks.put("a", { caption: "original", rows: [{ label: "keep" }] });
+  const before = doc.current;
+  const version = doc.version().encode();
+  expect(() => doc.fields.block.set({ caption: "bad", rows: [] })).toThrow("identity");
+  expect(() => doc.fields.blocks.put("a", { caption: "bad", rows: [] })).toThrow("identity");
+  expect(() =>
+    doc.change((tx) => {
+      tx.fields.block.caption.replace("also discarded");
+      try {
+        tx.fields.block.set({ caption: "bad", rows: [] });
+      } catch {}
+    }),
+  ).toThrow("identity");
+  expect(doc.current).toBe(before);
+  expect(doc.version().encode()).toEqual(version);
+  await doc.close();
 });

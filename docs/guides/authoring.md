@@ -109,7 +109,7 @@ Quick Checklist and Small Expenses are current examples, not a limit or a defaul
 
 Make the purpose visible in the first viewport. Keep controls familiar, state readable through words and structure, and essential text comfortable. Start with realistic content at manifest dimensions; remove competing elements before shrinking labels. Aim for at least 12px supporting text, 14px control labels, and 44px action targets. Provide keyboard access, visible focus, sufficient contrast, and reduced-motion behavior.
 
-Use plain CSS, with app-prefixed classes and related states/descendants kept together. Style Bits UI primitives through their supported attributes; give portal content explicit classes because it lives outside the trigger's ancestor tree. Define public tokens with `defineTheme` from `@hitslop/document/theme` and use `var(--slop-TOKEN)`. The builder writes immutable theme defaults; owners use `slop theme set/reset`, not arbitrary CSS overrides.
+Use plain CSS, with app-prefixed classes and related states/descendants kept together. Style Bits UI primitives through their supported attributes; give portal content explicit classes because it lives outside the trigger's ancestor tree. Define public tokens with `defineTheme` from `@hitslop/document/theme` and use `var(--slop-TOKEN)`. The builder writes immutable defaults to `assets/theme.json` and compiled app styling to `assets/main.css`. The runtime applies defaults and overrides before mounting the app, so no separate theme stylesheet is generated. Owners use `slop theme get/set/reset`; the host writes overrides to `state/theme.json`. Never edit these built files directly. Layout changes require authoring source and a rebuild.
 
 Motion should explain change and settle for capture. Persist target values immediately, stop transient work on unmount, and honor reduced motion. Export hooks must not mutate saved state to prepare a view.
 
@@ -125,8 +125,22 @@ The window is the stage in every mode. The host resets `html`/`body` margins and
 | `data-slop-shape` | Built-in shape, absent for PNG skins |
 | `data-slop-resizable` | Present when user resizing is enabled |
 | `--slop-width`, `--slop-height` | Initial dimensions, not live viewport measurements |
+| `data-slop-controls` | Optional `visible` / `hidden` signal matching the native hover toolbar |
 
 These presentation values are supplied by the native host. Use actual viewport layout in preview rather than assuming native masks or host globals exist there. Move windows with the native toolbar handle; no guest drag API or drag attribute exists.
+
+For strictly hover-only actions, follow `html[data-slop-controls="visible"]` in CSS.
+The host initializes this attribute to `hidden` and updates it with the native toolbar,
+including its pointer hit testing, toolbar interactions, and 0.8-second hide delay.
+Focus, Tab, and a disabled control do not reveal or retain these actions. Hide the
+controls with `visibility: hidden` and `pointer-events: none`, not opacity alone,
+so they are also absent from keyboard navigation while hidden. The attribute is
+transient presentation state, not document data or a JavaScript event API.
+
+Browser previews and older hosts may omit the attribute. Use
+`html:not([data-slop-controls]) .your-shell:hover .your-controls` as the CSS fallback;
+do not let that fallback override an explicit native `hidden` value. Continue to
+mark editing controls `data-slop-export="hide"`, or omit them from an export view.
 
 Use a PNG skin only when built-in shapes cannot express the outline or hole. `presentation` then contains only width, height, and `skin: "assets/window-mask.png"`. The RGBA image must exactly match those dimensions; the window cannot resize. Alpha 0–25 is click-through and 26–255 receives input. Keep controls/focus rings away from feathered edges and verify clicks actually reach the desktop through holes. Browser transparency alone does not reproduce native hit testing.
 

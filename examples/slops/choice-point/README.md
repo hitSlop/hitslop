@@ -1,6 +1,6 @@
 # Choice Point
 
-A quiet ACT worksheet based on Dr. Russ Harris’s fork-in-the-road diagram: name the moment, map away versus towards, pause with STOP, and pick one tiny move.
+A one-page ACT worksheet based on Dr. Russ Harris’s Choice Point: note the situation and what hooks you, map away and towards moves, list the values and skills that help you unhook, and commit to one towards move.
 
 From the repository root:
 

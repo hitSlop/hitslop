@@ -11,7 +11,7 @@ import WebKit
     var handled = false
     let server = try SocketServer { _, _, reply in
       handled = true
-      reply(["ok": true, "epoch": "test"])
+      reply(.init(ok: true, epoch: "test"))
     }
     defer { server.stop() }
     let path = server.path
@@ -35,7 +35,7 @@ import WebKit
     #expect(!handled)
   }
   @Test @MainActor func socketBoundsConcurrentClientsWithoutBlockingMainActor() async throws {
-    var replies: [@MainActor @Sendable ([String: Any]) -> Void] = []
+    var replies: [@MainActor @Sendable (SocketReply) -> Void] = []
     let server = try SocketServer { _, _, reply in replies.append(reply) }
     defer { server.stop() }
     let path = server.path
@@ -54,7 +54,7 @@ import WebKit
     await #expect(throws: (any Error).self) {
       _ = try await call()
     }
-    for reply in replies { reply(["ok": true, "state": [:]]) }
+    for reply in replies { reply(.init(ok: true, state: [:])) }
     for task in tasks { _ = try await task.value }
   }
 
@@ -66,6 +66,99 @@ import WebKit
     let storage = try Storage(root: root)
     defer { storage.close() }
     #expect(throws: (any Error).self) { try Storage(root: root) }
+  }
+  @Test func snapshotStorageReadsSavedDocumentWithoutTouchingPackage() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+      UUID().uuidString + ".slop")
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let writer = try Storage(root: root)
+    let saved = try writer.call([
+      "method": "append", "generation": "0", "updates": [Data([1, 2, 3]).base64EncodedString()],
+    ])
+    _ = try writer.call(["method": "theme.save", "values": ["accent": "#111111"]])
+    writer.close()
+    let database = root.appendingPathComponent("state/document.sqlite")
+    let theme = root.appendingPathComponent("state/theme.json")
+    let before = try [Data(contentsOf: database), Data(contentsOf: theme)]
+    let entries = try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("state").path).sorted()
+
+    let snapshot = try Storage(root: root, mode: .snapshot)
+    // Snapshots take no ownership: the document can still be opened for writing.
+    let owner = try Storage(root: root)
+    owner.close()
+    let loaded = try snapshot.call(["method": "load"])
+    #expect(loaded["generation"] as? String == saved["generation"] as? String)
+    #expect(loaded["updates"] as? [String] == [Data([1, 2, 3]).base64EncodedString()])
+    // Renderer writes succeed in memory and are discarded.
+    _ = try snapshot.call([
+      "method": "append", "generation": loaded["generation"]!, "updates": [Data([4]).base64EncodedString()],
+    ])
+    _ = try snapshot.call(["method": "theme.save", "values": ["accent": "#222222"]])
+    #expect(throws: (any Error).self) {
+      try snapshot.call(["method": "attachments.put", "bytes": Data([9]).base64EncodedString()])
+    }
+    snapshot.close()
+
+    #expect(try [Data(contentsOf: database), Data(contentsOf: theme)] == before)
+    #expect(try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("state").path).sorted() == entries)
+  }
+  @Test func snapshotStorageFreezesThemeWithDocument() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+      UUID().uuidString + ".slop")
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let writer = try Storage(root: root)
+    _ = try writer.call(["method": "theme.save", "values": ["accent": "#111111"]])
+    let snapshot = try Storage(root: root, mode: .snapshot)
+    defer { snapshot.close() }
+    _ = try writer.call(["method": "theme.save", "values": ["accent": "#333333"]])
+    writer.close()
+    #expect(try snapshot.call(["method": "theme.load"])["values"] as? [String: String] == ["accent": "#111111"])
+    _ = try snapshot.call(["method": "theme.save", "values": ["accent": "#222222"]])
+    #expect(try snapshot.call(["method": "theme.load"])["values"] as? [String: String] == ["accent": "#222222"])
+    let saved = try Data(contentsOf: root.appendingPathComponent("state/theme.json"))
+    #expect(try JSONSerialization.jsonObject(with: saved) as? [String: String] == ["accent": "#333333"])
+  }
+  @Test func snapshotStorageCopiesLiveRowsOnly() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+      UUID().uuidString + ".slop")
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let writer = try Storage(root: root)
+    let appended = try writer.call([
+      "method": "append", "generation": "0",
+      "updates": [Data(repeating: 7, count: 8 * 1024 * 1024).base64EncodedString()],
+    ])
+    // A checkpoint deletes the log; the file keeps those pages free.
+    let checkpoint = Data([1, 2, 3])
+    let saved = try writer.call([
+      "method": "checkpoint", "generation": appended["generation"]!,
+      "bytes": checkpoint.base64EncodedString(), "schemaKey": "key",
+    ])
+    writer.close()
+    let size = try FileManager.default.attributesOfItem(
+      atPath: root.appendingPathComponent("state/document.sqlite").path)[.size] as? Int ?? 0
+    #expect(size > 8 * 1024 * 1024)
+    let snapshot = try Storage(root: root, mode: .snapshot)
+    defer { snapshot.close() }
+    let loaded = try snapshot.call(["method": "load"])
+    #expect(loaded["checkpoint"] as? String == checkpoint.base64EncodedString())
+    #expect(loaded["schemaKey"] as? String == "key")
+    #expect(loaded["generation"] as? String == saved["generation"] as? String)
+    #expect(loaded["updates"] as? [String] == [])
+  }
+  @Test func snapshotStorageCreatesNoStateForMasters() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+      UUID().uuidString + ".slop")
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let snapshot = try Storage(root: root, mode: .snapshot)
+    let loaded = try snapshot.call(["method": "load"])
+    #expect(loaded["updates"] as? [String] == [])
+    _ = try snapshot.call(["method": "append", "generation": loaded["generation"]!, "updates": [Data([1]).base64EncodedString()]])
+    snapshot.close()
+    #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("state").path))
   }
   @Test(arguments: ["rows", "bytes"])
   func storageRefusesOversizedLogWithoutMaterializingIt(limit: String) throws {
@@ -84,6 +177,8 @@ import WebKit
       : "INSERT INTO updates(bytes) VALUES(zeroblob(17 * 1024 * 1024)),(zeroblob(17 * 1024 * 1024))"
     #expect(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK)
     sqlite3_close_v2(db)
+    // Snapshots validate limits before copying anything into memory.
+    #expect(throws: (any Error).self) { try Storage(root: root, mode: .snapshot) }
     let reopened = try Storage(root: root)
     defer { reopened.close() }
     #expect(throws: (any Error).self) { try reopened.call(["method": "load"]) }
@@ -105,6 +200,74 @@ import WebKit
     handler.webView(WKWebView(), start: task)
     #expect(task.error != nil)
     #expect(task.data.isEmpty)
+  }
+
+  // Decoding and normalization must never turn an authored asset into a private resource.
+  @Test @MainActor func schemeRejectsEncodedTraversalAndPreservesAllowedResources() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: root) }
+    for directory in ["assets", "state", "runtime/loro"] {
+      try FileManager.default.createDirectory(at: root.appendingPathComponent(directory), withIntermediateDirectories: true)
+    }
+    for path in ["assets/test.js", "runtime/loro/test.js", "runtime/secret.js", "state/host.lock", "state/document.sqlite"] {
+      try Data(path.utf8).write(to: root.appendingPathComponent(path))
+    }
+    let runtime = root.appendingPathComponent("runtime")
+    let handler = SchemeHandler(root: root, runtime: runtime)
+    let view = WKWebView()
+    for path in [
+      "assets%2F..%2Fstate%2Fhost.lock", "assets/..%2Fstate/document.sqlite",
+      "assets/%2e%2e/state/host.lock", "assets//test.js", "assets/%2e/test.js",
+      "__runtime__/loro%2F..%2Fsecret.js", "__runtime__/loro//test.js",
+    ] {
+      let task = SchemeTask(URL(string: "slop://app/" + path)!)
+      handler.webView(view, start: task)
+      #expect(task.error != nil, "Accepted unsafe resource: \(path)")
+      #expect(task.data.isEmpty)
+    }
+    for (path, expected) in [("assets/test.js?v=1", "assets/test.js"), ("__runtime__/loro/test.js", "runtime/loro/test.js")] {
+      let task = SchemeTask(URL(string: "slop://app/" + path)!)
+      handler.webView(view, start: task)
+      #expect(task.error == nil)
+      #expect(task.data == Data(expected.utf8))
+    }
+    let headless = SchemeHandler(root: root, runtime: runtime, headless: true)
+    let task = SchemeTask(URL(string: "slop://app/assets/test.js")!)
+    headless.webView(view, start: task)
+    #expect(task.error != nil)
+    #expect(task.data.isEmpty)
+  }
+
+  // Manifest sizing must govern actual bridge requests, not just native window chrome.
+  @Test(arguments: [false, true]) @MainActor
+  func resizeBridgeHonorsManifest(resizable: Bool) async throws {
+    let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
+    try FileManager.default.copyItem(atPath: repository + "/tests/compatibility/1-1/document", toPath: root.path)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let manifestURL = root.appendingPathComponent("manifest.json")
+    var manifest = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: manifestURL)) as? [String: Any])
+    manifest["presentation"] = ["width": 480, "height": 480, "resizable": resizable]
+    try JSONSerialization.data(withJSONObject: manifest).write(to: manifestURL)
+    let session = try WasmSession(package: SlopPackage(rootURL: root))
+    var resized = false
+    session.onResize = { size in resized = true; return size }
+    session.load()
+    do {
+      try await session.waitUntilReady()
+      let accepted = try await session.webView.callAsyncJavaScript("""
+        try {
+          const size = await webkit.messageHandlers.storage.postMessage({method:'window.resize',width:600,height:500});
+          return size.width === 600 && size.height === 500;
+        } catch { return false; }
+        """, arguments: [:], in: nil, contentWorld: .page)
+      #expect(accepted as? Bool == resizable)
+      #expect(resized == resizable)
+      try await session.close()
+    } catch {
+      try? await session.close()
+      throw error
+    }
   }
 
 }
