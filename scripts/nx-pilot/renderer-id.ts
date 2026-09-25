@@ -1,4 +1,5 @@
 // Hash the selected OS/toolchain, not a non-reproducible Swift debug executable.
+export {};
 if (process.platform !== "darwin") throw new Error("Artwork requires macOS");
 for (const command of [["sw_vers", "-buildVersion"], ["xcodebuild", "-version"], ["swift", "--version"]]) {
   const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });

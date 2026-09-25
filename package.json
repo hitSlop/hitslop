@@ -42,7 +42,8 @@
     "fixtures:seal": "bun scripts/v1/seal-templates.ts",
     "build:templates": "bun scripts/v1/build-templates.ts",
     "test:render": "bun scripts/v1/native-smoke.ts",
-    "nx:pilot": "node node_modules/nx/dist/bin/nx.js run-many -t verify -p pilot-daily-planner,pilot-reading-tracker --outputStyle=static"
+    "nx:pilot": "node node_modules/nx/dist/bin/nx.js run-many -t verify -p pilot-daily-planner,pilot-reading-tracker --outputStyle=static",
+    "nx:pilot:evaluate": "bun scripts/nx-pilot/evaluate.ts"
   },
   "devDependencies": {
     "@hitslop/document": "workspace:*",

@@ -1,0 +1,101 @@
+name: Nx cache pilot
+on:
+  workflow_dispatch:
+  # Bootstrap this unmerged experiment; subsequent measurements can rerun the same SHA.
+  push:
+    branches: [experiment/nx-pilot]
+    paths: [.github/workflows/nx-pilot.yml]
+permissions:
+  contents: read
+concurrency:
+  group: nx-pilot
+  cancel-in-progress: false
+env:
+  NX_DAEMON: "false"
+  NX_ISOLATE_PLUGINS: "false"
+  NX_TUI: "false"
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+jobs:
+  portable:
+    if: github.repository == 'hitSlop/hitslop' && (github.ref == 'refs/heads/experiment/nx-pilot' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.3"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - run: bun install --frozen-lockfile
+      - name: Require trusted CI cache credentials
+        run: test -n "$NX_CLOUD_ACCESS_TOKEN"
+      - run: bun scripts/v1/ci-baseline.ts
+      - run: bun node_modules/typescript/bin/tsc -p scripts/nx-pilot/tsconfig.json
+      - name: Direct portable baseline
+        run: bun scripts/nx-pilot/measure.ts direct-portable bun scripts/nx-pilot/direct.ts --portable
+      - run: bun scripts/nx-pilot/clean.ts --cache
+      - name: Fresh runner remote portable build
+        run: bun scripts/nx-pilot/measure.ts remote-portable node node_modules/nx/dist/bin/nx.js run-many -t compile -p pilot-daily-planner,pilot-reading-tracker --outputStyle=static
+      - name: Always verify portable artifacts
+        run: |
+          bun scripts/nx-pilot/verify.ts daily-planner --portable
+          bun scripts/nx-pilot/verify.ts reading-tracker --portable
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nx-pilot-portable-${{ github.run_attempt }}
+          path: .hitslop/v1-evidence/nx-pilot
+          include-hidden-files: true
+  artwork:
+    needs: portable
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.3"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/v1/ci-baseline.ts
+      - name: Identify Swift toolchain
+        id: toolchain
+        run: |
+          TOOLCHAIN_HASH=$( (xcodebuild -version; swift --version) | shasum -a 256 | cut -d ' ' -f 1)
+          echo "hash=$TOOLCHAIN_HASH" >> "$GITHUB_OUTPUT"
+      # Preserve the existing SwiftPM cache. Never transport an Nx local cache between runners.
+      - uses: actions/cache@v6
+        with:
+          path: apps/apple/Packages/HitSlopApple/.build
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-${{ hashFiles('apps/apple/Packages/HitSlopApple/Package.resolved', 'apps/apple/Packages/HitSlopApple/Package.swift') }}-${{ hashFiles('apps/apple/Packages/HitSlopApple/Sources/**', 'apps/apple/Packages/HitSlopApple/Tests/**', 'packages/document/**', 'packages/schema/**', 'runtimes/**', 'bun.lock') }}
+          restore-keys: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-${{ hashFiles('apps/apple/Packages/HitSlopApple/Package.resolved', 'apps/apple/Packages/HitSlopApple/Package.swift') }}-
+      - name: Prepare matching native helper
+        run: |
+          bun scripts/nx-pilot/measure.ts native-setup bun run build
+          echo "HITSLOP_NATIVE_CLI=$GITHUB_WORKSPACE/apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native" >> "$GITHUB_ENV"
+      - name: Direct full baseline
+        run: bun scripts/nx-pilot/measure.ts direct-full bun scripts/nx-pilot/direct.ts
+      - run: bun scripts/nx-pilot/clean.ts --cache
+      - name: Fresh runner remote full build
+        run: bun scripts/nx-pilot/measure.ts remote-full bun run nx:pilot
+      - name: Local warm build
+        run: bun scripts/nx-pilot/measure.ts local-warm bun run nx:pilot
+      - name: Cloud-disabled uncached build
+        env:
+          NX_NO_CLOUD: "true"
+          NX_SKIP_NX_CACHE: "true"
+        run: bun scripts/nx-pilot/measure.ts cloud-disabled bun run nx:pilot
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nx-pilot-macos-${{ github.run_attempt }}
+          path: .hitslop/v1-evidence/nx-pilot
+          include-hidden-files: true

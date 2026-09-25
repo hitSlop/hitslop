@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.v1.json",
+  "compilerOptions": { "allowJs": true },
+  "include": ["./*.ts", "./plugin.cjs"]
+}
