@@ -65,6 +65,8 @@ Quick Checklist and Small Expenses are current examples and deliberate fixtures 
 
 `bun run bench:windows` runs the opt-in window matrix. Startup diagnostics and their opt-in test are described in the [runtime reference](../reference/runtime.md#opening-and-recovery). Performance measurements are not CI latency thresholds.
 
+The opt-in [Nx pilot](../nx-pilot.md) measures local and remote caching for two templates. It includes a disposable-copy invalidation evaluation and an isolated GitHub workflow; ordinary development and release commands retain their existing owners.
+
 ## Change discipline
 
 Read AGENTS and the template manifest first. Preserve contributor changes already in the worktree. Keep generated artifacts separate from authored source and inspect generated changes after building. Never alter historical compatibility fixtures or release hashes to make a check pass.

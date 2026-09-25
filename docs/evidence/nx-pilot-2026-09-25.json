@@ -1,0 +1,1077 @@
+{
+  "commit": "9d64ff236b56d33c30eae5b0f012059209a7c8b6",
+  "run": "https://github.com/hitSlop/hitslop/actions/runs/36159020403",
+  "attempts": [
+    {
+      "attempt": 1,
+      "measurements": [
+        {
+          "label": "direct-portable",
+          "milliseconds": 3456.902147,
+          "code": 0,
+          "executions": [
+            {
+              "task": "runtime",
+              "milliseconds": 203.035728
+            },
+            {
+              "task": "compile:daily-planner",
+              "milliseconds": 2573.042345
+            },
+            {
+              "task": "compile:reading-tracker",
+              "milliseconds": 2596.002953
+            },
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 90.148798
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 86.40690800000002
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "linux",
+          "arch": "x64"
+        },
+        {
+          "label": "remote-portable",
+          "milliseconds": 6002.753328000001,
+          "code": 0,
+          "executions": [
+            {
+              "task": "runtime",
+              "milliseconds": 108.959281
+            },
+            {
+              "task": "compile:reading-tracker",
+              "milliseconds": 2376.20248
+            },
+            {
+              "task": "compile:daily-planner",
+              "milliseconds": 2432.712391
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "linux",
+          "arch": "x64"
+        },
+        {
+          "label": "direct-full",
+          "milliseconds": 14622.745625000001,
+          "code": 0,
+          "executions": [
+            {
+              "task": "runtime",
+              "milliseconds": 248.453167
+            },
+            {
+              "task": "compile:reading-tracker",
+              "milliseconds": 3460.52325
+            },
+            {
+              "task": "compile:daily-planner",
+              "milliseconds": 3645.887625
+            },
+            {
+              "task": "artwork:daily-planner",
+              "milliseconds": 4873.803790999999
+            },
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 264.7915
+            },
+            {
+              "task": "artwork:reading-tracker",
+              "milliseconds": 4149.202958
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 265.72245899999996
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        },
+        {
+          "label": "native-setup",
+          "milliseconds": 32892.857875,
+          "code": 0,
+          "executions": [],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        },
+        {
+          "label": "remote-full",
+          "milliseconds": 13832.082,
+          "code": 0,
+          "executions": [
+            {
+              "task": "artwork:daily-planner",
+              "milliseconds": 2349.997709
+            },
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 234.19204200000001
+            },
+            {
+              "task": "artwork:reading-tracker",
+              "milliseconds": 1720.816625
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 260.95629099999996
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        },
+        {
+          "label": "cloud-disabled",
+          "milliseconds": 11383.755749999998,
+          "code": 0,
+          "executions": [
+            {
+              "task": "runtime",
+              "milliseconds": 312.67449999999997
+            },
+            {
+              "task": "compile:daily-planner",
+              "milliseconds": 3889.0788749999997
+            },
+            {
+              "task": "compile:reading-tracker",
+              "milliseconds": 4035.53025
+            },
+            {
+              "task": "artwork:daily-planner",
+              "milliseconds": 1963.8586659999999
+            },
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 310.401875
+            },
+            {
+              "task": "artwork:reading-tracker",
+              "milliseconds": 1856.9892080000002
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 244.47075
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        },
+        {
+          "label": "local-warm",
+          "milliseconds": 3719.7050830000003,
+          "code": 0,
+          "executions": [
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 214.81341700000002
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 567.051375
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        }
+      ],
+      "jobs": [
+        {
+          "name": "portable",
+          "seconds": 30,
+          "steps": [
+            {
+              "name": "Set up job",
+              "seconds": 2
+            },
+            {
+              "name": "Run actions/checkout@v7",
+              "seconds": 3
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "seconds": 4
+            },
+            {
+              "name": "Run oven-sh/setup-bun@v2",
+              "seconds": 2
+            },
+            {
+              "name": "Run bun install --frozen-lockfile",
+              "seconds": 2
+            },
+            {
+              "name": "Require trusted CI cache credentials",
+              "seconds": 0
+            },
+            {
+              "name": "Run bun scripts/v1/ci-baseline.ts",
+              "seconds": 0
+            },
+            {
+              "name": "Run bun node_modules/typescript/bin/tsc -p scripts/nx-pilot/tsconfig.json",
+              "seconds": 3
+            },
+            {
+              "name": "Direct portable baseline",
+              "seconds": 4
+            },
+            {
+              "name": "Run bun scripts/nx-pilot/clean.ts --cache",
+              "seconds": 0
+            },
+            {
+              "name": "Fresh runner remote portable build",
+              "seconds": 6
+            },
+            {
+              "name": "Always verify portable artifacts",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run oven-sh/setup-bun@v2",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/checkout@v7",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "name": "artwork",
+          "seconds": 183,
+          "steps": [
+            {
+              "name": "Set up job",
+              "seconds": 2
+            },
+            {
+              "name": "Run actions/checkout@v7",
+              "seconds": 5
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "seconds": 7
+            },
+            {
+              "name": "Run oven-sh/setup-bun@v2",
+              "seconds": 1
+            },
+            {
+              "name": "Run bun install --frozen-lockfile",
+              "seconds": 4
+            },
+            {
+              "name": "Run bun scripts/v1/ci-baseline.ts",
+              "seconds": 0
+            },
+            {
+              "name": "Identify Swift toolchain",
+              "seconds": 4
+            },
+            {
+              "name": "Run actions/cache@v6",
+              "seconds": 33
+            },
+            {
+              "name": "Prepare matching native helper",
+              "seconds": 34
+            },
+            {
+              "name": "Direct full baseline",
+              "seconds": 15
+            },
+            {
+              "name": "Run bun scripts/nx-pilot/clean.ts --cache",
+              "seconds": 0
+            },
+            {
+              "name": "Fresh runner remote full build",
+              "seconds": 14
+            },
+            {
+              "name": "Local warm build",
+              "seconds": 4
+            },
+            {
+              "name": "Cloud-disabled uncached build",
+              "seconds": 11
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/cache@v6",
+              "seconds": 42
+            },
+            {
+              "name": "Post Run oven-sh/setup-bun@v2",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v7",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "seconds": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "attempt": 2,
+      "measurements": [
+        {
+          "label": "direct-portable",
+          "milliseconds": 4727.887799,
+          "code": 0,
+          "executions": [
+            {
+              "task": "runtime",
+              "milliseconds": 181.23478899999998
+            },
+            {
+              "task": "compile:reading-tracker",
+              "milliseconds": 3490.21648
+            },
+            {
+              "task": "compile:daily-planner",
+              "milliseconds": 3535.558797
+            },
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 140.643372
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 142.894974
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "linux",
+          "arch": "x64"
+        },
+        {
+          "label": "remote-portable",
+          "milliseconds": 3650.0323559999997,
+          "code": 0,
+          "executions": [],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "linux",
+          "arch": "x64"
+        },
+        {
+          "label": "direct-full",
+          "milliseconds": 13158.677166,
+          "code": 0,
+          "executions": [
+            {
+              "task": "runtime",
+              "milliseconds": 283.675708
+            },
+            {
+              "task": "compile:reading-tracker",
+              "milliseconds": 3710.172042
+            },
+            {
+              "task": "compile:daily-planner",
+              "milliseconds": 3817.3379170000003
+            },
+            {
+              "task": "artwork:daily-planner",
+              "milliseconds": 4311.911958
+            },
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 174.242333
+            },
+            {
+              "task": "artwork:reading-tracker",
+              "milliseconds": 3387.473708
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 166.602917
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        },
+        {
+          "label": "native-setup",
+          "milliseconds": 38989.307708,
+          "code": 0,
+          "executions": [],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        },
+        {
+          "label": "remote-full",
+          "milliseconds": 7577.315833,
+          "code": 0,
+          "executions": [
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 177.991334
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 208.718084
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        },
+        {
+          "label": "cloud-disabled",
+          "milliseconds": 11843.889625,
+          "code": 0,
+          "executions": [
+            {
+              "task": "runtime",
+              "milliseconds": 192.672917
+            },
+            {
+              "task": "compile:daily-planner",
+              "milliseconds": 2546.710625
+            },
+            {
+              "task": "compile:reading-tracker",
+              "milliseconds": 2557.426416
+            },
+            {
+              "task": "artwork:daily-planner",
+              "milliseconds": 3624.971083
+            },
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 175.072417
+            },
+            {
+              "task": "artwork:reading-tracker",
+              "milliseconds": 3588.5473749999996
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 203.252583
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        },
+        {
+          "label": "local-warm",
+          "milliseconds": 3100.01325,
+          "code": 0,
+          "executions": [
+            {
+              "task": "verify:daily-planner",
+              "milliseconds": 175.467375
+            },
+            {
+              "task": "verify:reading-tracker",
+              "milliseconds": 176.225959
+            }
+          ],
+          "node": "v22.23.3",
+          "bun": "1.4.2",
+          "platform": "darwin",
+          "arch": "arm64"
+        }
+      ],
+      "jobs": [
+        {
+          "name": "portable",
+          "seconds": 34,
+          "steps": [
+            {
+              "name": "Set up job",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v7",
+              "seconds": 4
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "seconds": 4
+            },
+            {
+              "name": "Run oven-sh/setup-bun@v2",
+              "seconds": 2
+            },
+            {
+              "name": "Run bun install --frozen-lockfile",
+              "seconds": 2
+            },
+            {
+              "name": "Require trusted CI cache credentials",
+              "seconds": 0
+            },
+            {
+              "name": "Run bun scripts/v1/ci-baseline.ts",
+              "seconds": 0
+            },
+            {
+              "name": "Run bun node_modules/typescript/bin/tsc -p scripts/nx-pilot/tsconfig.json",
+              "seconds": 6
+            },
+            {
+              "name": "Direct portable baseline",
+              "seconds": 5
+            },
+            {
+              "name": "Run bun scripts/nx-pilot/clean.ts --cache",
+              "seconds": 0
+            },
+            {
+              "name": "Fresh runner remote portable build",
+              "seconds": 4
+            },
+            {
+              "name": "Always verify portable artifacts",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run oven-sh/setup-bun@v2",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v7",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "name": "artwork",
+          "seconds": 136,
+          "steps": [
+            {
+              "name": "Set up job",
+              "seconds": 2
+            },
+            {
+              "name": "Run actions/checkout@v7",
+              "seconds": 3
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "seconds": 6
+            },
+            {
+              "name": "Run oven-sh/setup-bun@v2",
+              "seconds": 1
+            },
+            {
+              "name": "Run bun install --frozen-lockfile",
+              "seconds": 3
+            },
+            {
+              "name": "Run bun scripts/v1/ci-baseline.ts",
+              "seconds": 0
+            },
+            {
+              "name": "Identify Swift toolchain",
+              "seconds": 3
+            },
+            {
+              "name": "Run actions/cache@v6",
+              "seconds": 36
+            },
+            {
+              "name": "Prepare matching native helper",
+              "seconds": 39
+            },
+            {
+              "name": "Direct full baseline",
+              "seconds": 14
+            },
+            {
+              "name": "Run bun scripts/nx-pilot/clean.ts --cache",
+              "seconds": 0
+            },
+            {
+              "name": "Fresh runner remote full build",
+              "seconds": 8
+            },
+            {
+              "name": "Local warm build",
+              "seconds": 3
+            },
+            {
+              "name": "Cloud-disabled uncached build",
+              "seconds": 12
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/cache@v6",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run oven-sh/setup-bun@v2",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v7",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "seconds": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "local": {
+    "passed": true,
+    "node": "v22.23.3",
+    "bun": "1.4.2",
+    "records": [
+      {
+        "label": "disposable-checkout-and-install",
+        "milliseconds": 10158.32375
+      },
+      {
+        "label": "direct",
+        "milliseconds": 26415.012083,
+        "executions": [
+          {
+            "task": "runtime",
+            "milliseconds": 1031.066333
+          },
+          {
+            "task": "compile:reading-tracker",
+            "milliseconds": 17049.889916
+          },
+          {
+            "task": "compile:daily-planner",
+            "milliseconds": 17649.964792000002
+          },
+          {
+            "task": "artwork:daily-planner",
+            "milliseconds": 2246.3974160000002
+          },
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 642.1681669999999
+          },
+          {
+            "task": "artwork:reading-tracker",
+            "milliseconds": 2175.6940839999997
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 793.44325
+          }
+        ]
+      },
+      {
+        "label": "cold",
+        "milliseconds": 32512.43966599999,
+        "executions": [
+          {
+            "task": "runtime",
+            "milliseconds": 687.6074169999999
+          },
+          {
+            "task": "compile:reading-tracker",
+            "milliseconds": 21926.469708999997
+          },
+          {
+            "task": "compile:daily-planner",
+            "milliseconds": 21955.195249999997
+          },
+          {
+            "task": "artwork:daily-planner",
+            "milliseconds": 1901.457125
+          },
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 633.9049580000001
+          },
+          {
+            "task": "artwork:reading-tracker",
+            "milliseconds": 2010.584625
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 503.5408749999999
+          }
+        ]
+      },
+      {
+        "label": "warm",
+        "milliseconds": 3024.0570410000073,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 455.19795799999997
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 405.55433400000004
+          }
+        ]
+      },
+      {
+        "label": "one-template",
+        "milliseconds": 18328.658083999995,
+        "executions": [
+          {
+            "task": "compile:daily-planner",
+            "milliseconds": 7364.964375
+          },
+          {
+            "task": "artwork:daily-planner",
+            "milliseconds": 3413.4114580000005
+          },
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 1383.815875
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 1144.990167
+          }
+        ]
+      },
+      {
+        "label": "restore-template",
+        "milliseconds": 8582.76320799999,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 1599.257709
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 1451.7504170000002
+          }
+        ]
+      },
+      {
+        "label": "cli-help",
+        "milliseconds": 8490.997000000003,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 1251.6341659999998
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 814.0186669999999
+          }
+        ]
+      },
+      {
+        "label": "copied-skill",
+        "milliseconds": 67049.679583,
+        "executions": [
+          {
+            "task": "compile:daily-planner",
+            "milliseconds": 29878.812583
+          },
+          {
+            "task": "compile:reading-tracker",
+            "milliseconds": 30114.877208
+          },
+          {
+            "task": "artwork:daily-planner",
+            "milliseconds": 10944.19175
+          },
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 2984.58775
+          },
+          {
+            "task": "artwork:reading-tracker",
+            "milliseconds": 5945.180042
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 3255.2399589999995
+          }
+        ]
+      },
+      {
+        "label": "restore-skill",
+        "milliseconds": 19509.042000000016,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 2349.711042
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 1783.05275
+          }
+        ]
+      },
+      {
+        "label": "root-config",
+        "milliseconds": 72784.31766699997,
+        "executions": [
+          {
+            "task": "runtime",
+            "milliseconds": 2106.66425
+          },
+          {
+            "task": "compile:reading-tracker",
+            "milliseconds": 45595.067292
+          },
+          {
+            "task": "compile:daily-planner",
+            "milliseconds": 45700.133083
+          },
+          {
+            "task": "artwork:daily-planner",
+            "milliseconds": 3850.5170409999996
+          },
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 1416.560375
+          },
+          {
+            "task": "artwork:reading-tracker",
+            "milliseconds": 3498.1399579999998
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 1436.992375
+          }
+        ]
+      },
+      {
+        "label": "restore-config",
+        "milliseconds": 14988.699750000029,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 1547.313042
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 2349.4571669999996
+          }
+        ]
+      },
+      {
+        "label": "renderer-source",
+        "milliseconds": 34279.47195799998,
+        "executions": [
+          {
+            "task": "artwork:daily-planner",
+            "milliseconds": 6843.333250000001
+          },
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 4358.925667
+          },
+          {
+            "task": "artwork:reading-tracker",
+            "milliseconds": 6509.631083
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 2562.016208
+          }
+        ]
+      },
+      {
+        "label": "restore-renderer",
+        "milliseconds": 19111.137332999962,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 5182.328917
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 2157.043
+          }
+        ]
+      },
+      {
+        "label": "renderer-toolchain",
+        "milliseconds": 37940.907209000026,
+        "executions": [
+          {
+            "task": "artwork:daily-planner",
+            "milliseconds": 5866.371499999999
+          },
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 2720.016416
+          },
+          {
+            "task": "artwork:reading-tracker",
+            "milliseconds": 8967.868666
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 2729.378667
+          }
+        ]
+      },
+      {
+        "label": "restore-toolchain",
+        "milliseconds": 17482.546458000026,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 2579.9581670000002
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 3754.7997910000004
+          }
+        ]
+      },
+      {
+        "label": "missing-outputs",
+        "milliseconds": 16072.680249999976,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 1876.176042
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 3002.356041
+          }
+        ]
+      },
+      {
+        "label": "corruption-rejected",
+        "passed": true
+      },
+      {
+        "label": "restore-after-corruption",
+        "milliseconds": 34695.875416000024,
+        "executions": [
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 3434.3522920000005
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 9359.867458
+          }
+        ]
+      },
+      {
+        "label": "cloud-disabled-rebuild",
+        "milliseconds": 98262.00112500007,
+        "executions": [
+          {
+            "task": "runtime",
+            "milliseconds": 4032.6838340000004
+          },
+          {
+            "task": "compile:daily-planner",
+            "milliseconds": 40226.686416000004
+          },
+          {
+            "task": "compile:reading-tracker",
+            "milliseconds": 40332.324208
+          },
+          {
+            "task": "artwork:daily-planner",
+            "milliseconds": 9101.373207999999
+          },
+          {
+            "task": "verify:daily-planner",
+            "milliseconds": 2928.3554580000005
+          },
+          {
+            "task": "artwork:reading-tracker",
+            "milliseconds": 12261.49425
+          },
+          {
+            "task": "verify:reading-tracker",
+            "milliseconds": 3442.6922919999997
+          }
+        ]
+      }
+    ]
+  },
+  "cloudUsage": {
+    "plan": "Hobby",
+    "ciExecutions": 2,
+    "nxInvocations": 6,
+    "agents": 0,
+    "selfHealing": false,
+    "credits": null,
+    "reason": "Usage dashboard has not settled; reports data as of September 1"
+  }
+}
