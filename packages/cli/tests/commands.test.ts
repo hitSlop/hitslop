@@ -2,6 +2,7 @@ import { test, expect } from "bun:test";
 import { cp, mkdtemp, rm, symlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import metadata from "../package.json";
 
 async function run(args: string[], env: Record<string, string> = {}, cli = "packages/cli/src/cli.ts") {
   const child = Bun.spawn([process.execPath, cli, ...args], {
@@ -28,6 +29,7 @@ test("help and version do not invoke native or authoring handlers", async () => 
       [],
       ["--help"],
       ["--version"],
+      ["-v"],
       ["build", "--help"],
       ["apply", "--help"],
       ["skills", "--help"],
@@ -38,6 +40,8 @@ test("help and version do not invoke native or authoring handlers", async () => 
       expect(result.stderr).toBe("");
       expect(result.code).toBe(0);
       expect(result.stdout).toContain("slop");
+      if (args[0] === "--version" || args[0] === "-v")
+        expect(result.stdout.trim()).toBe(`slop v${metadata.version}`);
     }
   } finally {
     await rm(root, { recursive: true, force: true });

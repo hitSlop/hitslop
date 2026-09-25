@@ -88,8 +88,8 @@ export const app = new Crust("slop", {
     },
   ],
 })
-  .extend(help())
   .extend(version())
+  .extend(help())
   .add(defineCommand("attachments", { description: "Import, inspect, and export document attachments" }, c => c
     .add(defineCommand("list", { description: "List attachment IDs and sizes" }, c => c.args(document).action(async ({ args }) => {
       await (await import("./native")).runNative(["attachments", "list", args.document]);
