@@ -19,6 +19,10 @@ Use Node 22.23.3 and Bun 1.4.2. Native operations require a helper built from th
 
 Choice Point, Three Three Three and Ivy Lee Method now use fixed September 25, 2026 sample dates. Artwork is a generated snapshot, potentially containing live clock/random UI content; PNG byte reproducibility is not claimed. `--refresh-artwork` bypasses artwork reuse for this invocation while retaining portable caching. It does not overwrite the remote cache's earlier snapshot. Ordinary builds can restore that prior snapshot.
 
+## Portability correction found by the corpus check
+
+The initial full-corpus attempt ([36162796780](https://github.com/hitSlop/hitslop/actions/runs/36162796780)) built/rendered all 51 packages, then correctly rejected a Linux/macOS byte mismatch. Inspection of the transferred cache artifact found Svelte CSS identifiers derived from absolute installed-component paths. The compiler now hashes component content for style scope, preserving output across checkout locations. A two-location build regression demonstrably failed before the fix. Existing shipped artifacts and sealed engine bytes are unchanged. Benchmark repetitions use a new common candidate SHA after this fix; the failed attempt is diagnostic evidence, not a warm timing sample.
+
 ## Benchmark protocol
 
 Three attempts use the same SHA and fresh GitHub runners: one seed, then two warm repetitions. Linux compares direct compilation with Nx and verifies identical portable bytes. macOS compares the unchanged production template builder, direct compilation/rendering with the same concurrency as Nx, and Nx remote/local reuse. Its portable bytes must also match Linux's results. All timed paths include package/runtime verification; complete macOS paths include inventory assembly.

@@ -121,3 +121,23 @@ test("copied fonts retain their URLs without duplicate bundles", async () => {
     await rm(root, { recursive: true, force: true });
   }
 }, 60000);
+
+// Remote cache keys exclude checkout paths. Identical sources must therefore emit
+// identical portable bytes; the existing build tests use only one source location.
+test("Svelte styles compile identically in different checkout locations", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".v1-build-test-"));
+  try {
+    const outputs: string[] = [];
+    for (const location of ["first-checkout", "second-checkout"]) {
+      const source = join(root, location);
+      await cp("packages/cli/templates/checklist", source, { recursive: true });
+      await writeFile(join(source, "Styled.svelte"), '<p>Portable styles</p><style>p { color: rebeccapurple; }</style>');
+      await writeFile(join(source, "main.ts"), 'import { mount } from "svelte"; import Styled from "./Styled.svelte"; mount(Styled, { target: document.body });');
+      const built = await buildProject(source, join(root, `${location}.slop`));
+      outputs.push(await readFile(join(built, "assets/main.js"), "utf8"));
+    }
+    expect(outputs[0]).toBe(outputs[1]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);

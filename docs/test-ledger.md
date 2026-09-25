@@ -8,6 +8,7 @@ Bundled slop business logic is outside the platform suite by Jordan’s explicit
 
 | Contract | Oracle | Tier | Duplicate-of | Verdict |
 |---|---|---|---|---|
+| Portable Svelte compilation across checkout locations ([build.test.ts](../packages/cli/tests/build.test.ts)) | Identical component source built in two directories must emit identical app bytes; regression failed before CSS hash fix | 0 | Existing build cases use one checkout location | ADD cache portability regression; shipped runtime bytes unchanged |
 | Nx pilot input invalidation and restored artifact integrity ([evaluation](../scripts/nx-pilot/evaluate.ts)) | Actual execution journal, copied skill/manifest bytes, direct compilation digest, rejected corrupted package, and sealed runtime verification | Opt-in, Bun + native artwork | Existing TemplateCache tests do not cover Nx | EXTEND to corpus discovery/selection, affected projects, portable byte equality, and cloud-disabled builds; native mutation breadth remains two representative slops; production coverage unchanged |
 | Catalog discovery, master duplication, source identity and refresh ([LocalTemplateStoreTests](../apps/apple/Packages/HitSlopApple/Tests/HitSlopCatalogTests/LocalTemplateStoreTests.swift)) | Constructed catalog inputs, expected discovered packages, unchanged masters and observed refresh | 1 | — | KEEP |
 | Decorative catalog emoji mapping (former CatalogEmojiTests) | Exact cosmetic inventory; no platform requirement | — | None needed | DELETE |

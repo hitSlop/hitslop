@@ -1,7 +1,7 @@
 name: Nx full-corpus evaluation
 on:
   workflow_dispatch:
-  # Bootstrap this unmerged experiment; subsequent measurements can rerun the same SHA.
+  # Bootstrap this unmerged experiment; rerun the corrected portable compiler at the same SHA.
   push:
     branches: [experiment/nx-pilot]
     paths: [.github/workflows/nx-pilot.yml]
@@ -42,13 +42,36 @@ jobs:
       - name: Fresh runner remote portable build
         run: bun scripts/nx-pilot/measure.ts remote-portable bun scripts/nx-pilot/run.ts --portable
       - run: bun scripts/nx-pilot/fingerprints.ts linux-nx .hitslop/v1-evidence/nx-pilot/linux-direct-bytes.json
-      - name: Portable cache correctness
-        if: github.run_attempt == 1
-        run: bun scripts/nx-pilot/evaluate.ts --portable
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: nx-pilot-portable-${{ github.run_attempt }}
+          path: .hitslop/v1-evidence/nx-pilot
+          include-hidden-files: true
+  portable-correctness:
+    needs: portable
+    if: github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NX_NO_CLOUD: "true"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.3"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - run: bun install --frozen-lockfile
+      - run: bun scripts/v1/ci-baseline.ts
+      - run: bun scripts/nx-pilot/evaluate.ts --portable
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nx-pilot-correctness-${{ github.run_attempt }}
           path: .hitslop/v1-evidence/nx-pilot
           include-hidden-files: true
   artwork:

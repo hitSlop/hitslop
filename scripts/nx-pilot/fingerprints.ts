@@ -11,7 +11,7 @@ for (const slug of slugs) {
   const root = label.startsWith("legacy") ? join(output, "legacy-templates", `${slug}.slop`) : join(output, "portable", slug, "package.slop");
   const hash = createHash("sha256");
   async function visit(prefix = "") {
-    for (const entry of (await readdir(join(root, prefix), { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+    for (const entry of (await readdir(join(root, prefix), { withFileTypes: true })).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0)) {
       if (!prefix && entry.name === "QuickLook") continue;
       const path = join(prefix, entry.name);
       hash.update(JSON.stringify([path, entry.isDirectory() ? "directory" : "file"]));
@@ -24,6 +24,6 @@ for (const slug of slugs) {
 }
 const evidence = ".hitslop/v1-evidence/nx-pilot";
 await mkdir(evidence, { recursive: true });
-for (const comparison of comparisons) assert.deepEqual(result, JSON.parse(await readFile(comparison, "utf8")), `Portable bytes differ from ${comparison}`);
 await writeFile(join(evidence, `${label}-bytes.json`), JSON.stringify(result, null, 2) + "\n");
+for (const comparison of comparisons) assert.deepEqual(result, JSON.parse(await readFile(comparison, "utf8")), `Portable bytes differ from ${comparison}`);
 console.log(`${slugs.length} portable package fingerprints verified`);
