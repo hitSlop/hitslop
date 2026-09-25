@@ -2,8 +2,13 @@ name: Runtime contracts
 on:
   pull_request:
   push:
-    branches: ["**"]
+    branches: [master]
   workflow_dispatch:
+    inputs:
+      render_corpus:
+        description: Verify warm template reuse and profile every bundled/preserved render
+        type: boolean
+        default: false
 permissions:
   contents: read
   pull-requests: read
@@ -45,6 +50,7 @@ jobs:
               - 'packages/schema/src/**'
               - 'packages/cli/src/**'
               - 'packages/cli/templates/**'
+              - 'packages/cli/skills/hitslop-document/**'
               - 'packages/cli/tests/fixtures/**'
               - 'packages/*/tests/**/*.native.test.ts'
               - 'packages/*/package.json'
@@ -86,9 +92,10 @@ jobs:
           path: .hitslop/v1-evidence
           include-hidden-files: true
   # Tag runs can only restore caches saved on the default branch, so master keeps the
-  # full template corpus warm for the next release. Not a required check.
+  # full template corpus warm for the next release. Manual runs can also profile
+  # the complete render corpus without signing or publishing. Not a required check.
   release-templates:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event_name == 'workflow_dispatch' && inputs.render_corpus)
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
@@ -104,6 +111,15 @@ jobs:
         run: |
           bun run build
           bun run build:templates
+      - name: Verify warm template cache and profile full render corpus
+        if: github.event_name == 'workflow_dispatch' && inputs.render_corpus
+        env:
+          HITSLOP_TEMPLATE_CACHE_DIR: .hitslop/template-cache
+        run: |
+          cp .hitslop/v1-evidence/template-cache-templates.json .hitslop/v1-evidence/template-cache-first-build.json
+          bun run build:templates
+          bun -e 'import { strict as assert } from "node:assert"; const report = await Bun.file(".hitslop/v1-evidence/template-cache-templates.json").json(); const inventory = await Bun.file("generated/v1/templates/inventory.json").json(); assert.equal(report.built, 0); assert.equal(report.hits, inventory.templates.length);'
+          bun run test:render
       - uses: actions/upload-artifact@v4
         if: always()
         with:

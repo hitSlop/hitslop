@@ -6,6 +6,19 @@ Bundled slop business logic is outside the platform suite by Jordan’s explicit
 
 ## Contract dispositions
 
+### Cache and compiler corrections after the Nx pilot
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Shared compiler inputs invalidate every template | Skill/config edits cause rebuilds with named miss reasons; restored guidance equals current source; CLI help changes remain hits | Bun cache | Existing sibling isolation test retains one-template coverage | EXTEND; both missing inputs demonstrably returned stale hits before the fix |
+| Portable Svelte compilation | Identical component sources built in two checkout locations produce identical JavaScript | Bun build | Existing build checks used one source location | ADD; emitted style hashes differed before the fix |
+
+Focused validation passed all 11 build/cache tests after the fixes. No render cases
+or other consequential coverage were removed. Stage timings are observational;
+PNG/PDF, separate reopen, and immutable-master assertions remain in place.
+
+### Existing dispositions
+
 | Contract | Oracle | Tier | Duplicate-of | Verdict |
 |---|---|---|---|---|
 | Catalog discovery, master duplication, source identity and refresh ([LocalTemplateStoreTests](../apps/apple/Packages/HitSlopApple/Tests/HitSlopCatalogTests/LocalTemplateStoreTests.swift)) | Constructed catalog inputs, expected discovered packages, unchanged masters and observed refresh | 1 | — | KEEP |

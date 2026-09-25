@@ -1,12 +1,8 @@
 import type { Input } from "@hitslop/document";
 import schema from "./schema";
 
-function todayStr(): string {
-  return new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-}
-
 export default {
-  date: todayStr(),
+  date: "Friday, Sep 25",
   tasks: [
     { text: "Finalize quarterly financial model", done: false },
     { text: "Review candidate take-home submission", done: false },

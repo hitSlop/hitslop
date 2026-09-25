@@ -42,7 +42,9 @@ bun run check:built
 bun run test:render
 ```
 
-The generic native smoke takes disposable copies of every bundled and preserved package, opens headlessly, renders PNG/PDF with the authored app, reopens and checks unchanged state and master bytes. Both local and CI template builds use the validated cache in `.hitslop/template-cache`; `HITSLOP_TEMPLATE_CACHE_DIR` overrides its location. Entries are keyed on the template's own files plus the inputs every build shares: the compiler's import closure (not CLI routing, help or skills), document/schema SDK sources, the built runtime, the native renderer sources and the toolchain. A cache miss rebuilds the complete package and logs the changed inputs; `.hitslop/v1-evidence/template-cache-*.json` records hits and miss causes. Images and PDFs are review evidence, not pixel snapshots. Exports that cannot complete fail the gate.
+The generic native smoke takes disposable copies of every bundled and preserved package, opens headlessly, renders PNG/PDF with the authored app, reopens and checks unchanged state and master bytes. Both local and CI template builds use the validated cache in `.hitslop/template-cache`; `HITSLOP_TEMPLATE_CACHE_DIR` overrides its location. Entries are keyed on the template's own files plus the inputs every build shares: the compiler's import closure, copied `hitslop-document` skill, inherited `tsconfig.v1.json`, document/schema SDK sources, the built runtime, the native renderer sources and the toolchain. CLI routing, help and unrelated skills are excluded. A cache miss rebuilds the complete package and logs the changed inputs; `.hitslop/v1-evidence/template-cache-*.json` records hits and miss causes. Images and PDFs are review evidence, not pixel snapshots. Exports that cannot complete fail the gate.
+
+Render evidence at `.hitslop/v1-evidence/render/results.json` includes per-package and aggregate seconds for `initialRead`, `png`, `pdf`, `finalRead`, and `total`. Each stage includes helper startup and execution; it does not isolate WebKit startup cost. Failed attempted stages retain their timings, and each attempted package records `passed`. Fresh templates and preserved saved documents remain distinct cases even when their app bytes match.
 
 The shared crash matrix runs writer exclusion and process-death cases before/after append and checkpoint commit against both SQLite implementations. `test:native-crash` adds actual host/WebContent death. Startup/window benchmarks remain opt-in diagnostics, without hardware-dependent performance assertions. Bounded waiting remains only where native/WebKit asynchronous completion has no observable completion event.
 
@@ -66,12 +68,14 @@ adding automatic retries or lengthening deadlines.
 
 | Tier | Trigger | Runs |
 |---|---|---|
-| `fast` | every push/PR, Ubuntu | hygiene, check, Bun tests, compatibility replay, landing check |
+| `fast` | PRs, master pushes, manual runs; Ubuntu | hygiene, check, Bun tests, compatibility replay, landing check |
 | `native` | relevant changes, macOS | build, Swift tests, native owners, fixture render, helper, storage, native crash matrix |
-| `release-templates` | master pushes, not required | builds the full template corpus to keep the release cache warm |
+| `release-templates` | master pushes, or manual `render_corpus`; not required | warms the full template cache; manual profiling also verifies a second build has all hits and renders the complete corpus |
 | Release macOS | `macos-v*` tag, or manual dry run | full `release:check` once, then sign, accept, notarize and publish |
 
 The complete template corpus, `check:built` and full render run once per release, not on every push. A tag runs `release:check --skip-app`: instead of building a Debug app, packaging runs host-crash acceptance against the signed Release app before notarization, and Gatekeeper verification runs `release-artifact.ts` on the notarized app. A manual dry run executes the full `release:check`, including the Debug app, without signing or publishing.
+
+Feature branches use PR checks instead of a second push-triggered run. For a full render profile without release packaging, dispatch Runtime contracts with `render_corpus=true`; the `release-templates-evidence` artifact retains first/warm build reports, render timings, PNGs and PDFs. See [the Nx decision](nx-review.md) for the measured reason to retain the existing cache.
 
 GitHub scopes caches by ref: tag runs restore only caches saved on the default branch, which is why master keeps the release template cache warm. Fixture and release template caches use separate keys. SwiftPM caches include toolchain, lockfile, package and source identity, with a compatible restore prefix. SwiftPM still validates the graph after restore.
 

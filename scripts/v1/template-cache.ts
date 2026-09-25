@@ -81,6 +81,8 @@ export async function sharedTemplatePaths(repository: string, sources: string[])
   const paths = [
     "bun.lock",
     "packages/cli/package.json",
+    "packages/cli/skills/hitslop-document",
+    "tsconfig.v1.json",
     "packages/document/src",
     "packages/document/package.json",
     "packages/schema/src",
