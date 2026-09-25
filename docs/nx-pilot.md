@@ -2,6 +2,28 @@
 
 The pilot now discovers every active manifest-bearing directory through the production discovery function (currently 51). It remains isolated on `experiment/nx-pilot`; production CI, release acceptance, signing and publishing are unchanged. The earlier two-project measurements are retained below as historical evidence.
 
+## Full-corpus results — September 25, 2026
+
+**Recommendation: keep the existing production macOS template cache.** Nx is useful for portable compilation, but replacing the current macOS cache with this pipeline fails the agreed “simpler and faster” gate.
+
+[Three successful fresh-runner attempts](https://github.com/hitSlop/hitslop/actions/runs/36168102162) used candidate `29e57f8`. [Machine evidence](evidence/nx-corpus-2026-09-25.json) retains individual samples, execution counts, cache hits, package fingerprints, setup costs and correctness scenarios. Production [runtime-contract CI](https://github.com/hitSlop/hitslop/actions/runs/36168102303) also passed.
+
+| Path | Current/direct, median | Nx, median |
+|---|---:|---:|
+| Linux portable corpus, including verification | 94.5s uncached | 3.8s remote |
+| macOS cached corpus, including cache transfer and assembly | 6.9s | 55.4s |
+| macOS single-slop edit, including cache transfer and assembly | 13.5s | 64.2s |
+
+The existing builder itself took 1.5s for a warm corpus and 8.4s for an edit; its Actions restore/save overhead is included in the table. Even Nx's **local** warm path took 19.6s. Every remote macOS run reused all 103 cacheable tasks and still verified all 51 packages. Each edit executed exactly one compile and one artwork task; the other packages came from cache. The remaining time comes from cache/task orchestration, verification and assembly. The measurements do not isolate hashing, scheduling, network and extraction from one another.
+
+Common native helper setup had a 29.5s median, with SwiftPM restore and other job setup separately recorded in the evidence. The opt-in benchmark's total job time includes multiple competing builds and correctness experiments. The first final-harness attempt reused valid entries seeded by the earlier corrected-compiler run. All three repetitions used the same final SHA and tool versions.
+
+Portable compilation fell by 96.0% versus the uncached control. That is a promising **separate** integration opportunity for Linux checks that currently compile the corpus, but this experiment does not measure an end-to-end runtime-contract or release improvement. Keep the macOS replacement isolated; do not add a permanent second orchestrator for the same work. The deterministic sample dates and Svelte portability fix are useful independently of Nx.
+
+Validation: 105 tests passed; 55 compatibility replays and 51 template open/reopen checks passed; TypeScript/Svelte checks, workflow lint and hygiene passed. The full portable mutation suite and two-project native mutation suite passed, including missing/corrupt outputs, renderer/toolchain changes, discovery/selection, cold cache reset and cloud-disabled rebuilding. Both new regressions were observed failing before their fixes. Shipped runtime bytes and release records remain unchanged.
+
+Nx Cloud stayed on Hobby, with no paid agents or AI features enabled. The usage snapshot and its timestamp are recorded in the evidence; delayed counters are not treated as final consumption or as a reason to upgrade.
+
 ## Running it
 
 ```sh

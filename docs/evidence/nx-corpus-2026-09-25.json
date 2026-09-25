@@ -1,0 +1,1049 @@
+{
+  "candidate": "29e57f8cc6d2c22a02869b2323f835fa403d38d1",
+  "workflow": "https://github.com/hitSlop/hitslop/actions/runs/36168102162",
+  "attempts": [
+    1,
+    2,
+    3
+  ],
+  "production_ci": "https://github.com/hitSlop/hitslop/actions/runs/36168102303",
+  "samples": [
+    {
+      "attempt": 1,
+      "metrics": {
+        "direct-portable": {
+          "seconds": 77.838,
+          "executed": {
+            "runtime": 1,
+            "compile": 51,
+            "verify": 51
+          },
+          "built": [
+            "runtime",
+            "compile:alien-radio",
+            "compile:ambient-sound-mixer",
+            "compile:assignment-tracker",
+            "compile:bullet-journal",
+            "compile:codex-pet",
+            "compile:choice-point",
+            "compile:contact-card",
+            "compile:cornell-notes",
+            "compile:countdown-milestones",
+            "compile:daily-planner",
+            "compile:doodle-board",
+            "compile:eisenhower-matrix",
+            "compile:expense-log",
+            "compile:five-minute-journal",
+            "compile:flashcards",
+            "compile:focus-timer",
+            "compile:grade-calculator",
+            "compile:grocery-list",
+            "compile:habit-heatmap",
+            "compile:harada-method",
+            "compile:invoice",
+            "compile:ivy-lee-method",
+            "compile:kanban-board",
+            "compile:koi-pond",
+            "compile:meeting-notes",
+            "compile:markdown-editor",
+            "compile:mood-log",
+            "compile:metronome-tapper",
+            "compile:morning-pages",
+            "compile:packing-list",
+            "compile:personal-budget",
+            "compile:pixel-art",
+            "compile:pocket-sheet",
+            "compile:pros-cons-sheet",
+            "compile:quick-checklist",
+            "compile:reading-tracker",
+            "compile:recipe",
+            "compile:resume",
+            "compile:semester-planner",
+            "compile:school-schedule",
+            "compile:slide-deck",
+            "compile:side-quest",
+            "compile:small-expenses",
+            "compile:soma-amp",
+            "compile:subscription-tracker",
+            "compile:three-three-three",
+            "compile:water-tracker",
+            "compile:trip-itinerary",
+            "compile:weekly-planner",
+            "compile:wordle",
+            "compile:workout-planner"
+          ],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "linux",
+            "arch": "x64"
+          }
+        },
+        "remote-portable": {
+          "seconds": 4.48,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "linux",
+            "arch": "x64"
+          }
+        },
+        "nx-edit": {
+          "seconds": 64.195,
+          "executed": {
+            "compile": 1,
+            "artwork": 1,
+            "verify": 51
+          },
+          "built": [
+            "compile:daily-planner",
+            "artwork:daily-planner"
+          ],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "direct-full": {
+          "seconds": 300.323,
+          "executed": {
+            "runtime": 1,
+            "compile": 51,
+            "artwork": 51,
+            "verify": 51
+          },
+          "built": [
+            "runtime",
+            "compile:alien-radio",
+            "compile:ambient-sound-mixer",
+            "compile:assignment-tracker",
+            "compile:bullet-journal",
+            "compile:choice-point",
+            "compile:codex-pet",
+            "compile:contact-card",
+            "compile:cornell-notes",
+            "compile:countdown-milestones",
+            "compile:daily-planner",
+            "compile:eisenhower-matrix",
+            "compile:doodle-board",
+            "compile:five-minute-journal",
+            "compile:expense-log",
+            "compile:flashcards",
+            "compile:focus-timer",
+            "compile:grade-calculator",
+            "compile:grocery-list",
+            "compile:harada-method",
+            "compile:habit-heatmap",
+            "compile:invoice",
+            "compile:ivy-lee-method",
+            "compile:kanban-board",
+            "compile:koi-pond",
+            "compile:markdown-editor",
+            "compile:meeting-notes",
+            "compile:metronome-tapper",
+            "compile:mood-log",
+            "compile:morning-pages",
+            "compile:packing-list",
+            "compile:personal-budget",
+            "compile:pixel-art",
+            "compile:pocket-sheet",
+            "compile:pros-cons-sheet",
+            "compile:quick-checklist",
+            "compile:reading-tracker",
+            "compile:recipe",
+            "compile:resume",
+            "compile:school-schedule",
+            "compile:semester-planner",
+            "compile:side-quest",
+            "compile:slide-deck",
+            "compile:small-expenses",
+            "compile:soma-amp",
+            "compile:subscription-tracker",
+            "compile:three-three-three",
+            "compile:trip-itinerary",
+            "compile:water-tracker",
+            "compile:weekly-planner",
+            "compile:wordle",
+            "compile:workout-planner",
+            "artwork:alien-radio",
+            "artwork:ambient-sound-mixer",
+            "artwork:assignment-tracker",
+            "artwork:bullet-journal",
+            "artwork:choice-point",
+            "artwork:codex-pet",
+            "artwork:contact-card",
+            "artwork:cornell-notes",
+            "artwork:countdown-milestones",
+            "artwork:daily-planner",
+            "artwork:doodle-board",
+            "artwork:eisenhower-matrix",
+            "artwork:expense-log",
+            "artwork:five-minute-journal",
+            "artwork:flashcards",
+            "artwork:focus-timer",
+            "artwork:grade-calculator",
+            "artwork:grocery-list",
+            "artwork:habit-heatmap",
+            "artwork:harada-method",
+            "artwork:invoice",
+            "artwork:ivy-lee-method",
+            "artwork:kanban-board",
+            "artwork:koi-pond",
+            "artwork:markdown-editor",
+            "artwork:meeting-notes",
+            "artwork:metronome-tapper",
+            "artwork:mood-log",
+            "artwork:morning-pages",
+            "artwork:packing-list",
+            "artwork:personal-budget",
+            "artwork:pixel-art",
+            "artwork:pocket-sheet",
+            "artwork:pros-cons-sheet",
+            "artwork:quick-checklist",
+            "artwork:reading-tracker",
+            "artwork:recipe",
+            "artwork:resume",
+            "artwork:school-schedule",
+            "artwork:semester-planner",
+            "artwork:side-quest",
+            "artwork:slide-deck",
+            "artwork:small-expenses",
+            "artwork:soma-amp",
+            "artwork:subscription-tracker",
+            "artwork:three-three-three",
+            "artwork:trip-itinerary",
+            "artwork:water-tracker",
+            "artwork:weekly-planner",
+            "artwork:wordle",
+            "artwork:workout-planner"
+          ],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "native-setup": {
+          "seconds": 26.232,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "remote-full": {
+          "seconds": 55.436,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "legacy-full": {
+          "seconds": 1.92,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "legacy-edit": {
+          "seconds": 7.963,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "local-warm": {
+          "seconds": 19.575,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        }
+      },
+      "legacy_cache": {
+        "legacy-full": {
+          "hits": 51,
+          "built": 0,
+          "seconds": 0.710028041,
+          "misses": {}
+        },
+        "legacy-edit": {
+          "hits": 50,
+          "built": 1,
+          "seconds": 7.061507000000001,
+          "misses": {
+            "daily-planner": [
+              "template manifest.json"
+            ]
+          }
+        }
+      },
+      "legacy_actions_seconds": {
+        "Restore existing template cache (isolated benchmark namespace)": 3.0,
+        "Save existing template cache": 2.0
+      },
+      "legacy_full_with_actions_seconds": 6.92,
+      "legacy_edit_with_actions_seconds": 12.963,
+      "job_seconds": {
+        "portable": 110.0,
+        "portable-correctness": 538.0,
+        "artwork": 695.0
+      },
+      "macos_steps_seconds": {
+        "Set up job": 4.0,
+        "Run actions/checkout@v7": 4.0,
+        "Run actions/setup-node@v4": 5.0,
+        "Run oven-sh/setup-bun@v2": 2.0,
+        "Run bun install --frozen-lockfile": 4.0,
+        "Run bun scripts/v1/ci-baseline.ts": 0.0,
+        "Identify Swift toolchain": 3.0,
+        "Run actions/cache@v6": 40.0,
+        "Prepare matching native helper": 27.0,
+        "Run actions/download-artifact@v4": 2.0,
+        "Restore existing template cache (isolated benchmark namespace)": 3.0,
+        "Existing builder with restored cache": 2.0,
+        "Save existing template cache": 2.0,
+        "Direct full baseline": 301.0,
+        "Run bun scripts/nx-pilot/clean.ts --cache": 1.0,
+        "Fresh runner remote full build": 55.0,
+        "Local warm build": 20.0,
+        "Previously unseen single-slop edit": 73.0,
+        "Native cache correctness and cloud-disabled fallback": 137.0,
+        "Run actions/upload-artifact@v4": 1.0,
+        "Post Run actions/cache@v6": 1.0,
+        "Post Run oven-sh/setup-bun@v2": 0.0,
+        "Post Run actions/setup-node@v4": 1.0,
+        "Post Run actions/checkout@v7": 0.0,
+        "Complete job": 3.0
+      },
+      "portable_fingerprints": {
+        "alien-radio": "98a208a7d1add7c5581d974469afa59eef0360f8b9a8e7fca8ea8c5e42577f6b",
+        "ambient-sound-mixer": "9ecdd6f6df58b624f09f5cc84ae0862f3f8a561a0d536527478835e353073c41",
+        "assignment-tracker": "2615cde6cfeb435502ed0f929747c85d48bf8f8d53c51d6337a187cdd1fe5819",
+        "bullet-journal": "13acd83355b9b8f4c63784dc73dffa6bede317cb3baa83bd62b23d1b3193b1c8",
+        "choice-point": "97c7da4884880de02c43f749c10d5543939b1bfe1c73099e5d714357d710e9f3",
+        "codex-pet": "007f5341b7a79305f24d7474a9bd61248f22e3dbbc4626d7e3ea0c60272eea9e",
+        "contact-card": "93d46b9098376a021bb7df7c8749b70658eb689b04b8cffc4085d759bd2ac48e",
+        "cornell-notes": "b7c5f52e736f8e752f83be509f616bd4f56efe4f2b9413eceaaec2731641fc26",
+        "countdown-milestones": "f5446c2202cf1a29a4f5ba6f7e7046271286190632da975bf6161a376cbba2cf",
+        "daily-planner": "544295c7fc426a18613f750493feb5d74933eb2caada609380da564867d8ba67",
+        "doodle-board": "fdaa78e210d59a8cb7de3a56a5007f134bf11ed5ccedaae5cddfb8969a3ec129",
+        "eisenhower-matrix": "3c111df2c638be528e62c0eedd4440d9319fdc746121f7ea39c9056c39a1153c",
+        "expense-log": "636a6d6181cd6669df960c7657239f389c5ad70a4540f73a548dcd3b4cba36e4",
+        "five-minute-journal": "f0d1513f295e58faed99a3f32df1951ee64447c2b4446deb8014524e5aebe794",
+        "flashcards": "7def7444576fc784050bebd4123f16046ebea04c12d55a4a112669a6b6aa9dcf",
+        "focus-timer": "220b7e2806b7eea0c353908991c318531a1aadbf68841dff749db9a558532ca6",
+        "grade-calculator": "3bd054fd865951950994f8a6c26e5d23aefbc3f21b55aaf736e43cb285ab9810",
+        "grocery-list": "6dc6bd05180a16b6a9420894dea3576b80b0161aab9abc83ea5867e2a88528c9",
+        "habit-heatmap": "f47433af71d6bc09d7c682fc8358ecb7d6d289cd76913fba77a7cf3c817f8a12",
+        "harada-method": "d615068dccc0c42772deb3507467a4d209adf196031cd20505f7aab0f02450fb",
+        "invoice": "07f4597e2392b80dc90e04301dea62d5a3e8584653973d6715b3dcd51e85a6c4",
+        "ivy-lee-method": "8eb8c40749f88e8bb0dd18e0cb87115d4b730783715fee26376afb7dddbee4bd",
+        "kanban-board": "8d6eaeb0c32a6cbb8707aa9697d122080b633aab93adc85711a85c3004d1ba52",
+        "koi-pond": "ebf4d8ed11c26f3347dfec7309a4dfefc6a4c812cb93d909b26e4c71799f85e6",
+        "markdown-editor": "d6759cbc321575e5708df06b74030c8b70731f0e290e6f1e50fac609ed51681e",
+        "meeting-notes": "802d3e1f04bfd312ad40531a31ed5a0072d76ebe834451b4119cea20646784e1",
+        "metronome-tapper": "8be372687820ddb8ba8e911328a856b0b6a5b34b7e86be4c9c3cd1d93628cf18",
+        "mood-log": "110931c759ce45559e407d84248557411868b419c475adcc6a466868856db2ad",
+        "morning-pages": "b8b55af9a07282e2e5aba56ffbb3bcbeede69ee8d8dcea273c145bfe1bac3b75",
+        "packing-list": "162feb58b882bde51120c5e33a02c77a049a44d6eb7adf923c42b3f9715182db",
+        "personal-budget": "4309bc1fc4258c6955091856f968c7d58a9872a719f007d1516f6b369b07841b",
+        "pixel-art": "a66bdaa955cdf51a3f7a236ac210bdd841fe73a30d34d6e069f32776b7d630ad",
+        "pocket-sheet": "5810bc72526cd28df40b15d8112ebb0e0375752a936617f19f3581d6b8ab3cf4",
+        "pros-cons-sheet": "0951ef9531129a1abb088e3e47750b05a028de4965ef2d540c8e094f280918fb",
+        "quick-checklist": "1979e6ff2447614aa71165afd4bba36c754dcd83b45111b281a34c429c418dc4",
+        "reading-tracker": "ea333f33aaff4acfc88e5be11497f6f4e945dac38b90bbd4c1fb92d22f3f5200",
+        "recipe": "7790444c61306cffd90f1c62f12f04c4038ba74627cd58ef03472d26d7465dc0",
+        "resume": "fb8004ee870d03cff8aeaff2122f619bdd95c86b7aaf24c9c758acdc129121a3",
+        "school-schedule": "c4ae0dfa638dbe5f484b198bb685ae96b6f815409c3fe98510c6f861c1a5e66e",
+        "semester-planner": "57344dd38c5d3b2704546a4c54307c15bc651d05408d79ecb4b4bb8d5d309de8",
+        "side-quest": "81424e74992e151693fb79d9d335704faaa65af87fe17450a63f27c3f81530ba",
+        "slide-deck": "fc6af60d0ea6f6fd639264713a8727600a1fe5bef3258fa971c7cb0a48ab76a3",
+        "small-expenses": "5791ed8afca8ebdf71dd870e9467ca85433a9a5d7b4003f1005121b039032b1b",
+        "soma-amp": "5b06c4e57b4a8fc4fbf59bb2e67311f067e4f7898bb68635cdec88345af0dc0f",
+        "subscription-tracker": "2e12559e65646fe52ec2b8918d1be057d98c4739db84b7069edda5f34bab7486",
+        "three-three-three": "38610c33775023e2505fb1fef3055368d4fb679b9bf0e21b76798092765336b2",
+        "trip-itinerary": "685ff8a73e9cf9320dda9d7e818d2422977f4015bf873d784ad0e486823b8c90",
+        "water-tracker": "aee9775045cac643dc3d14a342dc127222a2029a26c24c78f76cf01fa0894f4b",
+        "weekly-planner": "a40b12dbedf2525cb30937857c8d9e9932ed591aeabcff54553c6c74975fb397",
+        "wordle": "3324538413832d8123647e2141b3fd520e00eddc3f8da175ab170018215b27c6",
+        "workout-planner": "35fbdb9b7bec0451aca42dab5217a4af83a72926e1bc9e9efec722b8f84e16ea"
+      }
+    },
+    {
+      "attempt": 2,
+      "metrics": {
+        "direct-portable": {
+          "seconds": 94.51,
+          "executed": {
+            "runtime": 1,
+            "compile": 51,
+            "verify": 51
+          },
+          "built": [
+            "runtime",
+            "compile:alien-radio",
+            "compile:ambient-sound-mixer",
+            "compile:assignment-tracker",
+            "compile:bullet-journal",
+            "compile:choice-point",
+            "compile:codex-pet",
+            "compile:contact-card",
+            "compile:cornell-notes",
+            "compile:countdown-milestones",
+            "compile:daily-planner",
+            "compile:doodle-board",
+            "compile:eisenhower-matrix",
+            "compile:expense-log",
+            "compile:five-minute-journal",
+            "compile:focus-timer",
+            "compile:flashcards",
+            "compile:grocery-list",
+            "compile:grade-calculator",
+            "compile:habit-heatmap",
+            "compile:harada-method",
+            "compile:invoice",
+            "compile:ivy-lee-method",
+            "compile:kanban-board",
+            "compile:koi-pond",
+            "compile:markdown-editor",
+            "compile:meeting-notes",
+            "compile:metronome-tapper",
+            "compile:mood-log",
+            "compile:packing-list",
+            "compile:morning-pages",
+            "compile:pixel-art",
+            "compile:personal-budget",
+            "compile:pros-cons-sheet",
+            "compile:pocket-sheet",
+            "compile:quick-checklist",
+            "compile:reading-tracker",
+            "compile:recipe",
+            "compile:resume",
+            "compile:semester-planner",
+            "compile:school-schedule",
+            "compile:slide-deck",
+            "compile:side-quest",
+            "compile:small-expenses",
+            "compile:soma-amp",
+            "compile:subscription-tracker",
+            "compile:three-three-three",
+            "compile:trip-itinerary",
+            "compile:water-tracker",
+            "compile:weekly-planner",
+            "compile:wordle",
+            "compile:workout-planner"
+          ],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "linux",
+            "arch": "x64"
+          }
+        },
+        "remote-portable": {
+          "seconds": 3.76,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "linux",
+            "arch": "x64"
+          }
+        },
+        "nx-edit": {
+          "seconds": 65.961,
+          "executed": {
+            "compile": 1,
+            "artwork": 1,
+            "verify": 51
+          },
+          "built": [
+            "compile:daily-planner",
+            "artwork:daily-planner"
+          ],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "native-setup": {
+          "seconds": 29.541,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "remote-full": {
+          "seconds": 59.639,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "legacy-full": {
+          "seconds": 1.485,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "legacy-edit": {
+          "seconds": 8.378,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "local-warm": {
+          "seconds": 19.058,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        }
+      },
+      "legacy_cache": {
+        "legacy-full": {
+          "hits": 51,
+          "built": 0,
+          "seconds": 0.5556171249999999,
+          "misses": {}
+        },
+        "legacy-edit": {
+          "hits": 50,
+          "built": 1,
+          "seconds": 7.559048084,
+          "misses": {
+            "daily-planner": [
+              "template manifest.json"
+            ]
+          }
+        }
+      },
+      "legacy_actions_seconds": {
+        "Restore existing template cache (isolated benchmark namespace)": 6.0,
+        "Save existing template cache": 2.0
+      },
+      "legacy_full_with_actions_seconds": 9.485,
+      "legacy_edit_with_actions_seconds": 16.378,
+      "job_seconds": {
+        "portable": 120.0,
+        "artwork": 281.0,
+        "portable-correctness": -1.0
+      },
+      "macos_steps_seconds": {
+        "Set up job": 2.0,
+        "Run actions/checkout@v7": 6.0,
+        "Run actions/setup-node@v4": 11.0,
+        "Run oven-sh/setup-bun@v2": 3.0,
+        "Run bun install --frozen-lockfile": 6.0,
+        "Run bun scripts/v1/ci-baseline.ts": 0.0,
+        "Identify Swift toolchain": 4.0,
+        "Run actions/cache@v6": 45.0,
+        "Prepare matching native helper": 30.0,
+        "Run actions/download-artifact@v4": 1.0,
+        "Restore existing template cache (isolated benchmark namespace)": 6.0,
+        "Existing builder with restored cache": 2.0,
+        "Save existing template cache": 2.0,
+        "Direct full baseline": 0.0,
+        "Run bun scripts/nx-pilot/clean.ts --cache": 0.0,
+        "Fresh runner remote full build": 60.0,
+        "Local warm build": 19.0,
+        "Previously unseen single-slop edit": 75.0,
+        "Native cache correctness and cloud-disabled fallback": 0.0,
+        "Run actions/upload-artifact@v4": 2.0,
+        "Post Run actions/cache@v6": 1.0,
+        "Post Run oven-sh/setup-bun@v2": 0.0,
+        "Post Run actions/setup-node@v4": 0.0,
+        "Post Run actions/checkout@v7": 1.0,
+        "Complete job": 2.0
+      },
+      "portable_fingerprints": {
+        "alien-radio": "98a208a7d1add7c5581d974469afa59eef0360f8b9a8e7fca8ea8c5e42577f6b",
+        "ambient-sound-mixer": "9ecdd6f6df58b624f09f5cc84ae0862f3f8a561a0d536527478835e353073c41",
+        "assignment-tracker": "2615cde6cfeb435502ed0f929747c85d48bf8f8d53c51d6337a187cdd1fe5819",
+        "bullet-journal": "13acd83355b9b8f4c63784dc73dffa6bede317cb3baa83bd62b23d1b3193b1c8",
+        "choice-point": "97c7da4884880de02c43f749c10d5543939b1bfe1c73099e5d714357d710e9f3",
+        "codex-pet": "007f5341b7a79305f24d7474a9bd61248f22e3dbbc4626d7e3ea0c60272eea9e",
+        "contact-card": "93d46b9098376a021bb7df7c8749b70658eb689b04b8cffc4085d759bd2ac48e",
+        "cornell-notes": "b7c5f52e736f8e752f83be509f616bd4f56efe4f2b9413eceaaec2731641fc26",
+        "countdown-milestones": "f5446c2202cf1a29a4f5ba6f7e7046271286190632da975bf6161a376cbba2cf",
+        "daily-planner": "544295c7fc426a18613f750493feb5d74933eb2caada609380da564867d8ba67",
+        "doodle-board": "fdaa78e210d59a8cb7de3a56a5007f134bf11ed5ccedaae5cddfb8969a3ec129",
+        "eisenhower-matrix": "3c111df2c638be528e62c0eedd4440d9319fdc746121f7ea39c9056c39a1153c",
+        "expense-log": "636a6d6181cd6669df960c7657239f389c5ad70a4540f73a548dcd3b4cba36e4",
+        "five-minute-journal": "f0d1513f295e58faed99a3f32df1951ee64447c2b4446deb8014524e5aebe794",
+        "flashcards": "7def7444576fc784050bebd4123f16046ebea04c12d55a4a112669a6b6aa9dcf",
+        "focus-timer": "220b7e2806b7eea0c353908991c318531a1aadbf68841dff749db9a558532ca6",
+        "grade-calculator": "3bd054fd865951950994f8a6c26e5d23aefbc3f21b55aaf736e43cb285ab9810",
+        "grocery-list": "6dc6bd05180a16b6a9420894dea3576b80b0161aab9abc83ea5867e2a88528c9",
+        "habit-heatmap": "f47433af71d6bc09d7c682fc8358ecb7d6d289cd76913fba77a7cf3c817f8a12",
+        "harada-method": "d615068dccc0c42772deb3507467a4d209adf196031cd20505f7aab0f02450fb",
+        "invoice": "07f4597e2392b80dc90e04301dea62d5a3e8584653973d6715b3dcd51e85a6c4",
+        "ivy-lee-method": "8eb8c40749f88e8bb0dd18e0cb87115d4b730783715fee26376afb7dddbee4bd",
+        "kanban-board": "8d6eaeb0c32a6cbb8707aa9697d122080b633aab93adc85711a85c3004d1ba52",
+        "koi-pond": "ebf4d8ed11c26f3347dfec7309a4dfefc6a4c812cb93d909b26e4c71799f85e6",
+        "markdown-editor": "d6759cbc321575e5708df06b74030c8b70731f0e290e6f1e50fac609ed51681e",
+        "meeting-notes": "802d3e1f04bfd312ad40531a31ed5a0072d76ebe834451b4119cea20646784e1",
+        "metronome-tapper": "8be372687820ddb8ba8e911328a856b0b6a5b34b7e86be4c9c3cd1d93628cf18",
+        "mood-log": "110931c759ce45559e407d84248557411868b419c475adcc6a466868856db2ad",
+        "morning-pages": "b8b55af9a07282e2e5aba56ffbb3bcbeede69ee8d8dcea273c145bfe1bac3b75",
+        "packing-list": "162feb58b882bde51120c5e33a02c77a049a44d6eb7adf923c42b3f9715182db",
+        "personal-budget": "4309bc1fc4258c6955091856f968c7d58a9872a719f007d1516f6b369b07841b",
+        "pixel-art": "a66bdaa955cdf51a3f7a236ac210bdd841fe73a30d34d6e069f32776b7d630ad",
+        "pocket-sheet": "5810bc72526cd28df40b15d8112ebb0e0375752a936617f19f3581d6b8ab3cf4",
+        "pros-cons-sheet": "0951ef9531129a1abb088e3e47750b05a028de4965ef2d540c8e094f280918fb",
+        "quick-checklist": "1979e6ff2447614aa71165afd4bba36c754dcd83b45111b281a34c429c418dc4",
+        "reading-tracker": "ea333f33aaff4acfc88e5be11497f6f4e945dac38b90bbd4c1fb92d22f3f5200",
+        "recipe": "7790444c61306cffd90f1c62f12f04c4038ba74627cd58ef03472d26d7465dc0",
+        "resume": "fb8004ee870d03cff8aeaff2122f619bdd95c86b7aaf24c9c758acdc129121a3",
+        "school-schedule": "c4ae0dfa638dbe5f484b198bb685ae96b6f815409c3fe98510c6f861c1a5e66e",
+        "semester-planner": "57344dd38c5d3b2704546a4c54307c15bc651d05408d79ecb4b4bb8d5d309de8",
+        "side-quest": "81424e74992e151693fb79d9d335704faaa65af87fe17450a63f27c3f81530ba",
+        "slide-deck": "fc6af60d0ea6f6fd639264713a8727600a1fe5bef3258fa971c7cb0a48ab76a3",
+        "small-expenses": "5791ed8afca8ebdf71dd870e9467ca85433a9a5d7b4003f1005121b039032b1b",
+        "soma-amp": "5b06c4e57b4a8fc4fbf59bb2e67311f067e4f7898bb68635cdec88345af0dc0f",
+        "subscription-tracker": "2e12559e65646fe52ec2b8918d1be057d98c4739db84b7069edda5f34bab7486",
+        "three-three-three": "38610c33775023e2505fb1fef3055368d4fb679b9bf0e21b76798092765336b2",
+        "trip-itinerary": "685ff8a73e9cf9320dda9d7e818d2422977f4015bf873d784ad0e486823b8c90",
+        "water-tracker": "aee9775045cac643dc3d14a342dc127222a2029a26c24c78f76cf01fa0894f4b",
+        "weekly-planner": "a40b12dbedf2525cb30937857c8d9e9932ed591aeabcff54553c6c74975fb397",
+        "wordle": "3324538413832d8123647e2141b3fd520e00eddc3f8da175ab170018215b27c6",
+        "workout-planner": "35fbdb9b7bec0451aca42dab5217a4af83a72926e1bc9e9efec722b8f84e16ea"
+      }
+    },
+    {
+      "attempt": 3,
+      "metrics": {
+        "direct-portable": {
+          "seconds": 97.426,
+          "executed": {
+            "runtime": 1,
+            "compile": 51,
+            "verify": 51
+          },
+          "built": [
+            "runtime",
+            "compile:ambient-sound-mixer",
+            "compile:alien-radio",
+            "compile:assignment-tracker",
+            "compile:bullet-journal",
+            "compile:choice-point",
+            "compile:codex-pet",
+            "compile:contact-card",
+            "compile:cornell-notes",
+            "compile:countdown-milestones",
+            "compile:daily-planner",
+            "compile:doodle-board",
+            "compile:eisenhower-matrix",
+            "compile:expense-log",
+            "compile:five-minute-journal",
+            "compile:flashcards",
+            "compile:focus-timer",
+            "compile:grade-calculator",
+            "compile:grocery-list",
+            "compile:habit-heatmap",
+            "compile:harada-method",
+            "compile:ivy-lee-method",
+            "compile:invoice",
+            "compile:kanban-board",
+            "compile:koi-pond",
+            "compile:markdown-editor",
+            "compile:meeting-notes",
+            "compile:mood-log",
+            "compile:metronome-tapper",
+            "compile:morning-pages",
+            "compile:packing-list",
+            "compile:pixel-art",
+            "compile:personal-budget",
+            "compile:pros-cons-sheet",
+            "compile:pocket-sheet",
+            "compile:reading-tracker",
+            "compile:quick-checklist",
+            "compile:recipe",
+            "compile:resume",
+            "compile:school-schedule",
+            "compile:semester-planner",
+            "compile:slide-deck",
+            "compile:side-quest",
+            "compile:small-expenses",
+            "compile:soma-amp",
+            "compile:three-three-three",
+            "compile:subscription-tracker",
+            "compile:trip-itinerary",
+            "compile:water-tracker",
+            "compile:wordle",
+            "compile:weekly-planner",
+            "compile:workout-planner"
+          ],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "linux",
+            "arch": "x64"
+          }
+        },
+        "remote-portable": {
+          "seconds": 3.698,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "linux",
+            "arch": "x64"
+          }
+        },
+        "nx-edit": {
+          "seconds": 54.327,
+          "executed": {
+            "compile": 1,
+            "artwork": 1,
+            "verify": 51
+          },
+          "built": [
+            "compile:daily-planner",
+            "artwork:daily-planner"
+          ],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "native-setup": {
+          "seconds": 32.253,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "remote-full": {
+          "seconds": 45.919,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "legacy-full": {
+          "seconds": 1.412,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "legacy-edit": {
+          "seconds": 9.533,
+          "executed": {},
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        },
+        "local-warm": {
+          "seconds": 21.008,
+          "executed": {
+            "verify": 51
+          },
+          "built": [],
+          "tools": {
+            "node": "v22.23.3",
+            "bun": "1.4.2",
+            "platform": "darwin",
+            "arch": "arm64"
+          }
+        }
+      },
+      "legacy_cache": {
+        "legacy-full": {
+          "hits": 51,
+          "built": 0,
+          "seconds": 0.5050305830000001,
+          "misses": {}
+        },
+        "legacy-edit": {
+          "hits": 50,
+          "built": 1,
+          "seconds": 8.520779625,
+          "misses": {
+            "daily-planner": [
+              "template manifest.json"
+            ]
+          }
+        }
+      },
+      "legacy_actions_seconds": {
+        "Restore existing template cache (isolated benchmark namespace)": 2.0,
+        "Save existing template cache": 2.0
+      },
+      "legacy_full_with_actions_seconds": 5.412,
+      "legacy_edit_with_actions_seconds": 13.533,
+      "job_seconds": {
+        "portable": 124.0,
+        "artwork": 261.0,
+        "portable-correctness": 0.0
+      },
+      "macos_steps_seconds": {
+        "Set up job": 2.0,
+        "Run actions/checkout@v7": 3.0,
+        "Run actions/setup-node@v4": 7.0,
+        "Run oven-sh/setup-bun@v2": 2.0,
+        "Run bun install --frozen-lockfile": 5.0,
+        "Run bun scripts/v1/ci-baseline.ts": 0.0,
+        "Identify Swift toolchain": 3.0,
+        "Run actions/cache@v6": 56.0,
+        "Prepare matching native helper": 33.0,
+        "Run actions/download-artifact@v4": 1.0,
+        "Restore existing template cache (isolated benchmark namespace)": 2.0,
+        "Existing builder with restored cache": 2.0,
+        "Save existing template cache": 2.0,
+        "Direct full baseline": 0.0,
+        "Run bun scripts/nx-pilot/clean.ts --cache": 0.0,
+        "Fresh runner remote full build": 46.0,
+        "Local warm build": 22.0,
+        "Previously unseen single-slop edit": 65.0,
+        "Native cache correctness and cloud-disabled fallback": 0.0,
+        "Run actions/upload-artifact@v4": 2.0,
+        "Post Run actions/cache@v6": 1.0,
+        "Post Run oven-sh/setup-bun@v2": 0.0,
+        "Post Run actions/setup-node@v4": 0.0,
+        "Post Run actions/checkout@v7": 1.0,
+        "Complete job": 2.0
+      },
+      "portable_fingerprints": {
+        "alien-radio": "98a208a7d1add7c5581d974469afa59eef0360f8b9a8e7fca8ea8c5e42577f6b",
+        "ambient-sound-mixer": "9ecdd6f6df58b624f09f5cc84ae0862f3f8a561a0d536527478835e353073c41",
+        "assignment-tracker": "2615cde6cfeb435502ed0f929747c85d48bf8f8d53c51d6337a187cdd1fe5819",
+        "bullet-journal": "13acd83355b9b8f4c63784dc73dffa6bede317cb3baa83bd62b23d1b3193b1c8",
+        "choice-point": "97c7da4884880de02c43f749c10d5543939b1bfe1c73099e5d714357d710e9f3",
+        "codex-pet": "007f5341b7a79305f24d7474a9bd61248f22e3dbbc4626d7e3ea0c60272eea9e",
+        "contact-card": "93d46b9098376a021bb7df7c8749b70658eb689b04b8cffc4085d759bd2ac48e",
+        "cornell-notes": "b7c5f52e736f8e752f83be509f616bd4f56efe4f2b9413eceaaec2731641fc26",
+        "countdown-milestones": "f5446c2202cf1a29a4f5ba6f7e7046271286190632da975bf6161a376cbba2cf",
+        "daily-planner": "544295c7fc426a18613f750493feb5d74933eb2caada609380da564867d8ba67",
+        "doodle-board": "fdaa78e210d59a8cb7de3a56a5007f134bf11ed5ccedaae5cddfb8969a3ec129",
+        "eisenhower-matrix": "3c111df2c638be528e62c0eedd4440d9319fdc746121f7ea39c9056c39a1153c",
+        "expense-log": "636a6d6181cd6669df960c7657239f389c5ad70a4540f73a548dcd3b4cba36e4",
+        "five-minute-journal": "f0d1513f295e58faed99a3f32df1951ee64447c2b4446deb8014524e5aebe794",
+        "flashcards": "7def7444576fc784050bebd4123f16046ebea04c12d55a4a112669a6b6aa9dcf",
+        "focus-timer": "220b7e2806b7eea0c353908991c318531a1aadbf68841dff749db9a558532ca6",
+        "grade-calculator": "3bd054fd865951950994f8a6c26e5d23aefbc3f21b55aaf736e43cb285ab9810",
+        "grocery-list": "6dc6bd05180a16b6a9420894dea3576b80b0161aab9abc83ea5867e2a88528c9",
+        "habit-heatmap": "f47433af71d6bc09d7c682fc8358ecb7d6d289cd76913fba77a7cf3c817f8a12",
+        "harada-method": "d615068dccc0c42772deb3507467a4d209adf196031cd20505f7aab0f02450fb",
+        "invoice": "07f4597e2392b80dc90e04301dea62d5a3e8584653973d6715b3dcd51e85a6c4",
+        "ivy-lee-method": "8eb8c40749f88e8bb0dd18e0cb87115d4b730783715fee26376afb7dddbee4bd",
+        "kanban-board": "8d6eaeb0c32a6cbb8707aa9697d122080b633aab93adc85711a85c3004d1ba52",
+        "koi-pond": "ebf4d8ed11c26f3347dfec7309a4dfefc6a4c812cb93d909b26e4c71799f85e6",
+        "markdown-editor": "d6759cbc321575e5708df06b74030c8b70731f0e290e6f1e50fac609ed51681e",
+        "meeting-notes": "802d3e1f04bfd312ad40531a31ed5a0072d76ebe834451b4119cea20646784e1",
+        "metronome-tapper": "8be372687820ddb8ba8e911328a856b0b6a5b34b7e86be4c9c3cd1d93628cf18",
+        "mood-log": "110931c759ce45559e407d84248557411868b419c475adcc6a466868856db2ad",
+        "morning-pages": "b8b55af9a07282e2e5aba56ffbb3bcbeede69ee8d8dcea273c145bfe1bac3b75",
+        "packing-list": "162feb58b882bde51120c5e33a02c77a049a44d6eb7adf923c42b3f9715182db",
+        "personal-budget": "4309bc1fc4258c6955091856f968c7d58a9872a719f007d1516f6b369b07841b",
+        "pixel-art": "a66bdaa955cdf51a3f7a236ac210bdd841fe73a30d34d6e069f32776b7d630ad",
+        "pocket-sheet": "5810bc72526cd28df40b15d8112ebb0e0375752a936617f19f3581d6b8ab3cf4",
+        "pros-cons-sheet": "0951ef9531129a1abb088e3e47750b05a028de4965ef2d540c8e094f280918fb",
+        "quick-checklist": "1979e6ff2447614aa71165afd4bba36c754dcd83b45111b281a34c429c418dc4",
+        "reading-tracker": "ea333f33aaff4acfc88e5be11497f6f4e945dac38b90bbd4c1fb92d22f3f5200",
+        "recipe": "7790444c61306cffd90f1c62f12f04c4038ba74627cd58ef03472d26d7465dc0",
+        "resume": "fb8004ee870d03cff8aeaff2122f619bdd95c86b7aaf24c9c758acdc129121a3",
+        "school-schedule": "c4ae0dfa638dbe5f484b198bb685ae96b6f815409c3fe98510c6f861c1a5e66e",
+        "semester-planner": "57344dd38c5d3b2704546a4c54307c15bc651d05408d79ecb4b4bb8d5d309de8",
+        "side-quest": "81424e74992e151693fb79d9d335704faaa65af87fe17450a63f27c3f81530ba",
+        "slide-deck": "fc6af60d0ea6f6fd639264713a8727600a1fe5bef3258fa971c7cb0a48ab76a3",
+        "small-expenses": "5791ed8afca8ebdf71dd870e9467ca85433a9a5d7b4003f1005121b039032b1b",
+        "soma-amp": "5b06c4e57b4a8fc4fbf59bb2e67311f067e4f7898bb68635cdec88345af0dc0f",
+        "subscription-tracker": "2e12559e65646fe52ec2b8918d1be057d98c4739db84b7069edda5f34bab7486",
+        "three-three-three": "38610c33775023e2505fb1fef3055368d4fb679b9bf0e21b76798092765336b2",
+        "trip-itinerary": "685ff8a73e9cf9320dda9d7e818d2422977f4015bf873d784ad0e486823b8c90",
+        "water-tracker": "aee9775045cac643dc3d14a342dc127222a2029a26c24c78f76cf01fa0894f4b",
+        "weekly-planner": "a40b12dbedf2525cb30937857c8d9e9932ed591aeabcff54553c6c74975fb397",
+        "wordle": "3324538413832d8123647e2141b3fd520e00eddc3f8da175ab170018215b27c6",
+        "workout-planner": "35fbdb9b7bec0451aca42dab5217a4af83a72926e1bc9e9efec722b8f84e16ea"
+      }
+    }
+  ],
+  "median_seconds": {
+    "direct-portable": 94.51,
+    "remote-portable": 3.76,
+    "remote-full": 55.436,
+    "local-warm": 19.575,
+    "legacy-full": 1.485,
+    "legacy-edit": 8.378,
+    "nx-edit": 64.195,
+    "native-setup": 29.541,
+    "legacy-full-with-actions": 6.92,
+    "legacy-edit-with-actions": 13.533
+  },
+  "correctness": {
+    "portable": {
+      "passed": true,
+      "scenarios": [
+        "disposable-checkout-and-install",
+        "direct",
+        "cold",
+        "warm",
+        "one-template",
+        "restore-template",
+        "cli-help",
+        "copied-skill",
+        "restore-skill",
+        "root-config",
+        "restore-config",
+        "missing-outputs",
+        "corruption-rejected",
+        "restore-after-corruption",
+        "selection-only",
+        "discovery-selection-and-affected",
+        "cloud-disabled-rebuild"
+      ]
+    },
+    "native": {
+      "passed": true,
+      "scenarios": [
+        "disposable-checkout-and-install",
+        "direct",
+        "cold",
+        "warm",
+        "one-template",
+        "restore-template",
+        "cli-help",
+        "copied-skill",
+        "restore-skill",
+        "root-config",
+        "restore-config",
+        "renderer-source",
+        "restore-renderer",
+        "renderer-toolchain",
+        "restore-toolchain",
+        "missing-outputs",
+        "corruption-rejected",
+        "restore-after-corruption",
+        "selection-only",
+        "discovery-selection-and-affected",
+        "cold-after-reset",
+        "cloud-disabled-rebuild"
+      ]
+    }
+  },
+  "validation": {
+    "unit_tests_passed": 105,
+    "compatibility_replays": 55,
+    "template_open_reopen_checks": 51,
+    "svelte_type_errors": 0,
+    "svelte_warnings": 0,
+    "svelte_portability_regression_failed_before_fix": true,
+    "cache_reset_regression_failed_before_fix": true
+  },
+  "usage": {
+    "plan": "Hobby",
+    "reported_credits": 2500,
+    "reported_allowance": 90000,
+    "as_of_utc": "2026-09-25 17:44:42",
+    "resource_usage_credits": 0,
+    "note": "Usage reporting trails execution. No paid features enabled; allowance includes account-specific bonus credits."
+  },
+  "decision": "Do not replace the production macOS template cache with this Nx pipeline. Portable compilation benefits substantially; a separate portable-only integration needs its own scope and should avoid two permanent owners of the same build work.",
+  "diagnostics": [
+    {
+      "run": 36162796780,
+      "issue": "Absolute checkout paths affected generated Svelte CSS identifiers; component-content style hashing fixed this."
+    },
+    {
+      "run": 36165181217,
+      "issue": "Benchmark cleanup removed artifacts but left Nx SQLite cache indexes; clearing both fixed fresh-runner simulation. Earlier successful build measurements remain diagnostic only."
+    }
+  ],
+  "methodology": [
+    "Three successful repetitions at the same final SHA; caches were seeded by prior runs with identical compiler/renderer inputs.",
+    "Direct portable control on every attempt; uncached macOS control only on attempt 1.",
+    "Complete macOS timings include verification and staged inventory assembly.",
+    "Existing cache comparison adds its Actions restore/save steps; Nx command already includes remote retrieval.",
+    "Common checkout/install/SwiftPM/helper setup is reported separately; no whole-release speedup is claimed.",
+    "Source/artwork hashing, graph startup, network, extraction and task-runner overhead are not individually isolated.",
+    "Each edit is unique to its attempt; only daily-planner may compile/render.",
+    "Portable byte equality is checked across independent Linux/macOS builders; images are validated snapshots, not pixel-equality goldens."
+  ]
+}
