@@ -31,3 +31,30 @@ now records stage timings before considering fewer helper launches. A portable
 compile cache and combined PNG/PDF export are follow-ups requiring measurements;
 neither is part of this change. Signing, notarization and ZIP/DMG distribution keep
 their existing behavior.
+
+## Validation after removing the pilot
+
+The [GitHub validation run](https://github.com/hitSlop/hitslop/actions/runs/36175211719)
+tests code commit `6dc7a9b`. Its Linux job completed in 2m 30s and its everyday
+native job in 6m 55s. It passed 107 Bun tests, 55 compatibility replay cases,
+51 bundled template open/reopen checks, 126 Swift tests and seven native CLI
+tests, along with the native helper, storage and crash checks. The everyday
+render smoke passed all four packages. The runtime checksum still matches
+sealed release `1-1`.
+
+These timings describe this run and its fixture-based native scope; they are
+not a claimed speedup for the complete release gate. Full-corpus profiling is
+an explicit manual option and does not sign or publish anything.
+
+The full sweep passed all **104** cases in **669.6s** (11m 10s). Initial reads
+took 134.6s, PNG exports 212.9s, PDF exports 186.9s, and final reads 133.9s.
+These stage times include startup and execution; they do not establish how much
+batching would save. No cases were skipped.
+
+The first template build had no cache entries and built all 51 in 265.8s.
+The second build restored all 51, rebuilt none, and took **1.04s** on the same
+runner. These command times exclude Actions cache transfer and helper setup;
+they are not comparable directly to the pilot's transfer-inclusive table above.
+The complete profiling job, including setup, both builds and the full render,
+took 17m 6s. [Per-package timings and build evidence](evidence/render-profile-2026-09-25.json)
+are retained with the code; the GitHub artifact also contains every PNG/PDF.
