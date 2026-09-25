@@ -1,0 +1,13 @@
+{
+  "name": "pilot-runtime",
+  "root": "scripts/nx-pilot",
+  "tags": ["nx-pilot"],
+  "targets": {
+    "build": {
+      "command": "bun scripts/nx-pilot/runtime.ts",
+      "cache": true,
+      "inputs": ["runtime"],
+      "outputs": ["{workspaceRoot}/generated/nx-pilot/runtime"]
+    }
+  }
+}

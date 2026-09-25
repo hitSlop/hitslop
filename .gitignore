@@ -69,3 +69,6 @@ _vibe/
 /packages/cli/runtimes/
 
 /packages/cli/runtimes.building/
+
+# Nx pilot task artifacts and local workspace database.
+.nx/

@@ -41,16 +41,19 @@
     "release:check": "bun scripts/v1/release-check.ts",
     "fixtures:seal": "bun scripts/v1/seal-templates.ts",
     "build:templates": "bun scripts/v1/build-templates.ts",
-    "test:render": "bun scripts/v1/native-smoke.ts"
+    "test:render": "bun scripts/v1/native-smoke.ts",
+    "nx:pilot": "node node_modules/nx/dist/bin/nx.js run-many -t verify -p pilot-daily-planner,pilot-reading-tracker --outputStyle=static"
   },
   "devDependencies": {
     "@hitslop/document": "workspace:*",
     "@hitslop/schema": "workspace:*",
     "@lucide/svelte": "^1.47.0",
+    "@nx/devkit": "23.2.1",
     "@types/bun": "latest",
     "bits-ui": "^2.19.2",
     "esbuild": "^0.28.2",
     "loro-crdt": "1.16.1",
+    "nx": "23.2.1",
     "prettier": "3.9.6",
     "quicktype-core": "26.0.0",
     "svelte": "5.57.1",

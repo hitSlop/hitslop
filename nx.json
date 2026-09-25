@@ -1,0 +1,56 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "cacheDirectory": ".nx/cache",
+  "defaultBase": "master",
+  "plugins": ["./scripts/nx-pilot/plugin.cjs"],
+  "namedInputs": {
+    "tools": [
+      "{workspaceRoot}/bun.lock",
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/nx.json",
+      "{workspaceRoot}/scripts/nx-pilot/plugin.cjs",
+      "{workspaceRoot}/scripts/nx-pilot/common.ts",
+      { "runtime": "bun --version" },
+      { "runtime": "node --version" }
+    ],
+    "sdk": [
+      "tools",
+      "{workspaceRoot}/packages/document/src/**/*",
+      "{workspaceRoot}/packages/document/package.json",
+      "{workspaceRoot}/packages/schema/src/**/*",
+      "{workspaceRoot}/packages/schema/package.json",
+      "{workspaceRoot}/tsconfig.v1.json"
+    ],
+    "runtime": [
+      "sdk",
+      "{workspaceRoot}/scripts/nx-pilot/runtime.ts",
+      "{workspaceRoot}/scripts/v1/runtime.ts",
+      "{workspaceRoot}/scripts/v1/runtime-artifacts.ts",
+      "{workspaceRoot}/scripts/v1/compatibility-history.ts",
+      "{workspaceRoot}/runtimes/**/*"
+    ],
+    "compiler": [
+      "sdk",
+      "{workspaceRoot}/scripts/nx-pilot/compile.ts",
+      "{workspaceRoot}/packages/cli/src/build.ts",
+      "{workspaceRoot}/packages/cli/src/build-worker.ts",
+      "{workspaceRoot}/packages/cli/src/svelte-plugin.ts",
+      "{workspaceRoot}/packages/cli/skills/hitslop-document/SKILL.md",
+      "{workspaceRoot}/packages/cli/package.json",
+      "{workspaceRoot}/examples/slops/package.json",
+      "{workspaceRoot}/examples/slops/tsconfig.json",
+      { "env": "HITSLOP_DEBUG_BUILD" }
+    ],
+    "renderer": [
+      "{workspaceRoot}/scripts/nx-pilot/artwork.ts",
+      "{workspaceRoot}/scripts/nx-pilot/renderer-id.ts",
+      "{workspaceRoot}/packages/cli/src/template.ts",
+      "{workspaceRoot}/packages/cli/src/native.ts",
+      "{workspaceRoot}/packages/cli/src/runtime-capabilities.ts",
+      "{workspaceRoot}/apps/apple/Packages/HitSlopApple/Package.swift",
+      "{workspaceRoot}/apps/apple/Packages/HitSlopApple/Package.resolved",
+      "{workspaceRoot}/apps/apple/Packages/HitSlopApple/Sources/**/*",
+      { "runtime": "bun scripts/nx-pilot/renderer-id.ts" }
+    ]
+  }
+}
