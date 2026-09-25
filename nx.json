@@ -2,7 +2,9 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "cacheDirectory": ".nx/cache",
   "defaultBase": "master",
-  "plugins": ["./scripts/nx-pilot/plugin.cjs"],
+  "plugins": [
+    "./scripts/nx-pilot/plugin.cjs"
+  ],
   "namedInputs": {
     "tools": [
       "{workspaceRoot}/bun.lock",
@@ -10,8 +12,12 @@
       "{workspaceRoot}/nx.json",
       "{workspaceRoot}/scripts/nx-pilot/plugin.cjs",
       "{workspaceRoot}/scripts/nx-pilot/common.ts",
-      { "runtime": "bun --version" },
-      { "runtime": "node --version" }
+      {
+        "runtime": "bun --version"
+      },
+      {
+        "runtime": "node --version"
+      }
     ],
     "sdk": [
       "tools",
@@ -39,7 +45,9 @@
       "{workspaceRoot}/packages/cli/package.json",
       "{workspaceRoot}/examples/slops/package.json",
       "{workspaceRoot}/examples/slops/tsconfig.json",
-      { "env": "HITSLOP_DEBUG_BUILD" }
+      {
+        "env": "HITSLOP_DEBUG_BUILD"
+      }
     ],
     "renderer": [
       "{workspaceRoot}/scripts/nx-pilot/artwork.ts",
@@ -50,7 +58,10 @@
       "{workspaceRoot}/apps/apple/Packages/HitSlopApple/Package.swift",
       "{workspaceRoot}/apps/apple/Packages/HitSlopApple/Package.resolved",
       "{workspaceRoot}/apps/apple/Packages/HitSlopApple/Sources/**/*",
-      { "runtime": "bun scripts/nx-pilot/renderer-id.ts" }
+      {
+        "runtime": "bun scripts/nx-pilot/renderer-id.ts"
+      }
     ]
-  }
+  },
+  "nxCloudId": "6ab69897516b325db00ef09a"
 }
