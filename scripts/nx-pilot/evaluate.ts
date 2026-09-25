@@ -129,6 +129,12 @@ try {
   const affected = await command(["node", "node_modules/nx/dist/bin/nx.js", "show", "projects", "--affected", "--files=examples/slops/daily-planner/initial.ts", "--with-target=compile", "--json"]);
   assert.deepEqual(JSON.parse(affected.stdout), ["pilot-daily-planner"]);
   records.push({ label: "discovery-selection-and-affected", passed: true });
+  if (subset) {
+    // A fresh-runner simulation must clear the cache index as well as artifacts.
+    // Otherwise Nx can claim a hit whose files were removed by the benchmark.
+    await command([process.execPath, "scripts/nx-pilot/clean.ts", "--cache"]);
+    await run("cold-after-reset", all);
+  }
   await run("cloud-disabled-rebuild", all, nx, { NX_SKIP_NX_CACHE: "true" });
   await writeFile(join(evidence, `local-evaluation-${portable ? "portable" : "native"}.json`), JSON.stringify({ passed: true, node: (await command(["node", "--version"])).stdout.trim(), bun: Bun.version, records }, null, 2) + "\n");
 } finally {

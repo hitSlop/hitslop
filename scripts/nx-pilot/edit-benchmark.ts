@@ -17,6 +17,7 @@ try {
   manifest.description += ` Nx corpus benchmark ${process.env.GITHUB_RUN_ID ?? "local"}/${process.env.GITHUB_RUN_ATTEMPT ?? "1"}.`;
   await writeFile(file, JSON.stringify(manifest));
   await run(["scripts/nx-pilot/measure.ts", "legacy-edit", process.execPath, "scripts/nx-pilot/legacy.ts"]);
+  await cp(".hitslop/v1-evidence/template-cache-templates.json", ".hitslop/v1-evidence/nx-pilot/legacy-edit-cache.json");
   await run(["scripts/nx-pilot/clean.ts", "--cache"]);
   await run(["scripts/nx-pilot/measure.ts", "nx-edit", process.execPath, "scripts/nx-pilot/run.ts"]);
 } finally {

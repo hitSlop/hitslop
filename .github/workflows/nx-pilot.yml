@@ -1,7 +1,7 @@
 name: Nx full-corpus evaluation
 on:
   workflow_dispatch:
-  # Bootstrap this unmerged experiment; rerun the corrected portable compiler at the same SHA.
+  # Bootstrap the evaluation; repeat fresh-runner samples at this same SHA.
   push:
     branches: [experiment/nx-pilot]
     paths: [.github/workflows/nx-pilot.yml]
@@ -115,7 +115,11 @@ jobs:
         with:
           path: generated/nx-pilot/legacy-cache
           key: nx-eval-legacy-${{ github.sha }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: nx-eval-legacy-${{ github.sha }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-
+          # The production cache validates every source/toolchain input itself.
+          # Reuse a prior benchmark revision when only the harness has changed.
+          restore-keys: |
+            nx-eval-legacy-${{ github.sha }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-
+            nx-eval-legacy-
       - name: Existing builder with restored cache
         run: |
           bun scripts/nx-pilot/measure.ts legacy-full bun scripts/nx-pilot/legacy.ts
@@ -127,6 +131,7 @@ jobs:
           path: generated/nx-pilot/legacy-cache
           key: ${{ steps.legacy-cache.outputs.cache-primary-key }}
       - name: Direct full baseline
+        if: github.run_attempt == 1
         run: |
           bun scripts/nx-pilot/measure.ts direct-full bun scripts/nx-pilot/direct.ts
           bun scripts/nx-pilot/fingerprints.ts mac-direct .hitslop/v1-evidence/linux/linux-direct-bytes.json
@@ -134,13 +139,11 @@ jobs:
       - name: Fresh runner remote full build
         run: |
           bun scripts/nx-pilot/measure.ts remote-full bun run nx:pilot
-          bun scripts/nx-pilot/fingerprints.ts mac-nx .hitslop/v1-evidence/nx-pilot/mac-direct-bytes.json
+          bun scripts/nx-pilot/fingerprints.ts mac-nx .hitslop/v1-evidence/linux/linux-direct-bytes.json
       - name: Local warm build
         run: bun scripts/nx-pilot/measure.ts local-warm bun run nx:pilot
       - name: Previously unseen single-slop edit
-        run: |
-          bun scripts/nx-pilot/edit-benchmark.ts
-          cp .hitslop/v1-evidence/template-cache-templates.json .hitslop/v1-evidence/nx-pilot/legacy-edit-cache.json
+        run: bun scripts/nx-pilot/edit-benchmark.ts
       - name: Native cache correctness and cloud-disabled fallback
         if: github.run_attempt == 1
         env:
