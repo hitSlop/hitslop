@@ -1,22 +1,17 @@
-const { readFileSync } = require('node:fs');
-const { dirname, join } = require('node:path');
+const { execFileSync } = require('node:child_process');
 
-// Only these two real authoring projects participate in the experiment.
-const slugs = ['daily-planner', 'reading-tracker'];
-exports.slugs = slugs;
+// One canonical discovery pass per graph refresh, including manifest and selection validation.
 /** @type {import('@nx/devkit').CreateNodes} */
-exports.createNodes = ['examples/slops/*/manifest.json', (files, options, context) =>
-  files.flatMap(file => {
-    const root = dirname(file);
-    if (!slugs.includes(root.split('/').at(-1))) return [];
-    const manifest = JSON.parse(readFileSync(join(context.workspaceRoot, file), 'utf8'));
-    if (manifest.runtime !== 'hitslop-v1' || manifest.slug !== root.split('/').at(-1))
-      throw new Error(`Invalid pilot manifest: ${file}`);
-    const slug = manifest.slug;
+exports.createNodes = ['examples/slops/*/manifest.json', (files, options, context) => {
+  const templates = JSON.parse(execFileSync('bun', ['scripts/nx-pilot/discover.ts'], {
+    cwd: context.workspaceRoot, encoding: 'utf8',
+  }));
+  return templates.map(({ slug, root }) => {
+    const file = `${root}/manifest.json`;
     const portable = `generated/nx-pilot/portable/${slug}`;
     const rendered = `generated/nx-pilot/rendered/${slug}`;
-    return [[file, { projects: { [root]: {
-      name: `pilot-${slug}`, root, tags: ['nx-pilot'],
+    return [file, { projects: { [root]: {
+      name: `pilot-${slug}`, root, tags: ['nx-pilot', 'slop'],
       implicitDependencies: ['pilot-runtime'],
       targets: {
         compile: {
@@ -37,5 +32,6 @@ exports.createNodes = ['examples/slops/*/manifest.json', (files, options, contex
           cache: false, dependsOn: ['artwork'],
         },
       },
-    } } }]];
-  })];
+    } } }];
+  });
+}];

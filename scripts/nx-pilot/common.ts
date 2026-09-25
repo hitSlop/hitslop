@@ -1,9 +1,10 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { digest, repository } from "../v1/runtime-artifacts";
-import plugin from "./plugin.cjs";
+import { discoverTemplates } from "../v1/templates";
 
-export const slugs: string[] = plugin.slugs;
+export const templates = await discoverTemplates();
+export const slugs = templates.map(template => template.slug);
 export const output = join(repository, "generated/nx-pilot");
 export function slugArgument() {
   const slug = process.argv[2];

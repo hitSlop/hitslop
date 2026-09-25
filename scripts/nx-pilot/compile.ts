@@ -1,10 +1,9 @@
 import { join } from "node:path";
 import { buildProject } from "../../packages/cli/src/build";
-import { repository } from "../v1/runtime-artifacts";
-import { output, seal, executed, slugArgument } from "./common";
+import { output, seal, executed, slugArgument, templates } from "./common";
 const slug = slugArgument();
 const started = performance.now();
 const destination = join(output, "portable", slug);
-await buildProject(join(repository, "examples/slops", slug), join(destination, "package.slop"));
+await buildProject(templates.find(template => template.slug === slug)!.source, join(destination, "package.slop"));
 await seal(destination);
 await executed(`compile:${slug}`, started);

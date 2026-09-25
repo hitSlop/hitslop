@@ -1,3 +1,50 @@
+# Full-corpus Nx evaluation
+
+The pilot now discovers every active manifest-bearing directory through the production discovery function (currently 51). It remains isolated on `experiment/nx-pilot`; production CI, release acceptance, signing and publishing are unchanged. The earlier two-project measurements are retained below as historical evidence.
+
+## Running it
+
+```sh
+bun run nx:pilot                             # all packages + artwork + verification + inventory
+bun run nx:pilot daily-planner               # one package and its dependencies
+bun run nx:pilot --portable                  # compilation and verification, Linux or macOS
+bun run nx:pilot --affected --base=master --head=HEAD
+bun run nx:pilot daily-planner --refresh-artwork
+NX_NO_CLOUD=true NX_SKIP_NX_CACHE=true bun run nx:pilot
+bun run nx:pilot:evaluate --portable          # disposable full-corpus cache mutation checks
+bun run nx:pilot:evaluate --slugs=daily-planner,reading-tracker
+```
+
+Use Node 22.23.3 and Bun 1.4.2. Native operations require a helper built from this candidate (`bun run build`, then set `HITSLOP_NATIVE_CLI` to its `.build/debug/hitslop-native`). Compilation has concurrency two; native captures are sequential. All outputs remain under `generated/nx-pilot`; only complete, verified full-corpus builds publish `templates/inventory.json` and `<slug>.slop` packages there. Single/affected builds leave the assembled full-corpus snapshot unchanged until the next full build.
+
+Choice Point, Three Three Three and Ivy Lee Method now use fixed September 25, 2026 sample dates. Artwork is a generated snapshot, potentially containing live clock/random UI content; PNG byte reproducibility is not claimed. `--refresh-artwork` bypasses artwork reuse for this invocation while retaining portable caching. It does not overwrite the remote cache's earlier snapshot. Ordinary builds can restore that prior snapshot.
+
+## Benchmark protocol
+
+Three attempts use the same SHA and fresh GitHub runners: one seed, then two warm repetitions. Linux compares direct compilation with Nx and verifies identical portable bytes. macOS compares the unchanged production template builder, direct compilation/rendering with the same concurrency as Nx, and Nx remote/local reuse. Its portable bytes must also match Linux's results. All timed paths include package/runtime verification; complete macOS paths include inventory assembly.
+
+The production builder uses a dedicated Actions cache namespace; no benchmark touches the production template cache. Nx local caches are deleted before remote measurements and never uploaded as Actions caches. Each attempt makes a new single-slop edit, so edit measurements cannot reuse the previous attempt's changed package. The existing builder's restore/save durations and shared native helper/cache setup are reported separately from build commands. The benchmark deliberately builds the corpus several ways; its total duration is not the proposed production build time.
+
+The first attempt also runs full-corpus portable invalidation checks and native invalidation checks on two representative projects. These use disposable copies of tracked/staged files, including tracked deletions, never arbitrary untracked files. Checks cover corruption rejection, missing outputs, copied skill/config changes, discovery/selection, affected calculation, and cloud-disabled rebuilding. Verification and assembly always execute outside the Nx cache.
+
+Nx Cloud remains on Hobby with no paid agents or AI features. Record usage when available; delayed dashboard counters are not proof of zero consumption. Exhausting the free allowance must not be treated as a reason to enable billing.
+
+## Adoption and concrete replacement
+
+Recommend adoption only if correctness passes, representative CI measurements improve beyond observed variation, and the production integration removes custom cache responsibility. There is no longer a 50% speedup requirement. Compare warm and changed-input runs against the existing cache, including transfer overhead; also report cold-build regressions.
+
+If supported by evidence, a follow-up integration would:
+
+- Route `build:templates` and native fixture subsets through inferred Nx projects, preserving existing commands and output locations.
+- Remove `TemplateCache`, its custom key/input hashing, miss classification and entry pruning, plus Actions transport of `.hitslop/template-cache`.
+- Retain canonical discovery, `validateTemplate` (also used by release artifact validation), staged package assembly, inventory generation, and native fixture selection.
+- Replace cache-specific tests with the proven Nx boundary checks while keeping package validation and all native/release acceptance coverage.
+- Retain SwiftPM caching: Nx template caching does not replace native incremental compilation.
+
+Do not merge a permanent second orchestrator into production. This branch is the evaluated candidate; the final evidence determines the follow-up recommendation.
+
+---
+
 # Nx cache pilot
 
 This experiment covers Daily Planner and Reading Tracker only. It layers Nx 23.2.1

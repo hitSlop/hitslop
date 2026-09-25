@@ -17,7 +17,9 @@
       },
       {
         "runtime": "node --version"
-      }
+      },
+      "{workspaceRoot}/scripts/nx-pilot/discover.ts",
+      "{workspaceRoot}/scripts/v1/templates.ts"
     ],
     "sdk": [
       "tools",

@@ -1,17 +1,8 @@
 import type { Input } from "@hitslop/document";
 import schema from "./schema";
 
-function todayStr(): string {
-  return new Date().toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 export default {
-  date: todayStr(),
+  date: "Fri, Sep 25, 2026",
   situation: "Feedback landed hard in the team review.",
   hooks: [{ text: "“I should already know this”" }, { text: "Hot face, tight chest" }, { text: "Urge to shut down" }],
   awayMoves: [{ text: "Put off the revision" }, { text: "Get short with my teammates" }],

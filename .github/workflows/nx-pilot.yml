@@ -1,4 +1,4 @@
-name: Nx cache pilot
+name: Nx full-corpus evaluation
 on:
   workflow_dispatch:
   # Bootstrap this unmerged experiment; subsequent measurements can rerun the same SHA.
@@ -19,7 +19,7 @@ jobs:
   portable:
     if: github.repository == 'hitSlop/hitslop' && (github.ref == 'refs/heads/experiment/nx-pilot' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,13 +37,14 @@ jobs:
       - run: bun node_modules/typescript/bin/tsc -p scripts/nx-pilot/tsconfig.json
       - name: Direct portable baseline
         run: bun scripts/nx-pilot/measure.ts direct-portable bun scripts/nx-pilot/direct.ts --portable
+      - run: bun scripts/nx-pilot/fingerprints.ts linux-direct
       - run: bun scripts/nx-pilot/clean.ts --cache
       - name: Fresh runner remote portable build
-        run: bun scripts/nx-pilot/measure.ts remote-portable node node_modules/nx/dist/bin/nx.js run-many -t compile -p pilot-daily-planner,pilot-reading-tracker --outputStyle=static
-      - name: Always verify portable artifacts
-        run: |
-          bun scripts/nx-pilot/verify.ts daily-planner --portable
-          bun scripts/nx-pilot/verify.ts reading-tracker --portable
+        run: bun scripts/nx-pilot/measure.ts remote-portable bun scripts/nx-pilot/run.ts --portable
+      - run: bun scripts/nx-pilot/fingerprints.ts linux-nx .hitslop/v1-evidence/nx-pilot/linux-direct-bytes.json
+      - name: Portable cache correctness
+        if: github.run_attempt == 1
+        run: bun scripts/nx-pilot/evaluate.ts --portable
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -53,7 +54,7 @@ jobs:
   artwork:
     needs: portable
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
@@ -81,18 +82,47 @@ jobs:
         run: |
           bun scripts/nx-pilot/measure.ts native-setup bun run build
           echo "HITSLOP_NATIVE_CLI=$GITHUB_WORKSPACE/apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: nx-pilot-portable-${{ github.run_attempt }}
+          path: .hitslop/v1-evidence/linux
+      - name: Restore existing template cache (isolated benchmark namespace)
+        id: legacy-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: generated/nx-pilot/legacy-cache
+          key: nx-eval-legacy-${{ github.sha }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: nx-eval-legacy-${{ github.sha }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.hash }}-
+      - name: Existing builder with restored cache
+        run: |
+          bun scripts/nx-pilot/measure.ts legacy-full bun scripts/nx-pilot/legacy.ts
+          cp .hitslop/v1-evidence/template-cache-templates.json .hitslop/v1-evidence/nx-pilot/legacy-full-cache.json
+          bun scripts/nx-pilot/fingerprints.ts legacy-full .hitslop/v1-evidence/linux/linux-direct-bytes.json
+      - name: Save existing template cache
+        uses: actions/cache/save@v6
+        with:
+          path: generated/nx-pilot/legacy-cache
+          key: ${{ steps.legacy-cache.outputs.cache-primary-key }}
       - name: Direct full baseline
-        run: bun scripts/nx-pilot/measure.ts direct-full bun scripts/nx-pilot/direct.ts
+        run: |
+          bun scripts/nx-pilot/measure.ts direct-full bun scripts/nx-pilot/direct.ts
+          bun scripts/nx-pilot/fingerprints.ts mac-direct .hitslop/v1-evidence/linux/linux-direct-bytes.json
       - run: bun scripts/nx-pilot/clean.ts --cache
       - name: Fresh runner remote full build
-        run: bun scripts/nx-pilot/measure.ts remote-full bun run nx:pilot
+        run: |
+          bun scripts/nx-pilot/measure.ts remote-full bun run nx:pilot
+          bun scripts/nx-pilot/fingerprints.ts mac-nx .hitslop/v1-evidence/nx-pilot/mac-direct-bytes.json
       - name: Local warm build
         run: bun scripts/nx-pilot/measure.ts local-warm bun run nx:pilot
-      - name: Cloud-disabled uncached build
+      - name: Previously unseen single-slop edit
+        run: |
+          bun scripts/nx-pilot/edit-benchmark.ts
+          cp .hitslop/v1-evidence/template-cache-templates.json .hitslop/v1-evidence/nx-pilot/legacy-edit-cache.json
+      - name: Native cache correctness and cloud-disabled fallback
+        if: github.run_attempt == 1
         env:
           NX_NO_CLOUD: "true"
-          NX_SKIP_NX_CACHE: "true"
-        run: bun scripts/nx-pilot/measure.ts cloud-disabled bun run nx:pilot
+        run: bun scripts/nx-pilot/evaluate.ts --slugs=daily-planner,reading-tracker
       - uses: actions/upload-artifact@v4
         if: always()
         with:
