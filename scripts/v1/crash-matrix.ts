@@ -99,7 +99,12 @@ export async function runCrashMatrix(adapters: ("bun" | "native")[], hostCheck =
             "--op",
             JSON.stringify({ type: "text.replace", path: ["title"], value: "Native acknowledged" }),
           ],
-          { stdout: "pipe", stderr: "pipe", env: { ...process.env, HITSLOP_NATIVE_CLI: binary } },
+          {
+            stdout: "pipe",
+            stderr: "pipe",
+            // A packaged candidate routes through its own embedded helper.
+            env: { ...process.env, HITSLOP_NATIVE_CLI: process.env.HITSLOP_NATIVE_CLI ?? binary },
+          },
         );
         const [out, error, code] = await Promise.all([
           new Response(child.stdout).text(),

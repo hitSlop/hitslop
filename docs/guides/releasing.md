@@ -8,7 +8,7 @@ The initial v1 SDK release is npm **1.0.0**, paired with Mac **1.0.6 (24)** and 
 
 1. Finish release preparation and commit a clean tree. Check package versions, dependency pins, Apple version/build, and runtime provenance together. Confirm the intended npm versions and Mac tag have not already shipped.
 2. Run the complete local gate below on that final commit and record manual acceptance results. A report from a dirty checkout or another commit does not validate the release candidate.
-3. Push `master` and wait for `fast`, `native`, `release`, and the full-history secret scan to pass for the exact commit. Tag that commit `macos-v1.0.6` and push the tag; this triggers `.github/workflows/macos-release.yml`.
+3. Push `master` and wait for `fast`, `native`, and the full-history secret scan to pass for the exact commit. Optionally run the Release macOS workflow manually on `master` as a dry run of the complete gate. Tag that commit `macos-v1.0.6` and push the tag; this triggers `.github/workflows/macos-release.yml`.
 4. Monitor signing, notarization, Gatekeeper verification, and GitHub Release publication. Verify downloaded artifacts and complete signed-install/Sparkle acceptance. Retain the release record and checksums.
 5. Download and verify the release's tested npm tarballs, then publish schema, document, and CLI in that order using the procedure below. Finish with fresh registry consumer checks.
 
@@ -32,9 +32,9 @@ Bundled selection comes from `examples/slops/bundled.json`. Every selected packa
 
 ### CI tiers and caches
 
-Every push/PR runs Bun-only `fast` on Ubuntu. The always-reporting `native` job uses an in-job path filter; relevant changes run Swift, native helper/rendering and crash checks on macOS. Require both checks in branch protection. Master, manual runs and release tags run the full `release:check`. See [testing](../testing.md).
+Every push/PR runs Bun-only `fast` on Ubuntu. The always-reporting `native` job uses an in-job path filter; relevant changes run Swift, native helper, fixture rendering and crash checks on macOS. Require both checks in branch protection. The full `release:check` runs once, in the Release macOS workflow: on a tag before signing, or manually as a dry run. See [testing](../testing.md).
 
-CI restores SwiftPM `.build` by toolchain, lockfile and source identity, with a compatible restore prefix. The template cache reuses complete, fingerprinted packages; damaged entries rebuild, shared runtime/renderer inputs invalidate entries, and removed templates are pruned. Local and CI template builds default to `.hitslop/template-cache`; `HITSLOP_TEMPLATE_CACHE_DIR` can override the location. `build` prepares the runtime/helper, while `build:templates` prepares the complete artwork corpus. Native PNG/QuickLook rendering remains outside the fast job.
+CI restores SwiftPM `.build` by toolchain, lockfile and source identity, with a compatible restore prefix. The template cache reuses complete, fingerprinted packages; damaged entries rebuild, compiler/SDK/runtime/renderer inputs invalidate entries, CLI routing and unrelated scripts do not, and removed templates are pruned. Misses log their changed inputs. Master pushes keep the release template cache warm for tags. Local and CI template builds default to `.hitslop/template-cache`; `HITSLOP_TEMPLATE_CACHE_DIR` can override the location. `build` prepares the runtime/helper, while `build:templates` prepares the complete artwork corpus. Native PNG/QuickLook rendering remains outside the fast job.
 
 Bundled templates are black boxes: every one compiles, opens and reopens in Bun, then renders PNG/PDF and reopens in the native smoke. Conformance fixtures and native boundary tests cover platform edits, picker cancellation, persistence and exports. Application-specific walkthroughs are removed. The gate retains PNG/PDF evidence without visual snapshot comparison.
 
@@ -70,7 +70,7 @@ bun scripts/v1/release-artifact.ts /path/to/hitSlop.app
 
 Embedding ships the native executable and its HitSlopWasm resource bundle. The retired HitSlopRuntime placeholder resource bundle is not required. Verification checks matching host/helper runtime catalogs and exercises installed helpers with a system-only PATH, including PNG/PDF. Native editing needs no checkout, Node, or Bun. `HITSLOP_NATIVE_CLI` selects an explicit matching helper for authoring verification.
 
-Developer ID, notarization, provisioning, App Store Connect, and Sparkle private keys remain outside Git. The tagged GitHub workflow runs the full local gate before signing, notarizing, verifying DMG/ZIP artifacts, and publishing the Mac release. It does not publish npm packages. Release the exact tested commit.
+Developer ID, notarization, provisioning, App Store Connect, and Sparkle private keys remain outside Git. The tagged GitHub workflow runs the gate once (`release:check --skip-app`), then archives one Release app. `package-macos-release.sh` runs host-crash acceptance on that signed app before notarizing (it needs the Debug helper from `bun run build`; `HITSLOP_SKIP_ACCEPTANCE=1` skips it). The workflow then verifies DMG/ZIP artifacts and publishes the Mac release. It does not publish npm packages. Release the exact tested commit.
 
 The workflow checks these repository secrets before installing/building: `MACOS_CERTIFICATE`, `MACOS_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD`, `ASC_API_KEY_ID`, `ASC_API_ISSUER_ID`, `ASC_API_KEY_P8`, and `SPARKLE_PRIVATE_KEY`. Their presence does not establish certificate validity or account access; signing and notarization must succeed. Temporary certificate/keychain files are cleaned up even after failure. The `release-evidence` workflow artifact retains the gate report, render evidence, packaging log, and any completed release record/checksums.
 

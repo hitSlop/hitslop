@@ -3,11 +3,10 @@ import { repository } from "./templates";
 import { buildTemplates } from "./build-templates";
 import { buildPresentationFixtures } from "./presentation-fixtures";
 
+export const nativeFixtureSlugs = ["quick-checklist", "small-expenses"];
+
 /** Shared native owners need two black-box apps, not the shipped template corpus. */
 export async function prepareNativeFixtures() {
-  await buildTemplates(join(repository, "generated/v1/native-fixtures"), [
-    "quick-checklist",
-    "small-expenses",
-  ]);
+  await buildTemplates(join(repository, "generated/v1/native-fixtures"), nativeFixtureSlugs);
   return buildPresentationFixtures();
 }

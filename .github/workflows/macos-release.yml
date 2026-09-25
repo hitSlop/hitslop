@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "macos-v*"
+  # Manual runs validate the full release gate without signing or publishing.
+  workflow_dispatch:
 
 concurrency:
   group: macos-release-${{ github.ref_name }}
@@ -14,7 +16,7 @@ permissions:
 
 jobs:
   release:
-    name: Sign, notarize, and publish
+    name: ${{ github.event_name == 'push' && 'Sign, notarize, and publish' || 'Release check (dry run)' }}
     if: github.repository == 'hitslop/hitslop'
     runs-on: macos-15
     env:
@@ -29,6 +31,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Validate release secrets
+        if: github.event_name == 'push'
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -43,15 +46,20 @@ jobs:
           done
       - uses: ./.github/actions/prepare-checks
       - uses: ./.github/actions/native-cache
+        with:
+          templates: release
       - name: Check release identity
+        if: github.event_name == 'push'
         run: bun scripts/v1/release-bundle.ts --preflight
       - run: bun install --cwd apps/landing --frozen-lockfile
       - run: brew install xcodegen
-      - name: Validate tagged artifacts
-        run: bun run release:check
+      # Tags accept the signed Release app during packaging instead of building a Debug app.
+      - name: Validate release artifacts
+        run: bun run release:check ${{ github.event_name == 'push' && '--skip-app' || '' }}
         env:
           HITSLOP_TEMPLATE_CACHE_DIR: .hitslop/template-cache
       - name: Import Developer ID certificate
+        if: github.event_name == 'push'
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -68,11 +76,13 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
       - name: Package notarized DMG
+        if: github.event_name == 'push'
         run: |
           set -euo pipefail
           mkdir -p .hitslop/v1-evidence
           scripts/package-macos-release.sh 2>&1 | tee .hitslop/v1-evidence/packaging.log
       - name: Verify Gatekeeper
+        if: github.event_name == 'push'
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#macos-v}"
@@ -93,11 +103,13 @@ jobs:
           spctl --assess --type execute "$RUNNER_TEMP/verify-zip/hitSlop.app"
           (cd dist/macos && shasum -a 256 -c SHA256SUMS)
       - name: Retain tested npm packages and sealed runtime
+        if: github.event_name == 'push'
         run: |
           bun scripts/v1/release-bundle.ts
           git diff --exit-code -- runtimes/releases.json
           (cd dist/macos && shasum -a 256 -c SHA256SUMS)
       - name: Publish GitHub Release
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

@@ -1,5 +1,9 @@
 name: Native build cache
 description: Reuse compatible SwiftPM and completed template builds
+inputs:
+  templates:
+    description: "Template cache set: fixtures (everyday CI) or release (full corpus)"
+    required: true
 runs:
   using: composite
   steps:
@@ -16,5 +20,5 @@ runs:
     - uses: actions/cache@v6
       with:
         path: .hitslop/template-cache
-        key: templates-v1-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
-        restore-keys: templates-v1-${{ runner.os }}-${{ runner.arch }}-
+        key: templates-v2-${{ inputs.templates }}-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: templates-v2-${{ inputs.templates }}-${{ runner.os }}-${{ runner.arch }}-

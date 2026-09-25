@@ -7,6 +7,7 @@ set -eu
 #   ASC_API_KEY_P8 / ASC_API_KEY_P8_FILE, ASC_API_KEY_ID, ASC_API_ISSUER_ID
 #   SPARKLE_PRIVATE_KEY / SPARKLE_PRIVATE_KEY_FILE
 #   SKIP_NOTARIZE=1             skip notarytool (still signs)
+#   HITSLOP_SKIP_ACCEPTANCE=1   skip host-crash acceptance of the signed app
 #   HITSLOP_OUTPUT_DIR          default: dist/macos
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -138,6 +139,18 @@ echo "Signing nested helper and app…"
   --entitlements "$project_dir/App/macOS/hitSlop.entitlements" \
   --sign "$identity" "$app"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$app"
+
+# Notarize only the candidate that passed installed-app and host-crash acceptance.
+# Requires the Debug helper from `bun run build` for storage probes.
+if [ "${HITSLOP_SKIP_ACCEPTANCE:-}" != "1" ]; then
+  echo "Accepting signed app before notarization…"
+  (
+    cd "$repo_root"
+    HITSLOP_APP_BINARY="$app/Contents/MacOS/hitSlop" \
+      HITSLOP_NATIVE_CLI="$app/Contents/Helpers/hitslop-native" \
+      bun scripts/v1/native-crash.ts
+  )
+fi
 
 versioned="hitSlop-${marketing_version}"
 /bin/mkdir -p "$output_dir"

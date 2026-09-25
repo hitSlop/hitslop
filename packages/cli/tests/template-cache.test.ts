@@ -2,7 +2,11 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fingerprint, TemplateCache, validateTemplate } from "../../../scripts/v1/template-cache";
+import {
+  sharedTemplatePaths,
+  TemplateCache,
+  validateTemplate,
+} from "../../../scripts/v1/template-cache";
 
 import identity from "../../document/src/runtime-identity.json";
 import { defineDocument, s } from "../../document/src/schema";
@@ -54,7 +58,7 @@ test("template cache reuses matching artifacts and rebuilds changed or damaged e
       builds++;
       await writePackage(output);
     };
-    const cache = new TemplateCache(directory, "shared-a");
+    const cache = new TemplateCache(directory, { "@swift": "a" });
     const run = async (current = cache) => {
       await rm(output, { recursive: true, force: true });
       return current.build(source, "quick-checklist", output, build);
@@ -67,11 +71,14 @@ test("template cache reuses matching artifacts and rebuilds changed or damaged e
     expect(await run()).toBe("hit");
     await writeFile(join(source, "main.ts"), "changed");
     expect(await run()).toBe("built");
+    expect(cache.misses.get("quick-checklist")).toEqual(["template main.ts"]);
     // Asset directories named like build outputs are still copied into the package.
     await mkdir(join(source, "assets/dist"), { recursive: true });
     await writeFile(join(source, "assets/dist/theme.css"), "changed asset");
     expect(await run()).toBe("built");
-    expect(await run(new TemplateCache(directory, "shared-b"))).toBe("built");
+    const toolchain = new TemplateCache(directory, { "@swift": "b" });
+    expect(await run(toolchain)).toBe("built");
+    expect(toolchain.misses.get("quick-checklist")).toEqual(["shared @swift"]);
     expect(await run()).toBe("built");
     await writeFile(join(directory, "quick-checklist/package.slop/app.html"), "damaged");
     expect(await run()).toBe("built");
@@ -88,9 +95,6 @@ test("template cache reuses matching artifacts and rebuilds changed or damaged e
     await mkdir(join(directory, "unrelated"));
     await cache.prune(["quick-checklist"]);
     expect(await readdir(directory)).toContain("unrelated");
-    expect(await fingerprint(root, ["source"], "toolchain-a")).not.toBe(
-      await fingerprint(root, ["source"], "toolchain-b"),
-    );
     await cache.prune([]);
     expect(await run()).toBe("built");
   } finally {
@@ -101,7 +105,7 @@ test("template cache reuses matching artifacts and rebuilds changed or damaged e
 test("changing one template preserves another template's cache entry", async () => {
   const root = await mkdtemp(join(tmpdir(), "hitslop-template-cache-"));
   try {
-    const cache = new TemplateCache(join(root, "cache"), "shared");
+    const cache = new TemplateCache(join(root, "cache"), {});
     const builds: string[] = [];
     for (const slug of ["quick-checklist", "small-expenses"]) {
       await mkdir(join(root, slug));
@@ -133,7 +137,7 @@ test("failed builds never publish cache entries; cached packages reject state an
       output = join(root, "output.slop"),
       directory = join(root, "cache");
     await mkdir(source);
-    const cache = new TemplateCache(directory, "shared");
+    const cache = new TemplateCache(directory, {});
     await expect(
       cache.build(source, "quick-checklist", output, async () => {
         throw new Error("render failed");
@@ -157,4 +161,27 @@ test("failed builds never publish cache entries; cached packages reject state an
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("template artwork is keyed on the compiler, not CLI routing, help or scripts", async () => {
+  const repository = join(import.meta.dir, "../../..");
+  const paths = await sharedTemplatePaths(repository, []);
+  for (const input of [
+    "packages/cli/src/build.ts",
+    "packages/cli/src/svelte-plugin.ts",
+    "packages/document/src",
+    "packages/cli/runtimes",
+  ])
+    expect(paths).toContain(input);
+  for (const unrelated of [
+    "packages/cli/src/cli.ts",
+    "packages/cli/src/app.ts",
+    "packages/cli/skills",
+    "scripts/v1/hygiene.ts",
+    "scripts/v1/release-check.ts",
+    "examples/slops/PRODUCT.md",
+  ])
+    expect(paths.some((path) => path === unrelated || path.startsWith(unrelated + "/"))).toBe(
+      false,
+    );
 });

@@ -5,17 +5,28 @@ import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { builtTemplates } from "./templates";
 import { digest } from "./runtime-artifacts";
+import { nativeFixtureSlugs, prepareNativeFixtures } from "./native-fixtures";
 
 const helper = resolve("apps/apple/Packages/HitSlopApple/.build/debug/hitslop-native");
 const evidence = resolve(".hitslop/v1-evidence/render");
 const parent = await mkdtemp(join(tmpdir(), "hitslop-native-smoke-"));
-const packages = (await builtTemplates()).templates
-  .filter((t) => t.bundled)
-  .map((t) => ({
-    name: `bundled-${t.slug}`,
-    source: resolve("generated/v1/templates", `${t.slug}.slop`),
-  }));
+// Everyday CI renders the native fixtures; releases render every bundled template.
+const fixtures = process.argv.includes("--fixtures");
+if (fixtures) await prepareNativeFixtures();
+const packages = fixtures
+  ? nativeFixtureSlugs.map((slug) => ({
+      name: `fixture-${slug}`,
+      source: resolve("generated/v1/native-fixtures", `${slug}.slop`),
+    }))
+  : (await builtTemplates()).templates
+      .filter((t) => t.bundled)
+      .map((t) => ({
+        name: `bundled-${t.slug}`,
+        source: resolve("generated/v1/templates", `${t.slug}.slop`),
+      }));
 for (const name of (await readdir("tests/compatibility")).sort()) {
+  // Preserved template snapshots mirror the release corpus; fixtures keep contract specimens.
+  if (fixtures && name.startsWith("template-")) continue;
   if (await Bun.file(`tests/compatibility/${name}/fixture.json`).exists())
     packages.push({
       name: `preserved-${name}`,
@@ -32,7 +43,11 @@ async function run(args: string[]) {
       new Response(child.stderr).text(),
       child.exited,
     ]);
-    assert.equal(code, 0, `${args.join(" ")} (${((performance.now() - started) / 1000).toFixed(1)}s): ${error}`);
+    assert.equal(
+      code,
+      0,
+      `${args.join(" ")} (${((performance.now() - started) / 1000).toFixed(1)}s): ${error}`,
+    );
     return out;
   } finally {
     clearTimeout(timeout);
@@ -62,7 +77,9 @@ try {
     assert.deepEqual(JSON.parse(await run(["get", root])), state);
     assert.equal(await digest(source), before, `Master changed: ${name}`);
     results.push({ name, sha256: before });
-    console.log(`PASS ${name}: headless open, authored render, PNG/PDF, reopen (${((performance.now() - started) / 1000).toFixed(1)}s)`);
+    console.log(
+      `PASS ${name}: headless open, authored render, PNG/PDF, reopen (${((performance.now() - started) / 1000).toFixed(1)}s)`,
+    );
   }
 } catch (error) {
   failure = String(error);
