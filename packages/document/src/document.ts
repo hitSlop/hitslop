@@ -18,6 +18,8 @@ import {
 import type { ByteStore } from "./storage.ts";
 import { Commands, applyOperation, fill, project, type Operation } from "./operations";
 import { patch } from "./projection";
+import { importJSON } from "./json-import";
+import { base64 } from "./bridge";
 export type { Operation, Destination } from "./operations";
 export type SaveStatus = "saved" | "saving" | "save-failed";
 /** `ui` for authored code, `cli` for socket requests; the message is kept in history. */
@@ -36,6 +38,7 @@ export class Document<N extends ObjectNode> extends Commands {
   private logRows = 0;
   private logBytes = 0;
   private checkpointBytes = 0;
+  private checkpointImport = false;
   private drafts = new Set<() => void>();
   private previews = new Map<string, { path: Path; value: unknown }>();
   private preparations: Array<(commit: (callback: () => void) => void) => Promise<void>> = [];
@@ -180,6 +183,23 @@ export class Document<N extends ObjectNode> extends Commands {
   }
   /** One synchronous, all-or-nothing commit. Reads stay on the pre-change snapshot. */
   change<R>(callback: (tx: Scope<N>) => R, options: CommitOptions = {}): R {
+    return this.stage(callback, options);
+  }
+  /** Import desired values through the same staged operation boundary as authored changes. */
+  importJSON(value: unknown, options: CommitOptions & { fresh?: boolean } = {}) {
+    this.stage(tx => importJSON(this.definition.descriptor.root, this.snapshot, value, tx, options.fresh), options, true);
+  }
+  /** Opaque optimistic-concurrency token; stable across close/reopen and checkpointing. */
+  snapshotFor(documentPath: string) {
+    return {
+      data: this.snapshot,
+      schema: this.definition.descriptor,
+      version: base64.encode(new TextEncoder().encode(JSON.stringify([
+        documentPath, this.key, base64.encode(this.engine.oplogVersion().encode()),
+      ]))),
+    };
+  }
+  private stage<R>(callback: (tx: Scope<N>) => R, options: CommitOptions, checkImport = false): R {
     this.assertWritable();
     const staged = this.engine.fork();
     let active = true;
@@ -215,11 +235,19 @@ export class Document<N extends ObjectNode> extends Commands {
       if (this.transactionFailure) throw this.transactionFailure;
       if (count) {
         staged.commit({ origin: options.origin ?? this.origin, message: options.message });
+        if (checkImport) {
+          project(this.definition.descriptor.root, staged.getMap("data"));
+          if (staged.export({ mode: "snapshot" }).length > MAX_CHECKPOINT_BYTES)
+            throw new OperationRejectedError("Import exceeds the 32 MiB storage limit");
+        }
         const bytes = staged.export({ mode: "update", from: this.engine.oplogVersion() });
         this.collecting = false;
         this.engine.import(bytes);
         // Imported operations do not trigger subscribeLocalUpdates.
         this.pending.push(bytes);
+        // Preserve the accepted absolute values as a checkpoint. Replaying separately
+        // batched floating-point counter increments can otherwise change rounding.
+        if (checkImport) this.checkpointImport = true;
         for (const op of touched) this.dropPreview(op);
         this.changed();
       }
@@ -331,10 +359,7 @@ export class Document<N extends ObjectNode> extends Commands {
   }
   flush(): Promise<void> {
     if (this.closed) return Promise.reject(new Error("Document closed"));
-    if (!this.closing) {
-      for (const draft of this.drafts) draft();
-      this.commitPreviews();
-    }
+    if (!this.closing) this.flushDrafts();
     clearTimeout(this.timer);
     this.timer = undefined;
     const task = this.queue
@@ -357,7 +382,7 @@ export class Document<N extends ObjectNode> extends Commands {
             const updates = this.pending.slice();
             const bytes = updates.reduce((n, b) => n + b.length, 0);
             if (
-              this.logRows + updates.length >= 256 ||
+              this.checkpointImport || this.logRows + updates.length >= 256 ||
               this.logBytes + bytes >= 4 * 1024 * 1024 ||
               this.checkpointBytes + this.logBytes + bytes > MAX_CHECKPOINT_BYTES
             ) {
@@ -398,6 +423,12 @@ export class Document<N extends ObjectNode> extends Commands {
     this.queue = task;
     return task;
   }
+  /** Synchronous barrier immediately before a snapshot or version-checked edit. */
+  flushDrafts() {
+    this.assertWritable();
+    for (const draft of this.drafts) draft();
+    this.commitPreviews();
+  }
   async compact() {
     await this.flush();
     const task = this.queue
@@ -428,9 +459,12 @@ export class Document<N extends ObjectNode> extends Commands {
     const snapshot = this.engine.export({ mode: "snapshot" });
     if (snapshot.length > MAX_CHECKPOINT_BYTES)
       throw new Error("Document exceeds the 32 MiB storage limit");
+    const imported = this.checkpointImport;
+    this.checkpointImport = false;
     try {
       this.generation = await this.storage.checkpoint(this.generation, snapshot, this.key);
     } catch (error) {
+      this.checkpointImport ||= imported;
       await this.reloadStorageMetadata();
       throw error;
     }

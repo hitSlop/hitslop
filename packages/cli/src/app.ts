@@ -35,7 +35,7 @@ async function forward(
   flags: Record<string, string | boolean | undefined>,
 ) {
   const argv = Object.entries(flags).flatMap(([name, value]) =>
-    typeof value === "string" ? [`--${name}`, value] : [],
+    typeof value === "string" ? [`--${name}`, value] : value === true ? [`--${name}`] : [],
   );
   if (command === "export") {
     if (process.platform !== "darwin")
@@ -167,9 +167,22 @@ export const app = new Crust("slop", {
   )
   .add(
     defineCommand("get", { description: "Print current document state as JSON" }, (c) =>
-      c.args(document).action(({ args }) => forward("get", args.document, {})),
+      c.args(document).flags({ name: "snapshot", type: "boolean", description: "Include schema and a version token for replacement" })
+        .action(({ args, flags }) => forward("get", args.document, flags)),
     ),
   )
+  .add(defineCommand("import", { description: "Import complete JSON data into a new or existing document", sections: [retrySection] }, c =>
+    c.args(document).flags(
+      { name: "file", type: "string", required: true, description: "JSON file in the destination schema" },
+      { name: "from", type: "string", description: "Create a new document from this template" },
+      { name: "replace", type: "boolean", description: "Replace existing data, preserving matching row IDs" },
+      { name: "if-version", type: "string", description: "Destination version from get --snapshot; required with --replace" },
+    ).action(({ args, flags }) => {
+      if (Boolean(flags.from) === Boolean(flags.replace) || (flags.replace ? !flags["if-version"] : flags["if-version"] !== undefined))
+        throw new Error("Use --from TEMPLATE or --replace --if-version TOKEN");
+      return forward("import", args.document, flags);
+    }),
+  ))
   .add(
     defineCommand(
       "apply",

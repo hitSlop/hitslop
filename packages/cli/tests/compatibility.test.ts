@@ -6,6 +6,101 @@ import { tmpdir } from "node:os";
 import { buildRuntime } from "../../../scripts/v1/runtime";
 import { runRuntime } from "../../../scripts/v1/compatibility";
 import { checkHistory } from "../../../scripts/v1/compatibility-history";
+import { loadRuntime } from "../../../scripts/v1/compatibility-worker";
+import { SQLiteStore } from "../../document/test-support/sqlite";
+import { defineDocument, s } from "../../document/src/schema";
+import { digest, releases, repository } from "../../../scripts/v1/runtime-artifacts";
+
+test("historical readers open JSON-imported updates and checkpoints with preserved rich text and references", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hitslop-import-readers-"));
+  try {
+    const runtimes = join(root, "runtimes");
+    await buildRuntime([runtimes]);
+    const runtime = await loadRuntime(join(runtimes, "1"));
+    const schema = defineDocument({
+      title: s.text(),
+      notes: s.richtext({ bold: "after" }),
+      count: s.counter(),
+      rows: s.list(s.object({ label: s.string(), link: s.string() })),
+      tree: s.tree(s.object({ label: s.string() })),
+    });
+    const initial = { title: "Old", notes: "", count: 0, rows: [], tree: [] };
+    for (const phase of ["updates", "checkpoint"]) {
+      const document = join(root, phase + ".slop");
+      await mkdir(document);
+      await writeFile(join(document, "state.schema.json"), JSON.stringify(schema.descriptor));
+      await writeFile(join(document, "initial.json"), JSON.stringify(initial));
+      const store = await SQLiteStore.open(document);
+      const doc = await runtime.Document.open(
+        runtime.fromDescriptor(schema.descriptor),
+        store,
+        initial,
+      );
+      const baseline = await store.load(),
+        version = doc.version();
+      doc.importJSON({
+        title: "Imported",
+        notes: { text: "Hello", delta: [{ insert: "Hello", attributes: { bold: true } }] },
+        count: 4,
+        rows: [{ label: "Linked", link: { $ref: "/tree/0/children/0" } }],
+        tree: [{ label: "Root", children: [{ label: "Child" }] }],
+      });
+      expect(doc.current.title).toBe("Imported");
+      expect(doc.current.notes.delta).toEqual([{ insert: "Hello", attributes: { bold: true } }]);
+      expect(doc.current.count).toBe(4);
+      expect(doc.current.rows[0].link).toBe(doc.current.tree[0].children[0].$id);
+      const expected = join(root, phase + ".json");
+      await writeFile(expected, JSON.stringify(doc.current));
+      const importedUpdates = doc.exportUpdates(version);
+      await doc.close();
+      // Imports checkpoint by default. Independently construct an update-only reader
+      // specimen to also prove the generated CRDT operations remain contract-1 data.
+      let readerSource = document;
+      if (phase === "updates") {
+        readerSource = join(root, "updates-only.slop");
+        await mkdir(readerSource);
+        await writeFile(join(readerSource, "state.schema.json"), JSON.stringify(schema.descriptor));
+        await writeFile(join(readerSource, "initial.json"), JSON.stringify(initial));
+        const readerStore = await SQLiteStore.open(readerSource);
+        const generation = await readerStore.checkpoint(
+          "0",
+          baseline.checkpoint!,
+          baseline.schemaKey!,
+        );
+        await readerStore.append(generation, [importedUpdates]);
+        await readerStore.close();
+      }
+      for (const release of (await releases()).filter((r) => r.runtimeContract === 1)) {
+        const historical = join(
+          repository,
+          "generated/v1/runtime-releases",
+          `1-${release.runtimeRevision}`,
+          "1",
+        );
+        expect(await digest(historical)).toBe(release.sha256);
+        const copy = join(root, `${phase}-reader-${release.runtimeRevision}.slop`);
+        await cp(readerSource, copy, { recursive: true });
+        const child = Bun.spawn(
+          [process.execPath, "scripts/v1/compatibility-worker.ts", historical],
+          {
+            stdin: new Blob([JSON.stringify([{ document: copy, expected }])]),
+            stdout: "pipe",
+            stderr: "pipe",
+          },
+        );
+        const [out, error, code] = await Promise.all([
+          new Response(child.stdout).text(),
+          new Response(child.stderr).text(),
+          child.exited,
+        ]);
+        expect(code, error).toBe(0);
+        expect(JSON.parse(out)[0].state).toEqual(JSON.parse(await Bun.file(expected).text()));
+      }
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}, 60000);
 
 test("compiled replay detects incorrect expectations and a no-op authored text handle", async () => {
   const root = await mkdtemp(join(tmpdir(), "hitslop-replay-fault-"));

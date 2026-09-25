@@ -7,7 +7,8 @@ import HitSlopCore
   public static func run(
     method: String, url: URL, operation: Data? = nil, operations: Data? = nil,
     themeValues: Data? = nil, themeToken: String? = nil,
-    attachmentBytes: Data? = nil, attachmentID: String? = nil
+    attachmentBytes: Data? = nil, attachmentID: String? = nil,
+    importData: Data? = nil, expectedVersion: String? = nil, fresh: Bool = false
   )
     async throws -> Data
   {
@@ -15,6 +16,14 @@ import HitSlopCore
     let package = try SlopPackage(rootURL: url)
     let root = package.rootURL
     guard let command = SocketRequest.Method(rawValue: method) else { throw failure("Invalid document command") }
+    if command == .snapshot || command == .import {
+      let catalog = try RuntimeCatalog.bundled()
+      let runtime = try catalog.resolve(package: package)
+      guard let identity = catalog.identities.first(where: { String($0["runtimeContract"] as! Int) == runtime.lastPathComponent }),
+        (identity["runtimeRevision"] as! Int) >= 2 else {
+        throw failure("JSON import requires runtime revision 2. Update hitSlop.app.")
+      }
+    }
     if command == .schema {
       return try SlopFile.read(package.dataSchemaURL, within: root, maximumBytes: 1_048_576)
     }
@@ -33,11 +42,17 @@ import HitSlopCore
     if let operations { input["ops"] = try JSONSerialization.jsonObject(with: operations) }
     if let attachmentBytes { input["bytes"] = attachmentBytes.base64EncodedString() }
     if let attachmentID { input["attachmentID"] = attachmentID }
+    if let importData { input["data"] = try JSONSerialization.jsonObject(with: importData) }
+    if let expectedVersion { input["expectedVersion"] = expectedVersion }
+    if command == .import { input["fresh"] = fresh }
     // Validate before acquiring ownership or creating any document state.
     // hello supplies the real epoch before any epoch-requiring request is dispatched.
-    if command.requiresEpoch { input["epoch"] = "new-session" }
+    if command.requiresEpoch { input["epoch"] = String(repeating: "x", count: 128) }
     guard PlatformContract.valid(input, against: socketRequestSchema) else {
       throw failure("Invalid document command")
+    }
+    guard try JSONSerialization.data(withJSONObject: input).count <= requestLimit(command) else {
+      throw failure("Document command exceeds the request size limit")
     }
     var request = try SocketRequest(json: input)
     var engine: WasmSession?
@@ -135,12 +150,16 @@ import HitSlopCore
     guard PlatformContract.valid(request.json, against: socketRequestSchema) else {
       throw failure("Invalid socket request")
     }
+    let encoded = try JSONSerialization.data(withJSONObject: request.json)
+    guard encoded.count <= requestLimit(request.method) else {
+      throw failure("Document command exceeds the request size limit")
+    }
     let object: [String: Any]
     if let engine {
       object = await engine.request(request).json
     } else {
       guard let socket else { throw failure("Missing live session") }
-      let bytes = try JSONSerialization.data(withJSONObject: request.json)
+      let bytes = encoded
       let result: Data = try await withCheckedThrowingContinuation { continuation in
         DispatchQueue.global(qos: .userInitiated).async {
           continuation.resume(with: Result { try SocketClient.call(path: socket, request: bytes) })
@@ -156,13 +175,17 @@ import HitSlopCore
     }
     return try SocketReply(json: object)
   }
+
+  private static func requestLimit(_ method: SocketRequest.Method) -> Int {
+    method == .import || method == .attachmentsPut ? 16 * 1024 * 1024 : 1_048_576
+  }
 }
 enum SocketClient {
   static func call(path: String, request: Data) throws -> Data {
     guard request.count <= 16 * 1024 * 1024 else { throw failure("Oversized socket request") }
     if request.count > 1_048_576 {
       guard let value = try? JSONSerialization.jsonObject(with: request) as? [String: Any],
-        value["method"] as? String == "attachments.put" else { throw failure("Oversized socket request") }
+        ["attachments.put", "import"].contains(value["method"] as? String ?? "") else { throw failure("Oversized socket request") }
     }
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)
     guard fd >= 0 else { throw failure("Cannot create client socket") }
@@ -207,8 +230,11 @@ enum SocketClient {
       guard count > 0 else {
         throw failure("Host disconnected or timed out; outcome may be unknown")
       }
+      let start = result.count
       result.append(contentsOf: buffer.prefix(count))
-      if let end = result.firstIndex(of: 10) {
+      // Prior chunks contain no delimiter; keep large replies linear to read.
+      if let delimiter = buffer.prefix(count).firstIndex(of: 10) {
+        let end = start + delimiter
         guard end <= 16 * 1024 * 1024 else { throw failure("Oversized socket response") }
         return result.prefix(upTo: end)
       }

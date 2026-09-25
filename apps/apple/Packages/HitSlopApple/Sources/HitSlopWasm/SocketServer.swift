@@ -112,7 +112,7 @@ final class SocketServer: @unchecked Sendable {
       }
       guard active else { return }
       guard let request = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
-        bytes.count <= 1_048_576 || request["method"] as? String == "attachments.put",
+        bytes.count <= 1_048_576 || ["attachments.put", "import"].contains(request["method"] as? String ?? ""),
         PlatformContract.valid(request, against: socketRequestSchema),
         let command = try? SocketRequest(json: request)
       else {
@@ -214,8 +214,11 @@ private final class Connection: @unchecked Sendable {
         close()
         return
       }
+      let start = input.count
       input.append(contentsOf: buffer.prefix(count))
-      if let end = input.firstIndex(of: 10) {
+      // Scan each byte once, including for bulk imports and attachment payloads.
+      if let delimiter = buffer.prefix(count).firstIndex(of: 10) {
+        let end = start + delimiter
         guard end <= 16 * 1024 * 1024 else {
           close()
           return

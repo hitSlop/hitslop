@@ -1,4 +1,4 @@
-// Sealed runtime 1/1: type-only text can change minified bytes. See docs/versioning.md before simplifying these aliases or guards.
+// Runtime changes require a new revision; preserve historical seals in docs/versioning.md.
 import type { Request as Command, Reply as Outcome, ReplyCode as Code } from "./session-types";
 export type * from "./session-types";
 import type { ThemeController } from "./theme-runtime";
@@ -54,6 +54,20 @@ export class Session {
           }
           if (request.method === "schema")
             return { ok: true, epoch: this.epoch, schema: this.doc.definition.descriptor };
+          if (request.method === "snapshot" || request.method === "import") {
+            // flush() may have awaited storage while the user entered another draft.
+            this.doc.flushDrafts();
+            if (request.method === "import") {
+              if (request.epoch !== this.epoch) throw new SessionChangedError("Session changed; read a new snapshot");
+              if (request.expectedVersion !== this.doc.snapshotFor(request.documentPath).version)
+                throw new OperationRejectedError("Destination changed; run slop get --snapshot and prepare the import again");
+              this.doc.importJSON(request.data, { origin: "cli", fresh: request.fresh });
+            }
+            // Capture data and version synchronously, then ensure this state is durable.
+            const state = this.doc.snapshotFor(request.documentPath);
+            await this.doc.flush();
+            return { ok: true, epoch: this.epoch, state };
+          }
           if (request.method !== "get") {
             if ((request as Partial<Extract<Command, { epoch: unknown }>>).epoch !== this.epoch)
               throw new SessionChangedError("Session changed; run slop get before issuing another edit");

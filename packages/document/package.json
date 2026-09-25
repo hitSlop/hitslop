@@ -1,6 +1,6 @@
 {
   "name": "@hitslop/document",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "exports": {
     ".": "./src/schema.ts",
@@ -14,7 +14,7 @@
     "./identity": "./src/runtime-identity.json"
   },
   "dependencies": {
-    "@hitslop/schema": "1.0.0",
+    "@hitslop/schema": "1.1.0",
     "loro-crdt": "1.16.1"
   },
   "peerDependencies": {

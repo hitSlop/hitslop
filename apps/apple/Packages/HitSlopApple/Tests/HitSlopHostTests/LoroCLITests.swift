@@ -9,6 +9,54 @@ import Testing
 @testable import HitSlopWasm
 
 extension LoroClientTests {
+  @Test @MainActor func jsonImportUpdatesOpenViewAndRejectsPendingDrafts() async throws {
+    _ = NSApplication.shared
+    let root = try captureFixture()
+    let file = root.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + ".json")
+    defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: file) }
+    let controller = try await SlopDocumentWindowController.open(packageURL: root)
+    try await controller.session.waitUntilReady()
+    let view = controller.session.webView
+    let before = try await cli(["get", root.path, "--snapshot"])
+    #expect(before.0 == 0, "\(before.2)")
+    let snapshot = try #require(try JSONSerialization.jsonObject(with: Data(before.1.utf8)) as? [String: Any])
+    let version = try #require(snapshot["version"] as? String)
+    var data = try #require(snapshot["data"] as? [String: Any])
+    data["title"] = "Imported into open window"
+    try JSONSerialization.data(withJSONObject: data).write(to: file)
+    let applied = try await cli(["import", root.path, "--replace", "--if-version", version, "--file", file.path])
+    #expect(applied.0 == 0, "\(applied.2)")
+    #expect(try await view.evaluateJavaScript("document.querySelector('#draft').value") as? String == "Imported into open window")
+    let accepted = try #require(try JSONSerialization.jsonObject(with: Data(applied.1.utf8)) as? [String: Any])
+    let nextVersion = try #require(accepted["version"] as? String)
+    _ = try await view.callAsyncJavaScript("""
+      const input = document.querySelector('#draft');
+      input.dispatchEvent(new CompositionEvent('compositionstart'));
+      input.value = 'User is still typing';
+      input.dispatchEvent(new InputEvent('input', {bubbles:true, isComposing:true}));
+      return true;
+      """, arguments: [:], in: nil, contentWorld: .page)
+    let rejected = try await cli(["import", root.path, "--replace", "--if-version", nextVersion, "--file", file.path])
+    #expect(rejected.0 != 0)
+    #expect(rejected.2.contains("Destination changed"))
+    #expect(try await view.evaluateJavaScript("document.querySelector('#draft').value") as? String == "User is still typing")
+    let fresh = try await DocumentCommand.run(method: "snapshot", url: root)
+    let freshState = try #require(try JSONSerialization.jsonObject(with: fresh) as? [String: Any])
+    let freshVersion = try #require(freshState["version"] as? String)
+    let large = String(repeating: "bulk ", count: 230_000)
+    data["title"] = large
+    try JSONSerialization.data(withJSONObject: data).write(to: file)
+    let bulk = try await cli(["import", root.path, "--replace", "--if-version", freshVersion, "--file", file.path])
+    #expect(bulk.0 == 0, "\(bulk.2)")
+    // WebKit caps plain input values; rendering that prefix must not edit the document.
+    #expect(try await view.evaluateJavaScript("document.querySelector('#draft').value.startsWith('bulk bulk')") as? Bool == true)
+    try await controller.session.finish()
+    let reopened = try await cli(["get", root.path])
+    let state = try #require(try JSONSerialization.jsonObject(with: Data(reopened.1.utf8)) as? [String: Any])
+    let preserved = state["title"] as? String == large
+    #expect(preserved)
+  }
+
   @Test @MainActor func executableExportsLiveSelectionAndClosedDefaultView() async throws {
     _ = NSApplication.shared
     let root = try captureFixture()

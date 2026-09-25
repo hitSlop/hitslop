@@ -21,6 +21,27 @@ class Control extends EventTarget {
 }
 const setting = defineDocument({ volume: s.number({ min: 0, max: 1 }) });
 
+test("browser-truncated text display never deletes undisplayed document text on flush", async () => {
+  const schema = defineDocument({ title: s.text() });
+  const doc = await Document.open(schema, new MemoryStore(), { title: "abcdef" });
+  const control = new Control();
+  control.type = "text";
+  let displayed = "";
+  // HTML inputs can cap programmatic values; this models the observable DOM boundary.
+  Object.defineProperty(control, "value", { get: () => displayed, set: (value: string) => displayed = value.slice(0, 3) });
+  const binding = bindText(control as any, doc.fields.title);
+  expect(control.value).toBe("abc");
+  await doc.flush();
+  expect(doc.current.title).toBe("abcdef");
+  control.value = "xbc";
+  control.dispatchEvent(new Event("input"));
+  expect(doc.current.title).toBe("xbcdef");
+  await doc.flush();
+  expect(doc.current.title).toBe("xbcdef");
+  binding.destroy();
+  await doc.close();
+});
+
 test("range change commits before flush and autosaves; unchanged controls do not write", async () => {
   const store = new MemoryStore();
   const doc = await Document.open(setting, store, { volume: 0 });

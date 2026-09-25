@@ -4,6 +4,27 @@ description: Inspect and edit a hitSlop v1 document with the local CLI.
 ---
 Read manifest.json first. Only hitslop-v1 is supported.
 Use slop schema PATH and slop get PATH, then slop apply PATH --op JSON or slop batch PATH --ops JSON.
+
+For complete JSON transfer (runtime revision 2+), export with `slop get SOURCE`
+and read both schemas. Map source data to the destination schema yourself; the
+CLI never guesses mappings. Create with `slop import NEW --from TEMPLATE --file
+mapped.json`. Replace with `slop get DEST --snapshot`, then `slop import DEST
+--replace --if-version TOKEN --file mapped.json`, using that snapshot's version.
+The input is the complete root data object, not `{data,schema,version}`. Missing
+required/unknown fields reject; omitted optional values, record entries and rows
+are deleted. Keep destination `$id` values to retain rows, omit them for fresh
+rows. Creation always uses fresh identities. Rich text accepts plain strings or
+the full `{text,delta}` snapshot. Use `{"$ref":"/groups/0"}` in string fields to
+link to imported rows/tree nodes; pointers address the input and resolve inside
+the transaction. Ordinary strings are literal. Duplicate IDs, cross-collection
+identity reuse and unresolved references reject atomically. Import returns
+`{data,schema,version}` after persistence. Concurrent destination edits reject;
+reread and reconsider the mapping. Do not automatically replay failures.
+Attachments transfer separately using the attachment commands below. To transfer
+attachments into a new document, create a writable template copy first, copy the
+blobs, then import its data using --replace and a fresh snapshot version. Import
+does not replace themes, authored assets or schemas. It has a 16 MiB request/file
+limit and retains the existing 32 MiB checkpoint limit.
 Paths name fields with strings, rows and tree nodes with {"id":"$id from get"}, record entries with {"key":"..."} and scalar list elements with {"index":n}. Never use array indexes as row identity.
 Operations: set (scalars), clear (optional fields, record entries), assign (whole optional objects, record entries, scalar lists), text.replace, text.splice {index,delete,insert}, text.mark/text.unmark {start,end,key,value} for declared rich text marks, insert {value, destination {before|after|parent}} for rows and tree nodes or {value,index} for scalar lists, remove {id} or {index,count}, move {id,destination} or {from,to}, increment {value} for counters. Read slop schema to see which kind each field is; prefer batch for several related edits.
 

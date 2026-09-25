@@ -43,7 +43,7 @@ export function bindText(element: HTMLInputElement | HTMLTextAreaElement, initia
   let stopDraft: (() => void) | undefined;
   let unavailable = false;
   let previousDisabled = element.disabled;
-  /** The document value the element last reflected. */
+  /** Actual DOM baseline: browsers may truncate or normalize assigned values. */
   let base = "";
   const read = () => {
     const value = observer.source.read(observer.path);
@@ -73,7 +73,7 @@ export function bindText(element: HTMLInputElement | HTMLTextAreaElement, initia
     // Leave the DOM's active composition draft alone until compositionend.
     if (composing) return;
     if (element.value !== value) render(value);
-    base = value;
+    base = element.value;
   };
   const write = () => {
     const current = read();
@@ -90,7 +90,7 @@ export function bindText(element: HTMLInputElement | HTMLTextAreaElement, initia
     if (edit.delete || edit.insert) handle.splice(edit.index, edit.delete, edit.insert);
     const merged = read() ?? element.value;
     if (merged !== element.value) render(merged);
-    base = merged;
+    base = element.value;
   };
   const input = (event: Event) => {
     if (!composing && !(event as InputEvent).isComposing) write();

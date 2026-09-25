@@ -9,9 +9,9 @@ Validate untrusted Foundation dictionaries before mapping them into generated ty
 Operation contents and document state remain opaque to native code.
 
 ```sh
-bun add @hitslop/schema@1.0.0
+bun add @hitslop/schema@1.1.0
 ```
 
 See the [authoring guide](https://github.com/hitSlop/hitslop/blob/master/docs/guides/authoring.md) and [release guide](https://github.com/hitSlop/hitslop/blob/master/docs/guides/releasing.md).
 
-Part of the hitSlop SDK 1.0.0, runtime contract 1 / revision 1. MIT licensed.
+Part of the hitSlop SDK 1.1.0, runtime contract 1 / revision 2. MIT licensed.

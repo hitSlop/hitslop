@@ -11,7 +11,7 @@ import HitSlopWasm
     commandName: "hitslop-native", abstract: "Read, edit, open, and export hitSlop documents.",
     subcommands: [
       RuntimeInfo.self, Theme.self, Attachments.self, Screenshot.self, Export.self,
-      Get.self, Schema.self,
+      Get.self, Schema.self, ImportJSON.self,
       Apply.self, Batch.self, Compact.self, Create.self, Open.self,
     ] + debugCommands)
 
@@ -76,7 +76,8 @@ struct DocumentArguments: ParsableArguments {
 }
 struct Get: AsyncParsableCommand {
   @OptionGroup var document: DocumentArguments
-  @MainActor func run() async throws { try await printDocument("get", document) }
+  @Flag var snapshot = false
+  @MainActor func run() async throws { try await printDocument(snapshot ? "snapshot" : "get", document) }
 }
 struct Schema: AsyncParsableCommand {
   @OptionGroup var document: DocumentArguments
