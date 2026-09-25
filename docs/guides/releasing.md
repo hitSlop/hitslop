@@ -4,11 +4,11 @@ Launch includes the signed/notarized Apple silicon Mac app and matching `@hitslo
 
 ## Release sequence
 
-The initial v1 SDK release is npm **1.0.0**, paired with Mac **1.0.6 (24)** and tag `macos-v1.0.6`. The Mac and npm version sequences are independent. Runtime contract **1**, revision **1** is already sealed; keep its existing ledger checksum unchanged.
+The current release candidate is npm **1.1.0**, paired with Mac **1.0.7 (25)** and tag `macos-v1.0.7`. It adds versioned JSON import with runtime contract **1**, revision **2**. The Mac and npm version sequences are independent. Mac 1.0.6 (24) shipped revision 1; preserve its existing runtime ledger checksum and template specimens.
 
 1. Finish release preparation and commit a clean tree. Check package versions, dependency pins, Apple version/build, and runtime provenance together. Confirm the intended npm versions and Mac tag have not already shipped.
 2. Run the complete local gate below on that final commit and record manual acceptance results. A report from a dirty checkout or another commit does not validate the release candidate.
-3. Push `master` and wait for `fast`, `native`, and the full-history secret scan to pass for the exact commit. Optionally run the Release macOS workflow manually on `master` as a dry run of the complete gate. Tag that commit `macos-v1.0.6` and push the tag; this triggers `.github/workflows/macos-release.yml`.
+3. Push `master` and wait for `fast`, `native`, and the full-history secret scan to pass for the exact commit. Optionally run the Release macOS workflow manually on `master` as a dry run of the complete gate. Tag that commit `macos-v1.0.7` and push the tag; this triggers `.github/workflows/macos-release.yml`.
 4. Monitor signing, notarization, Gatekeeper verification, and GitHub Release publication. Verify downloaded artifacts and complete signed-install/Sparkle acceptance. Retain the release record and checksums.
 5. Download and verify the release's tested npm tarballs, then publish schema, document, and CLI in that order using the procedure below. Finish with fresh registry consumer checks.
 

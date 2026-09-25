@@ -1,12 +1,12 @@
 # Runtime versioning
 
-## Current development revision
+## Current runtime revision
 
 SDK 1.1.0 targets contract 1, revision 2. It adds versioned JSON snapshots and
 atomic JSON import through the shared runtime, without changing SQLite format 1
 or the existing operation/handle contracts. Revision-1 readers must continue to
 read imported updates and checkpoints. The revision-1 release record and bytes
-remain sealed; revision 2 must be sealed separately when released. Ship the
+remain sealed. Revision 2 is sealed separately for Mac 1.0.7 (25). Ship the
 matching signed app before publishing the 1.1.0 npm packages.
 
 ## Initial release baseline

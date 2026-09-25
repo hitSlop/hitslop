@@ -1,0 +1,29 @@
+{
+  "format": 1,
+  "root": {
+    "kind": "object",
+    "properties": {
+      "title": {
+        "kind": "text"
+      },
+      "content": {
+        "kind": "text"
+      },
+      "mode": {
+        "kind": "enum",
+        "values": [
+          "inplace",
+          "split",
+          "preview"
+        ]
+      },
+      "theme": {
+        "kind": "enum",
+        "values": [
+          "paper",
+          "dark"
+        ]
+      }
+    }
+  }
+}
