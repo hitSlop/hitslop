@@ -10,6 +10,7 @@ import { loadRuntime } from "../../../scripts/v1/compatibility-worker";
 import { SQLiteStore } from "../../document/test-support/sqlite";
 import { defineDocument, s } from "../../document/src/schema";
 import { digest, releases, repository } from "../../../scripts/v1/runtime-artifacts";
+import identity from "../../document/src/runtime-identity.json";
 
 test("historical readers open JSON-imported updates and checkpoints with preserved rich text and references", async () => {
   const root = await mkdtemp(join(tmpdir(), "hitslop-import-readers-"));
@@ -71,12 +72,12 @@ test("historical readers open JSON-imported updates and checkpoints with preserv
         await readerStore.close();
       }
       for (const release of (await releases()).filter((r) => r.runtimeContract === 1)) {
-        const historical = join(
-          repository,
-          "generated/v1/runtime-releases",
-          `1-${release.runtimeRevision}`,
-          "1",
-        );
+        // Fresh runners restore older readers only. The newly sealed current
+        // revision comes from this candidate build and must match its ledger seal.
+        const historical = release.runtimeContract === identity.runtimeContract &&
+          release.runtimeRevision === identity.runtimeRevision
+          ? join(runtimes, "1")
+          : join(repository, "generated/v1/runtime-releases", `1-${release.runtimeRevision}`, "1");
         expect(await digest(historical)).toBe(release.sha256);
         const copy = join(root, `${phase}-reader-${release.runtimeRevision}.slop`);
         await cp(readerSource, copy, { recursive: true });

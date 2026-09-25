@@ -380,6 +380,10 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
       throw error
     }
     stopDiscovery()
+    // Native callbacks may run while storage releases its writer lease below.
+    // Retire the session before tearing down the renderer they would access.
+    closed = true
+    isReady = false
     destroyWebView()
     await withCheckedContinuation { continuation in
       storage.queue.async { [storage] in
@@ -387,8 +391,6 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
         continuation.resume()
       }
     }
-    closed = true
-    isReady = false
     completeWaiters(.failure(failure("Document closed")))
   }
 

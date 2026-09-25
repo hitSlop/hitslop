@@ -62,7 +62,18 @@ extension LoroClientTests {
     #expect(
       try Data(contentsOf: root.appendingPathComponent("state/theme.json"))
         == Data(contentsOf: duplicate.appendingPathComponent("state/theme.json")))
-    try await controller.session.finish()
+    // Pointer sampling continues while asynchronous close releases storage. A ready
+    // session must never expose an already-destroyed renderer to the native toolbar.
+    var finished = false
+    let close = Task { @MainActor in
+      defer { finished = true }
+      try await controller.session.finish()
+    }
+    while !finished {
+      controller.refreshToolbarHover()
+      await Task.yield()
+    }
+    try await close.value
     let reopened = try await DocumentCommand.run(method: "theme.get", url: root)
     #expect(reopened == theme)
     _ = try await DocumentCommand.run(method: "theme.reset", url: root, themeToken: "accent")
