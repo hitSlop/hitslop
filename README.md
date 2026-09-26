@@ -11,7 +11,8 @@ Your agent can work with the data, too. It can read changes you make in the app,
 macOS 14+ · Apple silicon · No account required
 
 <p align="center">
-  <img src="apps/landing/public/assets/desktop-hero-current.png" width="900" alt="A colorful desktop illustration of tiny apps: a music player, habit tracker, recipe, notes, focus timer, invoice, and pocket-sized pet.">
+  <a href="apps/landing/public/assets/desktop-hero.mp4"><img src="apps/landing/public/assets/desktop-hero-poster.jpg" width="900" alt="A Mac desktop full of open slops: a Winamp-style music player, a desktop pet, a focus timer, flashcards, a doodle board, a koi pond, Wordle, and school planners."></a>
+  <br><sub>▶ <a href="apps/landing/public/assets/desktop-hero.mp4">Watch the 30-second tour</a></sub>
 </p>
 
 ## Small enough to be yours

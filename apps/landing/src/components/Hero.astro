@@ -51,11 +51,24 @@ const categories = [
   { emoji: "🖥️", label: "Presentations" },
   { emoji: "🖼️", label: "Moodboards" },
 ];
-const heroPoster = "/assets/desktop-hero-current.png";
+const heroPoster = "/assets/desktop-hero-poster.jpg";
 const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/assets/desktop-hero.mp4" : null;
 ---
 
     <script>
+      const play = document.querySelector<HTMLButtonElement>("[data-hero-play]");
+      const videoDialog = document.querySelector<HTMLDialogElement>("#hero-video-dialog");
+      if (play && videoDialog) {
+        const video = videoDialog.querySelector("video")!;
+        play.addEventListener("click", () => {
+          videoDialog.showModal();
+          video.currentTime = 0;
+          void video.play().catch(() => {});
+        });
+        videoDialog.querySelector(".hero-video-close")!.addEventListener("click", () => videoDialog.close());
+        videoDialog.addEventListener("click", (event) => { if (event.target === videoDialog) videoDialog.close(); });
+        videoDialog.addEventListener("close", () => { video.pause(); play.focus(); });
+      }
       const shelf = document.querySelector<HTMLElement>("[data-category-list]");
       const shelfFrame = document.querySelector<HTMLElement>("[data-category-shelf]");
       const pause = document.querySelector<HTMLButtonElement>("[data-shelf-pause]");
@@ -144,8 +157,13 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
   </div>
   <figure class="hero-picture">
     <div class="hero-media-frame">
-      <img class="hero-poster" src={heroPoster} alt="A colorful Mac desktop with a music player, habit tracker, recipe, notes, focus timer, invoice, and tiny pet app" width="1448" height="1086" fetchpriority="high" />
-      {heroVideo && <video class="hero-video hero-poster" autoplay muted loop playsinline poster={heroPoster} aria-hidden="true"><source src={heroVideo} type="video/mp4" /></video>}
+      <img class="hero-poster" src={heroPoster} alt="A Mac desktop full of open slops: a Winamp-style music player, a desktop pet, a focus timer, flashcards, a doodle board, a koi pond, Wordle, and school planners" width="1920" height="1080" fetchpriority="high" />
+      {heroVideo && (
+        <button class="hero-play" type="button" data-hero-play aria-haspopup="dialog" aria-controls="hero-video-dialog">
+          <span class="hero-play-disc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5Z" /></svg></span>
+          <span class="hero-play-label">Watch it in action <span class="hero-play-time">0:30</span></span>
+        </button>
+      )}
     </div>
     <svg class="hero-stars-top hero-doodle" viewBox="0 0 36 75" aria-hidden="true"><path d="M21 3c0 18 4 23 12 25-8 2-12 8-12 23-1-15-5-21-13-23C16 25 20 20 21 3Z" /><path stroke="#f443a1" d="M8 48c0 8 2 11 7 12-5 2-7 4-7 12-1-8-3-10-7-12 4-1 6-4 7-12Z" /></svg>
     <svg class="hero-stars-bottom hero-doodle" viewBox="0 0 26 38" aria-hidden="true"><path d="M13 2c0 11 3 15 11 17-8 2-11 6-11 17C12 25 9 21 2 19 9 17 12 13 13 2Z" /></svg>
@@ -153,6 +171,12 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
       <svg class="hero-note-arrow hero-arrow" viewBox="0 0 70 50"><path d="M8 40c30 3 45-11 48-33M46 18 57 5l4 18" /></svg>
     </figcaption>
   </figure>
+  {heroVideo && (
+    <dialog class="hero-video-dialog" id="hero-video-dialog" aria-label="hitSlop in action">
+      <button class="hero-video-close" type="button" aria-label="Close video"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+      <video controls playsinline preload="none" poster={heroPoster} width="1920" height="1080"><source src={heroVideo} type="video/mp4" /></video>
+    </dialog>
+  )}
   <div class="hero-shelf" data-category-shelf aria-label="Things you can make with hitSlop">
     <button class="hero-shelf-button" type="button" data-shelf-direction="-1" aria-label="Scroll categories left" aria-controls="category-list"><svg class="hero-control-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7" /></svg></button>
     <ul class="hero-category-list" id="category-list" data-category-list>
@@ -559,7 +583,7 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
 
 @media screen and (min-width: 1100px) {
   .hero-picture {
-    width: min(100%, calc((100svh - 185px) * 1.3333));
+    width: min(100%, calc((100svh - 185px) * 1.7778));
   }
 }
 
@@ -571,7 +595,7 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
 
 .hero-media-frame {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: 28px;
   border: 2px solid #ffffffdd;
@@ -591,15 +615,111 @@ const heroVideo = existsSync(resolve("public/assets/desktop-hero.mp4")) ? "/asse
   object-fit: cover;
 }
 
-.hero-video {
+.hero-play {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: clamp(12px, 3%, 24px);
+  border: 0;
+  background: linear-gradient(180deg, transparent 55%, #10132c33);
+  color: #10132c;
+  font: inherit;
+  cursor: pointer;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hero-video {
-    display: none;
-  }
+.hero-play-disc {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: clamp(64px, 12%, 96px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fffffff0;
+  box-shadow: 0 12px 34px #2a1b6a55, 0 0 0 8px #ffffff55;
+  transform: translate(-50%, -50%);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.hero-play-disc svg {
+  width: 42%;
+  margin-left: 8%;
+  fill: #6c3fd6;
+}
+
+.hero-play:hover .hero-play-disc,
+.hero-play:focus-visible .hero-play-disc {
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow: 0 16px 40px #2a1b6a66, 0 0 0 12px #ffffff77;
+}
+
+.hero-play:focus-visible {
+  outline: 3px solid #6c3fd6;
+  outline-offset: -3px;
+}
+
+.hero-play-label {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #fffffff0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hero-play-time {
+  margin-left: 6px;
+  color: #6b6890;
+  font-weight: 500;
+}
+
+.hero-video-dialog {
+  width: min(1280px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #10132c;
+  box-shadow: 0 30px 90px #10132c88;
+}
+
+.hero-video-dialog::backdrop {
+  background: #10132cb3;
+  backdrop-filter: blur(6px);
+}
+
+.hero-video-dialog video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.hero-video-close {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: #10132ccc;
+  color: #fff;
+  cursor: pointer;
+}
+
+.hero-video-close svg {
+  width: 20px;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  fill: none;
 }
 
 .hero-sticky-note {
