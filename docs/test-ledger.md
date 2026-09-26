@@ -267,3 +267,25 @@ assertions are added.
 |---|---|---|---|---|
 | Help/version terminate without executing skills maintenance | Source-only CLI copy with installed dependencies and no generated skills returns exit 0, help/version output, and empty stderr, including the skill alias and update help | Bun CLI | Existing case used the developer checkout and could inherit generated skills | EXTEND existing command test; baseline fails with SkillSourceUnavailableError after printing help; run link maintenance only after completed skills actions |
 | Root `--version` and `-v` identify the installed CLI | Output is exactly `slop v` followed by the package metadata version | Bun CLI | Existing help/version case only required output containing `slop`, allowing help to conceal the version | EXTEND existing case; baseline prints help instead of version; register version before the branch help fallback |
+
+## Guided CLI creation and Crust 0.4 skills
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Successful init emits valid metadata, rejects invalid flags before writes, and retains deterministic unattended defaults ([commands](../packages/cli/tests/commands.test.ts)) | Parse emitted manifests through the independent platform validator; explicit expected metadata and absent invalid destinations | Bun CLI | Existing build case covers only the valid directory `starter` | EXTEND; regressions failed before their fixes because `init a` returned success with an invalid manifest and a 90-character directory name exceeded the title limit |
+| Interactive brief/author answers reach BRIEF.md and the manifest; cancelling creation leaves no destination ([init](../packages/cli/tests/init.test.ts)) | Actual prompt IO supplies the brief and author; title/categories/description keep their agent-replaceable placeholders; Ctrl+C at the author prompt leaves no project | Bun terminal | Subprocess command cases run non-interactively; category limits are owned by the flag cases | ADD; exercises the user input boundary without prompt-frame snapshots |
+| Agent selection hands off the project without shell evaluation or automatic permission changes ([agents](../packages/cli/tests/agents.test.ts)) | Fake executables report actual argv/cwd; known/custom prompt arguments, brief instructions, no launch for opt-out/CI/non-TTY, and retained project after failure | Bun process | — | ADD; no real agent or account is invoked |
+| Skills maintenance respects scope, survives source eviction, and supports repair/uninstall/aliases ([skills](../packages/cli/tests/skills.test.ts)) | Real CLI entrypoint leaves the other scope's link unchanged, guides remain readable after deleting the package, repair restores dangling links, uninstall removes only its scope | Bun CLI | Low-level Crust link test still owns conflict refusal and relative/global link formats | EXTEND app-only harness to shipped entrypoint; original cache hook demonstrably rewrote a global link during project-scoped installation |
+| Update notices cannot contaminate machine output or fail offline work ([updates](../packages/cli/tests/updates.test.ts)) | Isolated registry stub sees no requests for piped/CI/opt-out runs; successful JSON output, one cached interactive notice, and successful offline commands | Bun process | — | ADD; fault injection stays at registry I/O in disposable subprocesses |
+
+Existing skill link, deterministic artifact, and help/version assertions remain.
+No consequential coverage was removed. The two bug regressions were observed
+failing for the intended reasons before their production fixes, as did the
+long-directory title fallback.
+
+Validation: `bun run check`, `bun run test` (126 tests, 161 compatibility replay
+cases, and 51 bundled template open/reopen checks), `bun run packages:pack`,
+`bun run test:packed`, `bun run landing:check`, and `bun run landing:build` passed.
+The interactive init cases also passed with the enclosing runner marked as CI.
+Agent launch tests use disposable executables, not real provider sessions.
+Native runtime sources and sealed release records were not changed.

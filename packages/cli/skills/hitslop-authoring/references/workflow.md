@@ -1,6 +1,6 @@
 # Authoring workflow
 
-Read manifest.json, then edit schema.ts, initial.ts, theme.ts, and the UI source.
+Read manifest.json, AGENTS.md, and BRIEF.md, then edit schema.ts, initial.ts, theme.ts, and the UI source.
 Run the generated project's `bun run check` and `bun run dev`; refresh resets
 preview state and source edits require restarting preview. In the repository,
 use `bun slop COMMAND SOURCE`.

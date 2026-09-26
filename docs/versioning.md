@@ -9,6 +9,21 @@ read imported updates and checkpoints. The revision-1 release record and bytes
 remain sealed. Revision 2 is sealed separately for Mac 1.0.7 (25). Ship the
 matching signed app before publishing the 1.1.0 npm packages.
 
+## App releases, runtime revisions, and contracts
+
+App versions and runtime identities are separate. Multiple Mac app releases can
+ship the same runtime contract/revision and identical sealed bytes. An app release
+alone does not require a runtime revision or a new ledger entry. Changes outside
+the runtime that preserve its contract can reuse the existing runtime.
+
+Compatible runtime byte changes require a new revision; changes that cannot
+preserve the existing contract require a new contract. Each consumer bundles one
+revision per supported contract, not every historical revision. Older revisions
+are preserved for compatibility testing. A GitHub Release may attach the same
+runtime archive as an earlier app release without creating a new runtime identity.
+See the [runtime directory guide](../runtimes/README.md) for source, generated
+resources, archived bytes, and how the host loads them.
+
 ## Initial release baseline
 
 The initial v1 release uses contract 1, revision 1, and SDK 1.0.0. Its sealed bytes are recorded in `runtimes/releases.json` and must remain immutable. Subsequent runtime changes follow the revision and compatibility rules below. The former 1/1 hash retained locally under `generated/v1/prerelease-baselines/1-1` was an internal development baseline, not a published compatibility gate. Existing conformance fixtures remain regression tests. Ordinary builds never modify the ledger.

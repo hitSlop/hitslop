@@ -1,55 +1,15 @@
-import { resolve, join, basename } from "node:path";
-import { mkdtemp, rm, cp, mkdir, readFile, writeFile, stat } from "node:fs/promises";
-import metadata from "../package.json";
+import { resolve, join } from "node:path";
+import { mkdtemp, rm, mkdir, readFile } from "node:fs/promises";
 import type { SlopManifest } from "@hitslop/schema";
 import { tmpdir, homedir } from "node:os";
-import { buildProject, runtimeDirectory, cliRoot } from "./build";
+import { buildProject, runtimeDirectory } from "./build";
 import { buildTemplate, prepareRenderer, installTemplate } from "./template";
 export async function runAuthoring(
-  command: "init" | "build" | "register" | "dev",
+  command: "build" | "register" | "dev",
   target: string,
   port = 5173,
 ) {
-  if (command === "init") {
-    const source = join(cliRoot, "templates/checklist");
-    const destination = resolve(target);
-    if (
-      await stat(destination).then(
-        () => true,
-        () => false,
-      )
-    )
-      throw new Error("Choose a new source directory");
-    await cp(source, destination, { recursive: true, errorOnExist: true, force: false });
-    const name =
-      basename(destination)
-        .toLowerCase()
-        .replace(/[^a-z0-9-]+/g, "-")
-        .replace(/^-+|-+$/g, "") || "my-slop";
-    const project = JSON.parse(await readFile(join(destination, "package.json"), "utf8"));
-    project.name = name;
-    project.dependencies["@hitslop/document"] = metadata.version;
-    project.devDependencies = { "@hitslop/cli": metadata.version };
-    project.scripts = {
-      dev: "slop dev .",
-      check: "slop check .",
-      build: "slop build .",
-      register: "slop register .",
-    };
-    await writeFile(join(destination, "package.json"), JSON.stringify(project, null, 2) + "\n");
-    const manifest = JSON.parse(await readFile(join(destination, "manifest.json"), "utf8"));
-    manifest.slug = name;
-    manifest.title = basename(destination);
-    await writeFile(join(destination, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
-    await cp(join(cliRoot, "skills"), join(destination, ".agents/skills"), { recursive: true });
-    await writeFile(
-      join(destination, "AGENTS.md"),
-      "Read manifest.json, .agents/skills/hitslop-authoring/SKILL.md, and .agents/skills/hitslop-design/SKILL.md first. Choose a visual direction suited to the slop's purpose; the checklist is a functional starting point whose layout and appearance should be adapted to the task. Use plain CSS, defineTheme tokens, and typed document handles. Run bun run check and bun run build.\n",
-    );
-    console.log(
-      `Created ${destination}. Install its dependencies with bun install, then slop dev ${destination}.`,
-    );
-  } else if (command === "build") {
+  if (command === "build") {
     console.log(await buildTemplate(target, await prepareRenderer()));
   } else if (command === "register") {
     const output = await buildTemplate(target, await prepareRenderer());

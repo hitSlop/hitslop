@@ -56,6 +56,12 @@ The first command only lists new specimens. `--write` adds immutable `tests/comp
 
 Restore all older ledger runtimes with `bun run compatibility:restore` before validating on a fresh checkout. CI supplies an independent previous commit via `HITSLOP_COMPAT_BASE` to detect deleted or rewritten history, including a fixture and its hash changed together.
 
+An app release can reuse an existing sealed runtime; it does not automatically
+require a new runtime revision. The release workflow attaches an archive of the
+selected runtime even when earlier app releases shipped the same bytes. See the
+[runtime directory guide](../../runtimes/README.md) for storage locations and
+restoration from GitHub Releases.
+
 Inspect generated changes. Never regenerate preserved compatibility fixtures or rewrite release hashes to mask drift. See [versioning](../versioning.md). For a new runtime revision, run `bun scripts/v1/runtime-release.ts` after compatibility validation and commit the new ledger entry before the final release gate. For an already sealed runtime, this command verifies and archives the same bytes without changing the ledger. Retain `generated/v1/runtime-releases/<contract>-<revision>/` permanently with release artifacts; the tagged workflow includes it in the GitHub Release. Restore historical releases for cross-revision tests. Ordinary builds do not seal releases. Validate the final commit, push master and wait for CI, then tag that exact commit. The release workflow rejects an unsealed runtime or a tag that disagrees with the Apple project version.
 
 ## Package the Mac app

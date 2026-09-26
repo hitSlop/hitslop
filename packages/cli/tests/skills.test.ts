@@ -9,6 +9,8 @@ import {
   writeFile,
   access,
   realpath,
+  cp,
+  lstat,
 } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -108,22 +110,25 @@ test("Crust installs and repairs links without replacing conflicting directories
   }
 });
 
-test("public skills commands install all guides and update existing links only", async () => {
+// The prior app-only harness omitted the shipped cache hook. Exercise the real
+// entrypoint: scope isolation and survival after package eviction are user contracts.
+test("public skills commands preserve scope, survive eviction, repair and uninstall", async () => {
   const root = await mkdtemp(join(tmpdir(), "hsl-skill-cli-"));
   try {
     const home = join(root, "home"),
       project = join(root, "project");
     await mkdir(home);
     await mkdir(project);
-    await writeFile(join(root, "package.json"), '{"type":"module"}');
-    await writeFile(
-      join(root, "cli.ts"),
-      `import { app } from ${JSON.stringify(resolve("packages/cli/src/app.ts"))}; await app.execute();`,
-    );
-    const skills = join(root, ".crust/root/skills");
+    const bundle = join(root, "bundle");
+    await mkdir(bundle);
+    await cp("packages/cli/src", join(bundle, "src"), { recursive: true });
+    await cp("packages/cli/package.json", join(bundle, "package.json"));
+    await cp("packages/cli/skills", join(bundle, "skills"), { recursive: true });
+    await symlink(resolve("packages/cli/node_modules"), join(bundle, "node_modules"));
+    const skills = join(bundle, ".crust/root/skills");
     await buildSkills(skills);
     const run = async (...args: string[]) => {
-      const child = Bun.spawn([process.execPath, join(root, "cli.ts"), ...args], {
+      const child = Bun.spawn([process.execPath, join(bundle, "src/cli.ts"), ...args], {
         cwd: project,
         env: { ...process.env, HOME: home, PATH: "/usr/bin:/bin" },
         stdout: "pipe",
@@ -140,7 +145,12 @@ test("public skills commands install all guides and update existing links only",
     };
     await run("skills", "update", "--scope", "global");
     expect(await Bun.file(join(home, ".agents/skills/hitslop-cli/SKILL.md")).exists()).toBe(false);
+    const globalLink = join(home, ".agents/skills/hitslop-cli");
+    await mkdir(join(home, ".agents/skills"), { recursive: true });
+    const packagedTarget = await realpath(join(skills, "hitslop-cli"));
+    await symlink(packagedTarget, globalLink);
     await run("skills", "--all", "--scope", "project");
+    expect(await readlink(globalLink)).toBe(packagedTarget);
     for (const name of [
       "hitslop",
       "hitslop-authoring",
@@ -149,12 +159,24 @@ test("public skills commands install all guides and update existing links only",
       "hitslop-cli",
     ])
       expect(await readlink(join(project, ".agents/skills", name))).not.toStartWith("/");
-    await run("skill", "--all", "--scope", "global");
+    const projectLink = join(project, ".agents/skills/hitslop-cli");
+    const projectTarget = await readlink(projectLink);
+    await run("skill", "install", "--all", "--scope", "global");
+    expect(await readlink(projectLink)).toBe(projectTarget);
     const link = join(home, ".agents/skills/hitslop-cli");
     await rm(link);
     await symlink(join(home, ".hitslop/skills/hitslop-cli"), link);
-    await run("skills", "update", "--scope", "global");
-    expect(await realpath(link)).toBe(await realpath(join(skills, "hitslop-cli")));
+    await run("skills", "repair", "--scope", "global");
+    expect(await realpath(link)).toContain("/.hitslop/cli/");
+    await rm(link);
+    await symlink(join(home, ".hitslop/skills/hitslop-cli"), link);
+    await run("skill", "update", "--scope", "global");
+    expect(await realpath(link)).toContain("/.hitslop/cli/");
+    await run("skills", "uninstall", "--all", "--scope", "global");
+    expect(await lstat(link).catch(() => undefined)).toBeUndefined();
+    expect(await readlink(projectLink)).toBe(projectTarget);
+    await rm(bundle, { recursive: true, force: true });
+    expect(await readFile(join(projectLink, "SKILL.md"), "utf8")).toContain("name: hitslop-cli");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

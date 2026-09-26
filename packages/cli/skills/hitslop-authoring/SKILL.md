@@ -16,6 +16,23 @@ The host supplies the document SDK and Loro runtime. Do not embed the engine int
 
 Start anywhere with `bunx @hitslop/cli init NAME`, then `cd NAME` and `bun install`. Use the generated `bun run check/dev/build/register` scripts. Bun is the only JavaScript runtime required; build/register need the compatible installed hitSlop Mac app, not Swift or Xcode. Preview state is disposable; rerun dev to rebuild source. Create a writable copy of a built/registered template before editing. Agents use schema/get/apply/batch/compact. Pre-v1 documents are rejected without migration; preserve supported v1 contracts.
 
+For an agent already doing the work, use `init NAME --yes --brief 'What to build'`,
+optionally with `--author`, `--title`, `--description`, and one or two `--category`
+flags. `--slug` overrides the directory-derived slug. Metadata is validated before
+any project files are created. `--yes`, CI, and non-TTY runs never prompt or launch
+another agent. For humans, setup asks for a build brief and author, then offers
+a detected agent CLI, Other CLI, or Finish without launching. Title, description,
+and categories start as placeholders: set them in manifest.json to match what you
+build; the user can edit them later. The chosen agent
+runs in the project with normal permissions and reads `BRIEF.md` and `AGENTS.md`.
+Launch failure keeps the project. Read the brief before adapting the starter.
+
+`slop skills install` adds selected guides and agent links; `skills repair`
+repairs existing links, and `skills uninstall` explicitly removes owned links.
+Bare `skills` means install; `skills update` remains an alias for repair. The
+guides copied into a new project's `.agents/skills` are portable files, not
+managed links, and must be reviewed manually when upgrading the project.
+
 Quick Checklist and Small Expenses are current examples; additional projects are discovered under examples/slops and bundled selection lives in bundled.json. Use plain CSS and defineTheme tokens and each app's own visual identity. Read the bundled hitslop-design references for CSS, presentation, and capture. PNG/PDF export is supported; hosted publishing and catalog are deferred.
 
 Use `<Slop>` from `@hitslop/document/svelte`; optional inline exportView and icon snippets mount only during capture. Keep markup together in App.svelte unless a separate component helps. Build/register generate Quick Look artwork through the native helper, without bundling Loro. Register backs up and replaces an existing stateless master only after a successful complete build.

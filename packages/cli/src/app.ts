@@ -1,6 +1,7 @@
 import { Crust, defineCommand } from "@crustjs/core";
 import { help, version } from "@crustjs/extensions";
 import { skill } from "@crustjs/skills";
+import { SlopCategorySchema } from "@hitslop/schema";
 import metadata from "../package.json";
 
 export const skillExtras = [
@@ -46,29 +47,27 @@ async function forward(
 
 function themeCommand(command: "get" | "set" | "reset") {
   return defineCommand(command, { description: `${command} theme overrides` }, (sub) => {
-    const configured = sub
-      .args(document)
-      .flags(
-        ...(command === "set"
-          ? [
-              {
-                name: "values",
-                type: "string" as const,
-                required: true as const,
-                description: "Theme token values as JSON",
-              },
-            ]
-          : []),
-        ...(command === "reset"
-          ? [
-              {
-                name: "token",
-                type: "string" as const,
-                description: "Token to reset; omit to reset all",
-              },
-            ]
-          : []),
-      );
+    const configured = sub.args(document).flags(
+      ...(command === "set"
+        ? [
+            {
+              name: "values",
+              type: "string" as const,
+              required: true as const,
+              description: "Theme token values as JSON",
+            },
+          ]
+        : []),
+      ...(command === "reset"
+        ? [
+            {
+              name: "token",
+              type: "string" as const,
+              description: "Token to reset; omit to reset all",
+            },
+          ]
+        : []),
+    );
     return configured.action(async ({ args, flags }) => {
       const rest = Object.entries(flags).flatMap(([key, value]) =>
         typeof value === "string" ? [`--${key}`, value] : [],
@@ -90,22 +89,116 @@ export const app = new Crust("slop", {
 })
   .extend(version())
   .extend(help())
-  .add(defineCommand("attachments", { description: "Import, inspect, and export document attachments" }, c => c
-    .add(defineCommand("list", { description: "List attachment IDs and sizes" }, c => c.args(document).action(async ({ args }) => {
-      await (await import("./native")).runNative(["attachments", "list", args.document]);
-    })))
-    .add(defineCommand("import", { description: "Save a file and print its reference as JSON" }, c => c.args(document, { name: "file", type: "string", required: true }).action(async ({ args }) => {
-      await (await import("./native")).runNative(["attachments", "import", args.document, args.file]);
-    })))
-    .add(defineCommand("export", { description: "Export an attachment without overwriting an existing file" }, c => c.args(document, { name: "id", type: "string", required: true }).flags({ name: "output", type: "string", required: true }).action(async ({ args, flags }) => {
-      await (await import("./native")).runNative(["attachments", "export", args.document, args.id, "--output", flags.output]);
-    })))
-  ))
   .add(
-    defineCommand("init", { description: "Create a checklist authoring project" }, (c) =>
-      c.args(source).action(async ({ args }) => {
-        await (await import("./authoring")).runAuthoring("init", args.source);
-      }),
+    defineCommand(
+      "attachments",
+      { description: "Import, inspect, and export document attachments" },
+      (c) =>
+        c
+          .add(
+            defineCommand("list", { description: "List attachment IDs and sizes" }, (c) =>
+              c.args(document).action(async ({ args }) => {
+                await (await import("./native")).runNative(["attachments", "list", args.document]);
+              }),
+            ),
+          )
+          .add(
+            defineCommand(
+              "import",
+              { description: "Save a file and print its reference as JSON" },
+              (c) =>
+                c
+                  .args(document, { name: "file", type: "string", required: true })
+                  .action(async ({ args }) => {
+                    await (
+                      await import("./native")
+                    ).runNative(["attachments", "import", args.document, args.file]);
+                  }),
+            ),
+          )
+          .add(
+            defineCommand(
+              "export",
+              { description: "Export an attachment without overwriting an existing file" },
+              (c) =>
+                c
+                  .args(document, { name: "id", type: "string", required: true })
+                  .flags({ name: "output", type: "string", required: true })
+                  .action(async ({ args, flags }) => {
+                    await (
+                      await import("./native")
+                    ).runNative([
+                      "attachments",
+                      "export",
+                      args.document,
+                      args.id,
+                      "--output",
+                      flags.output,
+                    ]);
+                  }),
+            ),
+          ),
+    ),
+  )
+  .add(
+    defineCommand(
+      "init",
+      {
+        description: "Create an authoring project from the checklist starter",
+        sections: [
+          {
+            title: "Build with your agent",
+            body: "Interactive setup asks what your slop should do and saves it in BRIEF.md. After creation, choose a detected agent CLI, Other CLI to enter an executable and its prompt option, or Finish without launching. The agent starts in the project with BRIEF.md, AGENTS.md, and local hitSlop guidance, using its normal permissions. Launch failure keeps the project. --yes, CI, and non-TTY runs never prompt or launch another agent.",
+          },
+          {
+            title: "Project metadata",
+            body: "Interactive terminals also ask for the author. Title, categories, and description start as the directory name, productivity, and A hitSlop mini app.; the launched agent updates them in manifest.json to match what it builds, and you can edit them there anytime. Flags set any of these explicitly; --category accepts one or two distinct values. An omitted brief uses the description. The slug is derived from the directory name unless --slug is supplied. All metadata is validated before creating files; existing destinations are refused. Project agent guides are portable copies, not links managed by skills repair.",
+          },
+        ],
+      },
+      (c) =>
+        c
+          .args(source)
+          .flags(
+            {
+              name: "brief",
+              type: "string",
+              description: "What the slop should do; saved in BRIEF.md for your agent",
+            },
+            {
+              name: "title",
+              type: "string",
+              description: "App title (defaults to directory name)",
+            },
+            {
+              name: "slug",
+              type: "string",
+              description: "App slug: 2–64 lowercase letters/digits with single hyphens",
+            },
+            {
+              name: "category",
+              type: "string",
+              multiple: true,
+              choices: SlopCategorySchema.enum,
+              description: "Catalog category; repeat for a second category",
+            },
+            { name: "author", type: "string", description: "Author name (default: Anonymous)" },
+            {
+              name: "description",
+              type: "string",
+              description: "App description (default: A hitSlop mini app.)",
+            },
+            {
+              name: "yes",
+              type: "boolean",
+              description: "Skip prompts and agent launch; use defaults for missing metadata",
+            },
+          )
+          .action(async ({ args, flags, stdout }) => {
+            const destination = await (await import("./init")).initProject(args.source, flags);
+            stdout(`Created ${destination}. Run bun install in that directory, then bun run dev.`);
+            await (await import("./agents")).offerAgentLaunch(destination, flags.yes);
+          }),
     ),
   )
   .add(
@@ -167,22 +260,73 @@ export const app = new Crust("slop", {
   )
   .add(
     defineCommand("get", { description: "Print current document state as JSON" }, (c) =>
-      c.args(document).flags({ name: "snapshot", type: "boolean", description: "Include schema and a version token for replacement" })
+      c
+        .args(document)
+        .flags({
+          name: "snapshot",
+          type: "boolean",
+          description: "Include schema and a version token for replacement",
+        })
         .action(({ args, flags }) => forward("get", args.document, flags)),
     ),
   )
-  .add(defineCommand("import", { description: "Import complete JSON data into a new or existing document", sections: [retrySection] }, c =>
-    c.args(document).flags(
-      { name: "file", type: "string", required: true, description: "JSON file in the destination schema" },
-      { name: "from", type: "string", description: "Create a new document from this template" },
-      { name: "replace", type: "boolean", description: "Replace existing data, preserving matching row IDs" },
-      { name: "if-version", type: "string", description: "Destination version from get --snapshot; required with --replace" },
-    ).action(({ args, flags }) => {
-      if (Boolean(flags.from) === Boolean(flags.replace) || (flags.replace ? !flags["if-version"] : flags["if-version"] !== undefined))
-        throw new Error("Use --from TEMPLATE or --replace --if-version TOKEN");
-      return forward("import", args.document, flags);
-    }),
-  ))
+  .add(
+    defineCommand(
+      "import",
+      {
+        description: "Import complete JSON data into a new or existing document",
+        sections: [
+          {
+            title: "Complete data",
+            body: "Read the destination schema first and map the input explicitly. --file contains the complete root data object, not a patch or {data,schema,version} envelope. Missing required fields and unknown fields reject atomically. Replacement deletes omitted optional values, record entries, and rows; input order is authoritative.",
+          },
+          {
+            title: "Identity and concurrency",
+            body: 'Use --from TEMPLATE to create a new document with fresh row/tree identities, or --replace --if-version TOKEN using the destination\'s get --snapshot version. During replacement, retain destination $id values to preserve existing rows; omit IDs for fresh rows. Duplicate IDs and reuse across collections reject. Explicit {$ref:"/groups/0"} values in string fields resolve imported row/tree IDs; ordinary strings stay literal. Concurrent edits reject: reread the snapshot and reconsider the mapping.',
+          },
+          {
+            title: "Attachments and results",
+            body: "Import returns {data,schema,version} after persistence. JSON carries attachment references only; transfer blobs separately with attachments export/import. Import preserves existing blobs, theme overrides, schemas, and authored assets. For a new document with attachments, create a writable template copy, transfer blobs, then use version-checked replacement.",
+          },
+          retrySection,
+        ],
+      },
+      (c) =>
+        c
+          .args(document)
+          .flags(
+            {
+              name: "file",
+              type: "string",
+              required: true,
+              description: "JSON file in the destination schema",
+            },
+            {
+              name: "from",
+              type: "string",
+              description: "Create a new document from this template",
+            },
+            {
+              name: "replace",
+              type: "boolean",
+              description: "Replace existing data, preserving matching row IDs",
+            },
+            {
+              name: "if-version",
+              type: "string",
+              description: "Destination version from get --snapshot; required with --replace",
+            },
+          )
+          .action(({ args, flags }) => {
+            if (
+              Boolean(flags.from) === Boolean(flags.replace) ||
+              (flags.replace ? !flags["if-version"] : flags["if-version"] !== undefined)
+            )
+              throw new Error("Use --from TEMPLATE or --replace --if-version TOKEN");
+            return forward("import", args.document, flags);
+          }),
+    ),
+  )
   .add(
     defineCommand(
       "apply",

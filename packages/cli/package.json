@@ -6,15 +6,17 @@
     "slop": "src/cli.ts"
   },
   "dependencies": {
-    "@crustjs/core": "0.3.3",
-    "@crustjs/extensions": "0.3.3",
-    "@crustjs/skills": "0.3.3",
+    "@crustjs/core": "0.4.1",
+    "@crustjs/extensions": "0.4.1",
+    "@crustjs/prompts": "0.2.3",
+    "@crustjs/skills": "0.4.1",
     "@hitslop/document": "1.1.0",
     "@hitslop/schema": "1.1.0",
     "esbuild": "^0.28.2",
     "svelte": "5.57.1",
-    "typescript": "5.9.2",
-    "svelte-check": "^4.7.6"
+    "svelte-check": "^4.7.6",
+    "typebox": "^1.3.32",
+    "typescript": "5.9.2"
   },
   "publishConfig": {
     "access": "public"

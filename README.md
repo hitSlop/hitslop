@@ -22,7 +22,7 @@ Those are good reasons to make software.
 
 hitSlop is built for tools with one clear job and a little character. Start with a template, or ask your coding agent to make the thing you keep wishing existed. Give it the fields you need, the colors you like, and a window that fits the job. It can feel like a sheet of paper, a pocket calculator, or something you found in an old arcade.
 
-The useful part is making it yours. A weekly planner can follow *your* week. An invoice can look like *your* work. A checklist can be exactly as small as the task deserves.
+The useful part is making it yours. A weekly planner follows *your* week. An invoice looks like *your* work, because it is. A checklist is exactly as small as the task deserves.
 
 ## What belongs on your desktop?
 
@@ -47,23 +47,23 @@ These are real source examples you can explore and build:
 
 ## Make your own with an agent
 
-Bring a small idea, Bun, and your favorite coding agent. The starter includes a working Svelte checklist, `AGENTS.md`, and authoring/design skills so your agent has the local instructions it needs.
+Bring a small idea, Bun, and your favorite coding agent. Setup asks what your slop should do and who made it, then offers to launch the agent CLI you choose. The starter includes a working Svelte checklist, your `BRIEF.md`, `AGENTS.md`, and authoring/design skills.
 
 Use Bun 1.4.2 or newer and the matching hitSlop Mac app, installed in `/Applications` or `~/Applications` for native builds and registration.
 
 **1. Give your idea a folder.**
 
 ```sh
-bunx @hitslop/cli@1.0.0 init weekend-kit
+bunx @hitslop/cli@1.1.0 init weekend-kit
 cd weekend-kit
 bun install
 ```
 
-This quick start targets the v1 SDK. If that npm release is not available yet, use the [repository setup](docs/guides/development.md); older CLI packages use a different format.
+**2. Let your chosen agent build it.**
 
-**2. Open the folder in your coding agent and give it a job.**
+At the end of setup, choose a detected agent, **Other CLI…** to enter another installed tool, or **Finish without launching**. The agent opens in the project with your brief and hitSlop guidance. Use `--yes` and `--brief 'What to build'` when an agent or script is already creating the project; this never launches another agent.
 
-Try this:
+You can also open the folder in your agent yourself. Try this:
 
 > Read AGENTS.md, manifest.json, and the authoring/design skills in .agents/skills first. Turn this starter into “Weekend Kit,” a packing list for short trips. Let me add items, group them by bag, check them off, and see how many are left. Make it feel like a pocket field notebook: warm paper, forest-green ink, and comfortable checkboxes. Include a clean printable packing list for PNG/PDF export. Keep it small, use hitSlop's document APIs for saved data, and run the project checks when you're done.
 
@@ -98,7 +98,7 @@ Want to see what your agent is building? Here's **Tiny Wins**: a name, a counter
 With the same Bun and Mac app setup above, create a fresh starter:
 
 ```sh
-bunx @hitslop/cli@1.0.0 init tiny-wins
+bunx @hitslop/cli@1.1.0 init tiny-wins
 cd tiny-wins
 bun install
 ```
@@ -143,7 +143,7 @@ export default { title: "Tiny wins today", wins: 0 };
 
 ### 3. Pick its colors
 
-`theme.ts` declares tokens available as CSS variables. These colors are shared by the window, icon, and export. Your agent can override them at runtime through hitSlop's theme commands—even while the document is open, with no rebuild. Overrides stay with that document; the template's defaults stay intact.
+`theme.ts` declares tokens available as CSS variables. These colors are shared by the window, icon, and export. Your agent can override them at runtime through hitSlop's theme commands, even while the document is open. No rebuild needed. Overrides stay with that document; the template's defaults stay intact.
 
 ```ts
 import { defineTheme } from "@hitslop/document/theme";
@@ -250,8 +250,8 @@ In hitSlop, choose **Tiny Wins → Create**, then save your document as `My Wins
 Your agent can add a win to that same document through the CLI. Substitute the path where you saved it:
 
 ```sh
-bunx @hitslop/cli@1.0.0 get "/path/to/My Wins.slop"
-bunx @hitslop/cli@1.0.0 apply "/path/to/My Wins.slop" --op '{"type":"increment","path":["wins"],"value":1}'
+bunx @hitslop/cli@1.1.0 get "/path/to/My Wins.slop"
+bunx @hitslop/cli@1.1.0 apply "/path/to/My Wins.slop" --op '{"type":"increment","path":["wins"],"value":1}'
 ```
 
 With the document open, the number changes in the window. Its next export and icon capture use the updated value as well. That's the whole loop: one saved document, edited by you or your agent, with three views of the same little wins.
@@ -259,14 +259,32 @@ With the document open, the number changes in the window. Its next export and ic
 Ask your agent to “make the accent purple,” and it can change the declared theme token at runtime:
 
 ```sh
-bunx @hitslop/cli@1.0.0 theme set "/path/to/My Wins.slop" --values '{"accent":"#7050ad"}'
+bunx @hitslop/cli@1.1.0 theme set "/path/to/My Wins.slop" --values '{"accent":"#7050ad"}'
 ```
 
 The open window updates immediately, and the next export and icon capture use the same purple. To return to the template's colors:
 
 ```sh
-bunx @hitslop/cli@1.0.0 theme reset "/path/to/My Wins.slop"
+bunx @hitslop/cli@1.1.0 theme reset "/path/to/My Wins.slop"
 ```
+
+## Use the CLI
+
+Use `bunx @hitslop/cli@1.1.0` for individual commands, or install with `bun install -g @hitslop/cli@1.1.0` and run `slop` from Bun's PATH. In this checkout, use `bun slop`. Generated projects provide their own pinned `bun run` scripts.
+
+| Task | Commands |
+| --- | --- |
+| Create and preview an app | `init SOURCE`, then the project's `bun run check` and `bun run dev` |
+| Package and install a template | `bun run build`, `bun run register` |
+| Inspect and edit a writable document | `schema`, `get`, `apply`, `batch` |
+| Import complete JSON data | `import --from`, or `get --snapshot` followed by `import --replace --if-version` |
+| Customize colors and manage files | `theme get/set/reset`, `attachments list/import/export` |
+| Export a PNG or PDF | `export DOCUMENT --format FORMAT --output FILE` (`png` or `pdf`) |
+| Install agent guidance | `skills install`, `skills repair`, `skills uninstall` |
+
+The table lists command families; follow the [CLI workflows](apps/landing/src/content/docs/docs/guides/cli-workflows.mdx) for complete examples and required arguments. The [repository CLI reference](docs/guides/cli.md) covers operation shapes and contributor details. Add `--help` to a command to see its arguments.
+
+Native document commands run on macOS through the installed app. You can invoke `"/Applications/hitSlop.app/Contents/Helpers/hitslop-native"` directly without Node or Bun; its `create` and `open` commands make and open writable documents. Built and registered templates remain immutable. After an uncertain edit result, inspect with `get` before another edit.
 
 ## Work on hitSlop
 
@@ -293,3 +311,16 @@ Start with the [documentation index](docs/README.md). Contributors run `bun run 
 ## License
 
 MIT © 2026 hitSlop contributors. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## Related projects
+
+Other projects exploring personal software and interactive documents:
+
+- [Hyperclay](https://hyperclay.com/)
+- [Capsule](https://withcapsule.app/)
+- [uapp](https://thederf.com/uapp/demo)
+- [bento](https://bento.page/)
+- [Decker](https://beyondloom.com/decker/)
+- [TiddlyWiki](https://tiddlywiki.com/)
+
+Historical relatives include [HyperCard](https://www.computerhistory.org/revolution/the-web/20/373/2081) and [Smalltalk](https://squeak.org/), with their traditions of making your own interactive tools. [Winamp’s skin system](https://support.winamp.com/winamp-desktop-player-for-windows) was a major inspiration for hitSlop’s look and feel.

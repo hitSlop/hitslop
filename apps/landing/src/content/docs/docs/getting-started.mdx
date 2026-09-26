@@ -20,15 +20,15 @@ bun run dev
 
 Alternatively, install the CLI with `bun install -g @hitslop/cli` and run `slop init tiny-counter`. The generated project pins its own CLI and SDK versions; prefer its `bun run` scripts after creation.
 
-:::note[Release availability]
-The CLI and SDK must be published together with their matching Mac runtime. Until that package release is available, use the repository's packed-package verification workflow; an older npm package is not a substitute for this v1 SDK.
-:::
+See [CLI workflows](/docs/guides/cli-workflows/) for command entry points, document creation, editing, import, export, and agent skill installation.
 
-`init` creates a Checklist project, even if your directory is named `tiny-counter`. The project includes `AGENTS.md` and authoring/design skills in `.agents/skills/`. Ask your agent to read those before editing.
+`init` asks you to describe your slop and who the author is. It starts from a working Checklist, saves your idea in `BRIEF.md`, and includes `AGENTS.md` and authoring/design skills in `.agents/skills/`.
+
+The final question asks which agent CLI should build it for you. Choose an installed Codex, Claude Code, Gemini CLI, or OpenCode, or select **Other CLI…** to enter a tool such as Grok and its prompt option. The agent launches in your project with the brief and hitSlop guidance. Choose **Finish without launching** to follow the tutorial below yourself. Add `--yes` for a non-interactive starter; this never launches another agent.
 
 ## Understand the source
 
-Read `manifest.json` first. Its slug comes from the directory name. Set your title, description, author, categories, and useful initial window size; keep `runtime` set to `hitslop-v1`.
+Read `manifest.json` first. Its slug comes from the directory name unless you supplied `--slug`. The wizard records your author name, and the agent sets the title, description, and categories to match what it builds; you can edit these and the initial window size anytime. Keep `runtime` set to `hitslop-v1`.
 
 - `schema.ts` defines document fields; `initial.ts` provides creation-only values.
 - `App.svelte` renders and edits the document through typed handles.

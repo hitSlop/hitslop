@@ -42,14 +42,16 @@
         "slop": "src/cli.ts",
       },
       "dependencies": {
-        "@crustjs/core": "0.3.3",
-        "@crustjs/extensions": "0.3.3",
-        "@crustjs/skills": "0.3.3",
+        "@crustjs/core": "0.4.1",
+        "@crustjs/extensions": "0.4.1",
+        "@crustjs/prompts": "0.2.3",
+        "@crustjs/skills": "0.4.1",
         "@hitslop/document": "1.1.0",
         "@hitslop/schema": "1.1.0",
         "esbuild": "^0.28.2",
         "svelte": "5.57.1",
         "svelte-check": "^4.7.6",
+        "typebox": "^1.3.32",
         "typescript": "5.9.2",
       },
     },
@@ -78,15 +80,15 @@
   "packages": {
     "@babel/runtime": ["@babel/runtime@7.29.7", "", {}, "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="],
 
-    "@crustjs/core": ["@crustjs/core@0.3.3", "", { "dependencies": { "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-PBf6aMEkPPKO3X46fchicpNn4vU6stiNvRu6R0n2mO2FVHau+mNMMejSJeolQwWh5jd8jlEMMpVuUnOgCROi8w=="],
+    "@crustjs/core": ["@crustjs/core@0.4.1", "", { "dependencies": { "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-oYmO+949cdjSnaYJwwcBrW+DBCcfx+ElwM7pHupGmQVSpK+LES3ckuFJ16Pa7hulL1kfkScKUX+Fff0frKMIjg=="],
 
-    "@crustjs/extensions": ["@crustjs/extensions@0.3.3", "", { "dependencies": { "@crustjs/store": "^0.4.1", "@crustjs/style": "^0.3.3", "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "@crustjs/core": "^0.3.3", "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-ROczOV31gNcY6KUzclIqm2Z4/RSvu8REm52BUol4tLILtfZ+VGs9vXaTTX5ZURlqFrflITxk3KTgqIj8hMbSqA=="],
+    "@crustjs/extensions": ["@crustjs/extensions@0.4.1", "", { "dependencies": { "@crustjs/store": "^0.4.1", "@crustjs/style": "^0.3.3", "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "@crustjs/core": "^0.4.1", "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-mc4xXuao2wl/C8YPuSjx7UQ77nctc27OQF+h3LXRaPzks6c0wSGphQ42KL04e5h+M/OH+omtxFsdtqfdhtbt4w=="],
 
     "@crustjs/progress": ["@crustjs/progress@0.1.2", "", { "dependencies": { "@crustjs/style": "^0.3.3", "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-6foAsLFUOdxPvRJh32qfdlLfWeB2Zf4R4Hm+Mp6SKCmtsbHqXS13+q7NV/AsWqPzghty4yc6sakGrBeKzEk+Cg=="],
 
     "@crustjs/prompts": ["@crustjs/prompts@0.2.3", "", { "dependencies": { "@crustjs/style": "^0.3.3", "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-odYsw3HWoUnmk5cgVrG7I5PejeiKvw8FNk3OEpV3hx0B26H4lqGo8mMI45QtRlgBZ2zHsLCzk1pnaFdU/f919A=="],
 
-    "@crustjs/skills": ["@crustjs/skills@0.3.3", "", { "dependencies": { "@crustjs/progress": "^0.1.2", "@crustjs/prompts": "^0.2.3", "@crustjs/style": "^0.3.3", "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "@crustjs/core": "^0.3.3", "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-R7Wl0GcovuJ6qdS2lSrv+n1Y6pGaltI4P2kZnJyaz0KUw5/UrFPDbLmXNzO6QeAS5CWPWCQQ1n+P8rPwT7Fpqw=="],
+    "@crustjs/skills": ["@crustjs/skills@0.4.1", "", { "dependencies": { "@crustjs/progress": "^0.1.2", "@crustjs/prompts": "^0.2.3", "@crustjs/style": "^0.3.3", "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "@crustjs/core": "^0.4.1", "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-/lxfD7rfAQncMKIo2uNJw1ksrgxylgwjdi5/eqt0Ayck9WEKrOGwmFMXDhmw4Ln87i5b1yVFWY0Kr3JpRw+g4w=="],
 
     "@crustjs/store": ["@crustjs/store@0.4.1", "", { "dependencies": { "@crustjs/utils": "^0.1.0" }, "peerDependencies": { "typescript": "^7.0.0" }, "optionalPeers": ["typescript"] }, "sha512-os2pBAHAg+Gu0aj8NiiwDko3s5wBVpAIaslgB9wVm0xEIrWR0e9zwFlObz6n1sAFXOnl7qeGJz8kRxwPVk/Iqg=="],
 

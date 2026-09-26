@@ -1,10 +1,15 @@
 import { test, expect } from "bun:test";
-import { cp, mkdtemp, rm, symlink } from "node:fs/promises";
+import { cp, mkdtemp, rm, symlink, readFile, lstat } from "node:fs/promises";
+import { parseManifest } from "@hitslop/schema";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import metadata from "../package.json";
 
-async function run(args: string[], env: Record<string, string> = {}, cli = "packages/cli/src/cli.ts") {
+async function run(
+  args: string[],
+  env: Record<string, string> = {},
+  cli = "packages/cli/src/cli.ts",
+) {
   const child = Bun.spawn([process.execPath, cli, ...args], {
     env: { ...process.env, ...env },
     stdout: "pipe",
@@ -17,6 +22,102 @@ async function run(args: string[], env: Record<string, string> = {}, cli = "pack
   ]);
   return { stdout, stderr, code };
 }
+
+// A successful init must produce a valid manifest, even for directory names
+// outside the manifest slug grammar or title length. The build test covers only "starter".
+test("init derives valid slugs before reporting success", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hsl-init-metadata-"));
+  try {
+    for (const [name, slug] of [
+      ["a", "a-slop"],
+      ["foo--bar", "foo-bar"],
+      ["a".repeat(90), "a".repeat(64)],
+    ]) {
+      const target = join(root, name!);
+      expect((await run(["init", target])).code).toBe(0);
+      const manifest = parseManifest(
+        JSON.parse(await readFile(join(target, "manifest.json"), "utf8")),
+      );
+      expect(manifest.slug).toBe(slug!);
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("init flags and defaults produce validated metadata without prompts or partial projects", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hsl-init-flags-"));
+  try {
+    const target = join(root, "custom");
+    const created = await run([
+      "init",
+      target,
+      "--yes",
+      "--brief",
+      "Track monthly spending.",
+      "--title",
+      'My "budget"',
+      "--slug",
+      "budget-book",
+      "--category",
+      "finance",
+      "--category",
+      "personal",
+      "--author",
+      "Jordan",
+      "--description",
+      "Track spending.",
+    ]);
+    expect(created.code).toBe(0);
+    expect(created.stderr).toBe("");
+    expect(await readFile(join(target, "BRIEF.md"), "utf8")).toContain("Track monthly spending.");
+    const manifest = parseManifest(
+      JSON.parse(await readFile(join(target, "manifest.json"), "utf8")),
+    );
+    expect({
+      title: manifest.title,
+      slug: manifest.slug,
+      categories: manifest.categories,
+      author: manifest.author,
+      description: manifest.description,
+    }).toEqual({
+      title: 'My "budget"',
+      slug: "budget-book",
+      categories: ["finance", "personal"],
+      author: { name: "Jordan" },
+      description: "Track spending.",
+    });
+    const defaults = join(root, "defaults");
+    expect((await run(["init", defaults], { CI: "1" })).code).toBe(0);
+    const fallback = parseManifest(
+      JSON.parse(await readFile(join(defaults, "manifest.json"), "utf8")),
+    );
+    expect([
+      fallback.title,
+      fallback.author.name,
+      fallback.description,
+      fallback.categories,
+    ]).toEqual(["defaults", "Anonymous", "A hitSlop mini app.", ["productivity"]]);
+    const invalid = [
+      ["--slug", "x"],
+      ["--slug", "bad--slug"],
+      ["--title", ""],
+      ["--title", "x".repeat(81)],
+      ["--author", " "],
+      ["--description", ""],
+      ["--category", "unknown"],
+      ["--category", "finance", "--category", "finance"],
+      ["--category", "finance", "--category", "personal", "--category", "other"],
+    ];
+    for (const [index, flags] of invalid.entries()) {
+      const destination = join(root, `invalid-${index}`);
+      expect((await run(["init", destination, ...flags])).code).not.toBe(0);
+      expect(await lstat(destination).catch(() => undefined)).toBeUndefined();
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("help and version do not invoke native or authoring handlers", async () => {
   // A fresh checkout has sources and dependencies, but no generated skill bundle.
@@ -37,8 +138,16 @@ test("help and version do not invoke native or authoring handlers", async () => 
       ["skills", "--help"],
       ["skill", "-h"],
       ["skills", "update", "--help"],
+      ["skills", "install", "--help"],
+      ["skills", "repair", "--help"],
+      ["skills", "uninstall", "--help"],
+      ["init", "--help"],
     ]) {
-      const result = await run(args, { HITSLOP_NATIVE_CLI: "/nonexistent" }, join(root, "src/cli.ts"));
+      const result = await run(
+        args,
+        { HITSLOP_NATIVE_CLI: "/nonexistent" },
+        join(root, "src/cli.ts"),
+      );
       expect(result.stderr).toBe("");
       expect(result.code).toBe(0);
       expect(result.stdout).toContain("slop");

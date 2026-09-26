@@ -1,18 +1,82 @@
-# Document CLI
+# CLI workflows and reference
 
-Swift `hitslop-native` ships in `hitSlop.app/Contents/Helpers` with the same pinned JS/WASM runtime as the app. Installed document commands need neither Bun nor a running app. PATH installation is separate; invoke the bundled executable directly. In this checkout, `bun slop` forwards macOS document commands to it.
-See [development](development.md) for preparing the checkout and [releasing](releasing.md) for the launch package workflow.
+Start with the [public CLI workflows](../../apps/landing/src/content/docs/docs/guides/cli-workflows.mdx) for common tasks. This guide adds the operation reference and contributor details.
+
+## Choose an entry point
+
+| Entry point | Use |
+| --- | --- |
+| `bunx @hitslop/cli@1.1.0 COMMAND` | Run the CLI matching this checkout's SDK without installing globally. |
+| `slop COMMAND` | Run after `bun install -g @hitslop/cli@1.1.0`, with Bun's bin directory on PATH. |
+| `bun slop COMMAND` | Run from this repository after [development setup](development.md). |
+| `"/Applications/hitSlop.app/Contents/Helpers/hitslop-native" COMMAND` | Run native document commands directly, without Node or Bun. |
+
+Swift `hitslop-native` ships in `hitSlop.app/Contents/Helpers` with the same pinned JS/WASM runtime as the app. Installed document commands need neither Bun nor a running app. The helper is not automatically added to PATH; invoke the bundled executable directly. For an app under `~/Applications`, use `"$HOME/Applications/hitSlop.app/Contents/Helpers/hitslop-native"`. The TypeScript CLI forwards macOS document commands to the helper.
+
+Use `bun slop --help`, `bun slop COMMAND --help`, or the native helper's `--help` for additional commands and arguments. Package versions here reflect repository metadata, not npm availability; see [releasing](releasing.md) for the publication workflow.
+
+## Create, preview, and register an app
+
+With Bun 1.4.2 or newer:
+
+```sh
+bunx @hitslop/cli@1.1.0 init weekend-kit
+cd weekend-kit
+bun install
+bun run check
+bun run dev
+```
+
+In a terminal, `init` asks what your slop should do and who the author is. Title, categories, and description start as placeholders; the launched agent sets them in `manifest.json` to match what it builds, and you can edit them there anytime. It saves the build brief in `BRIEF.md` and offers to launch an agent to implement it. Choose a detected Codex, Claude Code, Gemini CLI, or OpenCode installation, **Other CLI…** to enter an executable and its prompt option, or **Finish without launching**. Detection only searches PATH. The agent runs in the project with its normal permissions; no agent is installed automatically. A failed or cancelled launch keeps the project.
+
+For automation, supply metadata explicitly:
+
+```sh
+bun slop init budget-book --yes \
+  --brief 'Track spending by category with a monthly summary.' \
+  --title 'Budget Book' --slug budget-book \
+  --category finance --category personal --author Jordan \
+  --description 'A simple monthly spending tracker.'
+```
+
+Metadata flags set values explicitly; `--brief` and `--author` also skip their prompts. `--yes`, CI, and non-TTY runs never prompt or launch an agent. Missing metadata defaults to the directory name (truncated to the title limit), `productivity`, `Anonymous`, and `A hitSlop mini app.`; an omitted brief uses the description. Slugs are normalized from the directory name unless supplied explicitly. The complete manifest is validated before writing, and existing destinations are refused. Categories and their limits come from the platform manifest schema.
+
+Read the generated `AGENTS.md`, `BRIEF.md`, and `manifest.json` before editing. Preview data is disposable; refreshing resets it. Restart preview after source changes. Stop it before building:
+
+```sh
+bun run build
+bun run register
+```
+
+Build creates `dist/weekend-kit.slop`; register builds and installs an immutable master in `~/.hitslop/templates`. Existing documents keep their app version. Both commands require a compatible installed Mac app. Prefer the generated scripts, which use matching CLI/SDK versions. From the checkout, use `bun slop check SOURCE`, `bun slop dev SOURCE [--port 5174]`, `bun slop build SOURCE`, and `bun slop register SOURCE`. The preview port defaults to 5173. See [authoring](authoring.md) for source structure.
+
+## Create and open a writable document
+
+Choose a template and **Create** in the Mac app, or run the native helper from your authoring project:
+
+```sh
+"/Applications/hitSlop.app/Contents/Helpers/hitslop-native" create \
+  --from dist/weekend-kit.slop --output "$HOME/Documents/Weekend.slop"
+"/Applications/hitSlop.app/Contents/Helpers/hitslop-native" open \
+  "$HOME/Documents/Weekend.slop"
+```
+
+`create` and `open` are native-only commands, not `slop` subcommands. Creation uses template starting data, refuses an existing destination, and adds `.slop` when omitted. Open launches the installed Mac app. Both print the document path. Keep writable documents outside the template cache and synced folders; never edit built or registered masters.
+
+## Read and edit data
+
+Read `manifest.json` first; only `hitslop-v1` is accepted. Inspect the schema and current data before choosing operations. These edits assume a text field named `title`; substitute your own document path and schema fields.
 
 ```sh
 bun slop schema /path/to/List.slop
 bun slop get /path/to/List.slop
 bun slop apply /path/to/List.slop --op '{"type":"text.replace","path":["title"],"value":"Today"}'
 bun slop batch /path/to/List.slop --ops '[{"type":"text.replace","path":["title"],"value":"Tomorrow"}]'
-bun slop compact /path/to/List.slop
-bun slop export /path/to/List.slop --format pdf --output /path/to/List.pdf
 ```
 
-`schema` prints the descriptor; reads and mutations print JSON state. Export prints its destination path. Errors go to stderr with a nonzero exit status. `get` is the canonical read command. The native executable also exposes `create --from TEMPLATE --output DOCUMENT`, `open DOCUMENT`, and template `screenshot` operations.
+`schema` prints the descriptor; `get`, `apply`, and `batch` print JSON data. Errors go to stderr with a nonzero exit status. `get` flushes pending edits before returning. After an uncertain mutation result, read again before another edit; never blindly replay mutations.
+
+For an explicit storage checkpoint, use `bun slop compact /path/to/List.slop`. It retains history and returns JSON state; it is not required after each edit.
 
 ## Operations
 
@@ -33,20 +97,20 @@ bun slop export /path/to/List.slop --format pdf --output /path/to/List.pdf
 
 ## Full JSON import
 
-Runtime contract 1 revision 2 / SDK 1.1.0 adds complete data import. An agent reads
-the source data and both schemas, then prepares JSON matching the destination
-schema. The CLI does not infer field mappings or change either schema.
+Read the source data and destination schema, then prepare a complete JSON object
+matching the destination's fields. An agent can help map the data for you.
 
 ```sh
-slop get Source.slop > source.json
-slop schema Template.slop
+bun slop get Source.slop > source.json
+bun slop schema Template.slop
 # Prepare mapped.json in the destination schema, then create a new document:
-slop import New.slop --from Template.slop --file mapped.json
+bun slop import New.slop --from Template.slop --file mapped.json
 
 # For an existing destination, capture its data, schema and version together:
-slop get Destination.slop --snapshot > destination.json
-# Prepare mapped.json using that snapshot; pass its version unchanged:
-slop import Destination.slop --replace --if-version TOKEN --file mapped.json
+bun slop get Destination.slop --snapshot > destination.json
+# Prepare mapped.json using that snapshot. Replace VERSION_TOKEN with its
+# exact version string, keeping it quoted:
+bun slop import Destination.slop --replace --if-version 'VERSION_TOKEN' --file mapped.json
 ```
 
 `--from` and `--replace` are mutually exclusive. Creation never overwrites an
@@ -114,6 +178,13 @@ Successful mutations acknowledge persistence. No automatic replay or public retr
 
 ## Export
 
+```sh
+bun slop export /path/to/List.slop --format png --output /path/to/List.png
+bun slop export /path/to/List.slop --format pdf --output /path/to/List.pdf
+```
+
+Export prints the destination path on success.
+
 Open-document exports capture the live view, including current width and selected tab. The existing capture flow commits text drafts, flushes storage, mounts the authored export snippet, and restores the editor. Closed exports render a disposable saved-state snapshot using the app's initial view. For Quick Checklist that means To do; the selected tab is not persisted.
 
 The source writer lock is held while copying a closed writable document. Managed or read-only templates remain state-free. User export destinations must be outside the source package; completed output replaces its destination atomically. Template screenshots are a separate build operation and may write QuickLook assets in their staging package.
@@ -127,14 +198,20 @@ The server waits 30 seconds for a command; the client allows 35 seconds for a re
 require an installed app supporting the required runtime contract and revision.
 The authored project SDK and CLI must have matching identities.
 
-The launch `@hitslop/cli` package owns `init`, `check`, disposable browser `dev`,
-`build`, and `register`. Run `bunx @hitslop/cli init my-slop` from any directory,
-then `cd my-slop && bun install`. Bun is the only JavaScript runtime required.
+Bun is the only JavaScript runtime required for authoring and skill management.
 Native document editing is macOS-only; there is no Bun document engine fallback.
 
-`slop theme get DOCUMENT` reports defaults, overrides, and effective values.
-`slop theme set DOCUMENT --values '{"accent":"#123456"}'` changes declared tokens;
-`slop theme reset DOCUMENT [--token accent]` restores defaults. Live commands use
+## Change theme tokens
+
+```sh
+bun slop theme get /path/to/List.slop
+bun slop theme set /path/to/List.slop --values '{"accent":"#123456"}'
+bun slop theme reset /path/to/List.slop --token accent
+bun slop theme reset /path/to/List.slop
+```
+
+`theme get` reports defaults, overrides, and effective values. Set only declared
+tokens; reset one with `--token` or omit it to reset all. Live commands use
 the owner socket; closed commands use engine-only WebKit. Inspect `theme get`
 after an uncertain transport result before retrying.
 
@@ -159,16 +236,21 @@ The TypeScript CLI uses Crust for command parsing, help, and packaged agent skil
 
 ```sh
 bun run skills:build
-bun slop skills
-bun slop skills --all --scope project
-bun slop skills --all --scope global
-bun slop skills update --scope global
+bun slop skills install
+bun slop skills install --all --scope project
+bun slop skills install --all --scope global
+bun slop skills repair --scope global
+bun slop skills uninstall --all --scope project
 ```
 
 The build packages the authored `hitslop`, `hitslop-authoring`, `hitslop-design`, and `hitslop-document` guides plus the generated `hitslop-cli` command reference. Authored sources live in `packages/cli/skills`; `bun run build` also builds these artifacts. Rebuild after changing command metadata or authored guidance. Generated output lives in `packages/cli/.crust/root/skills` and is not tracked.
 
-Interactive installation prompts for scope and agent targets. `--all` defaults to global scope unless `--scope` is supplied. Deselecting an installed target removes its owned link. Conflicting real directories are skipped by `--all`; interactive replacement requires explicit confirmation. Installed links target a durable versioned copy in `~/.hitslop/cli/VERSION/skills`, so clearing the bunx package cache does not break them.
+Interactive installation prompts for scope, skills, and agent targets, with one selection for all chosen skills. Installation is additive: unselected skills and agents remain untouched. `skills` is shorthand for `skills install`; `skill` remains an alias. `--all` defaults to global scope unless `--scope` is supplied. Conflicting real directories are skipped by `--all`; interactive replacement requires explicit confirmation. Installed links target a durable versioned copy in `~/.hitslop/cli/VERSION/skills`, so clearing the bunx package cache does not break them.
 
-`skills update` repairs existing links; it does not install absent skills or download newer content. Link repair is explicit (`autoUpdate: false`), so document and authoring commands do not rewrite repository discovery links. Old native-created links can be repaired; the old `~/.hitslop/skills` cache is left untouched.
+`skills repair` repairs existing links; it does not install absent skills or download newer content. `skills update` remains a compatibility alias. `skills uninstall` removes selected owned links at the chosen scope; `--all` is its non-interactive form. Link repair is explicit (`autoUpdate: false`), so document and authoring commands do not rewrite repository discovery links. Old native-created links can be repaired; the old `~/.hitslop/skills` cache is left untouched.
+
+`init` includes portable copies of authored guides in the project. These real directories are not managed links: repair does not refresh them, and install does not overwrite them without confirmation. Review their contents manually when upgrading the project.
+
+Interactive CLI use may show a cached update notice on stderr. Checks are skipped for CI, piped output, or `HITSLOP_NO_UPDATE_CHECK=1`; registry failures do not affect command success. Follow the [public upgrade guidance](../../apps/landing/src/content/docs/docs/guides/cli-workflows.mdx#upgrade-the-cli) to keep the CLI, SDK, and Mac app compatible.
 
 The Mac app no longer installs or updates agent skills. Skill management requires the Bun-based TypeScript CLI; native document editing and export still require neither Bun nor the TypeScript CLI.

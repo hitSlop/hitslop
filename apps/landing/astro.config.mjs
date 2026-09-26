@@ -23,28 +23,39 @@ export default defineConfig({
       lastUpdated: true,
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/hitSlop/hitslop" }],
       sidebar: [
-        { label: "Overview", slug: "docs" },
+        {
+          label: "Start here",
+          items: [
+            { label: "Overview", slug: "docs" },
+            { label: "Create your first slop", slug: "docs/getting-started" },
+          ],
+        },
         {
           label: "Build a slop",
           items: [
-            { label: "Create your first slop", slug: "docs/getting-started" },
+            { label: "Data and schemas", slug: "docs/guides/data-and-schemas" },
             { label: "Manifest and windows", slug: "docs/guides/manifest-and-windows" },
             { label: "Style an app", slug: "docs/guides/styling" },
-            { label: "Icons, previews, and exports", slug: "docs/guides/icons-and-exports" },
             { label: "PNG window skins", slug: "docs/guides/png-window-skins" },
-            { label: "Data and schemas", slug: "docs/guides/data-and-schemas" },
+            { label: "Icons, previews, and exports", slug: "docs/guides/icons-and-exports" },
             { label: "Build and share", slug: "docs/guides/build-and-share" },
           ],
         },
         {
           label: "Work with a document",
           items: [
-            { label: "Edit installed data", slug: "docs/guides/edit-installed-data" },
-            { label: "Collaboration (coming soon)", slug: "docs/guides/live-sharing" },
             { label: "How .slop files work", slug: "docs/concepts/how-slop-files-work" },
+            { label: "Edit installed data", slug: "docs/guides/edit-installed-data" },
           ],
         },
-        { label: "Availability", slug: "docs/availability" },
+        {
+          label: "Reference",
+          items: [
+            { label: "CLI workflows", slug: "docs/guides/cli-workflows" },
+            { label: "Availability", slug: "docs/availability" },
+            { label: "Collaboration (coming soon)", slug: "docs/guides/live-sharing" },
+          ],
+        },
       ],
     }),
   ],

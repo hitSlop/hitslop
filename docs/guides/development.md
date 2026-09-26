@@ -7,6 +7,7 @@ Use the Bun version in root `package.json` (currently 1.4.2), Xcode, and XcodeGe
 ```sh
 bun install --frozen-lockfile
 bun install --cwd apps/landing --frozen-lockfile
+bun run compatibility:restore
 bun run build
 bun run check
 bun run test
@@ -14,6 +15,12 @@ bun run swift:test
 ```
 
 `build` generates platform contracts and host/CLI runtime resources, builds agent skills, and compiles the native helper. Run `build` before native tests. Template artwork is a separate, cached `bun run build:templates` step. Neither command updates the runtime release ledger or historical fixtures.
+
+`compatibility:restore` uses the GitHub CLI (`gh`) to download missing historical
+runtime release assets and verify their committed checksums before compatibility
+tests. Install `gh` and ensure it can access the repository's releases. See the
+[runtime directory guide](../../runtimes/README.md) for generated resource paths,
+preserved archives, and runtime loading.
 
 Before building the complete app, run `bun run build:templates` to prepare its bundled resources. To work on the app, generate `apps/apple/hitSlop.xcodeproj` with `xcodegen generate --spec apps/apple/project.yml` and open it in Xcode. `bun run apple:build` builds and verifies a disposable development app under `generated/v1/app`.
 
