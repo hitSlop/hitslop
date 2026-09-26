@@ -32,7 +32,7 @@ export async function prepareRenderer() {
     !supportsRuntime(actual, identity.runtimeContract, identity.runtimeRevision)
   )
     throw new Error(
-      `Update hitSlop.app: CLI ${identity.sdkVersion} requires runtime contract ${identity.runtimeContract}, revision ${identity.runtimeRevision} or newer.`,
+      `Update hitSlop.app: SDK ${identity.sdkVersion} requires runtime contract ${identity.runtimeContract}, revision ${identity.runtimeRevision} or newer.`,
     );
   return helper;
 }

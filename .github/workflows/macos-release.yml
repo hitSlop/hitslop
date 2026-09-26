@@ -117,6 +117,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#macos-v}"
           NOTES="$RUNNER_TEMP/release-notes.md"
           SDK_VERSION=$(bun -e 'console.log((await Bun.file("dist/macos/release-record.json").json()).runtime.sdkVersion)')
+          CLI_VERSION=$(bun -e 'console.log((await Bun.file("dist/macos/release-record.json").json()).packageVersions.cli)')
           cat > "$NOTES" <<EOF
           hitSlop $VERSION for Apple silicon Macs.
 
@@ -125,7 +126,7 @@ jobs:
           Drag hitSlop.app into Applications, then create a document from the included template collection.
 
           This release uses the hitSlop v1 document format. Older pre-v1 documents are not supported.
-          The matching authoring packages are @hitslop/schema, @hitslop/document, and @hitslop/cli $SDK_VERSION.
+          The compatible authoring packages are @hitslop/schema and @hitslop/document $SDK_VERSION, with @hitslop/cli $CLI_VERSION.
           EOF
           gh release create "$GITHUB_REF_NAME" \
             --title "hitSlop $VERSION" \

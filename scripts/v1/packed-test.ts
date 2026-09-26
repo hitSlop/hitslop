@@ -131,6 +131,7 @@ try {
   await run([process.execPath, "x", "--no-install", "@hitslop/cli", "init", project], root, noNode);
   const metadata = JSON.parse(await readFile(join(project, "package.json"), "utf8"));
   assert.equal(metadata.dependencies["@hitslop/document"], versions.document);
+  assert.equal(metadata.devDependencies["@hitslop/cli"], versions.cli);
   metadata.overrides = tarballs;
   await writeFile(join(project, "package.json"), JSON.stringify(metadata));
   await run([process.execPath, "install"], project, noNode);

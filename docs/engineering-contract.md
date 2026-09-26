@@ -20,7 +20,7 @@ Read manifest.json first. Only runtime `hitslop-v1` is accepted. No legacy-forma
 - The native Swift CLI edits through the live Unix socket or an engine-only invisible WebKit session. Installed editing needs no Node/Bun. Never load authored app code for headless document operations.
 - Catalog discovery combines bundled slops and ~/.hitslop/templates, with manifest-derived categories and Recents. Users unpack external downloads before placing template packages in that folder. Hosted discovery, OpenAPI/Registry, accounts/Auth/App Check, and sharing code live in deferred; Firebase Analytics/Crashlytics stay active.
 
-- Launch includes matching npm schema/document/CLI packages, published manually after the compatible signed Mac app. Hosted template publication remains deferred. See docs/guides/releasing.md.
+- Launch includes compatible npm schema/document/CLI packages, published manually after the compatible signed Mac app. CLI versions may advance independently while their exact SDK dependency pins and runtime identity remain compatible. Hosted template publication remains deferred. See docs/guides/releasing.md.
 
 - Reusable attachments are in scope: host-owned immutable blobs in state/attachments, referenced by ordinary Loro fields. Use @hitslop/document/attachments or the native attachment CLI. HTTPS data/media access is allowed; CORS still applies.
 - Initial release baseline: contract 1/revision 1/SDK 1.0.0. Preserve sealed runtime bytes and ledger records; subsequent releases follow docs/versioning.md.

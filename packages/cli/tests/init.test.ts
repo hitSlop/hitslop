@@ -8,6 +8,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initProject } from "../src/init";
 import { parseManifest } from "@hitslop/schema";
+import sdk from "../../document/package.json";
+import cli from "../package.json";
 
 // Simulate a person's terminal even when the enclosing test runner is in CI.
 // CLI subprocess tests separately prove that CI selects unattended defaults.
@@ -85,6 +87,9 @@ test("cancelling init leaves no destination; --yes bypasses TTY prompts", async 
     expect(await rejected).toMatchObject({ name: "AbortError" });
     expect(await lstat(target).catch(() => undefined)).toBeUndefined();
     expect(await initProject(target, { yes: true }, tty.io)).toBe(target);
+    const project = JSON.parse(await readFile(join(target, "package.json"), "utf8"));
+    expect(project.dependencies["@hitslop/document"]).toBe(sdk.version);
+    expect(project.devDependencies["@hitslop/cli"]).toBe(cli.version);
   } finally {
     tty.io.output.destroy();
     await rm(root, { recursive: true, force: true });

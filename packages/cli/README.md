@@ -3,7 +3,7 @@
 Create an app with Bun 1.4.2 or newer:
 
 ```sh
-bunx @hitslop/cli@1.1.0 init my-slop
+bunx @hitslop/cli@1.2.0 init my-slop
 cd my-slop
 bun install
 bun run dev
@@ -37,18 +37,18 @@ In a generated project, use `bun run check`, `bun run dev`, `bun run build`, and
 For an existing writable document:
 
 ```sh
-bunx @hitslop/cli@1.1.0 schema My.slop
-bunx @hitslop/cli@1.1.0 get My.slop
-bunx @hitslop/cli@1.1.0 theme get My.slop
-bunx @hitslop/cli@1.1.0 export My.slop --format pdf --output My.pdf
+bunx @hitslop/cli@1.2.0 schema My.slop
+bunx @hitslop/cli@1.2.0 get My.slop
+bunx @hitslop/cli@1.2.0 theme get My.slop
+bunx @hitslop/cli@1.2.0 export My.slop --format pdf --output My.pdf
 ```
 
-Use `apply` or `batch` for schema-aware edits, `import` for complete JSON data, and `attachments` for portable files. Run `bunx @hitslop/cli@1.1.0 skills install` to choose skills and agent targets. Installation is additive; use `skills repair` to repair links and `skills uninstall` to remove them. Bare `skills` and the old `skills update` spelling remain aliases. The portable guides copied by `init` are ordinary files and are not refreshed by link repair. Add `--help` to inspect a command's arguments.
+Use `apply` or `batch` for schema-aware edits, `import` for complete JSON data, and `attachments` for portable files. Run `bunx @hitslop/cli@1.2.0 skills install` to choose skills and agent targets. Installation is additive; use `skills repair` to repair links and `skills uninstall` to remove them. Bare `skills` and the old `skills update` spelling remain aliases. The portable guides copied by `init` are ordinary files and are not refreshed by link repair. Add `--help` to inspect a command's arguments.
 
-Alternatively, `bun install -g @hitslop/cli@1.1.0` provides `slop` on Bun's PATH. Direct native commands use `"/Applications/hitSlop.app/Contents/Helpers/hitslop-native"`; `create` and `open` are available only through that helper.
+Alternatively, `bun install -g @hitslop/cli@1.2.0` provides `slop` on Bun's PATH. Direct native commands use `"/Applications/hitSlop.app/Contents/Helpers/hitslop-native"`; `create` and `open` are available only through that helper.
 
 Follow the [CLI workflows](https://hitslop.com/docs/guides/cli-workflows/) for copyable examples, import replacement rules, themes, attachments, exports, and skills. The [repository CLI reference](https://github.com/hitSlop/hitslop/blob/master/docs/guides/cli.md) includes all document operation shapes and contributor setup.
 
 See the [authoring guide](https://github.com/hitSlop/hitslop/blob/master/docs/guides/authoring.md) and [release guide](https://github.com/hitSlop/hitslop/blob/master/docs/guides/releasing.md).
 
-Part of the hitSlop SDK 1.1.0, runtime contract 1 / revision 2. MIT licensed.
+CLI 1.2.0 uses hitSlop SDK 1.1.0, runtime contract 1 / revision 2, supported by Mac 1.0.7 and later compatible releases. MIT licensed.

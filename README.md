@@ -54,7 +54,7 @@ Use Bun 1.4.2 or newer and the matching hitSlop Mac app, installed in `/Applicat
 **1. Give your idea a folder.**
 
 ```sh
-bunx @hitslop/cli@1.1.0 init weekend-kit
+bunx @hitslop/cli@1.2.0 init weekend-kit
 cd weekend-kit
 bun install
 ```
@@ -98,7 +98,7 @@ Want to see what your agent is building? Here's **Tiny Wins**: a name, a counter
 With the same Bun and Mac app setup above, create a fresh starter:
 
 ```sh
-bunx @hitslop/cli@1.1.0 init tiny-wins
+bunx @hitslop/cli@1.2.0 init tiny-wins
 cd tiny-wins
 bun install
 ```
@@ -250,8 +250,8 @@ In hitSlop, choose **Tiny Wins → Create**, then save your document as `My Wins
 Your agent can add a win to that same document through the CLI. Substitute the path where you saved it:
 
 ```sh
-bunx @hitslop/cli@1.1.0 get "/path/to/My Wins.slop"
-bunx @hitslop/cli@1.1.0 apply "/path/to/My Wins.slop" --op '{"type":"increment","path":["wins"],"value":1}'
+bunx @hitslop/cli@1.2.0 get "/path/to/My Wins.slop"
+bunx @hitslop/cli@1.2.0 apply "/path/to/My Wins.slop" --op '{"type":"increment","path":["wins"],"value":1}'
 ```
 
 With the document open, the number changes in the window. Its next export and icon capture use the updated value as well. That's the whole loop: one saved document, edited by you or your agent, with three views of the same little wins.
@@ -259,18 +259,18 @@ With the document open, the number changes in the window. Its next export and ic
 Ask your agent to “make the accent purple,” and it can change the declared theme token at runtime:
 
 ```sh
-bunx @hitslop/cli@1.1.0 theme set "/path/to/My Wins.slop" --values '{"accent":"#7050ad"}'
+bunx @hitslop/cli@1.2.0 theme set "/path/to/My Wins.slop" --values '{"accent":"#7050ad"}'
 ```
 
 The open window updates immediately, and the next export and icon capture use the same purple. To return to the template's colors:
 
 ```sh
-bunx @hitslop/cli@1.1.0 theme reset "/path/to/My Wins.slop"
+bunx @hitslop/cli@1.2.0 theme reset "/path/to/My Wins.slop"
 ```
 
 ## Use the CLI
 
-Use `bunx @hitslop/cli@1.1.0` for individual commands, or install with `bun install -g @hitslop/cli@1.1.0` and run `slop` from Bun's PATH. In this checkout, use `bun slop`. Generated projects provide their own pinned `bun run` scripts.
+Use `bunx @hitslop/cli@1.2.0` for individual commands, or install with `bun install -g @hitslop/cli@1.2.0` and run `slop` from Bun's PATH. In this checkout, use `bun slop`. Generated projects provide their own pinned `bun run` scripts.
 
 | Task | Commands |
 | --- | --- |

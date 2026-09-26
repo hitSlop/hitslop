@@ -1,10 +1,42 @@
 # Release the Mac app and npm packages
 
-Launch includes the signed/notarized Apple silicon Mac app and matching `@hitslop/schema`, `@hitslop/document`, and `@hitslop/cli` packages. Hosted template publication, catalog services, accounts, and collaboration remain deferred. npm publication is a separate maintainer-run action after the matching Mac app is available.
+Launch includes the signed/notarized Apple silicon Mac app and matching `@hitslop/schema`, `@hitslop/document`, and `@hitslop/cli` packages. Hosted template publication, catalog services, accounts, and collaboration remain deferred. npm publication is a separate maintainer-run action after the compatible Mac app is available. CLI-only releases may reuse an already shipped compatible app and SDK.
 
-## Release sequence
+## CLI-only release: 1.2.0
 
-The current release candidate is npm **1.1.0**, paired with Mac **1.0.7 (25)** and tag `macos-v1.0.7`. It adds versioned JSON import with runtime contract **1**, revision **2**. The Mac and npm version sequences are independent. Mac 1.0.6 (24) shipped revision 1; preserve its existing runtime ledger checksum and template specimens.
+CLI **1.2.0** uses schema/document **1.1.0**, Mac **1.0.7 (25)**, and the existing
+sealed runtime contract **1**, revision **2**. Publish only the CLI. Keep SDK and
+runtime identities, sealed bytes, historical records, and Mac tags unchanged.
+
+1. Update the CLI version, lockfile, and user-facing commands. Generated projects
+   must pin the CLI's exact document dependency independently of the CLI version.
+   Confirm the npm version and `cli-vVERSION` tag are unused.
+2. Commit the candidate, then run the complete `bun run release:check` on the clean
+   commit. Additionally install the exact CLI tarball with registry SDK packages
+   outside the checkout and exercise init/install/check/build/register, document
+   editing, and PNG/PDF export using the already shipped compatible Mac app.
+3. Push master and wait for `fast`, `native`, and the secret scan on that commit.
+   Tag it `cli-vVERSION`. This tag does not trigger Mac signing/publication.
+4. Create a GitHub Release retaining the tested CLI tarball, `SHA256SUMS`, gate
+   report, and `release-record.json`. Record the commit/tag, CLI and dependency
+   versions, compatible Mac version, runtime identity/checksum, artifact hashes,
+   and installed-app smoke results. Never attach new files to an old Mac release.
+5. Verify the retained tarball checksum, then manually publish that exact file
+   with `bun publish ./hitslop-cli-VERSION.tgz --access public --tag latest`.
+   Do not repack or republish unchanged SDK packages. If publication is interrupted,
+   inspect the registry before retrying; never overwrite a published version.
+6. Verify fresh `bunx @hitslop/cli@VERSION init smoke --yes` and global `slop`
+   consumers, successful generated-project installation without SDK overrides,
+   and that default `bunx @hitslop/cli` resolves to the intended version. Retain
+   registry integrity and consumer results with release evidence.
+
+For coordinated Mac releases below, package manifests determine each tarball's
+version. Release records include `packageVersions`; `runtime.sdkVersion` remains
+the SDK provenance. CLI dependency pins must match the released SDK packages.
+
+## Coordinated release sequence
+
+The most recent coordinated release is npm **1.1.0**, paired with Mac **1.0.7 (25)** and tag `macos-v1.0.7`. It adds versioned JSON import with runtime contract **1**, revision **2**. The Mac and npm version sequences are independent. Mac 1.0.6 (24) shipped revision 1; preserve its existing runtime ledger checksum and template specimens.
 
 1. Finish release preparation and commit a clean tree. Check package versions, dependency pins, Apple version/build, and runtime provenance together. Confirm the intended npm versions and Mac tag have not already shipped.
 2. Run the complete local gate below on that final commit and record manual acceptance results. A report from a dirty checkout or another commit does not validate the release candidate.

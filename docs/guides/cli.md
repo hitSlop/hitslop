@@ -6,8 +6,8 @@ Start with the [public CLI workflows](../../apps/landing/src/content/docs/docs/g
 
 | Entry point | Use |
 | --- | --- |
-| `bunx @hitslop/cli@1.1.0 COMMAND` | Run the CLI matching this checkout's SDK without installing globally. |
-| `slop COMMAND` | Run after `bun install -g @hitslop/cli@1.1.0`, with Bun's bin directory on PATH. |
+| `bunx @hitslop/cli@1.2.0 COMMAND` | Run the CLI matching this checkout's SDK without installing globally. |
+| `slop COMMAND` | Run after `bun install -g @hitslop/cli@1.2.0`, with Bun's bin directory on PATH. |
 | `bun slop COMMAND` | Run from this repository after [development setup](development.md). |
 | `"/Applications/hitSlop.app/Contents/Helpers/hitslop-native" COMMAND` | Run native document commands directly, without Node or Bun. |
 
@@ -20,7 +20,7 @@ Use `bun slop --help`, `bun slop COMMAND --help`, or the native helper's `--help
 With Bun 1.4.2 or newer:
 
 ```sh
-bunx @hitslop/cli@1.1.0 init weekend-kit
+bunx @hitslop/cli@1.2.0 init weekend-kit
 cd weekend-kit
 bun install
 bun run check
@@ -48,7 +48,7 @@ bun run build
 bun run register
 ```
 
-Build creates `dist/weekend-kit.slop`; register builds and installs an immutable master in `~/.hitslop/templates`. Existing documents keep their app version. Both commands require a compatible installed Mac app. Prefer the generated scripts, which use matching CLI/SDK versions. From the checkout, use `bun slop check SOURCE`, `bun slop dev SOURCE [--port 5174]`, `bun slop build SOURCE`, and `bun slop register SOURCE`. The preview port defaults to 5173. See [authoring](authoring.md) for source structure.
+Build creates `dist/weekend-kit.slop`; register builds and installs an immutable master in `~/.hitslop/templates`. Existing documents keep their app version. Both commands require a compatible installed Mac app. Prefer the generated scripts, which pin the CLI and its required SDK separately. From the checkout, use `bun slop check SOURCE`, `bun slop dev SOURCE [--port 5174]`, `bun slop build SOURCE`, and `bun slop register SOURCE`. The preview port defaults to 5173. See [authoring](authoring.md) for source structure.
 
 ## Create and open a writable document
 
@@ -196,7 +196,7 @@ The server waits 30 seconds for a command; the client allows 35 seconds for a re
 `HITSLOP_NATIVE_CLI` selects an explicit executable for both document commands and template capture. Missing/non-executable overrides fail; an executed helper is never retried through another binary. Helper discovery otherwise checks `/Applications/hitSlop.app`, then
 `~/Applications/hitSlop.app`. Authoring never compiles Swift. Build and register
 require an installed app supporting the required runtime contract and revision.
-The authored project SDK and CLI must have matching identities.
+The authored project SDK must match the SDK identity required by the CLI. CLI 1.2.0 requires document/schema SDK 1.1.0; the CLI package version itself need not equal the SDK version.
 
 Bun is the only JavaScript runtime required for authoring and skill management.
 Native document editing is macOS-only; there is no Bun document engine fallback.

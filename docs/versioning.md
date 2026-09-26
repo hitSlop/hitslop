@@ -6,8 +6,18 @@ SDK 1.1.0 targets contract 1, revision 2. It adds versioned JSON snapshots and
 atomic JSON import through the shared runtime, without changing SQLite format 1
 or the existing operation/handle contracts. Revision-1 readers must continue to
 read imported updates and checkpoints. The revision-1 release record and bytes
-remain sealed. Revision 2 is sealed separately for Mac 1.0.7 (25). Ship the
-matching signed app before publishing the 1.1.0 npm packages.
+remain sealed. Revision 2 is sealed separately for Mac 1.0.7 (25). Mac 1.0.7 and the 1.1.0 npm packages have shipped.
+
+## Independent CLI releases
+
+CLI 1.2.0 uses document/schema SDK 1.1.0 and the sealed contract-1/revision-2
+runtime supported by Mac 1.0.7. The CLI package version may advance independently
+when its changes preserve SDK/runtime requirements. `init` pins the project's
+SDK to the CLI's exact `@hitslop/document` dependency and its tooling to the CLI's
+own version. Builds still compare the complete project SDK identity with the
+CLI's required SDK identity. An independent CLI release does not change runtime
+provenance, seals, SDK versions, or the Mac version. See the CLI-only procedure in
+[releasing](guides/releasing.md).
 
 ## App releases, runtime revisions, and contracts
 

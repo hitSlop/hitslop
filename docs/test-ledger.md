@@ -289,3 +289,14 @@ cases, and 51 bundled template open/reopen checks), `bun run packages:pack`,
 The interactive init cases also passed with the enclosing runner marked as CI.
 Agent launch tests use disposable executables, not real provider sessions.
 Native runtime sources and sealed release records were not changed.
+
+## Independent CLI 1.2.0 release
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Init pins the project's document SDK separately from CLI tooling ([init](../packages/cli/tests/init.test.ts)) | Generated dependency equals the SDK package version; dev dependency equals the CLI package version | Bun CLI | Existing init checks covered manifest metadata, not differing package versions | EXTEND; with CLI 1.2.0 the baseline requested document 1.2.0 instead of 1.1.0; observed failure before the dependency fix |
+| Packed projects install and build with independently versioned SDK and CLI ([packed consumer](../scripts/v1/packed-test.ts)) | Emitted SDK and CLI pins match their independently packed manifests, followed by consumer install/check/build | Packed consumer | Existing test already asserted the SDK pin and ran the workflow | EXTEND with CLI pin assertion; retain existing install/build and runtime identity checks |
+
+No consequential coverage was removed. The targeted init regression passed after
+the fix. Full release validation is retained against the final commit in the
+CLI GitHub Release evidence rather than recording a dirty-tree run here.

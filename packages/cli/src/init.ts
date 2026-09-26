@@ -123,7 +123,7 @@ export async function initProject(target: string, options: InitOptions = {}, str
     await readFile(join(cliRoot, "templates/checklist/package.json"), "utf8"),
   );
   project.name = slug;
-  project.dependencies["@hitslop/document"] = metadata.version;
+  project.dependencies["@hitslop/document"] = metadata.dependencies["@hitslop/document"];
   project.devDependencies = { "@hitslop/cli": metadata.version };
   project.scripts = {
     dev: "slop dev .",
@@ -153,7 +153,7 @@ export async function initProject(target: string, options: InitOptions = {}, str
     await cp(join(cliRoot, "skills"), join(destination, ".agents/skills"), { recursive: true });
     await writeFile(
       join(destination, "AGENTS.md"),
-      "Read manifest.json, BRIEF.md, .agents/skills/hitslop-authoring/SKILL.md, and .agents/skills/hitslop-design/SKILL.md first. Build the slop described in BRIEF.md. Update manifest.json's title, description, and categories to match what you build; the user can edit them later. Choose a visual direction suited to its purpose; the checklist is a functional starting point whose layout and appearance should be adapted to the task. Use plain CSS, defineTheme tokens, and typed document handles. Install dependencies with bun install, then run bun run check and bun run build.\n\nThe project includes portable copies of its agent guides. slop skills repair repairs installed links; it does not update these copies. Review guide changes manually when upgrading the project's matching CLI and SDK versions.\n",
+      "Read manifest.json, BRIEF.md, .agents/skills/hitslop-authoring/SKILL.md, and .agents/skills/hitslop-design/SKILL.md first. Build the slop described in BRIEF.md. Update manifest.json's title, description, and categories to match what you build; the user can edit them later. Choose a visual direction suited to its purpose; the checklist is a functional starting point whose layout and appearance should be adapted to the task. Use plain CSS, defineTheme tokens, and typed document handles. Install dependencies with bun install, then run bun run check and bun run build.\n\nThe project includes portable copies of its agent guides. slop skills repair repairs installed links; it does not update these copies. Review guide changes manually when upgrading the project. CLI and SDK versions may differ; use the SDK version declared by the CLI's @hitslop/document dependency.\n",
     );
   } catch (error) {
     await rm(destination, { recursive: true, force: true });

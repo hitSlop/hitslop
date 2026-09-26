@@ -23,7 +23,7 @@ handoff. Use `--yes` and explicit metadata flags for unattended creation; CI and
 non-TTY runs never launch an agent. See [CLI workflows](cli.md#create-preview-and-register-an-app)
 for flag examples, defaults, and skill installation.
 
-The launch includes the CLI and SDK packages. Until that publication is available, use the checkout or the packed-package verification workflow; old npm versions are not substitutes for v1. Generated projects pin their dependencies. Prefer their `bun run check/dev/build/register` scripts. Native capture requires the installed Mac app or an explicit `HITSLOP_NATIVE_CLI`; authoring never compiles Swift. Browser preview needs no native renderer.
+CLI 1.2.0 uses document/schema SDK 1.1.0 and works with Mac 1.0.7. Generated projects pin the CLI and its required SDK separately; these package versions need not be equal. Prefer their `bun run check/dev/build/register` scripts. Native capture requires the installed Mac app or an explicit `HITSLOP_NATIVE_CLI`; authoring never compiles Swift. Browser preview needs no native renderer.
 
 Read `manifest.json` first. Set `runtime` to `hitslop-v1`, author, slug, title, description, one or two categories, and initial presentation. Define `schema.ts`, creation-only `initial.ts`, token defaults in `theme.ts`, and UI in `App.svelte`. `main.ts` imports `styles.css` and calls `mountDocument(App)` from `@hitslop/document/host`.
 

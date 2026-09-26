@@ -60,7 +60,7 @@ export async function buildProjectInBun(source: string, destination?: string) {
   );
   if (Object.entries(identity).some(([key, value]) => installedIdentity[key] !== value))
     throw new Error(
-      `Project SDK does not match CLI ${identity.sdkVersion}. Install matching @hitslop/document and @hitslop/cli versions.`,
+      `Project SDK identity does not match the CLI's required SDK ${identity.sdkVersion}. Install @hitslop/document@${identity.sdkVersion} in the project.`,
     );
   const schemaModule = await import(join(source, "schema.ts"));
   const definition = Object.values(schemaModule).find((v: any) => v?.descriptor) as any;

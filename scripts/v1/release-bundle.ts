@@ -12,9 +12,15 @@ if (!version || !build || process.env.GITHUB_REF_NAME !== `macos-v${version}`)
   throw new Error("Release tag must match the Apple project marketing version");
 const release = (await releases()).find(r => r.runtimeContract === identity.runtimeContract && r.runtimeRevision === identity.runtimeRevision);
 if (!release) throw new Error("Seal and commit the validated runtime before tagging a release");
+const packageVersions: Record<string, string> = {};
 for (const name of ["schema", "document", "cli"]) {
   const metadata = await Bun.file(join(repository, "packages", name, "package.json")).json();
-  if (metadata.version !== identity.sdkVersion) throw new Error(`SDK version mismatch: ${name}`);
+  packageVersions[name] = metadata.version;
+  if (name !== "cli" && metadata.version !== identity.sdkVersion)
+    throw new Error(`SDK version mismatch: ${name}`);
+  for (const dependency of name === "cli" ? ["document", "schema"] : name === "document" ? ["schema"] : [])
+    if (metadata.dependencies[`@hitslop/${dependency}`] !== identity.sdkVersion)
+      throw new Error(`SDK dependency mismatch: ${name} -> ${dependency}`);
 }
 if (process.argv.includes("--preflight")) process.exit(0);
 const catalog = await verifyCopies(runtimeDestinations);
@@ -31,7 +37,7 @@ if (await tar.exited) throw new Error("Cannot pack runtime archive");
 const retained = [runtimeName, "runtime-releases.json"];
 await cp(join(repository, "runtimes/releases.json"), join(output, "runtime-releases.json"));
 for (const name of ["schema", "document", "cli"]) {
-  const file = `hitslop-${name}-${identity.sdkVersion}.tgz`;
+  const file = `hitslop-${name}-${packageVersions[name]}.tgz`;
   await cp(join(repository, "generated/v1/npm", file), join(output, file));
   retained.push(file);
 }
@@ -40,7 +46,7 @@ const commit = (await new Response(git.stdout).text()).trim();
 if (await git.exited) throw new Error("Cannot identify release commit");
 const hashes: Record<string, string> = {};
 for (const file of retained) hashes[file] = createHash("sha256").update(await readFile(join(output, file))).digest("hex");
-await writeFile(join(output, "release-record.json"), JSON.stringify({ commit, tag: process.env.GITHUB_REF_NAME, macVersion: version, macBuild: build, runtime: { ...identity, sha256: release.sha256 }, artifacts: hashes }, null, 2) + "\n");
+await writeFile(join(output, "release-record.json"), JSON.stringify({ commit, tag: process.env.GITHUB_REF_NAME, macVersion: version, macBuild: build, packageVersions, runtime: { ...identity, sha256: release.sha256 }, artifacts: hashes }, null, 2) + "\n");
 hashes["release-record.json"] = createHash("sha256").update(await readFile(join(output, "release-record.json"))).digest("hex");
 const sums = await readFile(join(output, "SHA256SUMS"), "utf8");
 const prior = sums.split("\n").filter(line => line && !Object.keys(hashes).some(file => line.endsWith(`  ${file}`)));
