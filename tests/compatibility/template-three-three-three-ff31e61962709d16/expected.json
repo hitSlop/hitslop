@@ -1,0 +1,42 @@
+{
+  "date": "Friday, Sep 25",
+  "deepWork": {
+    "project": "Chapter 4 draft: The Economics of Attention",
+    "minutes": 90,
+    "notes": "Focus solely on outlining section 4.2 before touching citations. Zero tabs open."
+  },
+  "shortTasks": [
+    {
+      "text": "Call accountant regarding quarterly filing",
+      "done": false,
+      "$id": "j25r156mdxfq08557xqsp5pty8"
+    },
+    {
+      "text": "Confirm venue contract for October offsite",
+      "done": true,
+      "$id": "y0nqmrmmx3h2p9w414885xpv1w"
+    },
+    {
+      "text": "Send revised proposal to client",
+      "done": false,
+      "$id": "sxpq29a5t6dz1q59yeyv79fbk8"
+    }
+  ],
+  "maintenance": [
+    {
+      "text": "Inbox down to zero unprocessed emails",
+      "done": true,
+      "$id": "vdr2aevqfxdhgs6r513pfjam84"
+    },
+    {
+      "text": "45-minute zone 2 run or walk",
+      "done": false,
+      "$id": "hzr619ddfn61y48vanhmp50jww"
+    },
+    {
+      "text": "Backup local development databases",
+      "done": false,
+      "$id": "twe0zp9n38dsvksfm4acxf8630"
+    }
+  ]
+}

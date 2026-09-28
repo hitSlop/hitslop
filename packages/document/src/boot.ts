@@ -8,7 +8,11 @@ import { HostStore, hostCall } from "./bridge";
 import { captureController } from "./capture";
 import { Document } from "./document";
 import { MemoryStore } from "./memory";
-import { installPresentationStage, presentationStage, type PresentationStage } from "./presentation";
+import {
+  installPresentationStage,
+  presentationStage,
+  type PresentationStage,
+} from "./presentation";
 import { fromDescriptor, type ObjectNode } from "./schema";
 import { Session } from "./session";
 import { openTheme, type ThemeController } from "./theme-runtime";
@@ -104,7 +108,8 @@ export function createContext(
       registerTarget: capture.registerTarget,
     }),
     attachments: Object.freeze({
-      import: (file: File, options: Parameters<AttachmentController["import"]>[1]) => attachments.import(file, options),
+      import: (file: File, options: Parameters<AttachmentController["import"]>[1]) =>
+        attachments.import(file, options),
       read: (id: string, options?: { type?: string }) => attachments.read(id, options),
       list: () => attachments.list(),
     }),
@@ -123,7 +128,12 @@ export async function boot() {
   try {
     // Failures inside the package's own module are authored failures, reported as such.
     const authored = (error: unknown) => {
-      if (native) void hostCall({ method: "runtimeError", kind: "application", error: describe(error) }).catch(() => {});
+      if (native)
+        void hostCall({
+          method: "runtimeError",
+          kind: "application",
+          error: describe(error),
+        }).catch(() => {});
       throw error;
     };
     const app = import(new URL("/assets/app.js", location.href).href).then(
@@ -145,7 +155,12 @@ export async function boot() {
     const capture = captureController();
     const reportError = (error: unknown) => {
       globalThis.document.dispatchEvent(new CustomEvent("hitslop:render-error", { detail: error }));
-      if (native) void hostCall({ method: "runtimeError", kind: "application", error: describe(error) }).catch(() => {});
+      if (native)
+        void hostCall({
+          method: "runtimeError",
+          kind: "application",
+          error: describe(error),
+        }).catch(() => {});
     };
     const ctx = createContext(doc as Document<ObjectNode>, {
       attachments,
@@ -171,7 +186,11 @@ export async function boot() {
       recovered: native ? () => hostCall({ method: "runtimeRecovered" }) : undefined,
     });
     if (native) {
+      let lastStatus = "";
       doc.subscribe(() => {
+        const status = JSON.stringify([doc.status, doc.error]);
+        if (status === lastStatus) return;
+        lastStatus = status;
         void hostCall({ method: "status", status: doc.status, error: doc.error }).catch(() => {});
       });
       await hostCall({ method: "ready" });

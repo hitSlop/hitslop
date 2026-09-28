@@ -1,4 +1,4 @@
-import type { AttachmentInfo, AttachmentRef } from "../attachments";
+import type { AttachmentInfo, AttachmentRef } from "../contracts";
 import { current } from "./context";
 export type { AttachmentInfo, AttachmentRef };
 

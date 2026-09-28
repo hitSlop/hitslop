@@ -54,7 +54,7 @@ Example.slop/
     Preview.png                 refreshed in writable documents
     Icon.png                    optional immutable authored icon
   state/                        writable documents only
-    document.sqlite             opaque checkpoint/update bytes and doc_id, format 1
+    document.sqlite             opaque checkpoint/update bytes and doc_id, format 2
     writer.lock                 permanent ownership inode
     host.lock                   live socket discovery
     theme.json                  optional token overrides
@@ -63,17 +63,17 @@ Example.slop/
 
 Templates contain no `state`, `stores`, source, dependencies, caches, or editable structural stylesheets. Builds add document guidance; missing or changed guidance does not prevent opening an existing document. A built or registered master is immutable and must be copied before editing. Initial values seed only a new database. Schema changes require new documents; pre-v1 packages are not migrated.
 
-Host resources are served at stable `slop://app/__runtime__/` URLs, backed by the selected `runtimes/<contract>` directory. App bundles must not embed Loro or the document implementation. Preview uses the same runtime with disposable memory storage. No executable code is downloaded.
+Host resources are served at stable `slop://app/__runtime__/` URLs, backed by the single bundled runtime directory. App bundles must not embed Loro or the document implementation. Preview uses the same runtime with disposable memory storage. No executable code is downloaded.
 
 `assets/runtime.json` declares positive integer `runtimeContract` and `minRuntimeRevision`; SDK/Loro/protocol fields record provenance. Opening checks supported contract and minimum revision before storage opens. Authored source and CLI identities must match for compilation. Capture requires a helper supporting the requested contract/revision. See [versioning](../versioning.md) for the full compatibility contract.
 
 ## Persistence and ownership
 
-Swift owns `state/document.sqlite`: `user_version=1`, DELETE journaling, synchronous FULL, and opaque checkpoint/update bytes. Checkpoint replacement and covered-row deletion are atomic. The exact canonical descriptor is the storage key. Generation is a storage token, not a Loro version.
+Swift owns `state/document.sqlite`: `user_version=2`, DELETE journaling, synchronous EXTRA and macOS fullfsync, and opaque checkpoint/update bytes. Checkpoint replacement and covered-row deletion are atomic. The exact canonical descriptor is the storage key. Generation is a storage token, not a Loro version.
 
 One OS flock on permanent `state/writer.lock` owns each local package. Never unlink it or bypass a busy writer. `state/host.lock` is discovery only. A busy writer with unreachable discovery is an error, never permission for another writer.
 
-Autosave runs after 200 ms. Flush commits text drafts and scalar previews, persists updates, and checkpoints at 256 updates or 4 MiB. Native load/write limits are 4,096 rows and 32 MiB aggregate checkpoint/update bytes. The engine checkpoints before appending beyond those limits. Checkpoints retain history; automatic history pruning is deferred. Before persisting a batch, the runtime checks its actual full snapshot against capacity. Oversized live edits remain visible and unsaved (`save-failed`, `full`), and close/export fail. Editing and retry remain available; successful saving or explicit discard clears the failure. Discard awaits reloading durable state under the same writer lock and remounts the view; failed restoration retains unsaved edits. Full history is kept; see [runtime reset](../runtime-reset.md#3-data-semantics-ready-for-collaboration). `bun scripts/v1/growth.ts` measures realistic growth (5,000 tasks of churn use about 2% of capacity). Writers never produce shallow checkpoints; valid existing shallow checkpoints remain readable. Oversized existing packages are refused intact; compact cannot promise recovery of unloadable packages.
+Autosave runs after 200 ms. Flush commits text drafts and scalar previews, persists one merged update per save, and schedules optional checkpoint maintenance at 256 saved updates or 4 MiB. Native load/write limits are 4,096 rows and 32 MiB aggregate checkpoint/update bytes. The engine checkpoints before appending beyond those limits. Checkpoints retain history; automatic history pruning is deferred. Capacity measures stored checkpoint plus update bytes. Ordinary saves do not generate snapshots; counter edits and JSON replacement require checkpoints for exact replay. Oversized optional compaction preserves acknowledged state and does not block close/export. Oversized live edits remain visible and unsaved (`save-failed`, `full`), and close/export fail. Editing and retry remain available; successful saving or explicit discard clears the failure. Discard awaits reloading durable state under the same writer lock and remounts the view; failed restoration retains unsaved edits. Full history is kept; see [runtime reset](../runtime-reset.md#3-data-semantics-ready-for-collaboration). `bun scripts/v1/growth.ts` measures realistic growth (5,000 tasks of churn use about 2% of capacity). Writers never produce shallow checkpoints; valid existing shallow checkpoints remain readable. Oversized existing packages are refused intact; compact cannot promise recovery of unloadable packages.
 
 After an append commits but acknowledgement is lost, the engine reloads metadata and retains the same Loro bytes. A later flush imports them idempotently. Repeating the user's operation is not idempotent. CLI mutations serialize and acknowledge persistence; no receipts, public retry identity, or automatic replay exist. After an uncertain result, use `get` before another edit. `get` flushes drafts and pending writes. `hello` supplies the WebView session epoch for mutation/export handshakes.
 

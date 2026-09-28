@@ -88,7 +88,11 @@ function resolve(engine: LoroDoc, root: ObjectNode, path: Path): Location {
     if (value === undefined) reject(`Absent value at ${JSON.stringify(path)}; set it first`);
     const inner = unwrap(node);
     usable(inner, value, path);
-    if (typeof part === "string" && inner.kind === "object" && Object.hasOwn(inner.properties, part))
+    if (
+      typeof part === "string" &&
+      inner.kind === "object" &&
+      Object.hasOwn(inner.properties, part)
+    )
       location = {
         node: inner.properties[part]!,
         parent: value,
@@ -99,14 +103,26 @@ function resolve(engine: LoroDoc, root: ObjectNode, path: Path): Location {
     else if (part && typeof part === "object" && "id" in part && typeof part.id === "string") {
       if (inner.kind === "list" && inner.item.kind === "object") {
         const index = rowIndex(value, part.id, collection);
-        location = { node: inner.item, parent: value, key: index, value: value.get(index), entry: false };
+        location = {
+          node: inner.item,
+          parent: value,
+          key: index,
+          value: value.get(index),
+          entry: false,
+        };
       } else if (inner.kind === "tree") {
         const data = treeNode(value, part.id, collection).data;
         location = { node: inner.item, key: part.id, value: data, entry: false };
       } else reject("Unknown schema path");
     } else if (part && typeof part === "object" && "key" in part && inner.kind === "record") {
       checkRecordKey(part.key);
-      location = { node: inner.value, parent: value, key: part.key, value: value.get(part.key), entry: true };
+      location = {
+        node: inner.value,
+        parent: value,
+        key: part.key,
+        value: value.get(part.key),
+        entry: true,
+      };
     } else if (
       part &&
       typeof part === "object" &&
@@ -116,7 +132,13 @@ function resolve(engine: LoroDoc, root: ObjectNode, path: Path): Location {
     ) {
       if (!isInt(part.index) || part.index < 0 || part.index >= value.length)
         reject(`List index out of range at ${JSON.stringify(path)}`);
-      location = { node: inner.item, parent: value, key: part.index, value: value.get(part.index), entry: false };
+      location = {
+        node: inner.item,
+        parent: value,
+        key: part.index,
+        value: value.get(part.index),
+        entry: false,
+      };
     } else reject("Unknown schema path");
   }
   return location;
@@ -128,9 +150,13 @@ export function rowIdentities(list: LoroMovableList) {
   const items = list.toArray() as any[];
   const positions: number[] = [];
   items.forEach((row, index) => row?.kind?.() === "Map" && positions.push(index));
-  return effectiveIDs(positions.map((index) => ({ stored: items[index].get(ID_KEY), internal: items[index].id }))).map(
-    (identity, i) => ({ ...identity, index: positions[i]!, row: items[positions[i]!] as LoroMap }),
-  );
+  return effectiveIDs(
+    positions.map((index) => ({ stored: items[index].get(ID_KEY), internal: items[index].id })),
+  ).map((identity, i) => ({
+    ...identity,
+    index: positions[i]!,
+    row: items[positions[i]!] as LoroMap,
+  }));
 }
 /** Effective tree node IDs in depth-first pre-order, matching the projected tree. */
 export function treeIdentities(tree: LoroTree) {
@@ -142,9 +168,9 @@ export function treeIdentities(tree: LoroTree) {
     }
   };
   visit(tree.roots());
-  return effectiveIDs(nodes.map((node) => ({ stored: storedID(node.data), internal: node.id }))).map(
-    (identity, i) => ({ ...identity, node: nodes[i]! }),
-  );
+  return effectiveIDs(
+    nodes.map((node) => ({ stored: storedID(node.data), internal: node.id })),
+  ).map((identity, i) => ({ ...identity, node: nodes[i]! }));
 }
 /**
  * Maps a collection path and effective ID to the internal container (or tree node) ID
@@ -163,8 +189,11 @@ function rowIndex(list: LoroMovableList, id: string, collection: Path) {
     const parent = active.engine.getPathToContainer(list.id);
     const index = found?.at(-1);
     if (
-      found && parent && typeof index === "number" &&
-      found.length === parent.length + 1 && parent.every((part, i) => found![i] === part) &&
+      found &&
+      parent &&
+      typeof index === "number" &&
+      found.length === parent.length + 1 &&
+      parent.every((part, i) => found![i] === part) &&
       (list.get(index) as any)?.id === hint
     )
       return index;
@@ -176,7 +205,8 @@ function treeNode(tree: LoroTree, id: string, collection: Path): LoroTreeNode {
   const hint = isID(id) && active ? active.lookup?.(collection, id) : undefined;
   if (hint)
     try {
-      if (tree.has(hint as TreeID) && !tree.isNodeDeleted(hint as TreeID)) return tree.getNodeByID(hint as TreeID)!;
+      if (tree.has(hint as TreeID) && !tree.isNodeDeleted(hint as TreeID))
+        return tree.getNodeByID(hint as TreeID)!;
     } catch {}
   if (isID(id)) for (const entry of treeIdentities(tree)) if (entry.id === id) return entry.node;
   return reject(`Unknown tree node ID: ${id} at ${JSON.stringify(collection)}`);
@@ -231,20 +261,25 @@ function operate(engine: LoroDoc, root: ObjectNode, op: Operation): InsertResult
     case "clear":
       if (node.kind !== "optional" && !location.entry)
         reject("Only optional fields and record entries can be cleared");
-      if (!(parent instanceof LoroMap)) return reject("Only optional fields and record entries can be cleared");
+      if (!(parent instanceof LoroMap))
+        return reject("Only optional fields and record entries can be cleared");
       parent.delete(key as string);
       return;
     case "assign": {
       const target = unwrap(node);
       if (!parent) return reject("assign requires a field path");
       if (op.value === undefined) {
-        if (node.kind !== "optional" && !location.entry) reject("Only optional fields can be cleared");
+        if (node.kind !== "optional" && !location.entry)
+          reject("Only optional fields can be cleared");
         (parent as LoroMap).delete(key as string);
         return;
       }
       validate(target, op.value);
       // An explicit assignment replaces an unusable stored value; it is not a read repair.
-      const stored = isScalar(target) || value?.kind?.() === kinds[target.kind as keyof typeof kinds] ? value : undefined;
+      const stored =
+        isScalar(target) || value?.kind?.() === kinds[target.kind as keyof typeof kinds]
+          ? value
+          : undefined;
       assertAssignable(target, op.value, stored);
       if (parent instanceof LoroMovableList) parent.set(key as number, op.value as any);
       else write(parent as LoroMap, key as string, target, op.value, true);
@@ -262,7 +297,13 @@ function operate(engine: LoroDoc, root: ObjectNode, op: Operation): InsertResult
         container.update(op.value);
       } else if (op.type === "text.splice") {
         const length = container.length;
-        if (!isInt(op.index) || !isInt(op.delete) || op.index < 0 || op.delete < 0 || op.index + op.delete > length)
+        if (
+          !isInt(op.index) ||
+          !isInt(op.delete) ||
+          op.index < 0 ||
+          op.delete < 0 ||
+          op.index + op.delete > length
+        )
           reject("Text splice is outside the text");
         if (typeof op.insert !== "string") reject("Text splice inserts a string");
         container.splice(op.index, op.delete, op.insert);
@@ -270,7 +311,8 @@ function operate(engine: LoroDoc, root: ObjectNode, op: Operation): InsertResult
         if (text.kind !== "richtext") return reject(`${op.type} requires rich text`);
         validateMark(text, op.key, op.type === "text.mark" ? op.value : null);
         range(op.start, op.end, container.length);
-        if (op.type === "text.mark") container.mark({ start: op.start, end: op.end }, op.key, op.value);
+        if (op.type === "text.mark")
+          container.mark({ start: op.start, end: op.end }, op.key, op.value);
         else container.unmark({ start: op.start, end: op.end }, op.key);
       }
       return;
@@ -289,7 +331,8 @@ function operate(engine: LoroDoc, root: ObjectNode, op: Operation): InsertResult
     case "remove":
     case "move": {
       const target = present(location, op.path);
-      if (target.kind === "list" && target.item.kind === "object") return rows(value, target.item, op);
+      if (target.kind === "list" && target.item.kind === "object")
+        return rows(value, target.item, op);
       if (target.kind === "list") return values(value, target.item as Scalar, op);
       if (target.kind === "tree") return tree(value, target.item, op);
       return reject("Operation requires a list or tree field");
@@ -314,10 +357,17 @@ function assertAssignable(node: ValueNode, input: any, existing: any): void {
 type Structural = Extract<Operation, { type: "insert" | "remove" | "move" }>;
 function requestedID(op: Structural, taken: (id: string) => boolean) {
   if (op.type !== "insert" || op.id === undefined) return newID();
-  if (!isID(op.id) || taken(op.id)) reject(`Row ID ${JSON.stringify(op.id)} is invalid or already used`);
+  if (!isID(op.id) || taken(op.id))
+    reject(`Row ID ${JSON.stringify(op.id)} is invalid or already used`);
   return op.id!;
 }
-function insertRow(list: LoroMovableList, index: number, item: ObjectNode, value: any, id = newID()) {
+function insertRow(
+  list: LoroMovableList,
+  index: number,
+  item: ObjectNode,
+  value: any,
+  id = newID(),
+) {
   const row = list.insertContainer(index, new LoroMap());
   row.set(ID_KEY, id);
   fill(row, item, value);
@@ -362,7 +412,14 @@ function values(list: LoroMovableList, item: Scalar, op: Structural): void {
       reject("List range out of range");
     list.delete(op.index!, count);
   } else if (op.type === "move") {
-    if (!isInt(op.from) || !isInt(op.to) || op.from < 0 || op.to < 0 || op.from >= length || op.to >= length)
+    if (
+      !isInt(op.from) ||
+      !isInt(op.to) ||
+      op.from < 0 ||
+      op.to < 0 ||
+      op.from >= length ||
+      op.to >= length
+    )
       reject("List index out of range");
     if (op.from !== op.to) list.move(op.from!, op.to!);
   }
@@ -380,7 +437,10 @@ function tree(tree: LoroTree, item: ObjectNode, op: Structural): InsertResult | 
       return { parent: parent.id, index: parent.children()?.length ?? 0 };
     }
     const sibling = treeNode(tree, (d.before ?? d.after)!, op.path);
-    return { parent: sibling.parent()?.id, index: sibling.index()! + (d.after !== undefined ? 1 : 0) };
+    return {
+      parent: sibling.parent()?.id,
+      index: sibling.index()! + (d.after !== undefined ? 1 : 0),
+    };
   };
   if (op.type === "insert") {
     validate({ kind: "tree", item }, [op.value]);
@@ -394,13 +454,26 @@ function tree(tree: LoroTree, item: ObjectNode, op: Structural): InsertResult | 
   if (op.type !== "move") return;
   const d = op.destination as Destination | undefined;
   try {
-    if (d && typeof d === "object" && typeof d.before === "string" && !("after" in d) && !("parent" in d))
+    if (
+      d &&
+      typeof d === "object" &&
+      typeof d.before === "string" &&
+      !("after" in d) &&
+      !("parent" in d)
+    )
       node.moveBefore(treeNode(tree, d.before, op.path));
-    else if (d && typeof d === "object" && typeof d.after === "string" && !("before" in d) && !("parent" in d))
+    else if (
+      d &&
+      typeof d === "object" &&
+      typeof d.after === "string" &&
+      !("before" in d) &&
+      !("parent" in d)
+    )
       node.moveAfter(treeNode(tree, d.after, op.path));
     else {
       const { parent } = place(d);
-      const siblings = parent === undefined ? tree.roots() : tree.getNodeByID(parent)!.children() ?? [];
+      const siblings =
+        parent === undefined ? tree.roots() : (tree.getNodeByID(parent)!.children() ?? []);
       tree.move(node.id, parent, siblings.filter((s) => s.id !== node.id).length);
     }
   } catch (error) {
@@ -483,7 +556,8 @@ function replace(container: any, node: ValueNode, value: any, lazy: boolean): vo
       return;
     case "record":
       for (const key of container.keys()) if (!Object.hasOwn(value, key)) container.delete(key);
-      for (const [key, entry] of Object.entries(value)) write(container, key, node.value, entry, true);
+      for (const [key, entry] of Object.entries(value))
+        write(container, key, node.value, entry, true);
       return;
     case "list": {
       const list = container as LoroMovableList;
@@ -518,11 +592,8 @@ export type Register = (value: object, path: Path) => void;
  * `invalid` values are unusable and read as a documented fallback; `constraint`
  * values are preserved as stored. Projection never repairs stored bytes.
  */
-export type Issue = {
-  readonly path: Path;
-  readonly kind: "invalid" | "constraint" | "unknown-field" | "identity";
-  readonly detail: string;
-};
+import type { Issue } from "./contracts";
+export type { Issue } from "./contracts";
 const INVALID = Symbol("invalid");
 /** Projected row/tree objects remember their container for reuse; never exposed as identity. */
 const containers = new WeakMap<object, string>();
@@ -538,7 +609,11 @@ export function fallback(node: Node): any {
       return "";
     case "number":
     case "integer":
-      return node.min !== undefined && node.min > 0 ? node.min : node.max !== undefined && node.max < 0 ? node.max : 0;
+      return node.min !== undefined && node.min > 0
+        ? node.min
+        : node.max !== undefined && node.max < 0
+          ? node.max
+          : 0;
     case "boolean":
       return false;
     case "enum":
@@ -570,15 +645,22 @@ function scalarIssue(node: Scalar, value: unknown): [Issue["kind"], string] | un
       return;
     case "number":
     case "integer":
-      if (typeof value !== "number" || !Number.isFinite(value)) return ["invalid", "Expected finite number"];
-      if (node.kind === "integer" && !Number.isInteger(value)) return ["constraint", "Expected integer"];
-      if ((node.min !== undefined && value < node.min) || (node.max !== undefined && value > node.max))
+      if (typeof value !== "number" || !Number.isFinite(value))
+        return ["invalid", "Expected finite number"];
+      if (node.kind === "integer" && !Number.isInteger(value))
+        return ["constraint", "Expected integer"];
+      if (
+        (node.min !== undefined && value < node.min) ||
+        (node.max !== undefined && value > node.max)
+      )
         return ["constraint", `Expected a number from ${node.min ?? "-∞"} to ${node.max ?? "∞"}`];
       return;
     case "boolean":
       return typeof value === "boolean" ? undefined : ["invalid", "Expected boolean"];
     case "enum":
-      return typeof value === "string" && node.values.includes(value) ? undefined : ["invalid", "Unknown enum value"];
+      return typeof value === "string" && node.values.includes(value)
+        ? undefined
+        : ["invalid", "Unknown enum value"];
   }
 }
 /**
@@ -597,14 +679,24 @@ export function project(
   const result = read(node, value, previous, path, register, issues);
   return result === INVALID ? fallback(node) : result;
 }
-function read(node: Node, value: any, previous: any, path: Path, register?: Register, issues?: Issue[]): any {
+function read(
+  node: Node,
+  value: any,
+  previous: any,
+  path: Path,
+  register?: Register,
+  issues?: Issue[],
+): any {
   if (node.kind === "optional") {
     if (value === undefined) return undefined;
     const inner = read(node.inner, value, previous, path, register, issues);
     return inner === INVALID ? undefined : inner;
   }
   if (isScalar(node)) {
-    const problem = value !== null && typeof value === "object" ? (["invalid", "Expected scalar value"] as const) : scalarIssue(node, value);
+    const problem =
+      value !== null && typeof value === "object"
+        ? (["invalid", "Expected scalar value"] as const)
+        : scalarIssue(node, value);
     if (!problem) return value;
     report(issues, path, problem[0], problem[1]);
     return problem[0] === "invalid" ? INVALID : value;
@@ -626,15 +718,21 @@ function read(node: Node, value: any, previous: any, path: Path, register?: Regi
     case "richtext": {
       const text = value.toString();
       const delta = value.toDelta();
-      if (previous?.text === text && JSON.stringify(previous.delta) === JSON.stringify(delta)) return previous;
+      if (previous?.text === text && JSON.stringify(previous.delta) === JSON.stringify(delta))
+        return previous;
       return deepFreeze({ text, delta });
     }
     case "list": {
-      if (node.item.kind === "object") return projectRows(node.item, value, previous, path, register, undefined, issues);
+      if (node.item.kind === "object")
+        return projectRows(node.item, value, previous, path, register, undefined, issues);
       const item = node.item;
       return share(
         previous,
-        value.toArray().map((v: unknown, index: number) => project(item, v, undefined, [...path, { index }], undefined, issues)),
+        value
+          .toArray()
+          .map((v: unknown, index: number) =>
+            project(item, v, undefined, [...path, { index }], undefined, issues),
+          ),
       );
     }
     case "record": {
@@ -646,7 +744,14 @@ function read(node: Node, value: any, previous: any, path: Path, register?: Regi
           report(issues, path, "invalid", `Invalid record key ${JSON.stringify(key)}`);
           continue;
         }
-        const entry = read(node.value, value.get(key), previous?.[key], [...path, { key }], register, issues);
+        const entry = read(
+          node.value,
+          value.get(key),
+          previous?.[key],
+          [...path, { key }],
+          register,
+          issues,
+        );
         if (entry !== INVALID) next[key] = entry;
       }
       return shareObject(previous, next, path, register);
@@ -659,7 +764,14 @@ function read(node: Node, value: any, previous: any, path: Path, register?: Regi
           report(issues, path, "unknown-field", `Unknown stored field: ${key}`);
       const next: Record<string, unknown> = {};
       for (const [key, child] of Object.entries(node.properties)) {
-        const projected = project(child, value.get(key), previous?.[key], [...path, key], register, issues);
+        const projected = project(
+          child,
+          value.get(key),
+          previous?.[key],
+          [...path, key],
+          register,
+          issues,
+        );
         if (projected !== undefined) next[key] = projected;
       }
       return shareObject(previous, next, path, register);
@@ -680,7 +792,8 @@ export function projectRows(
   issues?: Issue[],
 ): any {
   const byContainer = new Map<string, any>();
-  for (const row of Array.isArray(previous) ? previous : []) byContainer.set(containerOf(row)!, row);
+  for (const row of Array.isArray(previous) ? previous : [])
+    byContainer.set(containerOf(row)!, row);
   const identities = new Map(rowIdentities(list).map((identity) => [identity.index, identity]));
   const rows: any[] = [];
   (list.toArray() as LoroMap[]).forEach((row, index) => {
@@ -712,13 +825,26 @@ export function projectRow(
   if (before && next === before && before.$id === id) return before;
   return rowValue(next, id, row.id, rowPath, register);
 }
-export function rowValue(fields: object, id: string, container: string, path: Path, register?: Register) {
+export function rowValue(
+  fields: object,
+  id: string,
+  container: string,
+  path: Path,
+  register?: Register,
+) {
   const value = Object.freeze({ ...fields, $id: id });
   containers.set(value, container);
   register?.(value, path);
   return value;
 }
-function projectTree(item: ObjectNode, tree: LoroTree, previous: any, path: Path, register?: Register, issues?: Issue[]) {
+function projectTree(
+  item: ObjectNode,
+  tree: LoroTree,
+  previous: any,
+  path: Path,
+  register?: Register,
+  issues?: Issue[],
+) {
   const byContainer = new Map<string, any>();
   const index = (nodes: any) => {
     for (const node of Array.isArray(nodes) ? nodes : []) {
@@ -739,7 +865,8 @@ function projectTree(item: ObjectNode, tree: LoroTree, previous: any, path: Path
         const fields = before ? (({ children: _c, $id: _i, ...rest }) => rest)(before) : undefined;
         const data = project(item, node.data, fields, nodePath, register, issues);
         const children = visit(node.children(), before?.children);
-        if (before && data === fields && children === before.children && before.$id === id) return before;
+        if (before && data === fields && children === before.children && before.$id === id)
+          return before;
         const value = Object.freeze({ ...data, $id: id, children });
         containers.set(value, node.id);
         register?.(value, nodePath);
@@ -755,7 +882,12 @@ function share(previous: any, next: any[]) {
     ? previous
     : Object.freeze(next);
 }
-function shareObject(previous: any, next: Record<string, unknown>, path: Path, register?: Register) {
+function shareObject(
+  previous: any,
+  next: Record<string, unknown>,
+  path: Path,
+  register?: Register,
+) {
   if (
     previous &&
     Object.keys(previous).filter((key) => key !== "$id").length === Object.keys(next).length &&

@@ -10,10 +10,14 @@ product decision.
 
 ## Launch baseline
 
-The 2026-09 pre-launch reset retired contract 1 and its fixtures; no documents from
-that era need to open; [runtime reset](runtime-reset.md) explains the reasons and changes. The launch baseline is **runtime contract 2, revision 1** with
-SDK 2.0.0. `runtimes/releases.json` receives its seal when the launch release is cut
-(see [releasing](guides/releasing.md)). From then on, every record is immutable.
+The second prelaunch reset retires contracts 1 and 2 and their fixtures; no documents
+from that era need to open. [Runtime reset v2](runtime-reset-v2.md) records the decisions.
+The launch baseline is **runtime contract 3, revision 1, storage revision 1** with
+SDK 3.0.0 and SQLite format 2. The tested launch candidate is already sealed in
+`runtimes/releases.json`; sealing freezes bytes and ledger records before
+publication. A local seal does not mean the app has shipped. Publication archives
+those same bytes with the release (see [releasing](guides/releasing.md)). Sealed
+records remain immutable; later runtime byte changes require a new revision.
 
 ## What a slop contains and what the app supplies
 
@@ -45,13 +49,13 @@ Everything a frozen slop depends on falls in one of these. Each has a named gate
    capabilities are optional and listed in `ctx.capabilities`.
 3. **Data.** Descriptor format 1 and its frozen schema-key canonicalization (sorted keys,
    array order kept, no whitespace, JavaScript JSON numbers); the Loro layout (`data`
-   root, `$id` registers, mergeable containers only for shared fields); SQLite format 1;
+   root, `$id` registers, mergeable containers only for shared fields); SQLite format 2;
    theme override and attachment reference formats.
 
 | Contract | Gate |
 |---|---|
-| App module + `ctx` | Sealed consumers `2-1` (hand-written plain JS) and `2-1-svelte` (the real adapter) run their self-tests in WebKit: `test:render --fixtures`, `RuntimeCompatibilityTests` |
-| Data | Bun replay of every sealed fixture, exact `issues.json`, scenarios, checkpoint/update phases, historical readers and mixed-version collaboration |
+| App module + `ctx` | Sealed consumers `3-1` (hand-written plain JS) and `3-1-svelte` (the real adapter) run their self-tests in WebKit: `test:render --fixtures`, `RuntimeCompatibilityTests` |
+| Data | Bun replay of every sealed fixture, exact `issues.json`, scenarios, checkpoint/update phases, same-storage historical readers, older-reader refusal and current-engine convergence |
 | Package history | `compatibility-history.ts` rejects changed ledger records or fixture bytes against the base commit |
 | Shipped templates | `check:sealed-templates` in `release:check` |
 
@@ -60,7 +64,7 @@ Everything a frozen slop depends on falls in one of these. Each has a named gate
 The Swift↔JS bridge and `globalThis.__slop` are private between the runtime and the
 host, which always ship together. Boot internals, the runtime's `index.js` exports
 (beyond the harness contract in `compatibility-worker.ts`), CLI internals, and Loro
-versions that pass historical readers and mixed-version collaboration may change in any
+versions that pass forward replay and readers admitted by the same storage revision may change in any
 release.
 
 ## Identities
@@ -81,8 +85,11 @@ through `ctx.document.issues`; representable values keep their stored value, unu
 ones read as a documented fallback (a non-finite counter reads as `null`) and refuse
 edits beneath them. Nothing is repaired on open. Undecodable bytes, missing
 dependencies, unsupported formats or schema keys and resource limits still fail.
-Validation stays strict for local writes. Live edits are synchronous; saving measures the
-actual full snapshot before acknowledging durability. A capacity failure retains live
+Validation stays strict for local writes. Live edits are synchronous; saving bounds
+the durable checkpoint plus update payloads at 32 MiB. Ordinary saves append one
+merged update. Counter-changing saves require full checkpoints because regrouping
+floating-point deltas can change accepted values. Optional compaction failure leaves
+acknowledged data saved and does not block close/export. A capacity failure retains live
 work, reports `save-failed` and `full`, and blocks close/export. Further edits and retry
 remain available. `full` clears after successful saving or explicit discard. Discard
 reloads the latest durable state and clears drafts while retaining the writer lock;
@@ -94,12 +101,15 @@ creation inputs and local writes still require finite numbers.
 ## Revisions and contracts
 
 App versions and runtime identities are separate; several app releases may ship the
-same sealed runtime. Compatible byte changes need a new revision; changes that cannot
-preserve the three contracts need a new contract. Each consumer bundles one revision
-per supported contract. Within a contract, state written by a new revision must stay
-readable by every earlier revision, because documents keep their minimum revision.
+same sealed runtime. Byte changes need a new runtime revision. Each consumer bundles
+exactly one runtime; old artifacts remain test inputs, never installed engines.
+Runtime updates preserve the app/ctx contracts and read prior saved documents.
+The separate storage revision increases when new writes are incompatible with older
+readers. Swift stamps that minimum reader revision atomically with each write;
+opening alone does not advance it. Readers below that floor refuse before decoding.
+Readers in the same storage revision must still interpret candidate writes correctly.
 Writers keep full history; readers accept shallow checkpoints, but safe pruning still needs a separate design
-for peer catch-up and shared history. SQLite format 1 is owned by Swift; a format change
+for peer catch-up and shared history. SQLite format 2 is owned by Swift; a format change
 needs its own compatibility design.
 
 `bun scripts/v1/runtime-release.ts` seals the current runtime and emits a release

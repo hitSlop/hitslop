@@ -50,12 +50,18 @@ export async function catalog(root: string) {
     const value = JSON.parse(await readFile(join(directory, "identity.json"), "utf8"));
     if (!Check(RuntimeIdentitySchema, value) || String(value.runtimeContract) !== name)
       throw new Error(`Invalid runtime identity: ${directory}`);
-    for (const file of ["index.js", "boot.js", "headless.js", "loro/index.js", "loro/loro_wasm_bg.wasm"])
+    for (const file of [
+      "index.js",
+      "boot.js",
+      "headless.js",
+      "loro/index.js",
+      "loro/loro_wasm_bg.wasm",
+    ])
       if (!(await lstat(join(directory, file))).isFile())
         throw new Error(`Missing runtime file: ${file}`);
     result[name] = { identity: value, sha256: await digest(directory) };
   }
-  if (!Object.keys(result).length) throw new Error(`Empty runtime catalog: ${root}`);
+  if (Object.keys(result).length !== 1) throw new Error(`Expected exactly one runtime: ${root}`);
   return result;
 }
 export async function verifyCopies(roots: string[]) {
@@ -90,7 +96,55 @@ export async function verifyProvenance() {
   )
     throw new Error("Runtime provenance differs from the resolved SDK/Loro/bridge");
 }
-export type Release = { runtimeContract: number; runtimeRevision: number; sha256: string };
+export type Release = {
+  runtimeContract: number;
+  runtimeRevision: number;
+  storageRevision: number;
+  loroVersion: string;
+  sha256: string;
+};
+type StorageDecision = {
+  runtimeContract: number;
+  runtimeRevision: number;
+  fromLoroVersion: string;
+  toLoroVersion: string;
+  storageRevision: number;
+  reason: string;
+};
+
+/** A changed engine pin requires an explicit compatibility decision, even when the floor stays put. */
+export function verifyStorageDecision(
+  current: typeof identity,
+  published: Release[],
+  decisions: StorageDecision[],
+) {
+  const previous = published
+    .filter(
+      (r) =>
+        r.runtimeContract === current.runtimeContract &&
+        r.runtimeRevision < current.runtimeRevision,
+    )
+    .sort((a, b) => b.runtimeRevision - a.runtimeRevision)[0];
+  if (!previous || previous.loroVersion === current.loroVersion) return;
+  const matches = decisions.filter(
+    (d) =>
+      d.runtimeContract === current.runtimeContract &&
+      d.runtimeRevision === current.runtimeRevision,
+  );
+  const decision = matches[0];
+  if (
+    matches.length !== 1 ||
+    !decision ||
+    decision.fromLoroVersion !== previous.loroVersion ||
+    decision.toLoroVersion !== current.loroVersion ||
+    decision.storageRevision !== current.storageRevision ||
+    typeof decision.reason !== "string" ||
+    !decision.reason.trim()
+  )
+    throw new Error(
+      "Changed Loro pin requires a matching storage-revision decision in runtimes/storage-decisions.json",
+    );
+}
 export async function releases(): Promise<Release[]> {
   const values: Release[] = JSON.parse(
     await readFile(join(repository, "runtimes/releases.json"), "utf8"),
@@ -103,6 +157,10 @@ export async function releases(): Promise<Release[]> {
       value.runtimeContract < 1 ||
       !Number.isSafeInteger(value.runtimeRevision) ||
       value.runtimeRevision < 1 ||
+      !Number.isSafeInteger(value.storageRevision) ||
+      value.storageRevision < 1 ||
+      typeof value.loroVersion !== "string" ||
+      !value.loroVersion ||
       !/^[a-f0-9]{64}$/.test(value.sha256) ||
       seen.has(key)
     )
@@ -117,11 +175,18 @@ export async function verifyReleasedIdentities(
   published?: Release[],
 ) {
   published ??= await releases();
+  verifyStorageDecision(
+    identity,
+    published,
+    await Bun.file(join(repository, "runtimes/storage-decisions.json")).json(),
+  );
   for (const release of published) {
     const installed = values[String(release.runtimeContract)];
     if (!installed) throw new Error(`Released contract ${release.runtimeContract} was removed`);
     if (installed.identity.runtimeRevision < release.runtimeRevision)
       throw new Error(`Runtime revision moved backwards: ${release.runtimeContract}`);
+    if (installed.identity.storageRevision < release.storageRevision)
+      throw new Error(`Storage revision moved backwards: ${release.runtimeContract}`);
     if (
       installed.identity.runtimeRevision === release.runtimeRevision &&
       installed.sha256 !== release.sha256

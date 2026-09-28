@@ -4,6 +4,7 @@
     "required": [
       "runtimeContract",
       "runtimeRevision",
+      "storageRevision",
       "sdkVersion",
       "loroVersion",
       "protocolVersion"
@@ -15,6 +16,11 @@
         "maximum": 9007199254740991
       },
       "runtimeRevision": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 9007199254740991
+      },
+      "storageRevision": {
         "type": "integer",
         "minimum": 1,
         "maximum": 9007199254740991
@@ -41,9 +47,7 @@
     "required": [
       "runtimeContract",
       "minRuntimeRevision",
-      "sdkVersion",
-      "loroVersion",
-      "protocolVersion"
+      "sdkVersion"
     ],
     "properties": {
       "runtimeContract": {
@@ -60,16 +64,6 @@
         "type": "string",
         "minLength": 1,
         "maxLength": 128
-      },
-      "loroVersion": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 128
-      },
-      "protocolVersion": {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 9007199254740991
       }
     }
   },
@@ -85,6 +79,7 @@
         "required": [
           "runtimeContract",
           "runtimeRevision",
+          "storageRevision",
           "sdkVersion",
           "loroVersion",
           "protocolVersion"
@@ -96,6 +91,11 @@
             "maximum": 9007199254740991
           },
           "runtimeRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "storageRevision": {
             "type": "integer",
             "minimum": 1,
             "maximum": 9007199254740991
@@ -124,6 +124,7 @@
           "required": [
             "runtimeContract",
             "runtimeRevision",
+            "storageRevision",
             "sdkVersion",
             "loroVersion",
             "protocolVersion"
@@ -135,6 +136,11 @@
               "maximum": 9007199254740991
             },
             "runtimeRevision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "storageRevision": {
               "type": "integer",
               "minimum": 1,
               "maximum": 9007199254740991

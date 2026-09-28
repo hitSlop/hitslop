@@ -1,0 +1,51 @@
+{
+  "title": "Leg day",
+  "restPreset": "90",
+  "exercises": [
+    {
+      "name": "Barbell back squat",
+      "sets": 4,
+      "reps": 8,
+      "completedSets": 0,
+      "completedSetIndices": [],
+      "weight": "225 lbs",
+      "$id": "6hednmzfa2vshrm2bqjqg45sm8"
+    },
+    {
+      "name": "Romanian deadlift",
+      "sets": 4,
+      "reps": 10,
+      "completedSets": 0,
+      "completedSetIndices": [],
+      "weight": "185 lbs",
+      "$id": "m96cc594kr7rsscwh7jf4ptnv4"
+    },
+    {
+      "name": "Leg press",
+      "sets": 3,
+      "reps": 12,
+      "completedSets": 0,
+      "completedSetIndices": [],
+      "weight": "360 lbs",
+      "$id": "6ztb27ywhrx21p61qanb6xfzcm"
+    },
+    {
+      "name": "Lying leg curl",
+      "sets": 3,
+      "reps": 12,
+      "completedSets": 0,
+      "completedSetIndices": [],
+      "weight": "90 lbs",
+      "$id": "dxz99bbgtgzqktn74kxpjtwed0"
+    },
+    {
+      "name": "Standing calf raise",
+      "sets": 4,
+      "reps": 15,
+      "completedSets": 0,
+      "completedSetIndices": [],
+      "weight": "140 lbs",
+      "$id": "4axnz2me1s9xdgt4p39rka24p4"
+    }
+  ]
+}

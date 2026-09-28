@@ -13,11 +13,8 @@ async function git(root: string, args: string[]) {
   return out.trim();
 }
 
-/**
- * Pre-launch history removed by the 2026-09 runtime reset; the launch contract is 2.
- * Never list a contract that reached users: its history stays immutable.
- */
-export const retiredContracts: ReadonlySet<number> = new Set([1]);
+/** Contract 3 is the first supported baseline. This fixed boundary never advances. */
+const launchContract = 3;
 
 /** CI supplies the PR base / previous push, never the candidate commit itself. */
 export async function checkHistory(root = repository, baseline = process.env.HITSLOP_COMPAT_BASE) {
@@ -55,12 +52,14 @@ export async function checkHistory(root = repository, baseline = process.env.HIT
     const previous = JSON.parse(await git(root, ["show", `${commit}:runtimes/releases.json`]));
     const current = JSON.parse(await readFile(join(root, "runtimes/releases.json"), "utf8"));
     for (const entry of previous) {
-      if (retiredContracts.has(entry.runtimeContract)) continue;
+      if (entry.runtimeContract < launchContract) continue;
       if (
         !current.some(
           (value: typeof entry) =>
             value.runtimeContract === entry.runtimeContract &&
             value.runtimeRevision === entry.runtimeRevision &&
+            value.storageRevision === entry.storageRevision &&
+            value.loroVersion === entry.loroVersion &&
             value.sha256 === entry.sha256,
         )
       )
@@ -72,12 +71,13 @@ export async function checkHistory(root = repository, baseline = process.env.HIT
     const fixture = /^(tests\/compatibility\/[^/]+)\/fixture\.json$/.exec(path)?.[1];
     if (!fixture) continue;
     const recorded = JSON.parse(await git(root, ["show", `${commit}:${path}`]));
-    if (retiredContracts.has(recorded.runtimeContract)) retired.add(fixture);
+    if (recorded.runtimeContract < launchContract) retired.add(fixture);
   }
   // Every file of a recorded fixture is an oracle (issues.json, collaboration.json, …).
   const sealed = entries.filter(
     ({ path }) =>
-      /^tests\/compatibility\/[^/]+\/.+/.test(path) && !retired.has(path.split("/").slice(0, 3).join("/")),
+      /^tests\/compatibility\/[^/]+\/.+/.test(path) &&
+      !retired.has(path.split("/").slice(0, 3).join("/")),
   );
   for (let start = 0; start < sealed.length; start += 128) {
     const batch = sealed.slice(start, start + 128);

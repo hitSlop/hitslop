@@ -38,7 +38,7 @@
     },
     "packages/cli": {
       "name": "@hitslop/cli",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "bin": {
         "slop": "src/cli.ts",
       },
@@ -58,10 +58,9 @@
     },
     "packages/document": {
       "name": "@hitslop/document",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "dependencies": {
-        "@hitslop/schema": "2.0.0",
-        "loro-crdt": "1.16.1",
+        "@hitslop/schema": "3.0.0",
       },
       "peerDependencies": {
         "svelte": "5.57.1",
@@ -72,7 +71,7 @@
     },
     "packages/schema": {
       "name": "@hitslop/schema",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "dependencies": {
         "typebox": "^1.3.32",
       },

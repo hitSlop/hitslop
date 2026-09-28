@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-16",
+  "priorities": [
+    {
+      "text": "Finish the quarterly summary",
+      "done": false,
+      "$id": "p7n6gvdbz0nvs78j3skmen7cj0"
+    },
+    {
+      "text": "Call the framer back",
+      "done": true,
+      "$id": "rcmk56yznqzfjnabg48t0wrj4m"
+    },
+    {
+      "text": "",
+      "done": false,
+      "$id": "qex4ay7aa0ds6mwdejcgghcmtg"
+    }
+  ],
+  "blocks": [
+    {
+      "start": "07:00",
+      "end": "08:00",
+      "title": "Reading and coffee",
+      "kind": "personal",
+      "$id": "kgy4my0zg6qwpngfbp19c8p4zm"
+    },
+    {
+      "start": "09:00",
+      "end": "11:00",
+      "title": "Quarterly summary — first pass",
+      "kind": "focus",
+      "$id": "w4ed7x969yettajctp5n6jnyh4"
+    },
+    {
+      "start": "11:00",
+      "end": "11:30",
+      "title": "Team stand-up",
+      "kind": "meeting",
+      "$id": "r9c80rawskwd4x39jmajekf43m"
+    },
+    {
+      "start": "12:30",
+      "end": "13:15",
+      "title": "Lunch away from the desk",
+      "kind": "break",
+      "$id": "vp0szfhj4wyvk9x9ve5ycg5x2c"
+    },
+    {
+      "start": "14:00",
+      "end": "14:30",
+      "title": "Call the framer",
+      "kind": "meeting",
+      "$id": "gamxperkd3kdaehjshkr77fjxm"
+    },
+    {
+      "start": "15:00",
+      "end": "17:00",
+      "title": "Edits and inbox",
+      "kind": "focus",
+      "$id": "6wq1pnfgvzbwg5dxs0xd1scbv0"
+    },
+    {
+      "start": "18:30",
+      "end": "19:30",
+      "title": "Swim",
+      "kind": "personal",
+      "$id": "156nnt18vxby84gtzvz2x5pwmr"
+    }
+  ],
+  "notes": "Book the van for Saturday. Ask about the delivery window before confirming."
+}

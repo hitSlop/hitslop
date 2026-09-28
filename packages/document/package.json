@@ -1,6 +1,6 @@
 {
   "name": "@hitslop/document",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "type": "module",
   "exports": {
     ".": "./src/schema.ts",
@@ -9,12 +9,10 @@
     "./attachments": "./src/app/attachments.ts",
     "./theme": "./src/theme.ts",
     "./abi": "./src/abi.ts",
-    "./runtime": "./src/document.ts",
-    "./identity": "./src/runtime-identity.json"
+    "./identity": "./src/sdk-identity.json"
   },
   "dependencies": {
-    "@hitslop/schema": "2.0.0",
-    "loro-crdt": "1.16.1"
+    "@hitslop/schema": "3.0.0"
   },
   "peerDependencies": {
     "svelte": "5.57.1"
@@ -28,7 +26,14 @@
     "access": "public"
   },
   "files": [
-    "src"
+    "src/app",
+    "src/abi.ts",
+    "src/contracts.ts",
+    "src/handle-types.ts",
+    "src/schema.ts",
+    "src/errors.ts",
+    "src/theme.ts",
+    "src/sdk-identity.json"
   ],
   "engines": {
     "bun": ">=1.4.2"

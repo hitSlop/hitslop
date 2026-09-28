@@ -39,7 +39,7 @@ struct RuntimeCatalog {
       }
       entries.append(identity)
     }
-    guard !entries.isEmpty else { throw failure("No bundled runtime contracts") }
+    guard entries.count == 1 else { throw failure("Expected exactly one bundled runtime") }
     identities = entries.sorted { ($0["runtimeContract"] as! Int) < ($1["runtimeContract"] as! Int) }
   }
 

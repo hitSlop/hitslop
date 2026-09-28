@@ -67,8 +67,8 @@ try {
   const documentPackage = join(coreRoot, "node_modules/@hitslop/document");
   assert.ok(!(await readdir(documentPackage)).includes("test-support"));
   const documentSource = await readdir(join(documentPackage, "src"));
-  for (const adapter of ["sqlite.ts", "writer-lock.ts"])
-    assert.ok(!documentSource.includes(adapter), `Test adapter shipped in npm package: ${adapter}`);
+  for (const internal of ["sqlite.ts", "writer-lock.ts", "document.ts", "runtime-entry.ts", "boot.ts", "runtime-identity.json"])
+    assert.ok(!documentSource.includes(internal), `Engine or test implementation shipped in npm SDK: ${internal}`);
   await run(
     [
       process.execPath,
@@ -80,6 +80,8 @@ try {
     assert.equal(typeof attachments.import, "function");
     assert.ok(defineDocument({title: s.text()}).descriptor);
     assert.throws(() => Bun.resolveSync("svelte", process.cwd()));
+    assert.throws(() => Bun.resolveSync("loro-crdt", process.cwd()));
+    assert.throws(() => Bun.resolveSync("@hitslop/document/runtime", process.cwd()));
   `,
     ],
     coreRoot,
@@ -236,12 +238,11 @@ try {
     const runtime = await fetch("http://127.0.0.1:5197/__runtime__/identity.json");
     assert.equal(runtime.status, 200);
     const identity = JSON.parse(
-      await readFile(
-        join(root, "node_modules/@hitslop/document/src/runtime-identity.json"),
-        "utf8",
-      ),
+      await readFile(join(root, "node_modules/@hitslop/document/src/sdk-identity.json"), "utf8"),
     );
-    assert.deepEqual(await runtime.json(), identity);
+    const previewIdentity = await runtime.json();
+    assert.equal(previewIdentity.runtimeContract, identity.runtimeContract);
+    assert.ok(previewIdentity.runtimeRevision >= identity.minRuntimeRevision);
     const wasm = await fetch("http://127.0.0.1:5197/__runtime__/loro/loro_wasm_bg.wasm");
     assert.equal(wasm.status, 200);
     assert.equal(

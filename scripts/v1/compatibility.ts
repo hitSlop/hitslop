@@ -126,7 +126,8 @@ export async function replayCompatibility(
         for (const release of historical.filter(
           (r) =>
             r.runtimeContract === record.runtimeContract &&
-            r.runtimeRevision >= record.runtimeRevision,
+            r.runtimeRevision >= record.runtimeRevision &&
+            r.storageRevision <= current.identity.storageRevision,
         )) {
           if (release.sha256 === current.sha256) {
             (candidateResult.equivalentReleases ??= []).push(release.key);
@@ -139,11 +140,18 @@ export async function replayCompatibility(
           }
           const copy = join(workspace, `${name}-${phase}-${release.key}.slop`);
           await cp(document, copy, { recursive: true });
-          reader.cases.push({ document: copy, expected, phase: `historical-${phase}` });
+          const rejectStorage =
+            phase !== "read" && release.storageRevision < current.identity.storageRevision;
+          reader.cases.push({
+            document: copy,
+            expected,
+            phase: `historical-${phase}`,
+            rejectStorage,
+          });
           reader.results.push({
             fixture: name,
             runtime: release.key,
-            phase: `historical-${phase}`,
+            phase: rejectStorage ? `refused-${phase}` : `historical-${phase}`,
           });
         }
       }
@@ -156,7 +164,7 @@ export async function replayCompatibility(
       );
     }
     if (!results.length) throw new Error("Compatibility corpus is empty");
-    // Mixed-version collaboration: edit, exchange, edit again and reopen on both sides.
+    // Current-engine convergence: edit, exchange, edit again and reopen on both sides.
     for (const name of (await readdir(corpus)).sort()) {
       const fixture = join(corpus, name);
       if (!(await Bun.file(join(fixture, "collaboration.json")).exists())) continue;
@@ -164,10 +172,11 @@ export async function replayCompatibility(
       const current = installed[String(record.runtimeContract)]!;
       const candidate = join(runtimeRoot, String(record.runtimeContract));
       const partners = [
-        { key: `${record.runtimeContract}-${current.identity.runtimeRevision}`, runtime: candidate, historical: false },
-        ...historical
-          .filter((r) => r.runtimeContract === record.runtimeContract && r.sha256 !== current.sha256)
-          .map((r) => ({ key: r.key, runtime: r.runtime, historical: true })),
+        {
+          key: `${record.runtimeContract}-${current.identity.runtimeRevision}`,
+          runtime: candidate,
+          historical: false,
+        },
       ];
       for (const partner of partners)
         results.push(await collaborate(name, fixture, candidate, partner, workspace));
@@ -189,8 +198,18 @@ async function collaborate(
   const { steps, expected } = await Bun.file(join(fixture, "collaboration.json")).json();
   const directory = await mkdtemp(join(workspace, `${name}-collaboration-`));
   const peers = {
-    a: { document: join(directory, "a.slop"), runtime: candidate, historical: false, exports: join(directory, "a.bin") },
-    b: { document: join(directory, "b.slop"), runtime: partner.runtime, historical: partner.historical, exports: join(directory, "b.bin") },
+    a: {
+      document: join(directory, "a.slop"),
+      runtime: candidate,
+      historical: false,
+      exports: join(directory, "a.bin"),
+    },
+    b: {
+      document: join(directory, "b.slop"),
+      runtime: partner.runtime,
+      historical: partner.historical,
+      exports: join(directory, "b.bin"),
+    },
   };
   for (const peer of Object.values(peers))
     await cp(join(fixture, "document"), peer.document, { recursive: true });

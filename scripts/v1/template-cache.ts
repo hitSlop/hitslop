@@ -171,11 +171,12 @@ export async function validateTemplate(path: string, slug: string) {
   const requirement = JSON.parse(await readFile(join(path, "assets/runtime.json"), "utf8"));
   if (
     requirement.runtimeContract !== identity.runtimeContract ||
-    requirement.minRuntimeRevision !== identity.runtimeRevision ||
+    requirement.minRuntimeRevision > identity.runtimeRevision ||
     requirement.sdkVersion !== identity.sdkVersion
   )
     throw new Error(`Template runtime mismatch: ${slug}`);
-  if (!(await readFile(join(path, "assets/app.js"))).length) throw new Error(`Empty template: ${slug}`);
+  if (!(await readFile(join(path, "assets/app.js"))).length)
+    throw new Error(`Empty template: ${slug}`);
   for (const name of ["Preview.png", "Icon.png"]) {
     const png = await readFile(join(path, "QuickLook", name)).catch((error) => {
       if (name === "Icon.png" && error.code === "ENOENT") return undefined;

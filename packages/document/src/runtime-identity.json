@@ -1,7 +1,8 @@
 {
-  "runtimeContract": 2,
+  "runtimeContract": 3,
   "runtimeRevision": 1,
-  "sdkVersion": "2.0.0",
+  "storageRevision": 1,
+  "sdkVersion": "3.0.0",
   "loroVersion": "1.16.1",
   "protocolVersion": 1
 }

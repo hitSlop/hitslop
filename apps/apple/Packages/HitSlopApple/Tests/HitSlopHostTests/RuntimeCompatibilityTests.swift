@@ -51,7 +51,7 @@ extension LoroClientTests {
       #expect((PDFDocument(data: pdf)?.pageCount ?? 0) > 0)
       try await session.finish()
       #expect(try await DocumentCommand.run(method: "get", url: root) == saved)
-      // SQLite replay, scenarios, issues and mixed-version collaboration run in Bun.
+      // SQLite replay, scenarios, issues and current-engine convergence run in Bun.
       // This test retains the frozen apps' WebKit, CLI, theme and export boundary.
     }
   }

@@ -7,6 +7,41 @@ import WebKit
 @testable import HitSlopWasm
 
 @Suite(.serialized) struct WasmTests {
+  // Per-field schema bounds do not bound an array's combined payload. The native
+  // dispatch boundary must reject it before base64 decoding or touching SQLite.
+  @Test func bridgeBoundsAggregatePayloadAndRejectsUnknownFields() {
+    #expect(StorageRequest(["method": "metadata"]) != nil)
+    #expect(StorageRequest(["method": "metadata", "extra": "unexpected"]) == nil)
+    let chunk = String(repeating: "A", count: 1024 * 1024)
+    #expect(StorageRequest(["method": "append", "generation": "0", "updates": Array(repeating: chunk, count: 49)]) == nil)
+    #expect(StorageRequest(["method": "append", "generation": "0", "updates": ["AQID"]]) != nil)
+  }
+
+  // A compatible reader must not be excluded by opening alone or a failed write;
+  // once new bytes commit, old writers and snapshot renderers must refuse them.
+  @Test func storageRevisionAdvancesOnlyWithCommittedBytes() throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    var storage = try Storage(root: root)
+    _ = try storage.call(["method": "checkpoint", "generation": "0", "bytes": "AQID", "schemaKey": "key"])
+    storage.close()
+    storage = try Storage(root: root, storageRevision: 2)
+    #expect(try storage.call(["method": "metadata"])["readerRevision"] as? Int64 == 1)
+    #expect(throws: (any Error).self) {
+      try storage.call(["method": "append", "generation": "wrong", "updates": ["AQID"]])
+    }
+    #expect(try storage.call(["method": "metadata"])["readerRevision"] as? Int64 == 1)
+    _ = try storage.call(["method": "append", "generation": "1", "updates": ["AQID"]])
+    #expect(try storage.call(["method": "metadata"])["readerRevision"] as? Int64 == 2)
+    storage.close()
+    #expect(throws: (any Error).self) { try Storage(root: root) }
+    #expect(throws: (any Error).self) { try Storage(root: root, mode: .snapshot) }
+    let snapshot = try Storage(root: root, mode: .snapshot, storageRevision: 2)
+    defer { snapshot.close() }
+    #expect(try snapshot.call(["method": "metadata"])["readerRevision"] as? Int64 == 2)
+  }
+
   @Test @MainActor func socketRejectsMalformedEnvelopesBeforeDispatch() async throws {
     var handled = false
     let server = try SocketServer { _, _, reply in
@@ -246,7 +281,7 @@ import WebKit
   func resizeBridgeHonorsManifest(resizable: Bool) async throws {
     let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
-    try FileManager.default.copyItem(atPath: repository + "/tests/compatibility/2-1/document", toPath: root.path)
+    try FileManager.default.copyItem(atPath: repository + "/tests/compatibility/3-1/document", toPath: root.path)
     defer { try? FileManager.default.removeItem(at: root) }
     let manifestURL = root.appendingPathComponent("manifest.json")
     var manifest = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: manifestURL)) as? [String: Any])

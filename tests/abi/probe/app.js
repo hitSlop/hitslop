@@ -1,5 +1,5 @@
 // Native platform probe over the conformance schema. Not sealed: Swift tests swap it
-// into disposable copies of tests/compatibility/2-1 to drive host behavior (drafts,
+// into disposable copies of tests/compatibility/3-1 to drive host behavior (drafts,
 // capture, toolbar, save ordering). Sealed ABI behavior lives in the consumer fixtures.
 export default {
   mount(ctx, target) {

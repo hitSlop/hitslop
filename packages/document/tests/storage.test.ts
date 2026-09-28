@@ -10,32 +10,137 @@ import { SQLiteStore } from "../test-support/sqlite";
 import { Session } from "../src/session";
 import { bindText } from "../src/bind-text";
 
-// Regression: update byte counts/UTF-16 lengths underestimate full snapshot bytes.
-// The literal multibyte edit remains live, but cannot be acknowledged as saved.
-const multibyte = Array.from({ length: 20_000 }, (_, i) => String.fromCharCode(0x4e00 + ((i * 7919) % 18000))).join("");
-test("saving measures the full snapshot even when its update log fits", async () => {
+// Counter deltas may be regrouped by Loro during replay. Saving must preserve the
+// value the user saw, including cancellation of large historical increments.
+test("ordinary counter edits retain their accepted value after saving and reopening", async () => {
+  const definition = defineDocument({ count: s.counter() });
+  const store = new MemoryStore();
+  const doc = await Document.open(definition, store, { count: 1e16 });
+  doc.fields.count.increment(-1e16);
+  doc.fields.count.increment(1);
+  expect(doc.current.count).toBe(1);
+  await doc.close();
+  const reopened = await Document.open(definition, store, { count: 0 });
+  expect(reopened.current.count).toBe(1);
+  reopened.fields.count.increment(0.25);
+  reopened.fields.count.increment(-0.5);
+  await reopened.close();
+  const fractional = await Document.open(definition, store, { count: 0 });
+  expect(fractional.current.count).toBe(0.75);
+  await fractional.close();
+});
+
+// Safe individual deltas and live values do not imply a safe accumulated delta.
+// The existing fractional/large-value case does not catch that narrower shortcut.
+test("safe-integer counter edits retain their accepted value after saving and reopening", async () => {
+  const definition = defineDocument({ count: s.counter() });
+  const store = new MemoryStore();
+  const doc = await Document.open(definition, store, { count: -9007199254740991 });
+  doc.fields.count.increment(9007199254740991);
+  expect(doc.current.count).toBe(0);
+  doc.fields.count.increment(9007199254740990);
+  expect(doc.current.count).toBe(9007199254740990);
+  await doc.close();
+  const reopened = await Document.open(definition, store, { count: 0 });
+  expect(reopened.current.count).toBe(9007199254740990);
+  await reopened.close();
+});
+
+// Stored-byte capacity deliberately permits a fitting incremental representation
+// even when re-encoding that state as a full snapshot would exceed the limit.
+const multibyte = Array.from({ length: 20_000 }, (_, i) =>
+  String.fromCharCode(0x4e00 + ((i * 7919) % 18000)),
+).join("");
+test("fitting updates stay durable when optional compaction exceeds capacity", async () => {
   const definition = defineDocument({ body: s.text() });
   const store = new MemoryStore();
   const doc = await Document.open(definition, store, { body: "" }, { capacityBytes: 96 * 1024 });
-  const before = await store.load();
   doc.fields.body.replace(multibyte);
   expect(doc.exportSnapshot().length).toBeGreaterThan(96 * 1024);
-  await expect(doc.flush()).rejects.toThrow("Document is full");
-  expect(await store.load()).toEqual(before);
+  await doc.flush();
+  const saved = await store.load();
+  expect(
+    saved.checkpoint!.length + saved.updates.reduce((n, bytes) => n + bytes.length, 0),
+  ).toBeLessThan(96 * 1024);
+  await expect(doc.compact()).rejects.toThrow("Document is full");
+  expect(await store.load()).toEqual(saved);
   expect(doc.current.body).toBe(multibyte);
+  expect(doc.status).toBe("saved");
+  expect(doc.full).toBe(false);
+  await doc.close();
+  const reopened = await Document.open(
+    definition,
+    store,
+    { body: "" },
+    { capacityBytes: 96 * 1024 },
+  );
+  expect(reopened.current.body).toBe(multibyte);
+  await reopened.close();
+});
+
+// Unlike optional compaction above, a counter checkpoint must fit before a save
+// can be acknowledged, even when an incremental representation would fit.
+test("a required counter checkpoint exceeding capacity retains edits and blocks close", async () => {
+  const definition = defineDocument({ body: s.text(), count: s.counter() });
+  const store = new MemoryStore();
+  const doc = await Document.open(
+    definition,
+    store,
+    { body: "", count: 0 },
+    { capacityBytes: 96 * 1024 },
+  );
+  doc.fields.body.replace(multibyte);
+  await doc.flush();
+  const saved = await store.load();
+  expect(
+    saved.checkpoint!.length + saved.updates.reduce((n, bytes) => n + bytes.length, 0),
+  ).toBeLessThan(96 * 1024);
+
+  doc.fields.count.increment(1);
+  expect(doc.exportSnapshot().length).toBeGreaterThan(96 * 1024);
+  await expect(doc.flush()).rejects.toThrow("Document is full");
   expect(doc.status).toBe("save-failed");
   expect(doc.full).toBe(true);
+  expect(doc.current.body).toBe(multibyte);
+  expect(doc.current.count).toBe(1);
+  expect(await store.load()).toEqual(saved);
+  await expect(doc.close()).rejects.toThrow("Document is full");
+  expect(doc.current.body).toBe(multibyte);
+  expect(doc.current.count).toBe(1);
+  expect(await store.load()).toEqual(saved);
+
   await doc.discardPending();
-  expect(doc.current.body).toBe("");
+  expect(doc.current.body).toBe(multibyte);
+  expect(doc.current.count).toBe(0);
+  expect(doc.status).toBe("saved");
+  expect(doc.full).toBe(false);
+  expect(await store.load()).toEqual(saved);
   await doc.close();
+  const reopened = await Document.open(
+    definition,
+    store,
+    { body: "", count: 0 },
+    { capacityBytes: 96 * 1024 },
+  );
+  expect(reopened.current.body).toBe(multibyte);
+  expect(reopened.current.count).toBe(0);
+  await reopened.close();
 });
 
 // Regression: committing a composition used to notify status before throwing,
 // overwriting the input with its saved value and allowing the next close.
 test("a text composition survives capacity failure and continues to block close", async () => {
   const definition = defineDocument({ title: s.text() });
-  const doc = await Document.open(definition, new MemoryStore(), { title: "saved" }, { capacityBytes: 96 * 1024 });
-  const input = Object.assign(new EventTarget(), { value: "", disabled: false }) as unknown as HTMLInputElement;
+  const doc = await Document.open(
+    definition,
+    new MemoryStore(),
+    { title: "saved" },
+    { capacityBytes: 96 * 1024 },
+  );
+  const input = Object.assign(new EventTarget(), {
+    value: "",
+    disabled: false,
+  }) as unknown as HTMLInputElement;
   const binding = bindText(input, doc.fields.title);
   input.dispatchEvent(new Event("compositionstart"));
   input.value = multibyte.repeat(3);
@@ -54,8 +159,8 @@ test("discard reloads durable state and preserves commits whose reply was lost",
   const doc = await Document.open(definition, store, { title: "initial" });
   const append = store.append.bind(store);
   let entered!: () => void, release!: () => void;
-  const started = new Promise<void>(resolve => entered = resolve);
-  const gate = new Promise<void>(resolve => release = resolve);
+  const started = new Promise<void>((resolve) => (entered = resolve));
+  const gate = new Promise<void>((resolve) => (release = resolve));
   store.append = async (...args) => {
     entered();
     await gate;
@@ -236,10 +341,19 @@ describe("storage boundaries", () => {
   test("automatic checkpoint bounds update rows and preserves reopen", async () => {
     const store = new MemoryStore();
     const doc = await Document.open(definition, store, initial);
+    let checkpointed!: () => void;
+    const completed = new Promise<void>((resolve) => (checkpointed = resolve));
+    const checkpoint = store.checkpoint.bind(store);
+    store.checkpoint = async (...args) => {
+      const generation = await checkpoint(...args);
+      checkpointed();
+      return generation;
+    };
     for (let i = 0; i < 260; i++) {
       doc.fields.title.replace(String(i));
       await doc.flush();
     }
+    await completed;
     expect((await store.load()).updates.length).toBeLessThan(256);
     await doc.close();
     const restored = await Document.open(definition, store, initial);
@@ -356,12 +470,20 @@ test("valid shallow checkpoints remain readable without enabling automatic pruni
 test("oversized local edits remain live and CLI reports failure rather than rejection", async () => {
   const definition = defineDocument({ body: s.text(), title: s.string() });
   const store = new MemoryStore();
-  const doc = await Document.open(definition, store, { body: "", title: "saved" }, { capacityBytes: 96 * 1024 });
+  const doc = await Document.open(
+    definition,
+    store,
+    { body: "", title: "saved" },
+    { capacityBytes: 96 * 1024 },
+  );
   const session = new Session(doc, "epoch");
   const sent: Uint8Array[] = [];
-  doc.onLocalUpdate(bytes => sent.push(bytes));
+  doc.onLocalUpdate((bytes) => sent.push(bytes));
   const reply = await session.handle({
-    id: "large-edit", documentPath: "test", epoch: "epoch", method: "apply",
+    id: "large-edit",
+    documentPath: "test",
+    epoch: "epoch",
+    method: "apply",
     op: { type: "text.replace", path: ["body"], value: multibyte.repeat(3) },
   });
   expect(reply).toMatchObject({ ok: false, code: "failed" });
@@ -387,19 +509,22 @@ test("oversized local edits remain live and CLI reports failure rather than reje
 test("creation checks actual snapshot bytes before writing", async () => {
   const definition = defineDocument({ body: s.text() });
   const store = new MemoryStore();
-  await expect(Document.open(definition, store, { body: multibyte }, { capacityBytes: 96 * 1024 }))
-    .rejects.toThrow("Document is full");
+  await expect(
+    Document.open(definition, store, { body: multibyte }, { capacityBytes: 96 * 1024 }),
+  ).rejects.toThrow("Document is full");
   expect((await store.load()).checkpoint).toBeNull();
 });
 
 test("discard failure retains unsaved edits and ownership, then a retry restores saved state", () =>
-  fixture(async root => {
+  fixture(async (root) => {
     const store = await SQLiteStore.open(root);
     const doc = await Document.open(schema, store, initial);
     const id = doc.id;
     const load = store.load.bind(store);
     doc.fields.title.replace("unsaved");
-    store.load = async () => { throw new Error("read unavailable"); };
+    store.load = async () => {
+      throw new Error("read unavailable");
+    };
     await expect(doc.discardPending()).rejects.toThrow("read unavailable");
     expect(doc.current.title).toBe("unsaved");
     expect(doc.status).toBe("save-failed");

@@ -784,6 +784,7 @@ public enum BridgeMethod: String, CaseIterable, Sendable {
   case `config` = "config"
   case `ready` = "ready"
   case `load` = "load"
+  case `metadata` = "metadata"
   case `append` = "append"
   case `checkpoint` = "checkpoint"
   case `status` = "status"

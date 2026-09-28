@@ -1,0 +1,31 @@
+{
+  "target": 2500,
+  "current": 1750,
+  "unit": "ml",
+  "logs": [
+    {
+      "time": "08:30",
+      "amount": 250,
+      "label": "Morning glass",
+      "$id": "2echyqw7v49dad2ykfxf164tv0"
+    },
+    {
+      "time": "11:00",
+      "amount": 500,
+      "label": "Desk bottle",
+      "$id": "92nk77w13w4j0ydrb0zc663ycw"
+    },
+    {
+      "time": "13:45",
+      "amount": 500,
+      "label": "Lunch bottle",
+      "$id": "dx958swcpsfc0j2199jz7n6bd4"
+    },
+    {
+      "time": "15:20",
+      "amount": 500,
+      "label": "Afternoon bottle",
+      "$id": "qfb2qkdgj8vbs2zz4nqd5c3frm"
+    }
+  ]
+}

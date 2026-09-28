@@ -1,0 +1,82 @@
+{
+  "date": "Wednesday, September 9, 2026",
+  "monthTitle": "September 2026",
+  "dailyPage": "42",
+  "monthlyPage": "40",
+  "entries": [
+    {
+      "type": "task",
+      "star": true,
+      "text": "Ship the Eisenhower & Ivy Lee productivity dockets",
+      "$id": "2zfzk3ngcy6ww8qmm9dzpv63t4"
+    },
+    {
+      "type": "complete",
+      "star": false,
+      "text": "Morning review of server latency telemetry",
+      "$id": "1b2gzgmxfq11gk0xtnddshejjw"
+    },
+    {
+      "type": "event",
+      "star": false,
+      "text": "14:00 Studio design sync with architectural team",
+      "$id": "zbm3njqpvm807eet1z5dqhv5p0"
+    },
+    {
+      "type": "note",
+      "star": false,
+      "text": "A single physical balance beam clarifies weighted decisions",
+      "$id": "pdjgbvx1ws7cg8v7grtaktk2v0"
+    },
+    {
+      "type": "migrated",
+      "star": false,
+      "text": "Update developer documentation on packaging invariants",
+      "$id": "9bt8zw79ye4r15176ybgq5kwxw"
+    },
+    {
+      "type": "task",
+      "star": false,
+      "text": "Order heavier grain fountain pen ink refills",
+      "$id": "7k151dae7cy8nmgma17fmp5dtg"
+    }
+  ],
+  "monthlyLog": [
+    {
+      "day": 1,
+      "weekday": "Tu",
+      "text": "Labor Day / Studio Planning",
+      "$id": "ga7f11yjw33rgk5t74pdkat0gg"
+    },
+    {
+      "day": 2,
+      "weekday": "We",
+      "text": "Core templates sprint kickoff",
+      "$id": "pws39xmw0h1yz64nbypt8qvzj8"
+    },
+    {
+      "day": 3,
+      "weekday": "Th",
+      "text": "Release candidate verification",
+      "$id": "rxyrdhz7vf6fhvkcf15y9r3mt0"
+    },
+    {
+      "day": 4,
+      "weekday": "Fr",
+      "text": "Team demo & retrospective",
+      "$id": "1k3b83gxz3h3bx45wjy1kceb8g"
+    },
+    {
+      "day": 12,
+      "weekday": "Sa",
+      "text": "Mountain trail run",
+      "$id": "rp29jattbx5n1j7d3cm1kf11qm"
+    },
+    {
+      "day": 15,
+      "weekday": "Tu",
+      "text": "Quarterly budget audit",
+      "$id": "4yjze44m0adst7r4vwept7zhfm"
+    }
+  ]
+}

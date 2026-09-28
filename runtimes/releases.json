@@ -1,7 +1,9 @@
 [
   {
-    "runtimeContract": 2,
+    "runtimeContract": 3,
     "runtimeRevision": 1,
-    "sha256": "04bbf2e014d33fcce65fcaecd2ae3e14d48ed83fd3c280dbb2358dcd9bfc5746"
+    "storageRevision": 1,
+    "loroVersion": "1.16.1",
+    "sha256": "48cb39e98f7d066f2a74f4df9dc91c6fe152b5ed168c2551aa8e9b851c9e37d7"
   }
 ]

@@ -1,0 +1,65 @@
+{
+  "title": "Lemon garlic pasta",
+  "description": "Silky, bright, and ready before the table is set.",
+  "difficulty": "Easy",
+  "servings": 2,
+  "prepMinutes": 10,
+  "cookMinutes": 20,
+  "ingredients": [
+    {
+      "text": "200g spaghetti",
+      "checked": false,
+      "$id": "8z4e3f0wystmvc56arvf8rzdz8"
+    },
+    {
+      "text": "4 garlic cloves, thinly sliced",
+      "checked": false,
+      "$id": "qk4hbt3wne591j81sf5f4n42gr"
+    },
+    {
+      "text": "2 tbsp extra-virgin olive oil",
+      "checked": false,
+      "$id": "xndmfkjz7zpyj1ahyt4t0abjem"
+    },
+    {
+      "text": "1 lemon, zest and juice",
+      "checked": false,
+      "$id": "07svnyp2c4vdt9ttfd5xnyxpbr"
+    },
+    {
+      "text": "½ cup finely grated parmesan",
+      "checked": false,
+      "$id": "swz3qq2bm5q2z1jjgbx3nacfa8"
+    },
+    {
+      "text": "Salt, pepper, and parsley",
+      "checked": false,
+      "$id": "gz018ck2mfya93kaph48z835jm"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Boil the pasta",
+      "text": "Cook the pasta in well-salted water until just al dente.",
+      "minutes": 10,
+      "$id": "1e619m83xsdcvts1nw91r9fsp4"
+    },
+    {
+      "title": "Sizzle the garlic",
+      "text": "Gently sizzle the garlic in olive oil until fragrant.",
+      "minutes": 3,
+      "$id": "28237e456mgdmhfcc61ah8phgc"
+    },
+    {
+      "title": "Build the sauce",
+      "text": "Add pasta, lemon zest, juice, and a splash of pasta water.",
+      "minutes": 2,
+      "$id": "qek622hzf43xcjvcjwgecee05r"
+    },
+    {
+      "title": "Finish and serve",
+      "text": "Toss with parmesan until glossy. Season and serve.",
+      "$id": "r1btdqx35w41gw4ffhbwt925tc"
+    }
+  ]
+}

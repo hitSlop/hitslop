@@ -1,0 +1,165 @@
+{
+  "tripTitle": "TOKYO AUTUMN TRIP",
+  "origin": "SFO",
+  "originCity": "SAN FRANCISCO",
+  "destination": "NRT",
+  "destCity": "TOKYO NARITA",
+  "bookingRef": "HS-8842",
+  "passenger": "JORDAN / PASSENGER",
+  "flight": "HS-774",
+  "gate": "B12",
+  "seat": "02A",
+  "selectedDay": "d-1",
+  "days": [
+    {
+      "dayKey": "d-1",
+      "title": "DAY 01",
+      "subtitle": "Departure & Arrival",
+      "date": "2026-10-14",
+      "events": [
+        {
+          "time": "11:30",
+          "title": "Flight HS-774 Departure",
+          "location": "SFO Terminal 3 Gate 82",
+          "tag": "flight",
+          "done": true,
+          "$id": "gdcxa78rzrh1myn9me6w0zpjg4"
+        },
+        {
+          "time": "15:45",
+          "title": "Touchdown Tokyo Narita",
+          "location": "NRT Terminal 1",
+          "tag": "flight",
+          "done": true,
+          "$id": "cxpwmga345mxjxj3avayb9f85w"
+        },
+        {
+          "time": "17:15",
+          "title": "Narita Express to Shibuya",
+          "location": "Platform 1",
+          "tag": "train",
+          "done": false,
+          "$id": "6ztdc4phtft162jcm3mrrgctyw"
+        },
+        {
+          "time": "19:00",
+          "title": "Hotel Check-in",
+          "location": "Shibuya Stream Hotel",
+          "tag": "hotel",
+          "done": false,
+          "$id": "1b8q4cd1mgwwn6rwha0nmd8tq4"
+        },
+        {
+          "time": "20:30",
+          "title": "Late Ramen Supper",
+          "location": "Ichiran Shibuya",
+          "tag": "dining",
+          "done": false,
+          "$id": "y8kwjvgkkxjrpskgkn86gq27t4"
+        }
+      ],
+      "$id": "152aebfpazmxne089qegcnssdr"
+    },
+    {
+      "dayKey": "d-2",
+      "title": "DAY 02",
+      "subtitle": "Meiji & Omotesando",
+      "date": "2026-10-15",
+      "events": [
+        {
+          "time": "08:30",
+          "title": "Morning walk at Meiji Jingu",
+          "location": "Harajuku Gate",
+          "tag": "explore",
+          "done": false,
+          "$id": "282rectembj00bvhr991dxs7m4"
+        },
+        {
+          "time": "11:00",
+          "title": "Coffee & Pastries",
+          "location": "Chatei Hatou",
+          "tag": "dining",
+          "done": false,
+          "$id": "waxes2t0yg3736fx4het5yax48"
+        },
+        {
+          "time": "14:00",
+          "title": "Architecture & Boutiques",
+          "location": "Omotesando Hills",
+          "tag": "explore",
+          "done": false,
+          "$id": "dsbyga7jdww1kh5p5jzcb9562m"
+        },
+        {
+          "time": "18:30",
+          "title": "Yakitori Dinner",
+          "location": "Omoide Yokocho",
+          "tag": "dining",
+          "done": false,
+          "$id": "tg9edw37qjb316hq516snphd7m"
+        }
+      ],
+      "$id": "gxrx3h11947mm94ecz4axvd7g4"
+    },
+    {
+      "dayKey": "d-3",
+      "title": "DAY 03",
+      "subtitle": "Old Asakusa & Akihabara",
+      "date": "2026-10-16",
+      "events": [
+        {
+          "time": "09:00",
+          "title": "Senso-ji Temple grounds",
+          "location": "Asakusa",
+          "tag": "explore",
+          "done": false,
+          "$id": "tfca545y906w7yqq4v447djpzg"
+        },
+        {
+          "time": "13:00",
+          "title": "Retro Electronics & Arcades",
+          "location": "Akihabara Electric Town",
+          "tag": "explore",
+          "done": false,
+          "$id": "8k79bqzza09q5rg5rzahg67p2c"
+        },
+        {
+          "time": "19:30",
+          "title": "Tonkatsu Dinner",
+          "location": "Katsukura",
+          "tag": "dining",
+          "done": false,
+          "$id": "hwtvsv1ap89hqgk0q6t81rbxwg"
+        }
+      ],
+      "$id": "ayg4qdh3bdr2jj9f0p6kpxm414"
+    }
+  ],
+  "stubItems": [
+    {
+      "text": "Passport & Visas",
+      "done": true,
+      "$id": "v6whvcrrp8rnkktw7p92gev66c"
+    },
+    {
+      "text": "eSIM Activated",
+      "done": true,
+      "$id": "5keh28vwfp8j5eyhqxa25st1b0"
+    },
+    {
+      "text": "Power Adapters",
+      "done": true,
+      "$id": "r0wcbs6awp8pc6g9f2nzdhz9ew"
+    },
+    {
+      "text": "Suica / IC Card loaded",
+      "done": false,
+      "$id": "t87t7gfzm5s6xxnek8ex2d8dnc"
+    },
+    {
+      "text": "Pocket Wi-Fi picked up",
+      "done": false,
+      "$id": "psdp00d3n78cv9ar3487ztqkh4"
+    }
+  ]
+}

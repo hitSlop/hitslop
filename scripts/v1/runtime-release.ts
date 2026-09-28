@@ -56,6 +56,8 @@ if (
   published.push({
     runtimeContract: identity.runtimeContract,
     runtimeRevision: identity.runtimeRevision,
+    storageRevision: identity.storageRevision,
+    loroVersion: identity.loroVersion,
     sha256: hash,
   });
   await writeFile(

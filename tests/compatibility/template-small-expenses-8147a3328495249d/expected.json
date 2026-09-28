@@ -1,0 +1,25 @@
+{
+  "title": "The little things",
+  "currency": "CAD",
+  "items": [
+    {
+      "merchant": "Neighbourhood coffee",
+      "amountMinor": 475,
+      "note": "Morning catch-up",
+      "settled": false,
+      "$id": "83p91st66hs2x8yq7gks70d6ww"
+    },
+    {
+      "merchant": "Studio supplies",
+      "amountMinor": 2400,
+      "settled": false,
+      "$id": "fjh5zd1en8acvq6a2m68ax29br"
+    },
+    {
+      "merchant": "Train home",
+      "amountMinor": 650,
+      "settled": true,
+      "$id": "vrhhxrka3y8c0y03r43teetbyr"
+    }
+  ]
+}

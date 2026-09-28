@@ -1,0 +1,22 @@
+{
+  "habits": [
+    {
+      "name": "Morning pages",
+      "color": "mint",
+      "checkins": {},
+      "$id": "n0tfvhb6gv054ggcgvfq54111g"
+    },
+    {
+      "name": "Walk outside",
+      "color": "coral",
+      "checkins": {},
+      "$id": "5hxnhxdbfbd8ygnjq7kaczm5km"
+    },
+    {
+      "name": "Read 20 min",
+      "color": "butter",
+      "checkins": {},
+      "$id": "ym4q7vfnmfa7s2rdvmrcv6be08"
+    }
+  ]
+}

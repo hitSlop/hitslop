@@ -1,14 +1,15 @@
 // The Svelte adapter, compiled into each slop. It depends only on the ctx ABI.
-import { getContext, mount, onDestroy, tick, unmount, type Component } from "svelte";
+import { getContext, mount, tick, unmount, type Component } from "svelte";
 import type { Binding, SlopApp, SlopContext } from "../abi";
-import type { Issue, Scope } from "../document";
-import type { At, Handle, ScalarHandle, TextHandle } from "../handles";
+import type { Issue, Scope } from "../contracts";
+import type { At, Handle, ScalarHandle, TextHandle } from "../handle-types";
 import type { Definition, ObjectNode, Value } from "../schema";
 import { schemaKey } from "../schema";
-import { activate, current, slopContext } from "./context";
+import { activate, deactivate, current, slopContext } from "./context";
+const adapterContext = Symbol("hitslop.document");
 /** Handle for any object from `current`: the root, a row, a nested object, a record entry or a tree node. */
-export type { At } from "../handles";
-export type { DocumentEvent, Issue } from "../document";
+export type { At } from "../handle-types";
+export type { DocumentEvent, Issue } from "../contracts";
 export type { SlopContext, SlopApp } from "../abi";
 export type DocumentScope<N extends ObjectNode> = Scope<N>;
 
@@ -17,8 +18,31 @@ export function defineSlop(App: Component): SlopApp {
   return {
     mount(ctx, target) {
       activate(ctx);
-      const app = mount(App, { target, context: new Map([[slopContext, ctx]]) });
-      return { rendered: tick, unmount: () => unmount(app) };
+      const adapter = createAdapter(ctx.document);
+      try {
+        const app = mount(App, {
+          target,
+          context: new Map<symbol, unknown>([
+            [slopContext, ctx],
+            [adapterContext, adapter.document],
+          ]),
+        });
+        return {
+          rendered: tick,
+          unmount: async () => {
+            try {
+              await unmount(app);
+            } finally {
+              adapter.dispose();
+              deactivate(ctx);
+            }
+          },
+        };
+      } catch (error) {
+        adapter.dispose();
+        deactivate(ctx);
+        throw error;
+      }
     },
   };
 }
@@ -45,19 +69,22 @@ export function useDocument<N extends ObjectNode>(definition: Definition<N>): Sl
   const doc = ctx?.document;
   if (!doc || doc.key !== schemaKey(definition.descriptor))
     throw new Error("Host document/schema mismatch");
+  const adapter = getContext<SlopDocument<N> | undefined>(adapterContext);
+  if (!adapter) throw new Error("Missing mounted document adapter");
+  return adapter;
+}
+function createAdapter<N extends ObjectNode>(doc: SlopContext["document"]) {
   let current = $state.raw<Value<N>>(doc.current as Value<N>);
   let status = $state(doc.status);
   let error = $state(doc.error);
   let full = $state(doc.full);
-  onDestroy(
-    doc.subscribe(() => {
-      current = doc.current as Value<N>;
-      status = doc.status;
-      error = doc.error;
-      full = doc.full;
-    }),
-  );
-  return {
+  const dispose = doc.subscribe(() => {
+    current = doc.current as Value<N>;
+    status = doc.status;
+    error = doc.error;
+    full = doc.full;
+  });
+  const document: SlopDocument<N> = {
     get current() {
       return current;
     },
@@ -80,10 +107,14 @@ export function useDocument<N extends ObjectNode>(definition: Definition<N>): Sl
     change: (callback, options) => doc.change(callback as any, { message: options?.message }),
     flush: () => doc.flush(),
   };
+  return { document, dispose };
 }
 
 /** Svelte action: `use:bindText={doc.fields.title}`. */
-export function bindText(element: HTMLInputElement | HTMLTextAreaElement, handle: TextHandle): Binding<TextHandle> {
+export function bindText(
+  element: HTMLInputElement | HTMLTextAreaElement,
+  handle: TextHandle,
+): Binding<TextHandle> {
   return current().bind.text(element, handle);
 }
 /** Svelte action: `use:bindValue={doc.fields.done}`. */
@@ -95,4 +126,10 @@ export function bindValue<V extends string | number | boolean>(
 }
 
 export { default as Slop } from "./Slop.svelte";
-export type { Handle, TextHandle, RichTextHandle, ScalarHandle, InsertResult } from "../handles";
+export type {
+  Handle,
+  TextHandle,
+  RichTextHandle,
+  ScalarHandle,
+  InsertResult,
+} from "../handle-types";

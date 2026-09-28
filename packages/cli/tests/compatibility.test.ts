@@ -27,7 +27,7 @@ test("template specimens tolerate regenerated ancillary files but cover every au
       "manifest.json": '{"slug":"example"}',
       "state.schema.json": '{"format":1}',
       "initial.json": '{"title":"Initial"}',
-      "assets/runtime.json": '{"runtimeContract":2,"minRuntimeRevision":1}',
+      "assets/runtime.json": '{"runtimeContract":3,"minRuntimeRevision":1}',
       "assets/app.js": "export default { mount() {} };",
       "assets/app.css": "body { color: black; }",
       "assets/font.woff2": "authored font",
@@ -42,22 +42,33 @@ test("template specimens tolerate regenerated ancillary files but cover every au
     await cp(template, document, { recursive: true });
     await mkdir(join(document, "state"));
     await writeFile(join(document, "state/document.sqlite"), "saved specimen state");
-    await writeFile(join(fixture, "fixture.json"), JSON.stringify({
-      kind: "template", sourceSha256, sha256: await digest(document),
-      runtimeContract: 2, runtimeRevision: 1,
-    }));
+    await writeFile(
+      join(fixture, "fixture.json"),
+      JSON.stringify({
+        kind: "template",
+        sourceSha256,
+        sha256: await digest(document),
+        runtimeContract: 3,
+        runtimeRevision: 1,
+      }),
+    );
     await checkTemplateSpecimens([template], corpus);
     await writeFile(join(template, "QuickLook/Preview.png"), "preview from another macOS");
     await writeFile(join(template, ".agents/AGENTS.md"), "updated guidance");
     await checkTemplateSpecimens([template], corpus);
-    for (const [path, content] of Object.entries(files).filter(([path]) =>
-      !path.startsWith("QuickLook/") && !path.startsWith(".agents/"))) {
+    for (const [path, content] of Object.entries(files).filter(
+      ([path]) => !path.startsWith("QuickLook/") && !path.startsWith(".agents/"),
+    )) {
       await writeFile(join(template, path), content + " changed");
-      await expect(checkTemplateSpecimens([template], corpus)).rejects.toThrow("Unsealed bundled templates: example");
+      await expect(checkTemplateSpecimens([template], corpus)).rejects.toThrow(
+        "Unsealed bundled templates: example",
+      );
       await writeFile(join(template, path), content);
     }
     await writeFile(join(document, "QuickLook/Preview.png"), "rewritten historical preview");
-    await expect(checkTemplateSpecimens([template], corpus)).rejects.toThrow("Preserved fixture changed: example");
+    await expect(checkTemplateSpecimens([template], corpus)).rejects.toThrow(
+      "Preserved fixture changed: example",
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -123,13 +134,21 @@ test("historical readers open JSON-imported updates and checkpoints with preserv
         await readerStore.append(generation, [importedUpdates]);
         await readerStore.close();
       }
-      for (const release of (await releases()).filter((r) => r.runtimeContract === identity.runtimeContract)) {
+      for (const release of (await releases()).filter(
+        (r) => r.runtimeContract === identity.runtimeContract,
+      )) {
         // Fresh runners restore older readers only. The newly sealed current
         // revision comes from this candidate build and must match its ledger seal.
-        const historical = release.runtimeContract === identity.runtimeContract &&
+        const historical =
+          release.runtimeContract === identity.runtimeContract &&
           release.runtimeRevision === identity.runtimeRevision
-          ? join(runtimes, contract)
-          : join(repository, "generated/v1/runtime-releases", `${contract}-${release.runtimeRevision}`, contract);
+            ? join(runtimes, contract)
+            : join(
+                repository,
+                "generated/v1/runtime-releases",
+                `${contract}-${release.runtimeRevision}`,
+                contract,
+              );
         expect(await digest(historical)).toBe(release.sha256);
         const copy = join(root, `${phase}-reader-${release.runtimeRevision}.slop`);
         await cp(readerSource, copy, { recursive: true });
@@ -162,19 +181,15 @@ test("compiled replay detects incorrect expectations and a no-op authored text h
     await buildRuntime([runtimes]);
     const current = join(runtimes, String(identity.runtimeContract));
     const document = join(root, "Document.slop");
-    await cp("tests/compatibility/2-1/document", document, { recursive: true });
-    const expected = await Bun.file("tests/compatibility/2-1/expected.json").json();
+    await cp("tests/compatibility/3-1/document", document, { recursive: true });
+    const expected = await Bun.file("tests/compatibility/3-1/expected.json").json();
     const wrong = join(root, "wrong.json");
     await writeFile(wrong, JSON.stringify({ ...expected, title: "Wrong saved state" }));
     await expect(runRuntime(current, document, wrong)).rejects.toThrow(
       `Document ${document}, read: AssertionError`,
     );
     // The same process must release ownership after a failed assertion.
-    const good = await runRuntime(
-      current,
-      document,
-      "tests/compatibility/2-1/expected.json",
-    );
+    const good = await runRuntime(current, document, "tests/compatibility/3-1/expected.json");
     expect(good.state).toEqual(expected);
     // Mutate only a disposable compiled runtime; seals must never be regenerated.
     const runtime = join(root, "mutant");
@@ -197,8 +212,8 @@ test("compiled replay detects incorrect expectations and a no-op authored text h
       runRuntime(
         runtime,
         document,
-        "tests/compatibility/2-1/expected.json",
-        "tests/compatibility/2-1/scenario.json",
+        "tests/compatibility/3-1/expected.json",
+        "tests/compatibility/3-1/scenario.json",
       ),
     ).rejects.toThrow("AssertionError");
   } finally {
@@ -222,9 +237,12 @@ test("committed fixture and release rewrites fail against an independent base co
     await git("init");
     await mkdir(join(root, "runtimes"));
     await mkdir(join(root, "tests/compatibility/example/document/assets"), { recursive: true });
-    const records = [{ runtimeContract: 2, runtimeRevision: 1, sha256: "a".repeat(64) }];
+    const records = [{ runtimeContract: 3, runtimeRevision: 1, sha256: "a".repeat(64) }];
     await writeFile(join(root, "runtimes/releases.json"), JSON.stringify(records));
-    await writeFile(join(root, "tests/compatibility/example/document/assets/app.js"), "Original app");
+    await writeFile(
+      join(root, "tests/compatibility/example/document/assets/app.js"),
+      "Original app",
+    );
     for (const oracle of ["issues.json", "collaboration.json"])
       await writeFile(join(root, "tests/compatibility/example", oracle), "recorded");
     await git("add", ".");
@@ -256,9 +274,15 @@ test("committed fixture and release rewrites fail against an independent base co
     );
     await expect(checkHistory(root, base)).rejects.toThrow("Published runtime record changed");
     await writeFile(join(root, "runtimes/releases.json"), JSON.stringify(records));
-    await writeFile(join(root, "tests/compatibility/example/document/assets/app.js"), "Rebuilt app");
+    await writeFile(
+      join(root, "tests/compatibility/example/document/assets/app.js"),
+      "Rebuilt app",
+    );
     await expect(checkHistory(root, base)).rejects.toThrow("Preserved fixture changed");
-    await writeFile(join(root, "tests/compatibility/example/document/assets/app.js"), "Original app");
+    await writeFile(
+      join(root, "tests/compatibility/example/document/assets/app.js"),
+      "Original app",
+    );
     await checkHistory(root, base);
     // Behavioral oracles beside the document are protected too.
     for (const oracle of ["issues.json", "collaboration.json"]) {

@@ -4,6 +4,7 @@ import { supportsRuntime } from "../src/runtime-capabilities";
 const runtime = {
   runtimeContract: 1,
   runtimeRevision: 3,
+  storageRevision: 1,
   sdkVersion: "9.0.0",
   loroVersion: "8.0.0",
   protocolVersion: 1,

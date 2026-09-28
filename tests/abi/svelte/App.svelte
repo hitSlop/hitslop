@@ -6,6 +6,7 @@
   import { capture } from "@hitslop/document/capture";
   import { attachments } from "@hitslop/document/attachments";
   import schema from "./schema";
+  import Child from "./Child.svelte";
 
   const doc = useDocument(schema);
   let failure = $state<string | null>(null);
@@ -13,6 +14,7 @@
   let titleInput: HTMLInputElement;
   let doneInput: HTMLInputElement;
   let shown: HTMLParagraphElement;
+  let child = $state(true);
   function check(name: string, ok: boolean) {
     if (!ok) throw new Error(`Svelte ABI check failed: ${name}`);
     passed++;
@@ -24,6 +26,18 @@
         doc.fields.title.replace(doc.current.title + " (svelte)");
         await tick();
         check("render follows edits", shown.textContent === doc.current.title);
+        const toggle = document.querySelector<HTMLInputElement>("[data-child-toggle]")!;
+        toggle.checked = !doc.current.done;
+        toggle.dispatchEvent(new Event("change"));
+        check("component function binding writes", doc.current.done === toggle.checked);
+        child = false;
+        await tick();
+        doc.fields.title.replace(doc.current.title + " (child removed)");
+        await tick();
+        check("removing child preserves parent reactivity", shown.textContent === doc.current.title);
+        child = true;
+        await tick();
+        check("remounted child sees current state", document.querySelector("[data-child-title]")?.textContent === doc.current.title);
         check("bindText renders", titleInput.value === doc.current.title);
         titleInput.value += "!";
         titleInput.dispatchEvent(new Event("input"));
@@ -66,6 +80,7 @@
     <p bind:this={shown}>{doc.current.title}</p>
     <input aria-label="Title" bind:this={titleInput} use:bindText={doc.fields.title} />
     <input aria-label="Done" type="checkbox" bind:this={doneInput} use:bindValue={doc.fields.done} />
+    {#if child}<Child bind:checked={() => doc.current.done, value => doc.fields.done.set(value)} />{/if}
   </main>
   {#snippet exportView()}<main>{verified()}</main>{/snippet}
 </Slop>

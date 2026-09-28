@@ -34,23 +34,27 @@ For coordinated Mac releases below, package manifests determine each tarball's
 version. Release records include `packageVersions`; `runtime.sdkVersion` remains
 the SDK provenance. CLI dependency pins must match the released SDK packages.
 
-## Launch release: contract 2, revision 1
+## Launch release: contract 3, revision 1
 
-The launch pairs the Mac app with npm **2.0.0** (schema, document, CLI) and runtime
-contract **2**, revision **1**; contract 1 was retired before launch. The runtime and
-bundled template specimens are sealed once, in this order, on the release candidate:
+The launch pairs the Mac app with npm **3.0.0** (schema, document, CLI) and runtime
+contract **3**, revision **1**, storage revision **1**; contracts 1 and 2 were retired before launch. The runtime and
+bundled template specimens are sealed once, in this order, on the release candidate.
+The local 3/1 candidate and its specimens are already sealed; verify and reuse
+those bytes rather than recreating their records. Sealing is separate from
+publication: it freezes the candidate, and the release archives the same bytes.
 
 1. `bun run build && bun run build:templates`, then run every tier below except
    `check:sealed-templates` (which requires step 3).
-2. `bun scripts/v1/runtime-release.ts` seals the tested runtime and records 2/1 in
+2. `bun scripts/v1/runtime-release.ts` seals the tested runtime and records 3/1 in
    `runtimes/releases.json`.
 3. `bun run fixtures:seal` to preview, then `bun run fixtures:seal --write` to add the
    `template-*` specimens.
 4. Review and commit the ledger entry and specimens; then run the complete
    `bun run release:check` on that clean commit and continue with the sequence below.
 
-After launch, every record and fixture is immutable and later releases follow the
-same sequence with the next revision.
+Every sealed record and fixture is immutable, including before launch. Runtime
+byte changes require the next revision; follow the same sequence for that new
+candidate. Do not rewrite the 3/1 hash to accept changed bytes.
 
 ## Coordinated release sequence
 
@@ -134,7 +138,10 @@ The workflow checks these repository secrets before installing/building: `MACOS_
 
 Record commit, version/build, OS, and results. Test macOS 14 and the current supported macOS on Apple silicon:
 
-- Fresh offline install: every selected starter, create copy, open, Recents, and local template discovery.
+- Fresh offline install: with networking unavailable, launch the installed app and
+  exercise every selected starter, create a working copy, edit/save/close/reopen,
+  Recents, local template discovery, and PNG/PDF export. Confirm no engine download
+  is needed. Bundled-resource checks alone do not establish this acceptance.
 - Install an unpacked external template; confirm categories and selection update when it is removed. Invalid packages report local issues without hiding valid templates.
 - Type then close, reorder rows, commit IME, and quit with multiple documents.
 - Failed save retains ownership; retry works and cancelled quit preserves other documents.

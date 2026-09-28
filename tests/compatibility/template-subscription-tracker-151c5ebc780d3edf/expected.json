@@ -1,0 +1,65 @@
+{
+  "currency": "USD",
+  "subscriptions": [
+    {
+      "name": "Netflix",
+      "amount": 15.49,
+      "cadence": "monthly",
+      "nextRenewal": "2026-09-28",
+      "category": "Entertainment",
+      "note": "Standard",
+      "active": true,
+      "$id": "p117053sm377zwydja421w58rr"
+    },
+    {
+      "name": "iCloud+",
+      "amount": 2.99,
+      "cadence": "monthly",
+      "nextRenewal": "2026-10-07",
+      "category": "Home",
+      "note": "200 GB",
+      "active": true,
+      "$id": "96nd55d3bkkqddpvwhz17srbmw"
+    },
+    {
+      "name": "Adobe Creative Cloud",
+      "amount": 54.99,
+      "cadence": "monthly",
+      "nextRenewal": "2026-09-22",
+      "category": "Work",
+      "note": "Photography",
+      "active": true,
+      "$id": "ngk25j499rvwam4q1nz1gp0p6m"
+    },
+    {
+      "name": "Planet Fitness",
+      "amount": 24.99,
+      "cadence": "monthly",
+      "nextRenewal": "2026-09-13",
+      "category": "Health",
+      "note": "",
+      "active": true,
+      "$id": "7pak7q6z107n62z4dgfnd9ph5c"
+    },
+    {
+      "name": "Namecheap domain",
+      "amount": 13.98,
+      "cadence": "annual",
+      "nextRenewal": "2026-12-09",
+      "category": "Work",
+      "note": "hitslop.com",
+      "active": true,
+      "$id": "d4a3ssxtfkr9dpkc9rpdpkxag4"
+    },
+    {
+      "name": "New York Times",
+      "amount": 17,
+      "cadence": "monthly",
+      "nextRenewal": "2026-10-26",
+      "category": "Entertainment",
+      "note": "Paused for summer",
+      "active": false,
+      "$id": "mbz9trczgs26snyc3qwa20pgvm"
+    }
+  ]
+}

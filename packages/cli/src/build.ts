@@ -17,9 +17,12 @@ export const runtimeDirectory = join(cliRoot, "runtimes", String(identity.runtim
 export const runtimePlugin: Plugin = {
   name: "host-runtime",
   setup(b) {
-    b.onResolve({ filter: /^(loro-crdt|@hitslop\/document\/runtime)(\/.*)?$|^\/__runtime__\// }, (args) => {
-      throw new Error(`App code cannot import ${args.path}; use ctx from the document SDK`);
-    });
+    b.onResolve(
+      { filter: /^(loro-crdt|@hitslop\/document\/runtime)(\/.*)?$|^\/__runtime__\// },
+      (args) => {
+        throw new Error(`App code cannot import ${args.path}; use ctx from the document SDK`);
+      },
+    );
   },
 };
 const sdkSource = /(?:packages\/document|@hitslop\/document)\/src\/(.+)$/;
@@ -33,9 +36,12 @@ export function checkAppBundle(inputs: string[], script: string, css: string) {
   }
   if (/messageHandlers|__slop\b/.test(script))
     throw new Error("App code cannot use the host bridge; use ctx from the document SDK");
-  const remote = /@import\s+(?:url\()?\s*["']?https?:|@font-face\s*\{[^}]*url\(\s*["']?https?:/i.exec(css);
+  const remote =
+    /@import\s+(?:url\()?\s*["']?https?:|@font-face\s*\{[^}]*url\(\s*["']?https?:/i.exec(css);
   if (remote || /\bimport\s*\(\s*["'`]https?:/.test(script))
-    throw new Error("Apps must not need remote stylesheets, fonts or scripts to start; copy them into assets/");
+    throw new Error(
+      "Apps must not need remote stylesheets, fonts or scripts to start; copy them into assets/",
+    );
 }
 export async function buildProject(source: string, destination?: string) {
   source = resolve(source);
@@ -89,8 +95,14 @@ export async function buildProjectInBun(source: string, destination?: string) {
     await cp(join(source, "assets"), join(stage, "assets"), { recursive: true });
   try {
     // App.svelte and styles.css need no entry file; main.ts may export another SlopApp.
-    const custom = await stat(join(source, "main.ts")).then(() => true, () => false);
-    const styles = await stat(join(source, "styles.css")).then(() => true, () => false);
+    const custom = await stat(join(source, "main.ts")).then(
+      () => true,
+      () => false,
+    );
+    const styles = await stat(join(source, "styles.css")).then(
+      () => true,
+      () => false,
+    );
     const result = await esbuild({
       ...(custom
         ? { entryPoints: [join(source, "main.ts")] }
@@ -122,23 +134,27 @@ export async function buildProjectInBun(source: string, destination?: string) {
             b.onResolve({ filter: /\.(ttf|otf|woff2?)([?#].*)?$/ }, async (args) => {
               if (args.pluginData?.resolvingFont) return;
               // Absolute browser URLs already refer to the copied assets directory.
-              if (args.path.startsWith("/assets/")) return args.kind === "url-token"
-                ? { path: args.path, external: true }
-                : { path: args.path, namespace: "copied-font" };
+              if (args.path.startsWith("/assets/"))
+                return args.kind === "url-token"
+                  ? { path: args.path, external: true }
+                  : { path: args.path, namespace: "copied-font" };
               if (/^(https?:|data:)/.test(args.path)) return;
               const resolved = await b.resolve(args.path, {
-                kind: args.kind, resolveDir: args.resolveDir,
+                kind: args.kind,
+                resolveDir: args.resolveDir,
                 pluginData: { resolvingFont: true },
               });
               if (resolved.errors.length || resolved.external) return resolved;
               const path = relative(join(source, "assets"), resolved.path);
               if (isAbsolute(path) || path === ".." || path.startsWith("../")) return;
-              const url = "/assets/" + path.split("/").map(encodeURIComponent).join("/") + resolved.suffix;
+              const url =
+                "/assets/" + path.split("/").map(encodeURIComponent).join("/") + resolved.suffix;
               if (args.kind === "url-token") return { path: url, external: true };
               return { path: url, namespace: "copied-font" };
             });
             b.onLoad({ filter: /.*/, namespace: "copied-font" }, ({ path }) => ({
-              contents: `export default ${JSON.stringify(path)}`, loader: "js",
+              contents: `export default ${JSON.stringify(path)}`,
+              loader: "js",
             }));
           },
         },
@@ -146,7 +162,13 @@ export async function buildProjectInBun(source: string, destination?: string) {
       ],
     });
     const css = join(stage, "assets/app.css");
-    if (!(await stat(css).then(() => true, () => false))) await writeFile(css, "");
+    if (
+      !(await stat(css).then(
+        () => true,
+        () => false,
+      ))
+    )
+      await writeFile(css, "");
     checkAppBundle(
       Object.keys(result.metafile!.inputs),
       await readFile(join(stage, "assets/app.js"), "utf8"),
@@ -160,10 +182,8 @@ export async function buildProjectInBun(source: string, destination?: string) {
       join(stage, "assets/runtime.json"),
       JSON.stringify({
         runtimeContract: identity.runtimeContract,
-        minRuntimeRevision: identity.runtimeRevision,
+        minRuntimeRevision: identity.minRuntimeRevision,
         sdkVersion: identity.sdkVersion,
-        loroVersion: identity.loroVersion,
-        protocolVersion: identity.protocolVersion,
       }),
     );
     await mkdir(join(stage, ".agents/skills/hitslop-document"), { recursive: true });

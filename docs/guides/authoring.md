@@ -80,6 +80,16 @@ Initialize absent optional composites with `set`, and absent record entries with
 
 Use `bindText` for plain text inputs. Typing becomes Unicode-safe text splices; composition drafts are rebased against intervening text changes and selection is adjusted when the input updates. This is a plain-text binding, not a collaborative rich-text editor. Use `bindValue` for range, number, select, checkbox and text inputs bound to scalars: range drags preview on `input` and commit once on `change`, starting normal autosave. For your own gestures, call `handle.preview(value)` (or `list.preview(index, value)`) while dragging and `set` when done; pending previews commit at flush, close and export and never enter history on their own. The host autosaves and flushes before close/export, presenting retry on failed saves. Never edit SQLite or add a JSON reconciliation writer.
 
+For bindable component props, use Svelte's getter/setter bindings with typed handles:
+
+```svelte
+<Toggle bind:checked={() => row.done, value => doc.at(row).done.set(value)} />
+```
+
+Keep `bindText` for text controls so composition and cursor handling are preserved.
+Every component's `useDocument(schema)` shares the mounted app's reactive adapter;
+removing a child does not disconnect other consumers. Never mutate `doc.current`.
+
 ## Attachments and HTTPS
 
 In interactive native windows, standard `<input type="file">` controls open a
@@ -87,7 +97,7 @@ document-attached file picker. Cancellation leaves the document unchanged.
 Background rendering and headless commands never present file pickers. Validate
 the selected file in authored code before storing it.
 
-Keep the document for state worth saving. High-frequency or transient values (drag positions, playback progress, timers, hover state) belong in local component state or `handle.preview()`, which commits only at flush; writing them on every frame grows history for no benefit. Store binary data as attachments, never inside fields. Documents are capped at 32 MiB; a refused edit leaves everything already saved intact.
+Keep the document for state worth saving. High-frequency or transient values (drag positions, playback progress, timers, hover state) belong in local component state or `handle.preview()`, which commits only at flush; writing them on every frame grows history for no benefit. Store binary data as attachments, never inside fields. Stored checkpoint plus updates are capped at 32 MiB; a failed save retains live edits and leaves the last durable representation intact.
 
 Import `attachments` from `@hitslop/document/attachments`. Save a browser File with
 `await attachments.import(file, { commit(ref) { doc.change(tx => { /* update typed fields */ }); } })`.

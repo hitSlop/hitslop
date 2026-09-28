@@ -9,11 +9,12 @@ const provenance = {
 export const RuntimeRequirementsSchema = T.Object({
   runtimeContract: version,
   minRuntimeRevision: version,
-  ...provenance,
+  sdkVersion: provenance.sdkVersion,
 });
 export const RuntimeIdentitySchema = T.Object({
   runtimeContract: version,
   runtimeRevision: version,
+  storageRevision: version,
   ...provenance,
 });
 export const RuntimeCapabilitiesSchema = T.Object({

@@ -1,4 +1,8 @@
-import type { BridgeMethod as Method, BridgeRequest as Message, BridgeReply as Result } from "@hitslop/schema/bridge";
+import type {
+  BridgeMethod as Method,
+  BridgeRequest as Message,
+  BridgeReply as Result,
+} from "@hitslop/schema/bridge";
 import type { ByteStore, Stored } from "./storage.ts";
 import { OperationRejectedError } from "./errors";
 // Safari 18.2+ has native base64 on Uint8Array; the fallbacks avoid per-byte callbacks.
@@ -29,11 +33,15 @@ export async function hostCall<M extends Method>(args: Message<M>): Promise<Resu
 }
 // Request stored bytes as soon as the runtime evaluates so the native read overlaps
 // WASM compilation. The first HostStore load consumes it; failures surface there.
-let prefetched: Promise<Result<"load">> | undefined = (globalThis as any).webkit?.messageHandlers?.storage
+let prefetched: Promise<Result<"load">> | undefined = (globalThis as any).webkit?.messageHandlers
+  ?.storage
   ? hostCall({ method: "load" })
   : undefined;
 prefetched?.catch(() => {});
 export class HostStore implements ByteStore {
+  metadata() {
+    return hostCall({ method: "metadata" });
+  }
   async load(): Promise<Stored> {
     const pending = prefetched;
     prefetched = undefined;

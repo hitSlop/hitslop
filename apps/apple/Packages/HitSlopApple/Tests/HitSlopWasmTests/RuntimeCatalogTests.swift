@@ -7,7 +7,7 @@ import Testing
   func fixture() throws -> URL {
     let repository = String(#filePath.components(separatedBy: "/apps/apple/")[0])
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".slop")
-    try FileManager.default.copyItem(atPath: repository + "/tests/compatibility/2-1/document", toPath: root.path)
+    try FileManager.default.copyItem(atPath: repository + "/tests/compatibility/3-1/document", toPath: root.path)
     try FileManager.default.removeItem(at: root.appendingPathComponent("state"))
     return root
   }
@@ -51,6 +51,41 @@ import Testing
     try await reopened.close()
   }
 
+  // Entry/module failures previously escaped the runtime's catch. Known load
+  // errors must report promptly and release the failed-open renderer and lease.
+  @Test @MainActor func brokenRuntimeResourcesReleaseFailedOpen() async throws {
+    for headless in [false, true] {
+      for resource in [headless ? "headless.js" : "boot.js", "index.js", "loro/loro_wasm_bg.wasm", "corrupt-wasm"] {
+        let root = try fixture()
+        let runtimes = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer {
+          try? FileManager.default.removeItem(at: root)
+          try? FileManager.default.removeItem(at: runtimes)
+        }
+        let runtime = runtimes.appendingPathComponent("3")
+        try FileManager.default.createDirectory(at: runtimes, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: RuntimeCatalog.bundled().currentRuntime, to: runtime)
+        let session = try WasmSession(package: SlopPackage(rootURL: root), headless: headless, catalog: RuntimeCatalog(root: runtimes))
+        if resource == "corrupt-wasm" {
+          try Data("invalid wasm".utf8).write(to: runtime.appendingPathComponent("loro/loro_wasm_bg.wasm"))
+        } else { try FileManager.default.removeItem(at: runtime.appendingPathComponent(resource)) }
+        weak var view = session.webView
+        session.load()
+        do {
+          try await session.waitUntilReady(timeout: .seconds(3))
+          Issue.record("Broken runtime became ready: \(resource)")
+        } catch {
+          #expect(!error.localizedDescription.contains("did not become ready"))
+        }
+        #expect(session.failureClassification == .platform)
+        #expect(view == nil)
+        let ownership = try DocumentWriterLock(root: root)
+        ownership.close()
+        try await session.close()
+      }
+    }
+  }
+
   @Test @MainActor func asyncOpenRejectsBusyOwnershipAndUnsupportedRuntime() async throws {
     let root = try fixture()
     defer { try? FileManager.default.removeItem(at: root) }
@@ -75,7 +110,7 @@ import Testing
       try? FileManager.default.removeItem(at: catalogRoot)
     }
     let bundled = try RuntimeCatalog.bundled()
-    for contract in [1, 2] {
+    for contract in [3] {
       let directory = catalogRoot.appendingPathComponent(String(contract))
       try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
       try FileManager.default.createDirectory(at: directory.appendingPathComponent("loro"), withIntermediateDirectories: true)
@@ -88,7 +123,7 @@ import Testing
       try JSONSerialization.data(withJSONObject: identity).write(to: directory.appendingPathComponent("identity.json"))
     }
     let catalog = try RuntimeCatalog(root: catalogRoot)
-    for contract in [1, 2] {
+    for contract in [3] {
       let requirements: [String: Any] = ["runtimeContract": contract, "minRuntimeRevision": 2,
         "sdkVersion": "99.0.0", "loroVersion": "99.0.0", "protocolVersion": 99]
       try JSONSerialization.data(withJSONObject: requirements).write(to: root.appendingPathComponent("assets/runtime.json"))

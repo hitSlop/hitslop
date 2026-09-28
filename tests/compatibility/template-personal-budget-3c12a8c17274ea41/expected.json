@@ -1,0 +1,43 @@
+{
+  "month": "September 2026",
+  "income": 5400,
+  "savings": 1200,
+  "categories": [
+    {
+      "name": "Housing",
+      "allocated": 1600,
+      "spent": 1600,
+      "$id": "07gme2k4f47q2htmagrrncjmqm"
+    },
+    {
+      "name": "Food & Dining",
+      "allocated": 800,
+      "spent": 542,
+      "$id": "qkng1t9w1s96wb1v1dq54s89yc"
+    },
+    {
+      "name": "Transport",
+      "allocated": 300,
+      "spent": 212,
+      "$id": "tqcp5vzq7mjqa756jj8qxsb234"
+    },
+    {
+      "name": "Utilities",
+      "allocated": 350,
+      "spent": 315,
+      "$id": "gn0kacrs5g80k7ndg8fnf3bk5w"
+    },
+    {
+      "name": "Health",
+      "allocated": 200,
+      "spent": 120,
+      "$id": "jghrpj52nysqwcs1tzr9dtd0fw"
+    },
+    {
+      "name": "Other & Leisure",
+      "allocated": 400,
+      "spent": 270,
+      "$id": "jva6xyjdzn8pmb06yfzjm806k4"
+    }
+  ]
+}

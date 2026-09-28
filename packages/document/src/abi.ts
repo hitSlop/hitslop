@@ -10,12 +10,12 @@
  * advertised in `capabilities`. Behavior is pinned by the sealed consumer
  * bundles in tests/abi, not by this declaration alone.
  */
-import type { DocumentEvent, Issue } from "./document";
-import type { At, Handle, ScalarHandle, TextHandle } from "./handles";
+import type { DocumentEvent, Issue } from "./contracts";
+import type { At, Handle, ScalarHandle, TextHandle } from "./handle-types";
 import type { Definition, ObjectNode, Value } from "./schema";
-import type { AttachmentInfo, AttachmentRef } from "./attachments";
-import type { CaptureMode } from "./capture";
-import type { Scope } from "./document";
+import type { AttachmentInfo, AttachmentRef } from "./contracts";
+import type { CaptureMode } from "./contracts";
+import type { Scope } from "./contracts";
 
 export const ABI = 1;
 
@@ -45,7 +45,9 @@ export interface SlopContext {
   readonly capture: {
     /** True inside the host's export renderer. */
     isRenderer(): boolean;
-    onPrepare(handler: (mode: CaptureMode, signal: AbortSignal) => void | Promise<void>): () => void;
+    onPrepare(
+      handler: (mode: CaptureMode, signal: AbortSignal) => void | Promise<void>,
+    ): () => void;
     registerTarget(kind: "icon" | "export", target: CaptureTarget): () => void;
   };
   readonly attachments: {
@@ -54,7 +56,11 @@ export interface SlopContext {
     list(): Promise<AttachmentInfo[]>;
   };
   readonly theme: {
-    get(): { defaults: Record<string, string>; overrides: Record<string, string>; effective: Record<string, string> };
+    get(): {
+      defaults: Record<string, string>;
+      overrides: Record<string, string>;
+      effective: Record<string, string>;
+    };
   };
   readonly window: {
     /** Request a window content size; ignored where the host has no window. */

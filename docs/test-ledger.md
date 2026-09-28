@@ -352,3 +352,40 @@ Native runtime sources and sealed release records were not changed.
 No consequential coverage was removed. The targeted init regression passed after
 the fix. Full release validation is retained against the final commit in the
 CLI GitHub Release evidence rather than recording a dirty-tree run here.
+
+## Runtime reset v2: clean launch baseline
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Fractional counter saves preserve accepted values ([storage](../packages/document/tests/storage.test.ts)) | Large cancellation followed by +1 reopens as exactly 1; fractional increments remain supported | Bun | JSON-import tests cover a separate mutation path | ADD; observed 0 before checkpointing ordinary counter edits |
+| Safe-integer counter saves preserve accepted values ([storage](../packages/document/tests/storage.test.ts)) | Initial -9007199254740991, then +9007199254740991 and +9007199254740990 reopen as exactly 9007199254740990 | Bun | Existing counter case includes an unsafe delta; it cannot disprove a per-delta safe-integer shortcut | ADD; removing the checkpoint guard in a disposable copy reopened 9007199254740989 |
+| Required counter checkpoints cannot fall back to incremental saves at capacity ([storage](../packages/document/tests/storage.test.ts)) | Oversized required checkpoint rejects flush/close, retains live count 1 and durable count 0; explicit discard clears failure and reopens count 0 | Bun | Optional-compaction case permits close; generic capacity cases do not distinguish a fitting append from an oversized required checkpoint | ADD; removing the checkpoint guard in a disposable copy incorrectly resolved the save |
+| Capacity means durable checkpoint plus updates | Multibyte update fits while its full snapshot exceeds capacity; save/reopen succeeds and failed compaction preserves bytes and saved status | Bun | Existing actual-exhaustion, composition and failed-close cases remain | REPLACE old hypothetical-snapshot cap intentionally; that prelaunch contract is retired |
+| Maintenance follows durability, with captured-version acknowledgements | Observable checkpoint completion and reopen; edits arriving during append/checkpoint survive; lost replies reconcile without replaying intent | Bun | Existing storage owner | EXTEND automatic maintenance case to await completion; retain concurrent-write and lost-reply cases |
+| Native request bounds survive removal of JSON serialization | Combined payload above 48 MiB and unknown fields are refused; valid request accepted | Swift | TypeBox owns per-field envelope shape | ADD aggregate boundary coverage |
+| Durable minimum reader revision | Open/failed write keep floor; committed write raises it; older document/snapshot readers refuse; copied snapshot carries floor | Swift/SQLite | Runtime and historical replay own encoded-state interpretation | ADD format-2 transaction coverage |
+| Missing entry/module/WASM and corrupt WASM fail promptly and release failed-open ownership | Real WebKit returns a platform error before timeout; weak WebView released; independent OS lease succeeds | Swift/WebKit | Existing cancellation, mount exception and renderer-death owners remain | EXTEND runtime catalog owner; baseline failed with retained WebView and Busy lease |
+| Single installed runtime and explicit Loro storage decisions | Multiple catalog entries rejected; changed pin without matching decision rejected, matching decision admitted | Bun | Native catalog validates installed resources separately | EXTEND artifact owner |
+| Svelte child removal/remount and component function binding | Parent continues reacting after child removal; new child renders current title; bound toggle writes expected boolean | Frozen Svelte/WebKit | Existing text, scalar, atomic change and capture self-checks remain | EXTEND launch consumer before sealing |
+| SDK is independent of the engine implementation | Outside-checkout tarball consumer imports/types succeed; Loro and the runtime entry cannot resolve; engine source files are absent | Packed consumer | Existing framework-neutral consumer checked only absence of Svelte and test adapters | EXTEND the installed-package owner |
+| Contract-2 seals, fixtures, alternate installed engines and mixed-version collaboration | — | — | No replacement is claimed for prelaunch compatibility | RETIRE by explicit clean-break authorization; Git retains history. Contract 3 starts forward replay, same-storage readers and refusal below newer floors |
+
+No previously shipped contract-3 bytes have been changed. The contract-3 fixtures
+are new, unshipped launch candidates. Existing native export, failed-save ownership,
+IME, attachments, identity, anomaly and crash owners remain active.
+
+
+Runtime reset v2 validation: the complete local `release:check` passed all 18 stages,
+including 145 Bun tests, the Swift suite, eight native CLI tests, 106 render/reopen
+packages, installed tarballs, and the packaged Mac app's acknowledged-write crash
+recovery. Two final 57-case replays matched. The first gate's stale-build rejection
+and the successful rerun are retained in `.hitslop/v1-evidence/runtime-reset-v2/`.
+The new runtime and 51 bundled-template specimens are sealed locally; no artifacts
+were published. Native stress measurements and their limits are recorded in
+[runtime-reset-v2.md](runtime-reset-v2.md#13-implementation-evidence).
+
+Counter follow-up: both added storage regressions failed for their intended
+reasons with the checkpoint guard removed in a disposable copy, and pass with
+production sources unchanged. `bun run check` and `bun run test` passed: 147 tests,
+57 compatibility replay cases and 51 bundled template open/reopen checks. Evidence:
+`.hitslop/v1-evidence/runtime-reset-v2/counter-followup-{sensitivity,check,test}.log`.

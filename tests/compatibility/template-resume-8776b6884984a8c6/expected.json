@@ -1,0 +1,62 @@
+{
+  "name": "Avery Quinn",
+  "initials": "AQ",
+  "role": "Product designer & systems thinker",
+  "email": "avery@hello.dev",
+  "location": "Brooklyn, NY",
+  "website": "hello.dev/avery",
+  "summary": "I turn ambiguous ideas into useful, calm digital products. I work from the first sketch through a durable system that gives teams room to move.",
+  "skills": [
+    {
+      "label": "Product design",
+      "$id": "4e8a3x6nvt7s4j48h91wwfy2ac"
+    },
+    {
+      "label": "Design systems",
+      "$id": "4hg4zsqjgek7v75q79kkq1vvzm"
+    },
+    {
+      "label": "Prototyping",
+      "$id": "a3e7s7y9x0memavsvvyd1ansgm"
+    },
+    {
+      "label": "User research",
+      "$id": "n30b4t5c9vq1f1jhzbvxdxg460"
+    },
+    {
+      "label": "Figma",
+      "$id": "tfheer47gcj0vayq3gxbfyec60"
+    }
+  ],
+  "experience": [
+    {
+      "role": "Senior product designer",
+      "company": "Mosaic Labs",
+      "period": "2022 — now",
+      "summary": "Led product direction for a collaborative workspace used by growing teams. Shaped the system, shipped the new editor, and partnered closely with engineering from discovery through launch.",
+      "$id": "hnh7fn6nbf7nz9r56bz9femckr"
+    },
+    {
+      "role": "Product designer",
+      "company": "Scale Studio",
+      "period": "2020 — 2022",
+      "summary": "Designed end-to-end tools for independent businesses, from first-run onboarding to daily operations. Built a reusable component library that made new work faster and more consistent.",
+      "$id": "420cw16b3gqe0j13357bc4ydac"
+    },
+    {
+      "role": "Visual designer",
+      "company": "North / South",
+      "period": "2018 — 2020",
+      "summary": "Made identities, websites, and small digital products for people doing interesting work. Learned to make the essential thing feel inevitable.",
+      "$id": "55q0t9552n86d5dzpe49j8ct48"
+    }
+  ],
+  "education": [
+    {
+      "school": "Parsons School of Design",
+      "program": "BFA, Communication Design",
+      "year": "2018",
+      "$id": "2wm6fn2g9b7ad050k0tg5ptx84"
+    }
+  ]
+}

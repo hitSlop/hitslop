@@ -1,0 +1,47 @@
+{
+  "storeName": "DAILY EXPENSE LOG",
+  "terminalId": "#0842",
+  "currency": "$",
+  "items": [
+    {
+      "title": "Pour-over coffee",
+      "amount": 5.5,
+      "category": "coffee",
+      "date": "2026-09-16",
+      "time": "08:15",
+      "$id": "4wv8yq8hnzs2t8r4e5j4jgbjj4"
+    },
+    {
+      "title": "Subway pass",
+      "amount": 2.9,
+      "category": "transit",
+      "date": "2026-09-16",
+      "time": "08:45",
+      "$id": "qmfzxmafrjvne8t62xdms4shr8"
+    },
+    {
+      "title": "Sourdough sandwich",
+      "amount": 14.25,
+      "category": "food",
+      "date": "2026-09-16",
+      "time": "12:30",
+      "$id": "w805es66s88sxc20wevcyth0n0"
+    },
+    {
+      "title": "Notebook & fine pen",
+      "amount": 18,
+      "category": "gear",
+      "date": "2026-09-16",
+      "time": "15:10",
+      "$id": "e3cv7zpex5gd5f7fzph813a4hr"
+    },
+    {
+      "title": "Cloud storage",
+      "amount": 9.99,
+      "category": "bills",
+      "date": "2026-09-16",
+      "time": "17:00",
+      "$id": "yxc3vwsjxzm6w3pw4em7fa61m4"
+    }
+  ]
+}

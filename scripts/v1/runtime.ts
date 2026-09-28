@@ -40,18 +40,14 @@ export async function buildRuntime(destinations = runtimeDestinations) {
       ],
     });
     const loro = dirname(Bun.resolveSync("loro-crdt/package.json", repository));
-    await cp(join(loro, "web"), join(runtimeDirectory, "loro"), { recursive: true });
-    await writeFile(join(runtimeDirectory, "identity.json"), JSON.stringify(identity));
-    for (const entry of await readdir(join(repository, "runtimes"), { withFileTypes: true })) {
-      if (entry.isSymbolicLink())
-        throw new Error(`Runtime archive cannot be a symlink: ${entry.name}`);
-      if (!entry.isDirectory()) continue;
-      if (!/^[1-9][0-9]*$/.test(entry.name) || Number(entry.name) >= identity.runtimeContract)
-        throw new Error(`Archived runtime must precede current contract: ${entry.name}`);
-      await cp(join(repository, "runtimes", entry.name), join(stage, entry.name), {
-        recursive: true,
-      });
+    await mkdir(join(runtimeDirectory, "loro"));
+    for (const entry of await readdir(join(loro, "web"))) {
+      if (entry.endsWith(".js") || entry.endsWith(".wasm") || entry === "snippets")
+        await cp(join(loro, "web", entry), join(runtimeDirectory, "loro", entry), {
+          recursive: true,
+        });
     }
+    await writeFile(join(runtimeDirectory, "identity.json"), JSON.stringify(identity));
     await verifyReleasedIdentities(await catalog(stage));
     for (const destination of destinations) {
       await mkdir(dirname(destination), { recursive: true });

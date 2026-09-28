@@ -48,6 +48,7 @@ export type RuntimeCase = {
   issues?: string;
   scenario?: string;
   phase?: string;
+  rejectStorage?: boolean;
 };
 /** One collaboration step: import the other peer's history, edit, save, reopen, export. */
 export type PeerCase = {
@@ -63,7 +64,8 @@ async function openDocument(runtime: any, root: string) {
   const descriptor = await Bun.file(join(root, "state.schema.json")).json();
   const initial = await Bun.file(join(root, "initial.json")).json();
   const definition = runtime.fromDescriptor(descriptor);
-  return () => SQLiteStore.open(root).then((store) => runtime.Document.open(definition, store, initial));
+  return () =>
+    SQLiteStore.open(root).then((store) => runtime.Document.open(definition, store, initial));
 }
 
 export async function runPeer(runtime: any, input: PeerCase): Promise<RuntimeResult> {
@@ -95,6 +97,13 @@ export async function runCase(runtime: any, input: RuntimeCase): Promise<Runtime
   const root = resolve(document);
   try {
     const open = await openDocument(runtime, root);
+    if (input.rejectStorage) {
+      const path = join(root, "state/document.sqlite");
+      const before = await Bun.file(path).bytes();
+      await assert.rejects(open, /Update hitSlop.app/);
+      assert.deepEqual(await Bun.file(path).bytes(), before);
+      return { state: null, stateHash: hash("storage revision refused") };
+    }
     let doc = await open();
     try {
       if (expectedPath && expectedPath !== "-")
@@ -135,11 +144,15 @@ if (import.meta.main) {
   for (const input of cases) {
     // A stalled case must not hang an entire historical batch.
     const timeout = setTimeout(() => {
-      console.error(`Document ${input.document}, ${input.kind === "peer" ? "peer" : (input.phase ?? "read")}: timed out`);
+      console.error(
+        `Document ${input.document}, ${input.kind === "peer" ? "peer" : (input.phase ?? "read")}: timed out`,
+      );
       process.exit(1);
     }, 30_000);
     try {
-      results.push(input.kind === "peer" ? await runPeer(runtime, input) : await runCase(runtime, input));
+      results.push(
+        input.kind === "peer" ? await runPeer(runtime, input) : await runCase(runtime, input),
+      );
     } finally {
       clearTimeout(timeout);
     }

@@ -16,12 +16,24 @@ import {
   type Snapshot,
 } from "./schema.ts";
 import type { ByteStore, Stored } from "./storage.ts";
-import { Commands, applyOperation, containerOf, fill, project, type Issue, type Lookup, type Operation } from "./operations";
+import { metadataOf, type StorageMetadata } from "./storage.ts";
+import {
+  Commands,
+  applyOperation,
+  containerOf,
+  fill,
+  project,
+  type Issue,
+  type Lookup,
+  type Operation,
+} from "./operations";
 import { patch } from "./projection";
 import { importJSON } from "./json-import";
 import { base64 } from "./bridge";
+import identity from "./runtime-identity.json";
 export type { Operation, Destination, Issue } from "./operations";
-export type SaveStatus = "saved" | "saving" | "save-failed";
+import type { SaveStatus, DocumentEvent, Scope } from "./contracts";
+export type { SaveStatus, DocumentEvent, Scope } from "./contracts";
 /** `ui` for authored code, `cli` for socket requests; the message is kept in history. */
 export type CommitOptions = { origin?: string; message?: string };
 /**
@@ -29,15 +41,8 @@ export type CommitOptions = { origin?: string; message?: string };
  * for CLI/agent edits routed into it, `remote` for imported peer updates.
  * `status` events report save status only.
  */
-export type DocumentEvent =
-  | { readonly kind: "change"; readonly origin: "local" | "host" | "remote" }
-  | { readonly kind: "status" };
 const originOf = (options: CommitOptions) => (options.origin === "cli" ? "host" : "local");
 /** What a `change()` callback may use: typed handles only. */
-export type Scope<N extends ObjectNode> = {
-  readonly fields: Handle<N>;
-  readonly at: At;
-};
 /** Host storage bound for one checkpoint or checkpoint plus log (Swift Storage.maximumBytes). */
 const MAX_CHECKPOINT_BYTES = 32 * 1024 * 1024;
 export type OpenOptions = { capacityBytes?: number };
@@ -45,12 +50,13 @@ const paths = new WeakMap<object, { owner: object; path: Path }>();
 const key = (path: Path) => JSON.stringify(path);
 export class Document<N extends ObjectNode> extends Commands {
   private engine = new LoroDoc();
+  private savedVersion = this.engine.oplogVersion();
   private pending: Uint8Array[] = [];
   private generation = "0";
   private logRows = 0;
   private logBytes = 0;
   private checkpointBytes = 0;
-  private checkpointImport = false;
+  private checkpointRequired = false;
   private drafts = new Set<() => void>();
   private previews = new Map<string, { path: Path; value: unknown }>();
   private preparations: Array<(commit: (callback: () => void) => void) => Promise<void>> = [];
@@ -63,6 +69,11 @@ export class Document<N extends ObjectNode> extends Commands {
   private stop?: () => void;
   private stopEvents?: () => void;
   private timer?: ReturnType<typeof setTimeout>;
+  private maintenanceTimer?: ReturnType<typeof setTimeout>;
+  private maintenanceRows = 0;
+  private maintenanceBytes = 0;
+  /** Optional checkpoint failure; never changes acknowledged save status. */
+  maintenanceError: string | null = null;
   private closed = false;
   private closing = false;
   private discarding = false;
@@ -105,12 +116,15 @@ export class Document<N extends ObjectNode> extends Commands {
     options: OpenOptions = {},
   ): Promise<Document<N>> {
     const doc = new Document(definition, storage);
-    doc.capacityBytes = Math.min(options.capacityBytes ?? MAX_CHECKPOINT_BYTES, MAX_CHECKPOINT_BYTES);
+    doc.capacityBytes = Math.min(
+      options.capacityBytes ?? MAX_CHECKPOINT_BYTES,
+      MAX_CHECKPOINT_BYTES,
+    );
     try {
       const stored = await storage.load();
       doc.id = stored.docId;
       doc.restoreEngine(doc.engine, stored);
-      doc.storageMetadata(stored);
+      doc.storageMetadata(metadataOf(stored));
       if (!stored.checkpoint) {
         validate(definition.descriptor.root, initial);
         fill(doc.engine.getMap("data"), definition.descriptor.root, initial);
@@ -119,16 +133,25 @@ export class Document<N extends ObjectNode> extends Commands {
         doc.generation = await storage.checkpoint(doc.generation, snapshot, doc.key);
         doc.checkpointBytes = snapshot.length;
       }
+      doc.savedVersion.free();
+      doc.savedVersion = doc.engine.oplogVersion();
       doc.snapshot = doc.view = doc.projectAll();
       doc.subscribeEngine();
       return doc;
     } catch (error) {
+      doc.savedVersion.free();
       doc.engine.free();
       await storage.close();
       throw error;
     }
   }
   private restoreEngine(engine: LoroDoc, stored: Stored) {
+    if (
+      !Number.isSafeInteger(stored.readerRevision) ||
+      stored.readerRevision < 1 ||
+      stored.readerRevision > identity.storageRevision
+    )
+      throw new Error("This document requires a newer storage revision. Update hitSlop.app.");
     const styles = textStyles(this.definition.descriptor.root);
     if (Object.keys(styles).length) engine.configTextStyle(styles);
     if (stored.schemaKey !== null && stored.schemaKey !== this.key)
@@ -176,7 +199,15 @@ export class Document<N extends ObjectNode> extends Commands {
   get issues(): readonly Issue[] {
     if (this.issueCache?.revision !== this.revision) {
       const issues: Issue[] = [];
-      if (!this.closed) project(this.definition.descriptor.root, this.engine.getMap("data"), undefined, [], undefined, issues);
+      if (!this.closed)
+        project(
+          this.definition.descriptor.root,
+          this.engine.getMap("data"),
+          undefined,
+          [],
+          undefined,
+          issues,
+        );
       this.issueCache = { revision: this.revision, issues: Object.freeze(issues) };
     }
     return this.issueCache.issues;
@@ -191,6 +222,9 @@ export class Document<N extends ObjectNode> extends Commands {
   /** Events arrive synchronously on commit and import; only touched containers are re-read. */
   private onEvents(batch: LoroEventBatch) {
     if (this.closed || batch.by === "checkout") return;
+    // Loro combines floating-point counter deltas during replay. A checkpoint
+    // preserves the accepted value instead of recomputing a differently grouped sum.
+    if (batch.events.some((event) => event.diff.type === "counter")) this.checkpointRequired = true;
     this.revision++;
     const root = this.definition.descriptor.root;
     try {
@@ -208,16 +242,22 @@ export class Document<N extends ObjectNode> extends Commands {
     if (value === this.view || value === this.snapshot)
       return commands === this ? this.fields : createHandles(this.definition.fields.node, commands);
     const entry = value && typeof value === "object" ? paths.get(value) : undefined;
-    if (!entry || entry.owner !== this) throw new Error("at() requires an object from this document's snapshot");
+    if (!entry || entry.owner !== this)
+      throw new Error("at() requires an object from this document's snapshot");
     const node = nodeAt(this.definition.descriptor.root, entry.path);
     return createHandles(node, commands, commands === this ? this.observer : undefined, entry.path);
   }
   /** Resolve an effective row or tree-node ID through the projected snapshot, O(depth). */
-  private lookup: Lookup = (collection, id) => containerOf(read(this.snapshot, [...collection, { id }]));
+  private lookup: Lookup = (collection, id) =>
+    containerOf(read(this.snapshot, [...collection, { id }]));
   private transactionFailure: unknown;
   private collecting = false;
   private assertWritable() {
-    if (this.closed || ((this.closing || this.discarding) && !this.committingPreparation) || this.collecting) {
+    if (
+      this.closed ||
+      ((this.closing || this.discarding) && !this.committingPreparation) ||
+      this.collecting
+    ) {
       const error = new OperationRejectedError(
         "Document is closed, closing, discarding, or running a transaction; use tx.fields inside transactions",
       );
@@ -244,7 +284,12 @@ export class Document<N extends ObjectNode> extends Commands {
   }
   /** Import desired values through the same staged operation boundary as authored changes. */
   importJSON(value: unknown, options: CommitOptions & { fresh?: boolean } = {}) {
-    this.stage((_, commands) => importJSON(this.definition.descriptor.root, this.snapshot, value, commands, options.fresh), options, true);
+    this.stage(
+      (_, commands) =>
+        importJSON(this.definition.descriptor.root, this.snapshot, value, commands, options.fresh),
+      options,
+      true,
+    );
   }
   /** Opaque optimistic-concurrency token; stable across close/reopen and checkpointing. */
   snapshotFor(documentPath: string) {
@@ -253,12 +298,22 @@ export class Document<N extends ObjectNode> extends Commands {
       schema: this.definition.descriptor,
       /** Merged anomalies in `data`, preserved as stored; empty for ordinary documents. */
       issues: this.issues,
-      version: base64.encode(new TextEncoder().encode(JSON.stringify([
-        documentPath, this.key, base64.encode(this.engine.oplogVersion().encode()),
-      ]))),
+      version: base64.encode(
+        new TextEncoder().encode(
+          JSON.stringify([
+            documentPath,
+            this.key,
+            base64.encode(this.engine.oplogVersion().encode()),
+          ]),
+        ),
+      ),
     };
   }
-  private stage<R>(callback: (tx: Scope<N>, commands: Commands) => R, options: CommitOptions, checkImport = false): R {
+  private stage<R>(
+    callback: (tx: Scope<N>, commands: Commands) => R,
+    options: CommitOptions,
+    checkImport = false,
+  ): R {
     this.assertWritable();
     const staged = this.engine.fork();
     let active = true;
@@ -301,7 +356,7 @@ export class Document<N extends ObjectNode> extends Commands {
         this.accept(bytes, true);
         // Preserve the accepted absolute values as a checkpoint. Replaying separately
         // batched floating-point counter increments can otherwise change rounding.
-        if (checkImport) this.checkpointImport = true;
+        if (checkImport) this.checkpointRequired = true;
         for (const op of touched) this.dropPreview(op);
         this.changed(originOf(options));
       }
@@ -428,9 +483,13 @@ export class Document<N extends ObjectNode> extends Commands {
         try {
           while (this.preparations.length) {
             try {
-              await this.preparations[0]!(callback => {
+              await this.preparations[0]!((callback) => {
                 this.committingPreparation = true;
-                try { callback(); } finally { this.committingPreparation = false; }
+                try {
+                  callback();
+                } finally {
+                  this.committingPreparation = false;
+                }
               });
             } catch (error) {
               if (error instanceof OperationRejectedError) this.preparations.shift();
@@ -439,44 +498,56 @@ export class Document<N extends ObjectNode> extends Commands {
             this.preparations.shift();
           }
           while (this.pending.length) {
-            const updates = this.pending.slice();
-            // Capture these bytes and their pending count before awaiting storage.
-            // Update size is not a bound on the resulting full snapshot size.
-            const snapshot = this.measuredSnapshot();
-            const bytes = updates.reduce((n, b) => n + b.length, 0);
-            if (
-              this.checkpointImport || this.logRows + updates.length >= 256 ||
-              this.logBytes + bytes >= 4 * 1024 * 1024 ||
-              this.checkpointBytes + this.logBytes + bytes > this.capacityBytes
-            ) {
-              await this.writeCheckpoint(snapshot, updates.length);
+            if (this.checkpointRequired) {
+              await this.writeCheckpoint();
               continue;
             }
+            const count = this.pending.length;
+            const update = this.engine.export({ mode: "update", from: this.savedVersion });
+            const bytes = update.length;
+            if (
+              this.logRows + 1 > 4096 ||
+              this.checkpointBytes + this.logBytes + bytes > this.capacityBytes
+            ) {
+              await this.writeCheckpoint();
+              continue;
+            }
+            const end = this.engine.oplogVersion();
+            const generation = this.generation;
             try {
-              this.generation = await this.storage.append(this.generation, updates);
+              this.generation = await this.storage.append(generation, [update]);
             } catch (error) {
-              // A commit can succeed before its reply is lost. Retrying Loro bytes is idempotent.
-              await this.reloadStorageMetadata();
+              try {
+                await this.reloadStorageMetadata();
+                if (BigInt(this.generation) === BigInt(generation) + 1n)
+                  this.acceptSaved(end, count);
+                else end.free();
+              } catch (recoveryError) {
+                end.free();
+                throw recoveryError;
+              }
               throw error;
             }
-            this.pending.splice(0, updates.length);
-            this.logRows += updates.length;
-            this.logBytes += updates.reduce((n, b) => n + b.length, 0);
+            this.acceptSaved(end, count);
+            this.logRows++;
+            this.logBytes += bytes;
           }
           if (pendingFailure) throw pendingFailure;
           this.status = this.pending.length ? "saving" : "saved";
           this.error = null;
           this.full = false;
           this.notify();
+          this.scheduleMaintenance();
         } catch (error) {
           if (error instanceof OperationRejectedError) {
             this.error = null;
             this.status = this.pending.length || this.preparations.length ? "saving" : "saved";
             this.notify();
-            if (this.status === "saving") this.timer ??= setTimeout(() => {
-              this.timer = undefined;
-              void this.flush().catch(() => {});
-            }, 200);
+            if (this.status === "saving")
+              this.timer ??= setTimeout(() => {
+                this.timer = undefined;
+                void this.flush().catch(() => {});
+              }, 200);
             throw error;
           }
           this.status = "save-failed";
@@ -515,86 +586,147 @@ export class Document<N extends ObjectNode> extends Commands {
     this.discarding = true;
     clearTimeout(this.timer);
     this.timer = undefined;
-    const task = this.queue.catch(() => {}).then(async () => {
-      const replacement = new LoroDoc();
-      try {
-        const stored = await this.storage.load();
-        if (stored.docId !== this.id || !stored.checkpoint) throw new Error("Saved document is unavailable");
-        this.restoreEngine(replacement, stored);
-        // Validate the replacement before touching the live document or drafts.
-        const snapshot = project(this.definition.descriptor.root, replacement.getMap("data"), undefined, [], this.register) as Value<N>;
-        this.stop?.();
-        this.stopEvents?.();
-        this.engine.free();
-        this.engine = replacement;
-        this.storageMetadata(stored);
-        this.pending = [];
-        this.preparations = [];
-        this.checkpointImport = false;
-        this.previews.clear();
-        // The view is remounted after discard; only its new bindings may flush drafts.
-        this.drafts.clear();
-        this.snapshot = this.view = snapshot;
-        this.revision++;
-        this.subscribeEngine();
-        this.full = false;
-        this.error = null;
-        this.status = "saved";
-        this.notify({ kind: "change", origin: "local" });
-      } catch (error) {
-        if (this.engine !== replacement) replacement.free();
-        this.status = "save-failed";
-        this.error = String(error);
-        this.notify();
-        throw error;
-      } finally {
-        this.discarding = false;
-      }
-    });
+    clearTimeout(this.maintenanceTimer);
+    this.maintenanceTimer = undefined;
+    const task = this.queue
+      .catch(() => {})
+      .then(async () => {
+        const replacement = new LoroDoc();
+        try {
+          const stored = await this.storage.load();
+          if (stored.docId !== this.id || !stored.checkpoint)
+            throw new Error("Saved document is unavailable");
+          this.restoreEngine(replacement, stored);
+          // Validate the replacement before touching the live document or drafts.
+          const snapshot = project(
+            this.definition.descriptor.root,
+            replacement.getMap("data"),
+            undefined,
+            [],
+            this.register,
+          ) as Value<N>;
+          this.stop?.();
+          this.stopEvents?.();
+          this.engine.free();
+          this.engine = replacement;
+          this.storageMetadata(metadataOf(stored));
+          this.savedVersion.free();
+          this.savedVersion = this.engine.oplogVersion();
+          this.maintenanceRows = this.maintenanceBytes = 0;
+          this.maintenanceError = null;
+          this.pending = [];
+          this.preparations = [];
+          this.checkpointRequired = false;
+          this.previews.clear();
+          // The view is remounted after discard; only its new bindings may flush drafts.
+          this.drafts.clear();
+          this.snapshot = this.view = snapshot;
+          this.revision++;
+          this.subscribeEngine();
+          this.full = false;
+          this.error = null;
+          this.status = "saved";
+          this.notify({ kind: "change", origin: "local" });
+        } catch (error) {
+          if (this.engine !== replacement) replacement.free();
+          this.status = "save-failed";
+          this.error = String(error);
+          this.notify();
+          throw error;
+        } finally {
+          this.discarding = false;
+        }
+      });
     this.queue = task;
     return task;
   }
   async compact() {
     await this.flush();
-    const task = this.queue
-      .catch(() => {})
-      .then(async () => {
-        try {
-          await this.writeCheckpoint();
-        } catch (error) {
-          this.status = "save-failed";
-          this.error = String(error);
-          this.full = error instanceof DocumentFullError;
-          this.notify();
-          throw error;
-        }
-      });
+    const task = this.queue.catch(() => {}).then(() => this.maintain());
     this.queue = task;
     await task;
   }
-  private async reloadStorageMetadata() {
-    this.storageMetadata(await this.storage.load());
+  private scheduleMaintenance() {
+    if (
+      this.closed ||
+      this.closing ||
+      this.discarding ||
+      this.maintenanceTimer ||
+      (this.logRows - this.maintenanceRows < 256 &&
+        this.logBytes - this.maintenanceBytes < 4 * 1024 * 1024)
+    )
+      return;
+    this.maintenanceTimer = setTimeout(() => {
+      this.maintenanceTimer = undefined;
+      const task = this.queue
+        .catch(() => {})
+        .then(async () => {
+          if (!this.closed && !this.closing && !this.discarding && !this.pending.length)
+            await this.maintain();
+        });
+      this.queue = task;
+      void task.catch(() => {});
+    }, 0);
   }
-  private storageMetadata(disk: Stored) {
-    this.generation = disk.generation;
-    this.checkpointBytes = disk.checkpoint?.length ?? 0;
-    this.logRows = disk.updates.length;
-    this.logBytes = disk.updates.reduce((n, b) => n + b.length, 0);
-  }
-  private async writeCheckpoint(snapshot = this.measuredSnapshot(), count = this.pending.length) {
-    const imported = this.checkpointImport;
-    this.checkpointImport = false;
+  private async maintain() {
+    this.maintenanceRows = this.logRows;
+    this.maintenanceBytes = this.logBytes;
     try {
-      this.generation = await this.storage.checkpoint(this.generation, snapshot, this.key);
+      await this.writeCheckpoint();
+      this.maintenanceError = null;
     } catch (error) {
-      this.checkpointImport ||= imported;
-      await this.reloadStorageMetadata();
+      this.maintenanceError = String(error);
       throw error;
     }
+  }
+  private async reloadStorageMetadata() {
+    const metadata = await this.storage.metadata();
+    if (metadata.docId !== this.id || metadata.schemaKey !== this.key)
+      throw new Error("Stored document changed");
+    this.storageMetadata(metadata);
+  }
+  private storageMetadata(disk: StorageMetadata) {
+    this.generation = disk.generation;
+    this.checkpointBytes = disk.checkpointBytes;
+    this.logRows = disk.updateRows;
+    this.logBytes = disk.updateBytes;
+  }
+  private acceptSaved(end: ReturnType<LoroDoc["oplogVersion"]>, count: number) {
+    this.savedVersion.free();
+    this.savedVersion = end;
     this.pending.splice(0, count);
+  }
+  private async writeCheckpoint() {
+    const snapshot = this.measuredSnapshot();
+    const count = this.pending.length;
+    const end = this.engine.oplogVersion();
+    const generation = this.generation;
+    const imported = this.checkpointRequired;
+    this.checkpointRequired = false;
+    try {
+      this.generation = await this.storage.checkpoint(generation, snapshot, this.key);
+    } catch (error) {
+      try {
+        await this.reloadStorageMetadata();
+        if (BigInt(this.generation) === BigInt(generation) + 1n) {
+          this.acceptSaved(end, count);
+          this.maintenanceRows = this.maintenanceBytes = 0;
+        } else {
+          this.checkpointRequired ||= imported;
+          end.free();
+        }
+      } catch (recoveryError) {
+        this.checkpointRequired ||= imported;
+        end.free();
+        throw recoveryError;
+      }
+      throw error;
+    }
+    this.acceptSaved(end, count);
     this.checkpointBytes = snapshot.length;
     this.logRows = 0;
     this.logBytes = 0;
+    this.maintenanceRows = this.maintenanceBytes = 0;
   }
   prepareClose(): Promise<void> {
     if (this.closed) return Promise.resolve();
@@ -624,11 +756,14 @@ export class Document<N extends ObjectNode> extends Commands {
     await this.prepareClose();
     if (this.closed) return;
     this.closed = true;
+    clearTimeout(this.maintenanceTimer);
+    this.maintenanceTimer = undefined;
     this.notify();
     this.outbound.clear();
     this.stop?.();
     this.stopEvents?.();
     this.engine.free();
+    this.savedVersion.free();
     this.listeners.clear();
     await this.storage.close();
   }

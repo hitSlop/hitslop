@@ -1,0 +1,468 @@
+{
+  "studentName": "Alex Rivera",
+  "term": "Fall Semester 2026",
+  "homeroom": "Rm 104 · Ms. Gallagher",
+  "locker": "#214 (Combo: 18-32-06)",
+  "periods": [
+    {
+      "periodKey": "p1",
+      "name": "Period 1",
+      "start": "08:15",
+      "end": "09:05",
+      "$id": "zbfha5wsvcgqjc2s2t13q84rc8"
+    },
+    {
+      "periodKey": "p2",
+      "name": "Period 2",
+      "start": "09:10",
+      "end": "10:00",
+      "$id": "vbd8n7knnqnajsam1hmz5k5ekw"
+    },
+    {
+      "periodKey": "adv",
+      "name": "Advisory",
+      "start": "10:05",
+      "end": "10:35",
+      "$id": "rr9q3cyhn3fxd34bfje1mtmeew"
+    },
+    {
+      "periodKey": "p3",
+      "name": "Period 3",
+      "start": "10:40",
+      "end": "11:30",
+      "$id": "4b3v9v5z0zj8kgk2w71cxbjztc"
+    },
+    {
+      "periodKey": "lunch",
+      "name": "Lunch",
+      "start": "11:35",
+      "end": "12:15",
+      "$id": "g1t0aj99e9svrgfm95y5kr7rjm"
+    },
+    {
+      "periodKey": "p4",
+      "name": "Period 4",
+      "start": "12:20",
+      "end": "13:10",
+      "$id": "wcc9d4tyys5knjgzeeeqp3gbaw"
+    },
+    {
+      "periodKey": "p5",
+      "name": "Period 5",
+      "start": "13:15",
+      "end": "14:05",
+      "$id": "qzbmkf73fg697zvmgpxn7qepe4"
+    },
+    {
+      "periodKey": "p6",
+      "name": "Period 6",
+      "start": "14:10",
+      "end": "15:00",
+      "$id": "1hta5q43czzpyswq3mgced62pw"
+    }
+  ],
+  "classes": [
+    {
+      "periodKey": "p1",
+      "day": "MON",
+      "subject": "AP Biology",
+      "room": "Rm 204",
+      "teacher": "Dr. Thorne",
+      "color": "sage",
+      "$id": "kzdppvcsyhmxe4ztsxdcvvxn3r"
+    },
+    {
+      "periodKey": "p2",
+      "day": "MON",
+      "subject": "Honors Lit",
+      "room": "Rm 112",
+      "teacher": "Ms. Davies",
+      "color": "slate",
+      "$id": "6vzt6b3km8c0tm6q75cwqswgp8"
+    },
+    {
+      "periodKey": "adv",
+      "day": "MON",
+      "subject": "Homeroom",
+      "room": "Rm 104",
+      "teacher": "Ms. Gallagher",
+      "color": "teal",
+      "$id": "5vbaqssdz35154mr2qydbfzzfc"
+    },
+    {
+      "periodKey": "p3",
+      "day": "MON",
+      "subject": "Pre-Calculus",
+      "room": "Rm 305",
+      "teacher": "Mr. Vance",
+      "color": "indigo",
+      "$id": "e76ja21nj4yzet5w65a9y603p8"
+    },
+    {
+      "periodKey": "lunch",
+      "day": "MON",
+      "subject": "Lunch & Quad",
+      "room": "Commons",
+      "teacher": "—",
+      "color": "amber",
+      "$id": "ezegm09s9fnwt2t5thj4hbrh80"
+    },
+    {
+      "periodKey": "p4",
+      "day": "MON",
+      "subject": "World History",
+      "room": "Rm 218",
+      "teacher": "Mr. O'Connor",
+      "color": "amber",
+      "$id": "gzcb0np93fbknedajsfs0tzewg"
+    },
+    {
+      "periodKey": "p5",
+      "day": "MON",
+      "subject": "Spanish III",
+      "room": "Rm 108",
+      "teacher": "Sra. Ortiz",
+      "color": "terracotta",
+      "$id": "zkn0abtcx88jvd0nxwvn0s529w"
+    },
+    {
+      "periodKey": "p6",
+      "day": "MON",
+      "subject": "Studio Art",
+      "room": "Art Wing",
+      "teacher": "Ms. Chen",
+      "color": "rose",
+      "$id": "e38k46cxb8abz4s1wyxd01tzz8"
+    },
+    {
+      "periodKey": "p1",
+      "day": "TUE",
+      "subject": "AP Biology",
+      "room": "Lab B",
+      "teacher": "Dr. Thorne",
+      "color": "sage",
+      "$id": "0eqkp4vz3kq6xg0mt5hcvapm74"
+    },
+    {
+      "periodKey": "p2",
+      "day": "TUE",
+      "subject": "Honors Lit",
+      "room": "Rm 112",
+      "teacher": "Ms. Davies",
+      "color": "slate",
+      "$id": "v0athr6fw4sed3639jnk5hs5nm"
+    },
+    {
+      "periodKey": "adv",
+      "day": "TUE",
+      "subject": "Class Meeting",
+      "room": "Auditorium",
+      "teacher": "Dean Hayes",
+      "color": "teal",
+      "$id": "hbqh3ppy86pmrjh0x2y015e96m"
+    },
+    {
+      "periodKey": "p3",
+      "day": "TUE",
+      "subject": "Pre-Calculus",
+      "room": "Rm 305",
+      "teacher": "Mr. Vance",
+      "color": "indigo",
+      "$id": "8crgngqhchsw39m5qc271q03t0"
+    },
+    {
+      "periodKey": "lunch",
+      "day": "TUE",
+      "subject": "Lunch & Quad",
+      "room": "Commons",
+      "teacher": "—",
+      "color": "amber",
+      "$id": "a0cmzgew77th12xx0p23vgc8k8"
+    },
+    {
+      "periodKey": "p4",
+      "day": "TUE",
+      "subject": "World History",
+      "room": "Rm 218",
+      "teacher": "Mr. O'Connor",
+      "color": "amber",
+      "$id": "1f4yz346j8bzmmq8q367m8gmwr"
+    },
+    {
+      "periodKey": "p5",
+      "day": "TUE",
+      "subject": "Spanish III",
+      "room": "Rm 108",
+      "teacher": "Sra. Ortiz",
+      "color": "terracotta",
+      "$id": "km7gw0seetf3t9cyb08j3htfnc"
+    },
+    {
+      "periodKey": "p6",
+      "day": "TUE",
+      "subject": "Study Hall",
+      "room": "Library",
+      "teacher": "Mr. Vance",
+      "color": "slate",
+      "$id": "5xw5e63nb6j72pac4z6smf1nwm"
+    },
+    {
+      "periodKey": "p1",
+      "day": "WED",
+      "subject": "AP Biology",
+      "room": "Rm 204",
+      "teacher": "Dr. Thorne",
+      "color": "sage",
+      "$id": "zrese21511w53rsre19gk1yz5w"
+    },
+    {
+      "periodKey": "p2",
+      "day": "WED",
+      "subject": "Honors Lit",
+      "room": "Rm 112",
+      "teacher": "Ms. Davies",
+      "color": "slate",
+      "$id": "191450wd5n4n437z8rdr8c6v1g"
+    },
+    {
+      "periodKey": "adv",
+      "day": "WED",
+      "subject": "Advisory Peer Check",
+      "room": "Rm 104",
+      "teacher": "Ms. Gallagher",
+      "color": "teal",
+      "$id": "qx7x81zk9gyk6hvvvtx8345g1g"
+    },
+    {
+      "periodKey": "p3",
+      "day": "WED",
+      "subject": "Pre-Calculus",
+      "room": "Rm 305",
+      "teacher": "Mr. Vance",
+      "color": "indigo",
+      "$id": "4crbzbmwhnt4n1hh249z2h0qz8"
+    },
+    {
+      "periodKey": "lunch",
+      "day": "WED",
+      "subject": "Lunch & Quad",
+      "room": "Commons",
+      "teacher": "—",
+      "color": "amber",
+      "$id": "c7pckha1bzad55dhqarnfq79cc"
+    },
+    {
+      "periodKey": "p4",
+      "day": "WED",
+      "subject": "World History",
+      "room": "Rm 218",
+      "teacher": "Mr. O'Connor",
+      "color": "amber",
+      "$id": "yb60hqj41yzmsvt7zxc8eaxjjr"
+    },
+    {
+      "periodKey": "p5",
+      "day": "WED",
+      "subject": "Spanish III",
+      "room": "Rm 108",
+      "teacher": "Sra. Ortiz",
+      "color": "terracotta",
+      "$id": "zv7ven52ms34k3dspc2ehyqe4c"
+    },
+    {
+      "periodKey": "p6",
+      "day": "WED",
+      "subject": "Studio Art",
+      "room": "Art Wing",
+      "teacher": "Ms. Chen",
+      "color": "rose",
+      "$id": "crrx30psq9x1ecn8vqwc9kenf0"
+    },
+    {
+      "periodKey": "p1",
+      "day": "THU",
+      "subject": "AP Biology",
+      "room": "Lab B",
+      "teacher": "Dr. Thorne",
+      "color": "sage",
+      "$id": "ksyr8fnpv7sf7efmkk07kb7pkw"
+    },
+    {
+      "periodKey": "p2",
+      "day": "THU",
+      "subject": "Honors Lit",
+      "room": "Rm 112",
+      "teacher": "Ms. Davies",
+      "color": "slate",
+      "$id": "2f1d6wmbxq99whw3hvz6btayww"
+    },
+    {
+      "periodKey": "adv",
+      "day": "THU",
+      "subject": "Club Time",
+      "room": "Various",
+      "teacher": "Staff",
+      "color": "teal",
+      "$id": "mhp2f6g6qm43j0td83pv7h7qpw"
+    },
+    {
+      "periodKey": "p3",
+      "day": "THU",
+      "subject": "Pre-Calculus",
+      "room": "Rm 305",
+      "teacher": "Mr. Vance",
+      "color": "indigo",
+      "$id": "aparydr4nmm9cads75h6a8c2yw"
+    },
+    {
+      "periodKey": "lunch",
+      "day": "THU",
+      "subject": "Lunch & Quad",
+      "room": "Commons",
+      "teacher": "—",
+      "color": "amber",
+      "$id": "e8td8tarsa5vdea8gvmjjtfsgr"
+    },
+    {
+      "periodKey": "p4",
+      "day": "THU",
+      "subject": "World History",
+      "room": "Rm 218",
+      "teacher": "Mr. O'Connor",
+      "color": "amber",
+      "$id": "szj36tvf3p0yhr7pcz54hn8hy4"
+    },
+    {
+      "periodKey": "p5",
+      "day": "THU",
+      "subject": "Spanish III",
+      "room": "Rm 108",
+      "teacher": "Sra. Ortiz",
+      "color": "terracotta",
+      "$id": "cjcf5cav0p0ef9y6vtftnzdfgg"
+    },
+    {
+      "periodKey": "p6",
+      "day": "THU",
+      "subject": "Study Hall",
+      "room": "Library",
+      "teacher": "Mr. Vance",
+      "color": "slate",
+      "$id": "xdqnek2gjjdxff310fya4rs9q8"
+    },
+    {
+      "periodKey": "p1",
+      "day": "FRI",
+      "subject": "AP Biology",
+      "room": "Rm 204",
+      "teacher": "Dr. Thorne",
+      "color": "sage",
+      "$id": "2awcr96x453mr70m08x97ca4cc"
+    },
+    {
+      "periodKey": "p2",
+      "day": "FRI",
+      "subject": "Honors Lit",
+      "room": "Rm 112",
+      "teacher": "Ms. Davies",
+      "color": "slate",
+      "$id": "n24daja4a7s39zkz4mq0wecwt4"
+    },
+    {
+      "periodKey": "adv",
+      "day": "FRI",
+      "subject": "Homeroom Spirit",
+      "room": "Rm 104",
+      "teacher": "Ms. Gallagher",
+      "color": "teal",
+      "$id": "640xmbw6vma08eerd05hgz1nsm"
+    },
+    {
+      "periodKey": "p3",
+      "day": "FRI",
+      "subject": "Pre-Calculus",
+      "room": "Rm 305",
+      "teacher": "Mr. Vance",
+      "color": "indigo",
+      "$id": "fzn0n11f1hmepxf2q1rrm4m294"
+    },
+    {
+      "periodKey": "lunch",
+      "day": "FRI",
+      "subject": "Lunch & Quad",
+      "room": "Commons",
+      "teacher": "—",
+      "color": "amber",
+      "$id": "jjh11crnq636rf7m8tf2ry52c8"
+    },
+    {
+      "periodKey": "p4",
+      "day": "FRI",
+      "subject": "World History",
+      "room": "Rm 218",
+      "teacher": "Mr. O'Connor",
+      "color": "amber",
+      "$id": "6k74pa9mkgdjs2rzmsh1ryt848"
+    },
+    {
+      "periodKey": "p5",
+      "day": "FRI",
+      "subject": "Spanish III",
+      "room": "Rm 108",
+      "teacher": "Sra. Ortiz",
+      "color": "terracotta",
+      "$id": "g6ytrc4w79ccr2dxe0nw1ws65m"
+    },
+    {
+      "periodKey": "p6",
+      "day": "FRI",
+      "subject": "Pep Rally / Assembly",
+      "room": "Gym",
+      "teacher": "All",
+      "color": "rose",
+      "$id": "av96sxrj4yttajmvqhsdbc3evc"
+    }
+  ],
+  "activities": [
+    {
+      "day": "MON",
+      "start": "15:30",
+      "end": "17:00",
+      "title": "Cross Country Practice",
+      "location": "Track",
+      "$id": "6rnvxv114tfbsc52ky909aaxw8"
+    },
+    {
+      "day": "TUE",
+      "start": "15:15",
+      "end": "16:30",
+      "title": "Robotics Team Build",
+      "location": "Lab 3",
+      "$id": "r959q08vqcv1z504t8j5cr60k0"
+    },
+    {
+      "day": "WED",
+      "start": "15:30",
+      "end": "17:00",
+      "title": "Cross Country Practice",
+      "location": "Track",
+      "$id": "wse9pc4zgzshwvrwasd9kredv8"
+    },
+    {
+      "day": "THU",
+      "start": "15:15",
+      "end": "16:15",
+      "title": "Math Tutoring Drop-in",
+      "location": "Rm 305",
+      "$id": "p5tg3ktsn5dqdtq7tn1a76z8gr"
+    },
+    {
+      "day": "FRI",
+      "start": "16:00",
+      "end": "18:00",
+      "title": "XC Dual Meet",
+      "location": "West Hills",
+      "$id": "f78vmnt2snz4fzyv1nq5hf6sf8"
+    }
+  ]
+}

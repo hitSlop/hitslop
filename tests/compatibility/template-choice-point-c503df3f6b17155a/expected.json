@@ -1,0 +1,59 @@
+{
+  "date": "Fri, Sep 25, 2026",
+  "situation": "Feedback landed hard in the team review.",
+  "hooks": [
+    {
+      "text": "“I should already know this”",
+      "$id": "2ggjenx6933gar8qwg8rfhd96r"
+    },
+    {
+      "text": "Hot face, tight chest",
+      "$id": "jqf5q9z6aejgfmg1trmy36hdbc"
+    },
+    {
+      "text": "Urge to shut down",
+      "$id": "ctpsapycc6ps5nddzxfjp7k9t8"
+    }
+  ],
+  "awayMoves": [
+    {
+      "text": "Put off the revision",
+      "$id": "40t6tw3rpxs4k31wd8npbamz4g"
+    },
+    {
+      "text": "Get short with my teammates",
+      "$id": "5jzwnv0xmktfbd1xgtb1r41yhg"
+    }
+  ],
+  "towardsMoves": [
+    {
+      "text": "Thank them for catching it",
+      "$id": "vyez90q6drnycwx8272a0gc79w"
+    },
+    {
+      "text": "Pair on the first fix",
+      "$id": "0xqgj1q2rpmystkf9wcehs2chr"
+    }
+  ],
+  "helpers": [
+    {
+      "text": "Craft",
+      "$id": "6x2zyq73tfw1kq7tqapzwh7qb0"
+    },
+    {
+      "text": "Humility",
+      "$id": "xwxh8txd2010ryg1n0n6vbjhyr"
+    },
+    {
+      "text": "Three slow breaths",
+      "$id": "b6tcgzyk75wjscfdxeemdjth4r"
+    },
+    {
+      "text": "Name it: “here’s the not-good-enough story”",
+      "$id": "z60386v20wwzbj4brbm05v2mhg"
+    }
+  ],
+  "nextMove": "Thank them, then pair on the first fix.",
+  "nextWhen": "Right after this meeting",
+  "nextDone": false
+}

@@ -1,0 +1,23 @@
+{
+  "title": "The big trip",
+  "createdAt": "2026-09-16",
+  "targetDate": "2026-12-12",
+  "targetTime": "09:00",
+  "milestones": [
+    {
+      "title": "Book the stay",
+      "done": false,
+      "$id": "2tbryd9qxnrnkha6aykyst43nr"
+    },
+    {
+      "title": "Plan a few adventures",
+      "done": false,
+      "$id": "x6gghz8dtsqsd94ztm9cjdtzbc"
+    },
+    {
+      "title": "Pack the essentials",
+      "done": false,
+      "$id": "b4cxdnvxh4mkdd79n9gg9vpn1w"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "title": "Groceries",
+  "stickyNote": "Don't forget coffee!",
+  "items": [
+    {
+      "text": "Organic whole milk",
+      "category": "Dairy",
+      "done": true,
+      "$id": "dby9y8301synn5cntspm1m8mkc"
+    },
+    {
+      "text": "Pasture eggs (dozen)",
+      "category": "Dairy",
+      "done": true,
+      "$id": "s6tx4qfq0hak2v914xb10rxc0w"
+    },
+    {
+      "text": "Sourdough loaf",
+      "category": "Bakery",
+      "done": false,
+      "$id": "25wc8jw7gbma6we3ep8y287cg4"
+    },
+    {
+      "text": "Hass avocados",
+      "category": "Produce",
+      "done": false,
+      "$id": "yv90pw9dqztshkfhzr3z43rqp8"
+    },
+    {
+      "text": "Cherry tomatoes",
+      "category": "Produce",
+      "done": false,
+      "$id": "4sgeymn1fwgzc514ee92816emr"
+    },
+    {
+      "text": "Baby spinach",
+      "category": "Produce",
+      "done": false,
+      "$id": "h51ccrmaet8kgkyf0ga7tebafm"
+    },
+    {
+      "text": "Oat barista milk",
+      "category": "Dairy",
+      "done": false,
+      "$id": "hd3ftv0rex3xe8vvycnt54c3r0"
+    },
+    {
+      "text": "Olive oil",
+      "category": "Pantry",
+      "done": false,
+      "$id": "303ndr5m3zyz4atadxwnjvsawr"
+    }
+  ]
+}

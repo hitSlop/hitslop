@@ -39,14 +39,16 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   public var onStorageFailure: ((SlopFailureContext) -> Void)?
   public var onIssue: ((String, Bool) -> Void)?
   public var onError: ((String) -> Void)?
-  let storageBridge: StorageBridge
-  private let storage: Storage
+  private(set) var storageBridge: StorageBridge
+  private var storage: Storage
   private let headless: Bool
   private var server: SocketServer?
   private var closing = false
   private var closed = false
   private var closeTask: Task<Void, Error>?
   private var openingError: String?
+  private var becameReady = false
+  private var startupCleanup: Task<Void, Never>?
   private var waiters: [UUID: CheckedContinuation<Void, Error>] = [:]
   public let webViewResources: URL
 
@@ -73,7 +75,8 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
         let identity = catalog.identities.first(where: { $0["runtimeContract"] as? Int == contract }),
         let revision = identity["runtimeRevision"] as? Int else { throw failure("Missing resolved runtime identity") }
       telemetryRuntime = SlopTelemetryRuntime(contract: contract, revision: revision)
-      storage = try Storage(root: package.rootURL, mode: mode)
+      guard let storageRevision = identity["storageRevision"] as? Int else { throw failure("Missing storage revision") }
+      storage = try Storage(root: package.rootURL, mode: mode, storageRevision: Int64(storageRevision))
     }
   }
 
@@ -158,8 +161,11 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
             else document.addEventListener('DOMContentLoaded', hideControls, {once: true});
           })();
           for (const type of ['error','unhandledrejection']) addEventListener(type,e=> {
-            webkit.messageHandlers.storage.postMessage({method:'runtimeError',kind:'application',error:String(e.error?.stack ?? e.reason?.stack ?? e.error?.message ?? e.reason ?? e.message).slice(0,4096)}).catch(()=>{});
-          });
+            const source = e.target?.src;
+            const runtimeResource = typeof source === 'string' && source.startsWith('slop://app/__runtime__/');
+            const error = String(runtimeResource ? 'Could not load runtime resource: ' + source : e.error?.stack ?? e.reason?.stack ?? e.error?.message ?? e.reason ?? e.message).slice(0,4096);
+            webkit.messageHandlers.storage.postMessage(runtimeResource ? {method:'failed',error} : {method:'runtimeError',kind:'application',error}).catch(()=>{});
+          }, true);
           """, injectionTime: .atDocumentStart, forMainFrameOnly: true))
     let spec = package.manifest.presentation
     let view = WKWebView(
@@ -180,6 +186,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   public func load() { liveWebView?.load(URLRequest(url: URL(string: "slop://app/")!)) }
 
   public func waitUntilReady(timeout: Duration = .seconds(15)) async throws {
+    if let startupCleanup { await startupCleanup.value }
     if isReady { return }
     if closed || rendererDead || openingError != nil {
       throw failure(openingError ?? "Document runtime unavailable")
@@ -218,9 +225,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
       message.frameInfo.securityOrigin.protocol == "slop",
       message.frameInfo.securityOrigin.host == "app",
       let args = message.body as? [String: Any],
-      let encoded = try? JSONSerialization.data(withJSONObject: args),
-      encoded.count <= 48 * 1024 * 1024,
-      PlatformContract.valid(args, against: bridgeValidationSchema),
+      let request = StorageRequest(args),
       let rawMethod = args["method"] as? String, let method = BridgeMethod(rawValue: rawMethod)
     else {
       replyHandler(nil, "Invalid bridge request")
@@ -263,6 +268,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
             to: package.rootURL.appendingPathComponent("state/host.lock"), options: .atomic)
         }
         isReady = true
+        becameReady = true
         completeWaiters(.success(()))
         onReady?()
         replyHandler([:], nil)
@@ -289,8 +295,8 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
       }
       replyHandler([:], nil)
     case .attachmentsPut, .attachmentsRead, .attachmentsList, .themeLoad, .themeSave,
-      .load, .append, .checkpoint:
-      storageBridge.call(encoded, method: method.rawValue, reply: replyHandler)
+      .load, .metadata, .append, .checkpoint:
+      storageBridge.call(request, method: method.rawValue, reply: replyHandler)
     }
   }
 
@@ -323,14 +329,14 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
   }
 
   public func flush() async throws {
-    guard !rendererDead, !closed else { throw failure("Document renderer unavailable") }
+    guard isReady, !rendererDead, !closed else { throw failure("Document renderer unavailable") }
     _ = try await webView.callAsyncJavaScript(
       "await globalThis.__slop.flush(); return true", arguments: [:], in: nil, contentWorld: .page)
   }
 
   /// Restores the latest durable state under the existing writer lock, after the user chose to.
   public func discardPending() async throws {
-    guard !rendererDead, !closed else { return }
+    guard isReady, !rendererDead, !closed else { return }
     _ = try await webView.callAsyncJavaScript(
       "await globalThis.__slop.discardPending(); return true", arguments: [:], in: nil, contentWorld: .page)
   }
@@ -375,6 +381,7 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
 
   private func finishClose() async throws {
     if closed { return }
+    if let startupCleanup { await startupCleanup.value }
     try await prepareClose()
     do {
       if isReady && !rendererDead {
@@ -408,6 +415,16 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
     }
     closing = true
     stopDiscovery()
+    if let startupCleanup {
+      await startupCleanup.value
+      // Failed initial startup owns no lease. Retry must acquire it again and
+      // validate the package, including any changes made while it was closed.
+      let prepared = try await Self.prepare(packageURL: package.rootURL, storage: storage.mode)
+      storage = prepared.storage
+      storageBridge = StorageBridge(storage: storage)
+      storageBridge.onFailure = { [weak self] diagnostic in self?.onStorageFailure?(diagnostic) }
+      self.startupCleanup = nil
+    }
     await withCheckedContinuation { continuation in storage.queue.async { continuation.resume() } }
     destroyWebView()
     epoch = UUID().uuidString
@@ -445,11 +462,27 @@ public final class WasmSession: NSObject, WKScriptMessageHandlerWithReply, WKNav
 
   private func failOpening(_ message: String, reason: SlopFailureContext.Reason = .startup,
                            classification: SlopFailureContext.Classification = .platform) {
+    guard !closed, openingError == nil else { return }
     failureClassification = classification
     failureReason = reason
     openingError = message
-    completeWaiters(.failure(failure(message)))
-    onError?(message)
+    if !becameReady {
+      stopDiscovery()
+      destroyWebView()
+      startupCleanup = Task { [self, storage] in
+        await withCheckedContinuation { continuation in
+          storage.queue.async {
+            storage.close()
+            continuation.resume()
+          }
+        }
+        completeWaiters(.failure(failure(message)))
+        onError?(message)
+      }
+    } else {
+      completeWaiters(.failure(failure(message)))
+      onError?(message)
+    }
   }
 
   public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

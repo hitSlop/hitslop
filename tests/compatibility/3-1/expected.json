@@ -1,0 +1,67 @@
+{
+  "title": "Stored title",
+  "notes": {
+    "text": "Hello 🌍",
+    "delta": [
+      {
+        "insert": "Hello",
+        "attributes": {
+          "bold": true
+        }
+      },
+      {
+        "insert": " 🌍"
+      }
+    ]
+  },
+  "count": 5,
+  "done": true,
+  "level": 9,
+  "mode": "c",
+  "tags": [
+    "one",
+    "two"
+  ],
+  "rows": [
+    {
+      "name": "Beta ✓",
+      "done": true,
+      "$id": "q6p5rfb688x11z0k6av9b7x1rr"
+    },
+    {
+      "name": "Alpha",
+      "done": false,
+      "$id": "e2qtc0tag0awdftps6brgg3ykw"
+    },
+    {
+      "name": "Gamma",
+      "done": false,
+      "$id": "dajkb2sx3evmw15szv2p6n7ppm"
+    }
+  ],
+  "cells": {
+    "A1": "1",
+    "B2": "2"
+  },
+  "outline": [
+    {
+      "label": "Root",
+      "$id": "mnp8v3g3n86gqpbes1pf6q7s74",
+      "children": [
+        {
+          "label": "Leaf",
+          "$id": "aywkatknsy76cfz7088nbwrfh0",
+          "children": []
+        },
+        {
+          "label": "Leaf 2",
+          "$id": "2pf71g1zbtr0xbspndbf5skhk0",
+          "children": []
+        }
+      ]
+    }
+  ],
+  "cover": {
+    "caption": "Cover"
+  }
+}

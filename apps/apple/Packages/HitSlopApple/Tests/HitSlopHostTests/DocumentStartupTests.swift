@@ -292,7 +292,7 @@ extension LoroClientTests {
     #expect(failures.count == 1)
     #expect(failures.first?.classification == .authored)
     #expect(failures.first?.reason == .authoredException)
-    #expect(failures.first?.runtime?.contract == 2)
+    #expect(failures.first?.runtime?.contract == 3)
     try await controller.session.finish()
   }
 }
