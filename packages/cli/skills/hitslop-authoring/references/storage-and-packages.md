@@ -16,7 +16,8 @@ before mounting the app. assets/app.css contains compiled app styling.
 state/theme.json contains bounded declared-token overrides written by the host.
 Use slop theme get/set/reset, never direct edits to these files. Layout changes require
 authoring source and a rebuild. Close before moving documents; synced folders are unsupported.
-Shipped v1 runtime contracts remain supported; pre-v1 formats are not migrated.
+Runtime contract 3 documents stay supported across updates; prelaunch contracts
+and pre-v1 formats are refused, not migrated.
 
 Optional `state/attachments/<sha256>` files hold opaque imported bytes. Only the
 host attachment API/CLI writes them, under existing ownership. References belong

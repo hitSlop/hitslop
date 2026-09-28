@@ -187,7 +187,7 @@ Keep editor, export, and icon markup together unless a separate component helps:
 
 Rendering failures in export or icon snippets reject that capture without replacing the editor or reporting an application-render error. Restoration clears the snippet failure so a later attempt renders it again. Editor rendering failures still use native application-error recovery and prevent capture.
 
-Child components can call `useDocument(schema)` during initialization for typed access to the same host document, including inside export and icon snippets. Each call creates its own subscription, not another document engine. For repeated list components, pass reactive rows and typed handles (or the existing `doc` facade) as props to avoid a subscription per row.
+Child components can call `useDocument(schema)` during initialization for typed access to the same host document, including inside export and icon snippets. Every call returns the mounted app's shared adapter, not another subscription or engine. For repeated list components, still pass reactive rows and typed handles as props rather than rereading the whole document per row.
 
 Dedicated exports should use normal flow, not fixed viewport heights or nested scrolling. With `exportView`, the editor is never captured. Without one, mark editing-only controls `data-slop-export="hide"`; fallback capture renders native text inputs as wrapping text. `<Slop>` centers icon art in a transparent 512px square with a strong silhouette and safe margins. Dedicated exports do not inherit native masks.
 

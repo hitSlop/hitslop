@@ -309,7 +309,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     recordStartup("runtime-ready")
     #if DEBUG
     if ProcessInfo.processInfo.environment["HITSLOP_STARTUP_TIMINGS"] == "1" {
-      // Page-relative milliseconds for the hitslop:* marks recorded by mountDocument.
+      // Page-relative milliseconds for the hitslop:* marks recorded by the runtime's boot.js.
       session.webView.evaluateJavaScript(
         "JSON.stringify(performance.getEntriesByType('mark').map(e => [e.name, Math.round(e.startTime)]))"
       ) { result, _ in print("[hitSlop startup] page \(result ?? "")") }

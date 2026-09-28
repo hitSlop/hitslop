@@ -34,18 +34,20 @@ For coordinated Mac releases below, package manifests determine each tarball's
 version. Release records include `packageVersions`; `runtime.sdkVersion` remains
 the SDK provenance. CLI dependency pins must match the released SDK packages.
 
-## Launch release: contract 3, revision 1
+## Launch release: contract 3, revision 2
 
 The launch pairs the Mac app with npm **3.0.0** (schema, document, CLI) and runtime
-contract **3**, revision **1**, storage revision **1**; contracts 1 and 2 were retired before launch. The runtime and
+contract **3**, revision **2**, storage revision **1**; contracts 1 and 2 were retired before launch. The runtime and
 bundled template specimens are sealed once, in this order, on the release candidate.
-The local 3/1 candidate and its specimens are already sealed; verify and reuse
-those bytes rather than recreating their records. Sealing is separate from
+The local 3/1 baseline and its specimens are already sealed; preserve them as
+historical inputs. The 3/2 candidate fixes reader and observer behavior without
+changing storage encoding; ordinary SDK packages retain minimum revision 1.
+Sealing is separate from
 publication: it freezes the candidate, and the release archives the same bytes.
 
 1. `bun run build && bun run build:templates`, then run every tier below except
    `check:sealed-templates` (which requires step 3).
-2. `bun scripts/v1/runtime-release.ts` seals the tested runtime and records 3/1 in
+2. `bun scripts/v1/runtime-release.ts` seals the tested runtime and records 3/2 in
    `runtimes/releases.json`.
 3. `bun run fixtures:seal` to preview, then `bun run fixtures:seal --write` to add the
    `template-*` specimens.

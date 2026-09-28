@@ -23,6 +23,10 @@ import { digest, repository } from "./runtime-artifacts";
 
 const corpus = join(repository, "tests/compatibility");
 const prefix = `${identity.runtimeContract}-${identity.runtimeRevision}`;
+const args = process.argv.slice(2);
+const selected = args[0] === "--only" && args.length === 2 ? args[1] : undefined;
+if (args.length && (!selected || ![prefix, `${prefix}-saved-state`, `${prefix}-issues`, `${prefix}-svelte`, `${prefix}-container-values`].includes(selected)))
+  throw new Error("Usage: author-fixtures.ts [--only <current-revision-fixture-name>]");
 const json = (value: unknown) => JSON.stringify(value, null, 2) + "\n";
 const exists = (path: string) =>
   stat(path).then(
@@ -113,6 +117,7 @@ async function create(
   build: (document: string, fixture: string) => Promise<void>,
   kind: string,
 ) {
+  if (selected && name !== selected) return;
   const fixture = join(corpus, name);
   if (await exists(fixture)) {
     console.log(`kept sealed ${name}`);
@@ -122,8 +127,7 @@ async function create(
   try {
     await mkdir(document, { recursive: true });
     await build(document, fixture);
-    // Ownership residue is not document content.
-    await rm(join(document, "state/writer.lock"), { force: true });
+    // Stores are closed before sealing. Preserve the lock inode; never unlink writer.lock.
     await writeFile(
       join(fixture, "fixture.json"),
       json({
@@ -141,7 +145,7 @@ async function create(
 }
 
 // Every value kind, a checkpoint plus uncheckpointed updates, a scripted scenario
-// and a mixed-version collaboration script.
+// and a current-runtime collaboration script.
 await create(
   prefix,
   async (document, fixture) => {
@@ -359,6 +363,68 @@ await create(
     await writeFile(join(fixture, "expected.json"), json(doc.current));
     await writeFile(join(fixture, "issues.json"), json(doc.issues));
     await doc.close();
+  },
+  "issues",
+);
+
+// Plain JSON objects with a kind property are anomalous values, not Loro containers.
+await create(
+  `${prefix}-container-values`,
+  async (document, fixture) => {
+    await plainPackage(document, "container-values", "Container values");
+    const created = await open(document);
+    const [alpha, beta] = created.current.rows.map(row => row.$id);
+    const root = created.current.outline[0]!;
+    // Only minted identities come from the engine; all value expectations are literal inputs/fallbacks.
+    const expected = {
+      ...initial,
+      notes: { text: "Hello 🌍", delta: [{ insert: "Hello 🌍" }] },
+      rows: [
+        { name: "", done: false, $id: alpha },
+        { name: "Beta", done: true, $id: beta },
+      ],
+      outline: [{ label: "Root", $id: root.$id, children: [
+        { label: "Leaf", $id: root.children[0]!.$id, children: [] },
+      ] }],
+    };
+    await created.close();
+    const store = await SQLiteStore.open(document);
+    const stored = await store.load();
+    const engine = new LoroDoc();
+    try {
+      engine.import(stored.checkpoint!);
+      const data = engine.getMap("data");
+      const rows = data.get("rows") as LoroMovableList;
+      (rows.get(0) as LoroMap).set("name", { kind: "Text" });
+      rows.insert(2, { kind: "Map", $id: "plain-row" });
+      data.set("cover", { kind: "Map" });
+      engine.commit();
+      await store.checkpoint(stored.generation, engine.export({ mode: "snapshot" }), created.key);
+    } finally {
+      engine.free();
+      await store.close();
+    }
+    // Only the broken text falls back; the non-container row is skipped and cover is absent.
+    const issues = [
+      { path: ["rows", { id: alpha }, "name"], kind: "invalid", detail: "Expected LoroText" },
+      { path: ["rows", { index: 2 }], kind: "invalid", detail: "Expected LoroMap" },
+      { path: ["cover"], kind: "invalid", detail: "Expected LoroMap" },
+    ];
+    const before = await load(document);
+    const doc = await open(document);
+    try {
+      assert.deepEqual(doc.current, expected);
+      assert.deepEqual(doc.issues, issues);
+      await writeFile(join(fixture, "expected.json"), json(expected));
+      await writeFile(join(fixture, "issues.json"), json(issues));
+      await writeFile(join(fixture, "scenario.json"), json({
+        operations: [{ type: "text.replace", path: ["title"], value: "Still editable" }],
+        expected: { ...expected, title: "Still editable" },
+      }));
+    } finally { await doc.close(); }
+    const after = await load(document);
+    assert.equal(after.generation, before.generation);
+    assert.deepEqual(after.checkpoint, before.checkpoint);
   },
   "issues",
 );

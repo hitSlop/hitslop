@@ -10,6 +10,67 @@ import { SQLiteStore } from "../test-support/sqlite";
 import { Session } from "../src/session";
 import { bindText } from "../src/bind-text";
 
+// Observer failures must not turn accepted edits into apparent rejections or stop durability.
+test("throwing observers and error reporters cannot interrupt autosave or close", async () => {
+  const definition = defineDocument({ title: s.string() });
+  const appended = Promise.withResolvers<void>();
+  class Store extends MemoryStore {
+    closes = 0;
+    override async append(generation: string, updates: Uint8Array[]) {
+      const next = await super.append(generation, updates);
+      appended.resolve();
+      return next;
+    }
+    override async close() { this.closes++; }
+  }
+  const store = new Store();
+  const reported: unknown[] = [];
+  const doc = await Document.open(definition, store, { title: "before" }, {
+    onListenerError(error) { reported.push(error); throw new Error("reporter failed"); },
+  });
+  const failure = new Error("observer failed");
+  let changes = 0, updates = 0;
+  const stop = doc.subscribe(() => { throw failure; });
+  const stopOutbound = doc.onLocalUpdate(() => { throw failure; });
+  doc.subscribe(event => { if (event.kind === "change") changes++; });
+  doc.onLocalUpdate(() => updates++);
+  try {
+    expect(() => doc.change(tx => tx.fields.title.set("accepted"))).not.toThrow();
+    expect(doc.current.title).toBe("accepted");
+    expect(changes).toBe(1);
+    expect(updates).toBe(1);
+    expect(() => doc.fields.title.set("accepted again")).not.toThrow();
+    expect(changes).toBe(2);
+    expect(updates).toBe(2);
+    await appended.promise;
+    await doc.flush();
+    expect(doc.status).toBe("saved");
+    expect(reported).toContain(failure);
+    await doc.prepareClose();
+    await doc.close();
+    await doc.close();
+    expect(store.closes).toBe(1);
+    const reopened = await Document.open(definition, store, { title: "before" });
+    expect(reopened.current.title).toBe("accepted again");
+    await reopened.close();
+  } finally {
+    stop(); stopOutbound();
+    await doc.close();
+  }
+});
+
+test("close-time observer failure cannot skip storage cleanup", async () => {
+  let closes = 0;
+  const store = new MemoryStore();
+  store.close = async () => { closes++; };
+  const doc = await Document.open(defineDocument({}), store, {}, { onListenerError() {} });
+  await doc.prepareClose();
+  doc.subscribe(() => { throw new Error("closing observer"); });
+  await doc.close();
+  await doc.close();
+  expect(closes).toBe(1);
+});
+
 // Counter deltas may be regrouped by Loro during replay. Saving must preserve the
 // value the user saw, including cancellation of large historical increments.
 test("ordinary counter edits retain their accepted value after saving and reopening", async () => {
@@ -386,7 +447,8 @@ describe("save status", () => {
   test("save failure stays visible through further edits and repeated failure until successful flush", async () => {
     const io = new MemoryStore(),
       append = io.append.bind(io),
-      doc = await Document.open(schema, io, initial);
+      doc = await Document.open(schema, io, initial, { onListenerError() {} });
+    doc.subscribe(() => { throw new Error("observer failed during storage failure"); });
     io.append = async () => {
       throw new Error("Disk unavailable");
     };

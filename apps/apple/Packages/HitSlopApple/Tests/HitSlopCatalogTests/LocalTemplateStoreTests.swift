@@ -82,6 +82,11 @@ import SwiftUI
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     defer { try? FileManager.default.removeItem(at: root) }
     let package = try writeTemplate(named: "tiny-counter", in: root)
+    let manifestURL = package.appendingPathComponent("manifest.json")
+    var manifest = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: manifestURL)) as? [String: Any])
+    manifest["lineage"] = ["template": "future"]
+    manifest["categories"] = ["utilities", "future-category"]
+    try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted]).write(to: manifestURL)
 
     let store = LocalTemplateStore(templatesURL: root)
     await store.refresh()
@@ -94,6 +99,7 @@ import SwiftUI
     try DocumentFactory().create(fromLocalPackage: #require(store.templates.first).packageURL, at: destination)
     SlopPreviewWriter.installExistingPreview(for: destination)
     #expect(try Data(contentsOf: package.appendingPathComponent("manifest.json")) == Data(contentsOf: destination.appendingPathComponent("manifest.json")))
+    #expect(try SlopPackage(rootURL: destination).manifest.categories == [.utilities, .other])
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("assets/app.js").path))
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("QuickLook/Preview.png").path))
     #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("QuickLook/Icon.png").path))

@@ -1,5 +1,7 @@
 # Approved test disposition ledger
 
+> Sections before *Runtime reset v2* record retired prelaunch dispositions (contracts 1 and 2); the *Runtime reset v2* table is the launch inventory. Later sections supersede earlier rows.
+
 Jordan approved the initial dispositions before pruning. This ledger groups that approved inventory by contract instead of requiring a row and survival essay for every declaration. Tier 0 is Bun; tier 1 covers distinct native risks. Detailed evidence is retained below. This simplification authorizes no additional test deletions.
 
 Bundled slop business logic is outside the platform suite by Jordan’s explicit decision. Its deletion does not claim equivalent formula, parser or decorative appearance coverage. Contractual byte seals, resource bounds, alpha hit testing and export bounds remain meaningful requirements. “—” in duplicate-of means no equivalent owner is claimed; tests at different layers retain distinct failure modes.
@@ -382,10 +384,43 @@ recovery. Two final 57-case replays matched. The first gate's stale-build reject
 and the successful rerun are retained in `.hitslop/v1-evidence/runtime-reset-v2/`.
 The new runtime and 51 bundled-template specimens are sealed locally; no artifacts
 were published. Native stress measurements and their limits are recorded in
-[runtime-reset-v2.md](runtime-reset-v2.md#13-implementation-evidence).
+[runtime reset history](history/runtime-reset.md#implementation-evidence).
 
 Counter follow-up: both added storage regressions failed for their intended
 reasons with the checkpoint guard removed in a disposable copy, and pass with
 production sources unchanged. `bun run check` and `bun run test` passed: 147 tests,
 57 compatibility replay cases and 51 bundled template open/reopen checks. Evidence:
 `.hitslop/v1-evidence/runtime-reset-v2/counter-followup-{sensitivity,check,test}.log`.
+
+## Contract 3 revision 2 robustness
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Observer exceptions do not interrupt accepted edits, saves or cleanup ([storage](../packages/document/tests/storage.test.ts)) | Later observers receive the edit, autosave completes, reopened value is literal expected text, storage closes once; reporter exceptions stay isolated and disk failures remain visible | Bun | Existing transaction rollback tests continue to own callback rejection | ADD/EXTEND; baseline threw after acceptance and skipped close cleanup |
+| Observer failures reach native application reporting ([startup](../apps/apple/Packages/HitSlopApple/Tests/HitSlopHostTests/DocumentStartupTests.swift)) | Real WebKit edit resolves saved, telemetry classifies an authored incident, closed CLI read returns accepted text | Swift/WebKit | Bun owns delivery and durability semantics | ADD; baseline WebKit call threw the subscriber exception |
+| Container-shaped JSON remains readable and preserved ([open](../packages/document/tests/open.test.ts), [convergence](../packages/document/tests/convergence.test.ts)) | Literal fallback/issue values, unchanged checkpoint on read, skipped malformed row, OperationRejectedError beneath unusable object, explicit replacement and reopen succeed | Bun | Existing anomaly cases did not contain a non-callable kind property | EXTEND; baseline threw TypeError during open and imported projection |
+| Future runtimes preserve total container reads ([3-2-container-values](../tests/compatibility/3-2-container-values)) | Frozen checkpoint, expected state, exact issues and a valid edit through append/checkpoint/reopen phases | Compiled compatibility + native | Source tests own individual malformed-value cases | ADD one revision-2 fixture; all revision-1 fixtures remain immutable |
+| Tolerant manifest reads retain strict known-field and variant validation ([manifest](../packages/schema/tests/manifest.test.ts), [SlopPackage](../apps/apple/Packages/HitSlopApple/Tests/HitSlopCoreTests/SlopPackageTests.swift)) | Extended metadata opens with explicit enum fallbacks; wrong runtime, malformed/null/mixed fields and unsafe skin paths fail; strict writer still refuses extensions | Bun + Swift | Swift proves generated validator and Codable normalization agree | EXTEND; baseline rejected extended manifest at strict validation |
+| Unknown manifest bytes survive duplicate and template creation ([package](../apps/apple/Packages/HitSlopApple/Tests/HitSlopCoreTests/SlopPackageTests.swift), [catalog](../apps/apple/Packages/HitSlopApple/Tests/HitSlopCatalogTests/LocalTemplateStoreTests.swift)) | Destination bytes equal original bytes and destination opens with mapped categories through both copy paths | Swift | Existing duplicate cases lacked unknown metadata | EXTEND; baseline refused source packages and catalog discovery |
+| Release-seal refusals remain independent of a Loro upgrade ([artifacts](../packages/cli/tests/runtime-artifacts.test.ts)) | Altered bytes and missing contracts are still refused | Bun | Separate storage-decision case owns changed Loro pins | RETAIN assertions; use the installed Loro version in synthetic release metadata so advancing runtime revision does not trigger an unrelated upgrade gate |
+
+No consequential coverage was removed. Baseline failures and subsequent validation
+logs are retained in `.hitslop/v1-evidence/robustness/`. Storage revision remains 1:
+the runtime corrects reading and callback isolation without changing encoded writes.
+
+Validation: `schema:generate`, `check`, `build`, all 154 Bun tests, all 135 Swift
+tests and eight native CLI tests passed. Compatibility replay passed 115 cases
+and 52 bundled-template open/reopen checks, including historical revision-1
+readers. Earlier combined `test` attempts hit existing CLI/build test deadlines;
+the same complete Bun inventory passed in isolation with unchanged deadlines,
+and `test:compatibility` passed separately. Both failed and passing logs remain
+in the evidence directory. Runtime 3/2 is sealed locally in `runtimes/releases.json`;
+the 3/1 release record, archived bytes and existing fixtures remain unchanged.
+
+The full `release:check` passed hygiene, runtime/template builds, source checks
+and built-artifact checks, then stopped at `check:sealed-templates`: the separately
+authored Little Days (`baby-journal`) template has no sealed specimen. Its release
+preparation stays separate; no template seal was added. The retained
+`robustness/release-check.json` reports `passed: false` and the dirty working tree.
+Later release stages did not run in that invocation; this is not a complete
+release-gate pass.

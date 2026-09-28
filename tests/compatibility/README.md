@@ -19,5 +19,12 @@ Both consumer apps check the `ctx` ABI while mounting; a failed check fails the 
 open or export. `template-<slug>-<hash>` specimens are added by
 `bun run fixtures:seal --write` when a release seals its runtime.
 
+Revision 2 adds `3-2-container-values`: plain JSON objects with non-callable `kind`
+properties in text, optional-object and row positions. Exact fallbacks/issues and
+an unrelated edit survive append, checkpoint and reopen. Author only this fixture
+with `bun scripts/v1/author-fixtures.ts --only 3-2-container-values`; existing
+fixtures are never replaced. Its package requires revision 2; revision-1 specimens
+continue to exercise older readers of candidate-written state at storage revision 1.
+
 Swift tests always edit disposable copies. Host-behavior probes swap in the unsealed
 `tests/abi/probe/app.js`.

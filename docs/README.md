@@ -15,4 +15,6 @@ hitSlop ships a macOS app and a matching Bun authoring CLI/SDK. Documents stay l
 
 The [public tutorial](../apps/landing/src/content/docs/docs/getting-started.mdx) is for authors using the distributed tools. Repository guides cover contributor workflows and implementation contracts. Packaged agent guidance lives in [packages/cli/skills](../packages/cli/skills); repository discovery links point there.
 
+[`history/`](history/runtime-reset.md) keeps design history (why the runtime was reset before launch); it is not a task guide or contract.
+
 [Restored-client measurements](benchmarks/v1/README.md) describe historical observations, not performance guarantees. Retired implementations and measurements may be kept in the local, Git-ignored `deferred/` archive. That archive is optional and is not included in fresh clones.

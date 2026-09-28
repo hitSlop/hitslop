@@ -24,7 +24,7 @@ Attachments transfer separately using the attachment commands below. To transfer
 attachments into a new document, create a writable template copy first, copy the
 blobs, then import its data using --replace and a fresh snapshot version. Import
 does not replace themes, authored assets or schemas. It has a 16 MiB request/file
-limit and retains the existing 32 MiB checkpoint limit.
+limit; stored checkpoint plus update bytes stay capped at 32 MiB.
 Paths name fields with strings, rows and tree nodes with {"id":"$id from get"}, record entries with {"key":"..."} and scalar list elements with {"index":n}. Never use array indexes as row identity.
 Operations: set (scalars), clear (optional fields, record entries), assign (whole optional objects, record entries, scalar lists), text.replace, text.splice {index,delete,insert}, text.mark/text.unmark {start,end,key,value} for declared rich text marks, insert {value, destination {before|after|parent}} for rows and tree nodes or {value,index} for scalar lists, remove {id} or {index,count}, move {id,destination} or {from,to}, increment {value} for counters. Read slop schema to see which kind each field is; prefer batch for several related edits.
 

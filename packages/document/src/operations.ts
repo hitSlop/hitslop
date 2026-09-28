@@ -1,6 +1,7 @@
 import type { InsertResult } from "./handles";
 import { OperationRejectedError } from "./errors";
 import {
+  isContainer,
   LoroCounter,
   LoroDoc,
   LoroMap,
@@ -11,6 +12,7 @@ import {
   type ContainerID,
   type TreeID,
 } from "loro-crdt";
+const containerKind = (value: unknown) => isContainer(value) ? value.kind() : undefined;
 import { ID_KEY, effectiveIDs, isID, newID } from "./identity";
 import {
   checkRecordKey,
@@ -144,12 +146,12 @@ function resolve(engine: LoroDoc, root: ObjectNode, path: Path): Location {
   return location;
 }
 const storedID = (container: any): unknown =>
-  container?.kind?.() === "Map" ? container.get(ID_KEY) : undefined;
+  containerKind(container) === "Map" ? container.get(ID_KEY) : undefined;
 /** Effective row IDs by list position; projection and resolution share this rule. */
 export function rowIdentities(list: LoroMovableList) {
   const items = list.toArray() as any[];
   const positions: number[] = [];
-  items.forEach((row, index) => row?.kind?.() === "Map" && positions.push(index));
+  items.forEach((row, index) => containerKind(row) === "Map" && positions.push(index));
   return effectiveIDs(
     positions.map((index) => ({ stored: items[index].get(ID_KEY), internal: items[index].id })),
   ).map((identity, i) => ({
@@ -215,7 +217,7 @@ function treeNode(tree: LoroTree, id: string, collection: Path): LoroTreeNode {
 function usable(node: ValueNode, value: any, path: Path) {
   if (isScalar(node) || value === undefined) return;
   const kind = kinds[node.kind as keyof typeof kinds];
-  if (value?.kind?.() !== kind)
+  if (containerKind(value) !== kind)
     reject(`Stored value at ${JSON.stringify(path)} is unusable; see document issues`);
 }
 /** Present value of a composite, rejecting absent optional values and record entries. */
@@ -277,7 +279,7 @@ function operate(engine: LoroDoc, root: ObjectNode, op: Operation): InsertResult
       validate(target, op.value);
       // An explicit assignment replaces an unusable stored value; it is not a read repair.
       const stored =
-        isScalar(target) || value?.kind?.() === kinds[target.kind as keyof typeof kinds]
+        isScalar(target) || containerKind(value) === kinds[target.kind as keyof typeof kinds]
           ? value
           : undefined;
       assertAssignable(target, op.value, stored);
@@ -531,7 +533,7 @@ function write(map: LoroMap, key: string, node: ValueNode, value: any, lazy: boo
   const kind = kinds[node.kind as keyof typeof kinds];
   const existing = map.get(key) as any;
   const container =
-    existing?.kind?.() === kind
+    containerKind(existing) === kind
       ? existing
       : lazy && existing === undefined
         ? (map as any)[mergeable[kind]](key)
@@ -702,7 +704,7 @@ function read(
     return problem[0] === "invalid" ? INVALID : value;
   }
   const kind = kinds[node.kind as keyof typeof kinds];
-  if (value?.kind?.() !== kind) {
+  if (containerKind(value) !== kind) {
     report(issues, path, "invalid", value === undefined ? "Missing value" : `Expected Loro${kind}`);
     return INVALID;
   }

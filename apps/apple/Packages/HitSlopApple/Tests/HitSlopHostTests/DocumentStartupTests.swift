@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import HitSlopWasm
 import HitSlopCore
 import HitSlopRuntime
 import Testing
@@ -277,6 +278,37 @@ private actor OpeningDelay {
 }
 
 extension LoroClientTests {
+  // A subscriber failure must reach native reporting without interrupting the accepted edit.
+  @Test @MainActor func observerFailureIsReportedWithoutPreventingDurability() async throws {
+    let root = try contractFixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    try Data(#"""
+      export default { mount(ctx) {
+        ctx.document.subscribe(() => { throw new Error('observer failure'); });
+        globalThis.observerProbe = async () => {
+          ctx.document.change(tx => tx.fields.title.replace('Saved despite observer failure'));
+          await ctx.document.flush();
+          return ctx.document.status;
+        };
+        return {};
+      } };
+      """#.utf8).write(to: root.appendingPathComponent("assets/app.js"))
+    let (incidents, continuation) = AsyncStream<SlopFailureContext>.makeStream()
+    defer { continuation.finish() }
+    let controller = try await SlopDocumentWindowController.open(packageURL: root,
+      telemetry: SlopTelemetry { if case .failed(_, let context) = $0 { continuation.yield(context) } })
+    try await controller.session.waitUntilReady()
+    let status = try await controller.session.webView.callAsyncJavaScript(
+      "return await globalThis.observerProbe()", arguments: [:], in: nil, contentWorld: .page)
+    #expect(status as? String == "saved")
+    var iterator = incidents.makeAsyncIterator()
+    let incident = await iterator.next()
+    #expect(incident?.classification == .authored)
+    try await controller.session.finish()
+    let saved = try await DocumentCommand.run(method: "get", url: root)
+    #expect(String(decoding: saved, as: UTF8.self).contains("Saved despite observer failure"))
+  }
+
   // Gap: installing telemetry only after open returns loses early guest startup failures.
   // A disposable fixture throws before mounting; expect one sanitized authored incident.
   @Test @MainActor func startupTelemetryIsInstalledBeforeAuthoredCodeRuns() async throws {

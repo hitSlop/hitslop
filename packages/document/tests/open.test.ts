@@ -68,6 +68,24 @@ describe("opening stored documents", () => {
       { title: "Kept", tasks: [] },
       [{ path: [], kind: "unknown-field", detail: "Unknown stored field: extra" }],
     ],
+    ...["Text", 42, null].map(kind => [
+      `text stored as a plain object with kind ${JSON.stringify(kind)}`,
+      (data: LoroMap) => {
+        data.set("title", { kind });
+        data.setContainer("tasks", new LoroMovableList());
+      },
+      { title: "", tasks: [] },
+      [{ path: ["title"], kind: "invalid", detail: "Expected LoroText" }],
+    ] as const),
+    [
+      "plain object masquerading as a row",
+      (data: LoroMap) => {
+        data.setContainer("title", new LoroText()).update("Kept");
+        data.setContainer("tasks", new LoroMovableList()).insert(0, { kind: "Map", $id: "x" });
+      },
+      { title: "Kept", tasks: [] },
+      [{ path: ["tasks", { index: 0 }], kind: "invalid", detail: "Expected LoroMap" }],
+    ],
     [
       "invalid row scalar",
       (data: LoroMap) => {

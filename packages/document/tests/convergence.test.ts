@@ -3,7 +3,7 @@
 import { expect, test } from "bun:test";
 import { LoroDoc, type LoroMap, type LoroMovableList } from "loro-crdt";
 import { Document } from "../src/document";
-import { defineDocument, s } from "../src/schema";
+import { defineDocument, s, OperationRejectedError } from "../src/schema";
 import { MemoryStore } from "../src/memory";
 import { copyStore } from "./helpers";
 const schema = defineDocument({
@@ -200,6 +200,8 @@ test("incremental and full projection agree for every anomaly position", async (
     ["row field", (d) => ((d.get("rows") as LoroMovableList).get(0) as LoroMap).set("done", "yes")],
     ["row identity", (d) => ((d.get("rows") as LoroMovableList).get(0) as LoroMap).delete("$id")],
     ["wrong container", (d) => d.set("cover", "not an object")],
+    ["plain container-shaped object", (d) => d.set("cover", { kind: "Map" })],
+    ["plain container-shaped row", (d) => (d.get("rows") as LoroMovableList).insert(0, { kind: "Map", $id: "x" })],
     ["unknown field", (d) => d.set("extra", 1)],
   ];
   for (const [name, mutate] of mutations) {
@@ -212,10 +214,24 @@ test("incremental and full projection agree for every anomaly position", async (
     doc.importUpdates(fork.export({ mode: "update", from: doc.version() }));
     const incremental = doc.current;
     const issues = doc.issues;
+    if (name === "plain container-shaped object") {
+      expect(doc.current.cover).toBeUndefined();
+      expect(issues).toEqual([{ path: ["cover"], kind: "invalid", detail: "Expected LoroMap" }]);
+      expect(() => doc.fields.cover.caption.set("blocked")).toThrow(OperationRejectedError);
+    }
+    if (name === "plain container-shaped row") {
+      expect(doc.current.rows.map(row => row.name)).toEqual(["r"]);
+      expect(issues).toEqual([{ path: ["rows", { index: 0 }], kind: "invalid", detail: "Expected LoroMap" }]);
+    }
     await doc.close();
     const reopened = await Document.open(shaped, store, initial);
     expect([name, reopened.current]).toEqual([name, incremental]);
     expect([name, reopened.issues]).toEqual([name, issues]);
+    if (name === "plain container-shaped object") {
+      reopened.fields.cover.set({ caption: "Recovered" });
+      expect(reopened.current.cover?.caption).toBe("Recovered");
+      expect(reopened.issues).toEqual([]);
+    }
     await reopened.close();
     fork.free();
   }

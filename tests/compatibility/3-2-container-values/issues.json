@@ -1,0 +1,30 @@
+[
+  {
+    "path": [
+      "rows",
+      {
+        "id": "cgnbk728hs0nw3bcq1jbnq1tpr"
+      },
+      "name"
+    ],
+    "kind": "invalid",
+    "detail": "Expected LoroText"
+  },
+  {
+    "path": [
+      "rows",
+      {
+        "index": 2
+      }
+    ],
+    "kind": "invalid",
+    "detail": "Expected LoroMap"
+  },
+  {
+    "path": [
+      "cover"
+    ],
+    "kind": "invalid",
+    "detail": "Expected LoroMap"
+  }
+]

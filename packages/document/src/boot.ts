@@ -29,6 +29,12 @@ export function initialize() {
 }
 
 const isNative = () => Boolean((globalThis as any).webkit?.messageHandlers?.storage);
+const reportApplicationError = (native: boolean, error: unknown) => {
+  globalThis.document.dispatchEvent(new CustomEvent("hitslop:render-error", { detail: error }));
+  if (native)
+    void hostCall({ method: "runtimeError", kind: "application", error: describe(error) }).catch(() => {});
+  else console.error(error);
+};
 const fetchJSON = async (path: string, missing: string) => {
   const response = await fetch(path);
   if (!response.ok) throw new Error(missing);
@@ -50,6 +56,7 @@ async function openDocument(native: boolean) {
     fromDescriptor(descriptor),
     native ? new HostStore() : new MemoryStore(),
     initial,
+    { onListenerError: (error) => reportApplicationError(native, error) },
   );
   const attachments = configureAttachments(doc, native);
   const session = new Session(doc, config.epoch, theme, attachments);
@@ -153,15 +160,7 @@ export async function boot() {
     if (!view || typeof view.mount !== "function")
       throw new Error("assets/app.js must export default { mount(ctx, target) }");
     const capture = captureController();
-    const reportError = (error: unknown) => {
-      globalThis.document.dispatchEvent(new CustomEvent("hitslop:render-error", { detail: error }));
-      if (native)
-        void hostCall({
-          method: "runtimeError",
-          kind: "application",
-          error: describe(error),
-        }).catch(() => {});
-    };
+    const reportError = (error: unknown) => reportApplicationError(native, error);
     const ctx = createContext(doc as Document<ObjectNode>, {
       attachments,
       theme,

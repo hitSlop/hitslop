@@ -2,6 +2,7 @@ import { test, expect } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import identity from "../../document/src/runtime-identity.json";
 import {
   catalog,
   verifyCopies,
@@ -90,14 +91,15 @@ test("released contracts cannot disappear, regress or silently change bytes", as
       runtimeContract: 3,
       runtimeRevision: 1,
       storageRevision: 1,
-      loroVersion: "1",
+      // This case owns release seals, not a change of engine pin.
+      loroVersion: identity.loroVersion,
       sha256: "a".repeat(64),
     },
   ];
   const values: Awaited<ReturnType<typeof catalog>> = {};
   for (const release of published)
     values[String(release.runtimeContract)] = {
-      identity: { ...release, sdkVersion: "1", loroVersion: "1", protocolVersion: 1 },
+      identity: { ...release, sdkVersion: "1", protocolVersion: 1 },
       sha256: release.sha256,
     };
   await verifyReleasedIdentities(values, published);

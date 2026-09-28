@@ -45,7 +45,11 @@ const originOf = (options: CommitOptions) => (options.origin === "cli" ? "host" 
 /** What a `change()` callback may use: typed handles only. */
 /** Host storage bound for one checkpoint or checkpoint plus log (Swift Storage.maximumBytes). */
 const MAX_CHECKPOINT_BYTES = 32 * 1024 * 1024;
-export type OpenOptions = { capacityBytes?: number };
+export type OpenOptions = {
+  capacityBytes?: number;
+  /** Internal observer error sink; application errors cannot interrupt document bookkeeping. */
+  onListenerError?: (error: unknown) => void;
+};
 const paths = new WeakMap<object, { owner: object; path: Path }>();
 const key = (path: Path) => JSON.stringify(path);
 export class Document<N extends ObjectNode> extends Commands {
@@ -64,6 +68,8 @@ export class Document<N extends ObjectNode> extends Commands {
   private queue: Promise<unknown> = Promise.resolve();
   private listeners = new Set<(event: DocumentEvent) => void>();
   private outbound = new Set<(bytes: Uint8Array) => void>();
+  private onListenerError: (error: unknown) => void = console.error;
+  private reportingListenerError = false;
   private revision = 0;
   private issueCache?: { revision: number; issues: readonly Issue[] };
   private stop?: () => void;
@@ -82,7 +88,7 @@ export class Document<N extends ObjectNode> extends Commands {
   private view!: Value<N>;
   private origin = "ui";
   private capacityBytes = MAX_CHECKPOINT_BYTES;
-  /** The last save failed because its full snapshot exceeded storage capacity. */
+  /** The last save failed because stored checkpoint plus update bytes would exceed capacity. */
   full = false;
   status: SaveStatus = "saved";
   error: string | null = null;
@@ -116,6 +122,7 @@ export class Document<N extends ObjectNode> extends Commands {
     options: OpenOptions = {},
   ): Promise<Document<N>> {
     const doc = new Document(definition, storage);
+    doc.onListenerError = options.onListenerError ?? console.error;
     doc.capacityBytes = Math.min(
       options.capacityBytes ?? MAX_CHECKPOINT_BYTES,
       MAX_CHECKPOINT_BYTES,
@@ -193,7 +200,7 @@ export class Document<N extends ObjectNode> extends Commands {
   }
   private accept(bytes: Uint8Array, local: boolean) {
     this.pending.push(bytes);
-    if (local) for (const listener of this.outbound) listener(bytes);
+    if (local) this.deliver(this.outbound, bytes);
   }
   /** Semantic anomalies in the stored state, computed on demand. Stored bytes are never repaired. */
   get issues(): readonly Issue[] {
@@ -213,7 +220,25 @@ export class Document<N extends ObjectNode> extends Commands {
     return this.issueCache.issues;
   }
   private notify(event: DocumentEvent = { kind: "status" }) {
-    for (const listener of this.listeners) listener(event);
+    this.deliver(this.listeners, event);
+  }
+  private deliver<T>(listeners: Set<(value: T) => void>, value: T) {
+    for (const listener of listeners) {
+      try {
+        listener(value);
+      } catch (error) {
+        if (this.reportingListenerError) continue;
+        this.reportingListenerError = true;
+        try {
+          this.onListenerError(error);
+        } catch {
+          // Reporting is best effort, including when an application replaced console.error.
+          try { console.error(error); } catch {}
+        } finally {
+          this.reportingListenerError = false;
+        }
+      }
+    }
   }
   private projectAll(previous?: Value<N>): Value<N> {
     const root = this.definition.descriptor.root;
@@ -448,11 +473,11 @@ export class Document<N extends ObjectNode> extends Commands {
   private changed(origin: "local" | "host" | "remote") {
     this.view = this.applyPreviews(this.snapshot);
     if (!this.error) this.status = "saving";
-    this.notify({ kind: "change", origin });
     this.timer ??= setTimeout(() => {
       this.timer = undefined;
       void this.flush().catch(() => {});
     }, 200);
+    this.notify({ kind: "change", origin });
   }
   /** Host capabilities stage durable bytes before committing their document references. */
   stageSave(work: (commit: (callback: () => void) => void) => Promise<void>): Promise<void> {
@@ -759,13 +784,22 @@ export class Document<N extends ObjectNode> extends Commands {
     clearTimeout(this.maintenanceTimer);
     this.maintenanceTimer = undefined;
     this.notify();
-    this.outbound.clear();
-    this.stop?.();
-    this.stopEvents?.();
-    this.engine.free();
-    this.savedVersion.free();
-    this.listeners.clear();
-    await this.storage.close();
+    const failures: unknown[] = [];
+    try {
+      for (const release of [
+        () => this.outbound.clear(),
+        () => this.stop?.(),
+        () => this.stopEvents?.(),
+        () => this.engine.free(),
+        () => this.savedVersion.free(),
+        () => this.listeners.clear(),
+      ]) {
+        try { release(); } catch (error) { failures.push(error); }
+      }
+    } finally {
+      await this.storage.close();
+    }
+    if (failures.length) throw new AggregateError(failures, "Document cleanup failed");
   }
 }
 /** Walk a snapshot by identity path. */

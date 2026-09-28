@@ -5,5 +5,12 @@
     "storageRevision": 1,
     "loroVersion": "1.16.1",
     "sha256": "48cb39e98f7d066f2a74f4df9dc91c6fe152b5ed168c2551aa8e9b851c9e37d7"
+  },
+  {
+    "runtimeContract": 3,
+    "runtimeRevision": 2,
+    "storageRevision": 1,
+    "loroVersion": "1.16.1",
+    "sha256": "418ce1a4565fbe8278b86d8667a1def9c153ab67bec7662bc088ce71203cfe3a"
   }
 ]

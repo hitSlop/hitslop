@@ -11,9 +11,12 @@ product decision.
 ## Launch baseline
 
 The second prelaunch reset retires contracts 1 and 2 and their fixtures; no documents
-from that era need to open. [Runtime reset v2](runtime-reset-v2.md) records the decisions.
+from that era need to open. The [runtime reset history](history/runtime-reset.md) records
+why; this page is the rule.
 The launch baseline is **runtime contract 3, revision 1, storage revision 1** with
-SDK 3.0.0 and SQLite format 2. The tested launch candidate is already sealed in
+SDK 3.0.0 and SQLite format 2. Revision 1 remains the sealed baseline; the intended
+launch candidate is revision 2, which fixes observer isolation and anomalous-state
+reads without changing storage encoding or the SDK minimum revision. The baseline is sealed in
 `runtimes/releases.json`; sealing freezes bytes and ledger records before
 publication. A local seal does not mean the app has shipped. Publication archives
 those same bytes with the release (see [releasing](guides/releasing.md)). Sealed
@@ -44,6 +47,16 @@ Everything a frozen slop depends on falls in one of these. Each has a named gate
    covered: `/assets/*` resolution, the mount target and CSP, `--slop-*` theme variables,
    capture behavior and package validation. Apps import nothing from `/__runtime__/`;
    the build rejects engine imports, bridge access and remote boot resources.
+   Manifest readers ignore unknown metadata keys while validating known fields and
+   presentation variants. Unknown category strings map to `other`, deduplicated in
+   first-occurrence order; unknown shape/background strings are treated as absent
+   (rounded and nontransparent for standard windows). Future enum strings are
+   1–64 characters; existing category count/uniqueness bounds remain. Standard
+   windows forbid `skin`; skinned windows forbid standard presentation controls,
+   including null values. Normalization affects only the decoded model: opening,
+   duplication and template creation preserve original manifest bytes. Authoring
+   and build writers remain strict. A new field or value that older apps must
+   understand requires raising `minRuntimeRevision`.
 2. **The `ctx` interface** ([abi.ts](../packages/document/src/abi.ts)). Behavioral:
    arguments, results, timing and errors, not only names. It only grows; new
    capabilities are optional and listed in `ctx.capabilities`.
@@ -85,7 +98,10 @@ through `ctx.document.issues`; representable values keep their stored value, unu
 ones read as a documented fallback (a non-finite counter reads as `null`) and refuse
 edits beneath them. Nothing is repaired on open. Undecodable bytes, missing
 dependencies, unsupported formats or schema keys and resource limits still fail.
-Validation stays strict for local writes. Live edits are synchronous; saving bounds
+Validation stays strict for local writes. Observer exceptions are reported as
+application errors without interrupting accepted edits, other observers, autosave
+or close; transaction callback failures still reject the staged change.
+Live edits are synchronous; saving bounds
 the durable checkpoint plus update payloads at 32 MiB. Ordinary saves append one
 merged update. Counter-changing saves require full checkpoints because regrouping
 floating-point deltas can change accepted values. Optional compaction failure leaves
@@ -122,4 +138,5 @@ existing one.
 
 The CLI package version may advance independently when its SDK and runtime
 requirements are unchanged. `init` pins the project's SDK to the CLI's exact
-`@hitslop/document` dependency, and builds compare the complete SDK identity.
+`@hitslop/document` dependency, and builds compare the SDK identity's
+`runtimeContract`, `minRuntimeRevision` and `sdkVersion`.
