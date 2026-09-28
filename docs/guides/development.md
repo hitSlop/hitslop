@@ -2,7 +2,7 @@
 
 ## Set up the checkout
 
-Use the Bun version in root `package.json` (currently 1.4.2), Xcode, and XcodeGen on macOS. The shipped app supports Apple silicon on macOS 14 or newer.
+Use the Bun version in root `package.json` (currently 1.4.2), Xcode, and XcodeGen on macOS. The shipped app supports Apple silicon on macOS 15.2 or newer.
 
 ```sh
 bun install --frozen-lockfile

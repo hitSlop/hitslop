@@ -690,3 +690,55 @@ template discovery, and export PNG/PDF without fetching engine resources. Local
 resource checks and the Debug release gate do not establish that manual acceptance.
 Run the complete release gate again on the final clean release commit before
 publication; the earlier dirty-tree report is implementation evidence only.
+
+### Bridge transport spike (binary vs. base64)
+
+An external proposal suggested replacing the WebView↔Swift bridge's base64-JSON
+transport with raw binary transfer, and separately a native Swift/Rust `LoroDoc`
+mirror. The latter is a second document engine and was rejected outright without
+testing (§7's "no second document engine" rule; see also `runtime-reset.md`'s
+"Not recommended now: ... a Swift-side engine"). The former was spiked with a
+disposable, isolated WebKit harness — never touching `bridge.ts`, `document.ts`,
+`Storage.swift`, `StorageBridge.swift`, or `SchemeHandler.swift` — to measure
+before assuming. Evidence: `.hitslop/v1-evidence/binary-transport-spike/*.json`.
+
+The proposal's core premise does not hold on this app's WebKit version. A
+top-level `Uint8Array` passed to `postMessage` arrives in Swift as a `Dictionary`
+keyed by byte index (not `Data`); a top-level `ArrayBuffer` arrives as an *empty*
+dictionary, silently losing the bytes; and a raw `Data` reply from Swift back to
+JS fails outright ("The result value passed back from the WKWebView API client
+was unable to be serialized"). The only binary channel that actually works is
+`fetch()` against a `WKURLSchemeHandler`, in both directions, byte-exact up to
+30 MiB — a materially bigger change than "swap base64 for ArrayBuffer in
+postMessage," since writes have no scheme-handler channel today.
+
+Measured against real SQLite (`Storage.call`) and a real `WasmSession` open/save
+cycle as the end-to-end denominator, base64 is not a bottleneck on the primary
+path (native `Uint8Array.toBase64`/`fromBase64`): at 8 MiB, switching to binary
+saves roughly 2.5 ms on writes and 8 ms on reads against a total cost in the
+tens of milliseconds, well under any reasonable threshold. The one real cost
+was on the `atob`/per-byte fallback path pre-Safari-18.2 WebKit uses: 46-84 ms
+at 8 MiB, genuine main-thread jank. That fallback existed because the app's
+minimum macOS version was 14; native `Uint8Array.toBase64`/`fromBase64` shipped
+with Safari 18.2 / macOS 15.2. Rather than build binary transport to work around
+a fallback path, the deployment target was raised to macOS 15.2 (`Package.swift`,
+`project.yml`, and the regenerated `.pbxproj`), which removes the fallback path
+entirely for every supported user. `bridge.ts`'s feature-detected fallback
+function is left in place as harmless, near-zero-cost defensive code; nothing
+in the bridge transport itself changed.
+
+Conclusion: no bridge transport change. The spike test file was deleted after
+this conclusion was recorded; the evidence JSON remains under `.hitslop/`.
+
+The same spike's single-sample run also showed one edit+flush on a 1000-row
+document taking 9.5s, wildly out of line with everything else measured. A
+follow-up ran 8 consecutive edits on the same 1000-row document, both headless
+and in the full visible app, isolating rendering from document logic. Headless
+was uniformly 3-7ms per edit, matching a separate clean repro of
+`packages/document/src`'s own logic outside any WebView (0.5-1.2ms regardless
+of row count). Visible mode cost 156-194ms per edit — real, but consistent
+across all 8 edits (no first-edit cliff) and in line with `BenchmarkTests`'
+existing 188-311ms p95 figure at 1000 rows. The original 9.5s reading did not
+reproduce under repeated, controlled sampling; treated as a one-off measurement
+artifact from that single-sample run, not a document/CRDT/transport regression.
+Evidence: `.hitslop/v1-evidence/large-list-edit-timing/{headless,visible}.json`.

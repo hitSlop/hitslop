@@ -120,7 +120,7 @@ Inspect generated changes. Never regenerate preserved compatibility fixtures or 
 
 ## Package the Mac app
 
-The deployment target is macOS 14+ on Apple silicon. App version/build values live in `apps/apple/project.yml`. Existing TCA features, local catalog, native windows/toolbar, Analytics/Crashlytics, Sparkle, and NativeCLI remain part of release.
+The deployment target is macOS 15.2+ on Apple silicon. App version/build values live in `apps/apple/project.yml`. Existing TCA features, local catalog, native windows/toolbar, Analytics/Crashlytics, Sparkle, and NativeCLI remain part of release.
 
 ```sh
 scripts/install-macos-release.sh
@@ -136,7 +136,7 @@ The workflow checks these repository secrets before installing/building: `MACOS_
 
 ## Manual Mac acceptance
 
-Record commit, version/build, OS, and results. Test macOS 14 and the current supported macOS on Apple silicon:
+Record commit, version/build, OS, and results. Test macOS 15.2 and the current supported macOS on Apple silicon:
 
 - Fresh offline install: with networking unavailable, launch the installed app and
   exercise every selected starter, create a working copy, edit/save/close/reopen,
