@@ -17,4 +17,8 @@ The [public tutorial](../apps/landing/src/content/docs/docs/getting-started.mdx)
 
 [`history/`](history/runtime-reset.md) keeps design history (why the runtime was reset before launch); it is not a task guide or contract.
 
+[Loro host ownership](LoroHostPlan.md) is a proposal with an isolated
+[Rust-core spike](../spikes/hitslop-core/REPORT.md). Its experiments do not change
+the active runtime, compatibility rules or template inventory.
+
 [Restored-client measurements](benchmarks/v1/README.md) describe historical observations, not performance guarantees. Retired implementations and measurements may be kept in the local, Git-ignored `deferred/` archive. That archive is optional and is not included in fresh clones.

@@ -282,7 +282,7 @@
   .intro { min-width: 0; align-self: start; }
   .edition { margin: 0 0 8px; display: flex; align-items: center; gap: 9px; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5b358e; }
   .edition span { font-size: 24px; line-height: 1; }
-  h1 { font-family: "HitSlop Display", sans-serif; font-size: clamp(38px, 4.5vw, 80px); font-weight: 400; line-height: .98; letter-spacing: -.025em; white-space: nowrap; }
+  h1 { font-family: "HitSlop Display", sans-serif; font-size: clamp(38px, 4.5vw, 80px); font-weight: 800; line-height: .98; letter-spacing: -.025em; white-space: nowrap; }
   h1 > span { color: #7922e0; }
   .wardrobe { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
   .groups { min-height: 0; flex: 0 1 480px; display: grid; gap: 8px; }
@@ -347,7 +347,7 @@
   .dialog-close { position: absolute; top: 8px; right: 10px; }
   .dialog-close button { width: 36px; height: 36px; border: 0; border-radius: 6px; background: transparent; font-size: 26px; color: #5d5372; cursor: pointer; }
   .dialog-eyebrow { margin: 0 0 16px; font-size: .7rem; font-weight: 700; letter-spacing: .12em; color: #7741b7; }
-  dialog h2 { font-family: "HitSlop Display", sans-serif; font-size: 40px; font-weight: 400; line-height: 1; }
+  dialog h2 { font-family: "HitSlop Display", sans-serif; font-size: 40px; font-weight: 800; line-height: 1; }
   dialog h2 span { color: #7922e0; }
   dialog p { font-size: .95rem; color: #5d5372; }
   dialog label { font-size: .8rem; font-weight: 650; }

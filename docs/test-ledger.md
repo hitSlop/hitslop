@@ -424,3 +424,42 @@ preparation stays separate; no template seal was added. The retained
 `robustness/release-check.json` reports `passed: false` and the dirty working tree.
 Later release stages did not run in that invocation; this is not a complete
 release-gate pass.
+
+### Engine placement spike (isolated, not a production contract change)
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Native candidate rejects a batch atomically ([owner](../spikes/engine-placement/Tests/SpikeTests/ContractTests.swift)) | A late invalid edit leaves both projected state and Loro version unchanged | Swift spike | Existing Bun owner applies to the current engine, not this interpreter | ADD; replacing fork staging with live mutation made both expectations fail; source restored |
+| Native candidate durability and writer ownership | Failed save retains live edits and lock; retry/reopen restores the accepted edit; lost commit reply does not append twice; failed checkpoint/capacity leaves generation unchanged | Swift spike | Production native storage tests remain unchanged | ADD; temporary-path SQLite failures were observed and fixed by resolving the OS path before NOFOLLOW open |
+| Async author intent collection ([SDK](../spikes/engine-placement/sdk.test.ts)) | A throwing callback submits nothing; flush waits for an accepted pending edit | Bun spike | — | ADD; owns the new asynchronous author boundary only |
+| Native projection conformance ([audit](../spikes/engine-placement/audit.ts)) | Current SDK projection from identical bytes; independent atomic rejection/version check | Cross-engine diagnostic | Does not replace full compatibility replay | ADD; rich-text delta and anomalous-text probes failed before correction; remaining capability gaps keep the audit gate closed |
+| Engine placement performance ([harness](../spikes/engine-placement/README.md)) | Frozen executable/assets, fresh processes, identical views, separate acceptance/render-opportunity/durability measurements | Mac diagnostic | — | ADD; performance results cannot certify semantic conformance or compositor paint |
+| Native/WASM durable-log replay ([replay](../spikes/engine-placement/replay.ts)) | Concurrent literal text converges and reopens; a lost acknowledgement creates no second entry; changed bytes under a retry ID are refused; persisted log survives reopen and replays 1,000 edits | Native + Bun spike | Production collaboration remains deferred | ADD component evidence only; direct page delivery does not prove WebSocket delivery, remote paint or durable missing-dependency buffering |
+| Matched-core counter replay ([probe](../spikes/engine-placement/counter-probe.ts)) | Arithmetic sequence has literal accepted result 1; replayed result must match at the same version | Loro diagnostic | Existing runtime checkpoint coverage owns local reopen | ADD; 1.16.2 reproduces replay result 0, so this diagnostic intentionally fails and checkpoints remain |
+
+The engine-placement comparison is isolated under `spikes/engine-placement`; it
+does not change production runtime identity or seals. The native interpreter's
+missing capabilities keep its conformance gate closed. See the
+[decision report](../spikes/engine-placement/REPORT.md) for measurements, discarded
+calibration runs, validation and limitations. Little Days release preparation remains
+separate.
+
+### Shared Rust core spike (isolated, incomplete conformance)
+
+| Contract | Oracle | Tier | Duplicate-of | Verdict |
+|---|---|---|---|---|
+| Rust intent semantics, row identity and atomic rejection ([owner](../spikes/hitslop-core/core/tests/conformance.rs)) | Literal fixture values/errors, unchanged rejected state/version/publication, checkpoint/update replay | Rust spike | Current Bun tests remain the production owner; new interpreter needs independent evidence | ADD; sensitivity in a disposable copy bypasses staging and catches partial live mutation |
+| Generated Swift/WASM binding parity and byte interchange ([runner](../spikes/hitslop-core/run.ts), [Swift](../spikes/hitslop-core/Sources/Conformance/main.swift)) | Each binding checks the same independent literal outcomes; both directions replay real checkpoint/update bytes | Swift/UniFFI + Bun/WASM spike | Rust owns semantics; these consumers prove distinct marshaling/build/byte boundaries | ADD; 12 scenarios per binding, no existing coverage removed |
+| Rust malformed import, preliminary preserve-and-flag reads and replica merge | Rejected bytes leave state unchanged; literal anomalous value/issue survives reopen without read mutation; independently edited replicas converge | Rust spike | Not a substitute for exact current anomaly/identity fixtures | ADD; full conformance remains explicitly open |
+| Stable-ID Rust publications and invalidated row indexes | 100,000 seeded local/import steps reconstruct fresh snapshots/issues; existing literal binding fixtures retain independent expected values | Rust spike + binding consumers | Existing production publication tests remain intact | EXTEND; consumers now apply row/field patches instead of coarse replacements |
+| Draft ancestry, receipts, Unicode caret and removed targets | Literal `RabcXYZ`/`遠abcXYZ`, UTF-16 caret offsets, unchanged rejected owner, duplicate receipt and reopen | Rust spike | Current-base splice cases do not cover retained authored branches | ADD; full system IME remains a separate manual gate |
+| Renderer structural sharing, publication recovery and retained failed composition | Unchanged row references, stale/gap/session traces including delayed snapshot rollback, exact DOM draft and no submission during composition | Bun spike renderer | Distinct from Rust merge semantics | ADD; actual WebKit gate additionally counts affected row components |
+| Rust owner SQLite durability and ownership | Reopen literal accepted boolean, busy OS lock after failed close, exactly one update after ambiguous commit | Swift/UniFFI + real SQLite | Existing Swift-native control retained; this proves the Rust adapter's boundary | ADD; shared Store extracted without replacing its ten existing control tests |
+| Native WebView text and lifecycle | Exact DOM text/caret under four reply delays, AppKit keyboard/undo/redo, save retry, weak-reference renderer destruction and same-owner remount | WKWebView spike | Synthetic DOM checks cannot prove actual responder or renderer lifetimes | ADD; automated integration passes; real Japanese/Chinese IME remains unverified |
+
+Native-owner measurement outcome: [report](../spikes/hitslop-core/NATIVE-OWNER.md).
+All 90 ordinary-size process runs complete, but relative latency, one every-run move
+p95 and publication-cost gates fail. All three Rust stress cells fail autosave
+cadence; failed cells are retained. No production gate or existing test was weakened.
+Sensitivity builds now use separate target caches to prevent intentionally broken
+objects from contaminating normal validation.

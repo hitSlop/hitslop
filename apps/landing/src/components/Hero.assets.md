@@ -8,12 +8,12 @@ live slop demos or documentation.
 Self-hosted Latin WOFF2 files in `public/assets/hero/fonts/`, downloaded from Google
 Fonts. Each family includes its SIL Open Font License in the same directory.
 
-- Mochiy Pop One, regular: marketing headline, sticker badge, merch headings.
-- Nunito Sans, variable 400–900 (opsz 6–12): header and hero interface/copy.
+- Omnes Black (`omnes-black-latin.woff2`, latin subset of a licensed font supplied by the owner): hero H1 only.
+- Baloo 2, variable 400–800: floating header wordmark/nav, sticker badge, merch headings.
+- Nunito Sans, variable 400–900 (opsz 6–12): hero interface/copy.
 - Kalam, regular: handwritten annotations.
 
-Mochiy Pop One runs wider than a typical display face; keep hero sizes tight
-(`letter-spacing: -.04em`, line-height about .96) and check the title at 1100–1280 px.
+Baloo 2 is compact and heavy; keep hero sizes tight (`letter-spacing: .005em`, line-height about .92) and check the title at 1100–1280 px.
 
 Sticker, speech bubble, callouts, smiley, stars and underlines are inline SVG/CSS and
 decorative (`aria-hidden`). They hide below 1200 px where the poster has no margin.

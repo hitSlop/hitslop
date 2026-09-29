@@ -34,11 +34,12 @@ const platformRequirements = "macOS 14+ · Apple silicon";
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#fafbfd" />
+    <meta name="theme-color" content="#f4efff" />
     <meta name="description" content="Tiny local-first apps and documents that live on your desktop. Create from included templates, edit locally, and export PNG or PDF." />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-    <link rel="preload" href="/assets/hero/fonts/mochiy-pop-one-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/hero/fonts/omnes-black-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/hero/fonts/baloo-2-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/assets/hero/fonts/nunito-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
     <title>hitSlop — Tiny apps &amp; docs for your desktop</title>
   </head>
@@ -153,25 +154,24 @@ const platformRequirements = "macOS 14+ · Apple silicon";
 </html>
 
 <style>
-  .masthead { font-family: "HitSlop Sans", sans-serif; color: #10132c; }
-  .home-masthead nav, .home-masthead .nav-download { font-weight: 800; }
+  .masthead { color: #10132c; }
   .header-actions { display: flex; align-items: center; gap: 16px; }
   .social-links { display: flex; align-items: center; }
-  .nav-social { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: #10132c; }
-  .nav-social:hover { color: #7922e0; background: #7922e00a; }
+  .nav-social { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 14px; color: #10132c; }
+  .nav-social:hover { color: #6c16ed; background: #f1e9ff; }
   .nav-social :global(svg) { display: block; width: 20px; height: 20px; }
   @media (max-width: 979px) {
     .home-masthead { grid-template-columns: auto 1fr auto; }
     .home-masthead nav { display: flex; justify-content: flex-end; }
     .home-masthead nav a { display: none; }
-    .home-masthead nav .merch-link { display: inline-flex; align-items: center; min-height: 44px; font-size: .85rem; font-weight: 700; }
+    .home-masthead nav .merch-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 1rem; font-weight: 700; }
   }
-  @media (max-width: 480px) {
+  @media (max-width: 640px) {
     .header-actions { gap: 4px; }
     .home-masthead .nav-download { width: 44px; padding-inline: 0; }
     .nav-download > span { display: none; }
   }
-  @media (max-width: 420px) {
+  @media (max-width: 440px) {
     .home-masthead .wordmark > span:last-child { display: none; }
     .home-masthead { padding-inline: 12px; gap: 10px; }
   }
