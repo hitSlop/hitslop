@@ -1,5 +1,7 @@
 # Next phase: host-owned documents without Loro
 
+> **Superseded 2026-09-29** by [LoroRustCutover.md](LoroRustCutover.md): documents stay on Loro, owned by a host Rust core. This JSON-ops/JavaScriptCore plan failed its own gates above 1k rows (`spikes/document-authority/REPORT.md`).
+
 Status: proposal, 2026-09-28. Nothing here is an active contract yet. When a
 phase lands, its rules move into `AGENTS.md`, `docs/engineering-contract.md`,
 `docs/versioning.md` and the test ledger. This file then becomes history.

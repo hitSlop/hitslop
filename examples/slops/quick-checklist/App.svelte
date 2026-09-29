@@ -34,25 +34,38 @@
   const exportFinished = $derived(exported.filter(task => task.done).length);
   const marks = $derived(visible.length ? Math.round(3 * finished / visible.length) : 0);
 
-  function addTask() {
-    const text = draft.trim(); if (!text) return;
-    doc.fields.tasks.insert({text, done:false, archived:false});
-    draft = ""; composer?.focus();
+  let adding = $state(false);
+  async function addTask() {
+    const submitted = draft;
+    const text = submitted.trim(); if (!text || adding) return;
+    adding = true;
+    try {
+      await doc.fields.tasks.insert({text, done:false, archived:false});
+      if (draft === submitted) draft = "";
+      composer?.focus();
+    } catch { /* The runtime reports failures; keep the composer for retry. */ }
+    finally { adding = false; }
   }
-  function move(id: string, direction: -1 | 1) {
+  async function move(id: string, direction: -1 | 1) {
     const index = visible.findIndex(task => task.$id === id);
     const neighbor = visible[index + direction]; if (!neighbor) return;
-    doc.fields.tasks.move(id, direction === -1 ? {before:neighbor.$id} : {after:neighbor.$id});
+    try { await doc.fields.tasks.move(id, direction === -1 ? {before:neighbor.$id} : {after:neighbor.$id}); } catch {}
   }
-  function remove(id: string) { doc.fields.tasks.remove(id); notice = "Task removed."; composer?.focus(); }
-  function fileFinished() {
+  async function remove(id: string) {
+    try { await doc.fields.tasks.remove(id); notice = "Task removed."; composer?.focus(); } catch {}
+  }
+  async function fileFinished() {
     const done = visible.filter(task => task.done);
-    doc.change(tx => { for (const task of done) tx.at(task).archived.set(true); }, {message: "File finished tasks"});
-    notice = `${done.length} ${done.length === 1 ? "task" : "tasks"} filed.`;
+    try {
+      await doc.change(tx => { for (const task of done) tx.at(task).archived.set(true); }, {message: "File finished tasks"});
+      notice = `${done.length} ${done.length === 1 ? "task" : "tasks"} filed.`;
+    } catch {}
   }
-  function restore(task: (typeof filed)[number]) {
-    doc.change(tx => { const row = tx.at(task); row.archived.set(false); row.done.set(false); });
-    notice = "Task moved back to your list.";
+  async function restore(task: (typeof filed)[number]) {
+    try {
+      await doc.change(tx => { const row = tx.at(task); row.archived.set(false); row.done.set(false); });
+      notice = "Task moved back to your list.";
+    } catch {}
   }
   function sizeToText(node: HTMLTextAreaElement, _value: string) {
     let timer: ReturnType<typeof setTimeout>; let width = -1;
@@ -119,7 +132,7 @@
       <button
         type="submit"
         aria-label="Add task"
-        disabled={!draft.trim()}
+        disabled={adding || !draft.trim()}
         ><Plus size={20} /></button
       >
     </form>
@@ -152,7 +165,7 @@
             >
               <Checkbox.Root
                 checked={task.done}
-                onCheckedChange={(checked) => doc.at(task).done.set(checked)}
+                onCheckedChange={(checked) => { void doc.at(task).done.set(checked).catch(() => {}); }}
                 aria-label={`Mark ${task.text || "untitled task"} ${task.done ? "incomplete" : "complete"}`}
               >
                 {#snippet children({ checked })}{#if checked}<Check

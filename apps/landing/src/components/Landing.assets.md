@@ -1,7 +1,29 @@
-# Hero artwork and fonts
+# Landing artwork, fonts and data
 
-The marketing hero owns this visual direction. Its typography does not apply to
-live slop demos or documentation.
+The landing page is a playful desktop: a hero, the draggable desktop playground
+(`playground/`), the template wall, and interactive sections. Its typography does
+not apply to live slop demos or documentation.
+
+## Template wall data
+
+`src/data/templates.json` and `public/assets/templates/` are generated from every
+manifest in `examples/slops` and `archive/slops` (all of them ship in the app):
+
+```sh
+bun apps/landing/scripts/templates.ts
+```
+
+Titles, descriptions, categories and window shape come from `manifest.json`; tile
+colors from `theme.ts` tokens (read as text, never executed); real
+`QuickLook/Icon.png` and `Preview.png` are used wherever a template build exists,
+otherwise a curated emoji tile. Commit the outputs: the Cloudflare build installs
+only `apps/landing` and never builds templates. Rerun after templates change.
+
+## Share image
+
+`public/og.jpg` (1200×630) is rendered from `scripts/og-card.html` with the dev
+server running (`bun run --cwd apps/landing dev`), then screenshotted in a browser at
+1200×630 and saved as JPEG. It reuses the product-tour poster.
 
 ## Fonts
 
@@ -12,39 +34,24 @@ Fonts. Each family includes its SIL Open Font License in the same directory.
 - Baloo 2, variable 400–800: floating header wordmark/nav, sticker badge, merch headings.
 - Nunito Sans, variable 400–900 (opsz 6–12): hero interface/copy.
 - Kalam, regular: handwritten annotations.
+- Newsreader (500–700, italic 500) and Onest (400–800): the invoice, export paper and theme demo.
+
+No third-party font CSS is loaded; every face is self-hosted with its license beside it.
 
 Baloo 2 is compact and heavy; keep hero sizes tight (`letter-spacing: .005em`, line-height about .92) and check the title at 1100–1280 px.
 
-Sticker, speech bubble, callouts, smiley, stars and underlines are inline SVG/CSS and
-decorative (`aria-hidden`). They hide below 1200 px where the poster has no margin.
-
-## Feature illustrations
-
-Generated with `genmedia` and `fal-ai/recraft/v4.1/text-to-vector` on 2026-09-17.
-Three generations at the reported $0.08/image price. No runtime generation.
-
-- `folder.svg`: request `01a0b259-7186-73c1-850d-35c306980385`
-- `edit.svg`: request `01a0b259-dec5-7093-ae6e-76a8f375720f`
-- `together.svg`: request `01a0b259-e293-7471-9542-8bc69f442e44`
-
-Shared prompt direction: a single small icon for a playful indie Mac app website;
-expressive, slightly irregular rounded felt-tip purple outline; one small magenta
-accent; almost no interior detail; flat vector; no lettering, shadows, or 3D;
-simple friendly geometry readable at 40px.
-
-The subjects are an open folder, a diagonal pencil with two sparkles, and two
-people represented by round heads and shoulders. Generated SVGs were cropped,
-color-normalized to the hero palette, and stripped of their full-canvas background
-and generation metadata. The three production SVGs total approximately 12.5 KB.
-
-Arrows, marker strokes, sparkle decorations, and playback controls are authored
-inline SVG/CSS. All headline and annotation lettering is live HTML text.
+Stickers, annotations, the smiley and underlines are inline SVG/CSS (`src/styles/motion.css`).
+Annotations are decorative (`aria-hidden`) and always point at something interactive.
+All motion stops under `prefers-reduced-motion`. Blob, the desktop pet, is original pixel
+art (`playground/DesktopPet.svelte`).
 
 ## Product tour video and poster
 
 `public/assets/desktop-hero.mp4` (30 s, 1920×1080, with music) and
 `desktop-hero-poster.jpg` are rendered in code by `apps/promo`; there is no screen
-recording. The README uses the same poster.
+recording. The README uses the same poster. On the site the poster lives in the
+playground's "hitSlop in action.mp4" window (AVIF/WebP/JPEG at 960 and 1920 px) and
+opens the video dialog (`VideoDialog.astro`).
 
 1. `bun run capture` drives the real example apps through `slop dev` in headless
    Chromium: it plays SomaAmp and drops in a classic `.wsz` skin, imports a Codex pet

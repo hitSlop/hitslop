@@ -1,54 +1,31 @@
-# Loro in the host: plan and proving spikes
+# Loro in the host: architecture and proving spikes
 
-Status: proposal, 2026-09-28. It supersedes the JSON-ops/JSC direction in
-[NextPhasePlan.md](NextPhasePlan.md). None of this is an active contract yet.
-When a phase lands, its rules move into `AGENTS.md`,
-`docs/engineering-contract.md`, `docs/versioning.md` and the test ledger.
+Status: architecture decision and spike record, updated 2026-09-29.
+[LoroRustCutover.md](LoroRustCutover.md) owns the agreed SDK, compatibility policy,
+production milestones and current gate table. It supersedes the JavaScriptCore
+direction in [NextPhasePlan.md](NextPhasePlan.md). Implementation contracts change
+alongside the milestones that land, not merely because these plans were written.
 
-Decision, 2026-09-29: **commit to the host-owned Rust core.** The second
-`spikes/hitslop-core` iteration is the fastest candidate in every matrix cell
-(5k checkbox/move 3/3 ms vs 8–10/9–10 Swift native and 13–14/32–36 WASM) and
-passes all latency gates; see `spikes/hitslop-core/NATIVE-OWNER.md`.
+**Approved:** host-owned Rust core + UniFFI; breaking runtime contract 4 / ABI 2
+without contract-3 migration; slop archival with Quick Checklist as the first port;
+async ordinary writes, synchronous transaction collectors and explicit durable
+flush. Keep sealed historical bytes and release records. System Japanese/Chinese
+IME gates broad release, not the limited signed trial.
 
-Status, 2026-09-29 (third iteration): **S3 passes** (9/9 CLI race and kill
-scenarios; 1k-row cold apply 20 ms p95 against 150 ms). **S4 passes** (a per-writer
-integer counter converges exactly where Loro Counter fails). Publication hardening
-fixed two review-found bugs (other Loro roots, plain lists) and added chaos-peer,
-nested-list and post-rejection coverage. The memory gate miss is attributed to
-WebContent (the host is smaller). **Open: S2 system IME** (manual gate), then the
-production cutover (§7).
+The second native-owner iteration passed the spike's ordinary edit-latency,
+render and drain gates (5k checkbox/move 3/3 ms versus 8–10/9–10 ms for the
+Swift-native control). The third iteration added publication hardening, CLI
+race/kill evidence and exact integer counters. This is implementation evidence,
+not a Rust-versus-Swift language comparison or proof that the full production SDK
+is complete. Memory and the complete publication budget remain open, along with
+production semantic/identity/issue coverage, native integration and packaging.
 
-Review update, 2026-09-28: **start the isolated Rust semantic-core spike**.
-This authorizes experiments, not a production cutover, another runtime reset,
-descriptor removal or template retirement. Existing contracts remain authoritative.
-Progress and actual evidence live in [the binding report](../spikes/hitslop-core/REPORT.md)
-and [the native-owner integration report](../spikes/hitslop-core/NATIVE-OWNER.md).
-The integration milestone uses a Rust-only executable and a renderer that refuses
-WASM assets. It does not put a second CRDT replica in the native application's view.
-The separate WASM build is for browser/Bun portability. S1–S5 remain evidence gates;
-passing the checklist integration alone does not authorize production cutover.
-
-### Native-owner milestone result (2026-09-28)
-
-The isolated Rust/UniFFI owner now drives a real WKWebView with no renderer Loro
-or WASM. Automated draft ancestry, UTF-16 caret, composition simulation, AppKit
-keyboard/undo/redo, save retry and normal/forced renderer remount checks pass.
-A 100,000-step publication test and both-direction native/WASM byte replay pass.
-
-The measured Rust implementation **misses the performance gates**: at 5k rows and
-one window, median checkbox/move acceptance p95s are 39/45 ms versus 5/5 ms for the
-Swift-native control; one move run reaches 82 ms p95. Native publication construction
-alone is 30.61 ms p95, over the complete 2 ms budget. All three exploratory 40k Rust
-cells fail periodic autosave cadence. Ordinary memory and typing-drain gates pass.
-Full numbers, failed cells, hashes and methodology are in the
-[native-owner report](../spikes/hitslop-core/NATIVE-OWNER.md).
-
-Continue with direct Loro-diff publication and incremental issue/index maintenance
-before adding production integration. Keep UniFFI; a new binding generator does not
-address the measured full-value publication work. S1/S5 stay open, as do full
-semantic parity and the real Japanese/Chinese IME gate. Five fresh trials cover each
-ordinary-size candidate/cell; 40k remains a separate one-run-per-candidate stress
-probe. No production ownership, ABI or storage change is authorized by these results.
+See the [binding report](../spikes/hitslop-core/REPORT.md) and
+[native-owner report](../spikes/hitslop-core/NATIVE-OWNER.md) for current and
+historical measurements. The first integration's 39/45 ms results and full-value
+publication bottleneck are historical; event-driven publication replaced that
+implementation. Native hosts have no renderer CRDT. WASM builds target browser
+development/tests and later server work, not a second replica inside the native view.
 
 ## 1. Decision in one paragraph
 
@@ -91,8 +68,10 @@ it does not eliminate two independent semantic implementations that exist today.
 | Native Loro owned by the host | `spikes/engine-placement/REPORT.md`; `_docs/hitslop-sync` spikes 2–4 | Partial Swift interpreter: 2–6 ms checkbox/move up to 5k rows; 29/33 ms at 40k in the single-window cell. Stress tails failed some every-run gates. Earlier native experiments proved hosted relay feasibility with different semantics/storage. |
 
 The native result includes indexing and smaller publications, not placement alone.
-All candidates retain atomic staging. The renderer displays 40 rows, and timing is
-acceptance/render opportunity, not physical paint or durability. Re-measure after
+The older placement candidates retain fork staging; the newer Rust core proves
+atomic rejection with in-place edits and recovery at pre-batch frontiers. The
+renderer displays 40 rows, and timing is acceptance/render opportunity, not
+physical paint or durability. Re-measure after
 semantic coverage grows; never substitute the archived relay timings for UI latency.
 
 ### 2.3 Against the long-term goals
@@ -125,10 +104,15 @@ The first version already had a native Swift actor owning Loro via loro-swift
 
 | First version | What went wrong | v2 |
 |---|---|---|
-| `change(draft => …)` mutated a JSON clone; Swift **diffed JSON** into Loro ops | Intent was lost (a move became delete+insert, text became a guessed diff); it needed schema-aware reconciliation on a fork | The SDK sends **typed intents**. There is no diffing. |
+| `change(draft => …)` mutated a JSON clone; Swift **diffed JSON** into Loro ops | The reconciler preserved keyed moves via `list.mov`, but inferred text edits and needed schema-aware before/after reconciliation | The SDK sends **typed intents**; the core does not reconstruct writes by diffing whole JSON documents. |
 | Editable `stores/data.json` mirror, a byte journal across files, external-edit review sheets and recovery | The largest source of complexity | **No mirror.** Agents use the CLI. Storage stays SQLite with opaque Loro bytes. |
 | Semantics written in Swift on loro-swift | loro-swift already wraps Rust through UniFFI. The Swift semantic interpreter is not shared with Tauri or the Worker; fine-grained access also crosses FFI repeatedly. | Semantics live in **our Rust crate**, behind coarse calls. We own the binding/toolchain; lower call overhead is measured, not assumed. |
 | One relay entry per edit, one replay entry per ack | ~6 minutes to clear 1,000 hosted edits | Bounded batching of the outbox and replay |
+
+The archived native checklist was a generated variant: its preparation script
+added `await` to structural actions and replaced ordinary text bindings with the
+ancestry-aware adapter. The native spike did not prove unchanged synchronous app
+code safe across an asynchronous bridge.
 
 Carried forward because they were proven:
 
@@ -156,14 +140,16 @@ Carried forward because they were proven:
 ### 4.2 The core's API (JSON in, JSON/bytes out)
 
 ```rust
-Document::create(schema_json, initial_json, id_seed) -> Document
+Document::create(schema_json, initial_json) -> Document
 Document::open(schema_json, checkpoint: Bytes, updates: Vec<Bytes>) -> Document
-doc.snapshot() -> Json            // { version, value, issues }
+doc.snapshot() -> Json            // { session, sequence, version, value, issues }
 doc.apply(batch_json) -> Json     // { ok: { version, ids, patch } } | { error: { code, opIndex, message } }
 doc.export_since(version) -> Bytes    // SQLite append + sync outbox
 doc.checkpoint() -> Bytes
 doc.import(bytes) -> Json         // { version, patch, issues }
-doc.version() -> Json             // opaque frontiers token
+doc.version() -> String           // opaque history token
+doc.text(request_json) -> Json    // draft ancestry, publication and reconciled selection
+doc.release_draft(draft_id)       // session-scoped cleanup
 ```
 
 - Each call crosses FFI once. The placement spike showed that per-row crossings
@@ -204,42 +190,46 @@ doc.version() -> Json             // opaque frontiers token
 ```ts
 type Seg = string | { id: string };              // key, or list row by $id
 type Path = Seg[];
-type Anchor = { before: string } | { after: string } | {};   // {} = end
+type Anchor = { before: string } | { after: string }; // omitted anchor = end
 
 type Intent =
   | { type: "set";       path: Path; value: unknown }
   | { type: "increment"; path: Path; by: number }
   | { type: "insert";    path: Path; value: object; at?: Anchor; id?: string }
   | { type: "remove";    path: Path; id: string }
-  | { type: "move";      path: Path; id: string; to: Anchor }
+  | { type: "move";      path: Path; id: string; at?: Anchor }
   | { type: "splice";    path: Path; base: string; index: number; delete: number; insert: string };
 
-type Batch = { intents: Intent[]; message?: string; origin: "view" | "cli" | "import" };
+type Batch = { id: string; intents: Intent[]; message?: string; origin: "view" | "cli" };
 ```
 
-- **A batch is atomic.** Start with fork/stage isolation and publish only a
-  completed candidate. Validation observes earlier operations in the same batch,
+- **A batch is atomic.** Validation observes earlier operations in the batch,
   including inserted and removed rows. Rejection leaves state, version and emitted
-  publications unchanged. Loro transactions do not roll back applied operations.
-  Removing staging is a separate optimization requiring equivalent proof.
+  publications unchanged. Loro transactions do not roll back applied operations;
+  the current spike uses in-place edits with recovery at pre-batch frontiers and
+  verifies continued use after rejection. Preserve that proof when porting.
 - **Paths never use indices.** Intents based on an old snapshot still target
   the right row. Intents on removed rows reject with `path_not_found`; they
   are never retargeted.
-- **The host mints `$id`s.** `insert` may carry a caller-chosen `id` when
-  later intents in the same batch need to reference the new row.
+- **The SDK allocates application `$id`s** and Rust validates them. In a
+  transaction, allocation lets later intents reference the new row synchronously;
+  it does not imply acceptance. CLI callers may supply an ID or ask the core to
+  mint one. Ordinary SDK insertion returns its ID after acceptance.
 - **Splice indices are UTF-16**, applied through Loro's `*_utf16` APIs.
 - **Stable error codes:** `path_not_found`, `type_mismatch`, `out_of_range`,
   `duplicate_id`, `stale_base`, `too_large`, `unknown_intent`.
 
 ### 4.6 Host → view
 
-- On mount: `{ type: "state", version, value, issues, status }`.
+- On mount: `{ type: "state", session, sequence, version, value, issues, status }`.
 - After every accepted local batch, CLI batch or remote import:
-  `{ type: "patch", version, ops, origin, batchId? }`. `ops` are path
-  operations keyed by `$id`, derived from Loro diff events.
+  `{ type: "patch", session, previous, sequence, version, ops, issues, origin, batchId? }`.
+  Operations use `$id` paths and come from Loro diff events. Swift sends them over
+  the private bridge; request replies and pushed events share one SDK handler.
 - The SDK applies patches to a deeply frozen, **structurally shared**
-  snapshot. Unchanged rows keep object identity, so Svelte keyed `{#each}`
-  skips them.
+  snapshot. The Svelte adapter assigns it to `$state.raw`; stable keys preserve
+  components and unchanged row identities avoid unnecessary child updates. Authors
+  never apply patches or transport versions themselves.
 - `status` events: `pending` / `saved` / `save-failed`, and later `synced`.
 - Add an owner-session identity and monotonically increasing publication sequence,
   plus the preceding sequence on patches. A gap or new owner session requests a
@@ -257,10 +247,10 @@ type Batch = { intents: Intent[]; message?: string; origin: "view" | "cli" | "im
 
 | Kind of edit | Behavior |
 |---|---|
-| Structural (checkbox, insert, move, remove, set) | Send the intent; the view updates when the patch arrives. The Swift-native control demonstrated low latency, but the Rust prototype currently misses the gates above and needs cheaper publication. Authors write no rollback code. |
+| Structural (checkbox, insert, move, remove, set) | Send the intent; the snapshot updates when the publication arrives. The event-driven Rust spike passes ordinary latency gates. Await acceptance before clearing input or displaying success; authors write no document rollback code. |
 | Text (`bindText`) | The DOM owns the draft while edits are pending. Serialize submissions per binding and retain the draft's authored frontier/parent edit separately from the current merged publication. Recompute queued splices against acknowledged authored ancestry; never apply coordinates calculated after an unacknowledged insertion to an older confirmed string. Historical edits may use `fork_at` plus merge, subject to S2. Composition sends only committed text. Reconcile selection after pending edits settle. |
-| Previews (slider drag, color scrub) | Local SDK overlay; nothing is sent until commit. |
-| Read-after-write | `doc.current` is stale until the patch lands, so intents return `Promise<{ version, ids }>`. Example: `const [id] = (await tasks.insert(v)).ids;` then focus the new row. |
+| Previews (slider drag, color scrub) | Local SDK overlay; explicit set or flush commits it. Incoming publications update confirmed state beneath the overlay; failed commits retain the preview for recovery. |
+| Read-after-write | Ordinary edits resolve after acceptance and incorporation of the publication into this view. `const { id } = await tasks.insert(v)` returns the ID; other ordinary writes resolve void. Await Svelte `tick()` separately for DOM rendering. |
 
 If measurement at large sizes ever demands it, the SDK can add a
 pending-intent overlay rebased on each patch. That is safe because the host
@@ -274,9 +264,14 @@ stays authoritative. Do not build it now.
   decision. Neither automatically implies a SQLite format bump.
 - The owner appends `export_since(lastSaved)` on each coalesced save. It
   writes a checkpoint on close and at a size threshold.
-- A failed save retains the in-memory edits and the lock, and shows the
-  native retry. Close and export wait for a successful save (unchanged).
-- Attachments are unchanged: host-owned immutable blobs.
+- Close/export establish a barrier, drain DOM drafts/previews, finish queued edits
+  and save before capture/teardown. Swift coordinates but cannot skip the renderer
+  drain. Read-only capture views cannot mutate the owner.
+- A failed save retains the in-memory edits and lock and shows native retry. A
+  cancelled close restores normal service; successful close destroys views.
+- Attachments stay host-owned immutable blobs. Their SDK import waits for durable
+  bytes, accepted reference insertion and saving; adapt the commit callback to the
+  async write contract.
 
 ### 4.9 Sync (design only; built after launch)
 
@@ -297,44 +292,35 @@ stays authoritative. Do not build it now.
 - CLI and agent edits are ordinary local batches, so they sync like any
   other edit.
 
-## 5. SDK and DSL: what stays, what changes
+## 5. SDK and DSL decisions
 
-**Stays:**
+The authoritative contract and examples are in
+[LoroRustCutover §3](LoroRustCutover.md#3-author-facing-dsl-and-async-sdk).
 
-- `defineDocument` / `s` descriptors as **pure data**. The Rust core
-  interprets `state.schema.json`.
-- `useDocument(schema)`, `doc.current` (immutable snapshot), `doc.fields.*`,
-  `doc.at(row)`, `bindText`, `bindValue`, `<Slop>` with its `icon` and
-  `exportView` snippets.
-- `ctx`: `capture`, `attachments`, `theme`, `window`, `reportError`.
-- `$id` application identity (host-minted, never a Loro container ID).
-- `issues` (preserve-and-flag). It is needed once merges happen and is
-  computed in the core.
-
-**Changes:**
-
-- **Handles are intent builders** that return `Promise<Accepted>`.
-  `doc.change(tx => …)` stays a synchronous callback. It collects intents
-  into one atomic batch and returns a promise. Reads come from the snapshot;
-  `tx` is write-only (already today's rule).
-- **Status:** `doc.status` is `pending` | `saved` | `save-failed` (later
-  `synced`), and `flush()` means durable locally. `full` becomes host UI only.
-- **Counters:** retain a distinct counter concept while S4 evaluates alternatives.
-  A per-writer contribution map is a hypothesis, not a fix. Specify arithmetic,
-  overflow, concurrent set/increment behavior and growth with fresh session peers
-  before choosing its representation. Do not replace `s.counter()` with a number
-  register as part of the placement experiment.
-- **Spike schema subset:** `text`, `string`, `boolean`,
-  `number({int?, min?, max?})`, `enum`, `optional`, `object`,
-  `list(object)`. S1 begins smaller as specified below. This is a coverage limit,
-  not permission to remove records, scalar lists, trees or rich text from production.
-- **JSON import:** retain destination-version checking, identity preservation and
-  staged translation until the core proves equivalent behavior. Calling replacement
-  one batch does not remove the translation work or authorize replacing collections.
-- **Compatibility gate:** asynchronous handles change observable ABI behavior.
-  Production cutover needs a separate explicit decision about supported documents
-  and authored apps. No reset, old-package refusal, fixture replacement or template
-  retirement is authorized by this plan's spike phase. Preserve all sealed bytes.
+- Keep pure-data `defineDocument` / `s`, `useDocument`, immutable `doc.current`,
+  typed fields, `doc.at`, bindings, `<Slop>` and `ctx` services. No raw CRDT/bridge
+  concepts in authored code.
+- Ordinary writes return promises: insert resolves `{ id }`; other edits resolve
+  void. `change<R>` collects synchronously and resolves `R` after batch acceptance.
+  Its write-only transaction handles synchronously allocate row references. Reject
+  async/nested collectors and escaped transaction handles; callback failure sends
+  nothing. Reads remain the last published snapshot, not a speculative document.
+- `await` means accepted and published into this view, not durable or DOM-rendered.
+  `flush()` drains drafts/previews/queued writes and establishes local durability.
+  Operation rejection and storage failure remain distinct.
+- Integer counters use the tested contribution-map design with exact safe-integer
+  increments/decrements and overflow rules. No reset API: subtracting an observed
+  total is not a concurrent reset. Fix the new anomaly projection/storage contract
+  before exposing the type beyond the spike.
+- Supported vocabulary grows with core/SDK/binding fixtures. The approved archival
+  allows unsupported descriptors to remain unavailable until their slops return.
+  It does not permit silently accepting unimplemented semantics.
+- JSON import retains destination-version checks and identity-preserving operation
+  translation within an atomic batch. Never replace existing collections wholesale
+  merely because a replacement has one batch envelope.
+- **Compatibility decision is made:** runtime contract 4 / ABI 2, no contract-3
+  migration, archival and incremental restoration. Sealed bytes stay immutable;
+  active contracts change with implementation, not this plan alone.
 
 ## 6. Spikes
 
@@ -347,11 +333,12 @@ Reuse the engine-placement harness (`spikes/engine-placement/run.ts`, `web/`,
 `Sources/Harness`) and the document-authority harness
 (`spikes/document-authority/Sources/Harness`) wherever possible.
 
-S1 is the first go/no-go and includes patch correctness and a minimal text-ancestry
-screen. Complete S2, S3, S4, S5 and the compatibility/coverage decision before a
-production cutover. S6/S7 remain later work. Initial implementation is deliberately
-incremental: report completed gates and gaps rather than claiming S1 passed after
-the crate merely compiles.
+S1 includes patch correctness and a minimal text-ancestry screen. S2–S5 guide
+coverage expansion; spike success does not replace real app/SDK proof. The agreed
+cutover distinguishes the limited signed trial from broad release: actual system
+IME gates broad release, while memory/publication budgets stay open until measured
+or explicitly adjusted with evidence. Follow the cutover's current gate table.
+S6/S7 remain later work.
 
 ### S1: `hitslop-core` in Rust, native and WASM (go/no-go)
 
@@ -400,10 +387,11 @@ the crate merely compiles.
   - Every fixture passes identically in Bun and Swift.
   - The xcframework builds from a script under the pinned Xcode/XcodeGen and
     signs with the hardened runtime and the current entitlements.
-  - **Atomicity:** reject a later operation after earlier operations have executed
-    on the stage, proving unchanged live state/version and no publication. In a
-    disposable source copy, bypass staging and verify the same owner test fails
-    for partial mutation. Never run a sensitivity script against production source.
+  - **Atomicity:** reject a later operation after earlier operations have executed,
+    proving unchanged live state/version and no publication plus continued editing,
+    drafting, byte export and reopening. In a disposable source copy, bypass the
+    isolation/recovery mechanism and verify the owner test detects partial mutation.
+    Never run a sensitivity script against production source.
 - **Kill or adjust:**
   - If the UniFFI/xcframework toolchain can't be made reproducible in CI,
     evaluate `swift-bridge` or a C ABI with cbindgen before abandoning the
@@ -433,7 +421,7 @@ the crate merely compiles.
   - A focused-row removal blurs cleanly without resurrecting the row.
   - A failed save keeps the DOM draft.
   - A system IME (Japanese/Chinese) manual gate is recorded with the enabled
-    input sources.
+    input sources before broad release; the approved limited trial may precede it.
 - **Output:** the `bindText` contract, plus SDK-boundary Bun tests with a
   fake host for the non-IME cases.
 
@@ -495,7 +483,8 @@ the crate merely compiles.
 ### S5: Patch publication and snapshot structural sharing
 
 The correctness subset is part of S1; this phase expands randomized coverage and
-proves rendering cost. It is a cutover gate, not optional follow-up work.
+proves rendering cost. Correctness blocks integration; the complete 2 ms budget
+remains an explicit measurement gate under the cutover's trial/release policy.
 
 - **Question:** Are `$id`-keyed patches derived from Loro diff events correct
   and cheap, and does the SDK's structural sharing keep Svelte re-renders
@@ -550,65 +539,29 @@ proves rendering cost. It is a cutover gate, not optional follow-up work.
   - The platform-specific code is limited to lock, path, lifecycle and IPC
     adapters.
 
-## 7. Conditional production phases (not authorized by starting the spike)
+## 7. Agreed production cutover
 
-Before these phases, review complete semantics/identity/issues coverage, S1–S5
-evidence and compatibility. The async ABI requires a deliberate product decision:
-preserve supported consumers through a proved design, or explicitly authorize a
-prelaunch reset. The current contract remains in force until then. Do not infer a
-reset from this proposal or weaken tests to make the smaller interpreter pass.
+[LoroRustCutover.md](LoroRustCutover.md) owns the complete milestone sequence:
 
-1. **Core**
-   - Promote `hitslop-core` into the repo (e.g. `crates/hitslop-core`), with
-     reproducible xcframework and WASM build scripts wired into
-     `bun run build`.
-   - The fixture table becomes the semantics contract, run in Bun and Swift.
-   - TypeBox owns the intent, patch, state and descriptor contracts; run
-     `bun run schema:generate`.
-2. **Swift owner**
-   - `DocumentOwner` replaces the engine half of `HitSlopWasm/WasmSession.swift`.
-   - `Storage.swift` keeps its SQLite role but stores core-exported bytes.
-   - `SocketServer.swift` gets the new method set.
-   - `DocumentCommand.swift` / `NativeCLI.swift` implement forward-or-own.
-   - Delete `headless.js`, the headless page in `SchemeHandler.swift`, and the
-     Loro resources in `RuntimeCatalog.swift`. Rename the module to
-     `HitSlopDocument`.
-3. **SDK**
-   - Rewrite `packages/document/src` (`document.ts`, `operations.ts`,
-     `handles.ts`, `projection.ts`, `session.ts`, `json-import.ts`,
-     `storage.ts`, `boot.ts`) around intent builders, the patch-driven
-     snapshot store, `bindText` per S2, and previews.
-   - `slop dev` hosts the WASM core in the page.
-   - Introduce the approved ABI change with new fixtures; never rewrite sealed ones.
-4. **CLI** (`packages/cli`)
-   - `get`/`apply`/`batch`/`import`/`schema` use the intent shape.
-   - Remove `compact` unless S1 shows a checkpoint command is still useful.
-   - Apply the separately approved runtime compatibility policy.
-5. **Slops**
-   - Port Quick Checklist, then Small Expenses as the second black-box
-     fixture. Preserve the active template inventory; a smaller product catalog
-     requires a separate product decision and is not a placement optimization.
-   - Update the `init` starter and the embedded `hitslop-document` skill.
-   - Update README examples only for the API actually selected and proved.
-6. **Contracts and docs**
-   - Rewrite the affected lines of `AGENTS.md` and
-     `docs/engineering-contract.md`:
-     - "Loro in the WebView owns live state" becomes host ownership via
-       `hitslop-core`.
-     - "no second engine" stays true (one core).
-     - The collaboration-readiness line is updated.
-   - Update `docs/versioning.md`, `docs/testing.md` and the five-column test
-     ledger.
-   - Keep sealed runtime bytes and release records as history.
-7. **Later:** sync (S6 → production), iOS and Tauri (S7 → production),
-   additional descriptors as slops return.
+1. M0: async contracts, reset policy and archival preparation.
+2. M1: native/WASM builds, bindings and signed app/helper packaging.
+3. M2: SDK and Swift-owner integration, publication delivery, drafts and barriers.
+4. M3: Quick Checklist end-to-end slice and production measurements.
+5. M4: new compatibility consumers, coverage audit and trial packaging.
+6. M5: limited signed trial, then additional types/slops and broad-release gates.
+
+The reset/archival decision is approved; do not repeatedly request it. Keep the
+existing native client and update active contracts alongside implementation.
+Retire old compatibility promises explicitly while preserving their sealed
+artifacts. Remove obsolete implementations only after replacement paths are wired
+and their still-promised behavior has an independent test owner.
 
 ## 8. Risks
 
 | Risk | Mitigation |
 |---|---|
 | Rust/UniFFI toolchain adds build and CI complexity | S1 requires a reproducible scripted build; `swift-bridge`/cbindgen fallback; a prebuilt xcframework cached in CI |
-| Rust panics crash or invalidate the owner | Use unwind-capable native builds and boundary containment; never keep using a potentially mutated owner after a panic. Recovery reloads durable state under the lock. Catching panics does not catch OOM/abort; document platform-specific limits and fuzz bounded imports. |
+| Rust panics crash or invalidate the owner | Use unwind-capable native builds and boundary containment; never keep using a potentially mutated owner after a panic. Retain the lock and available drafts; explicit recovery distinguishes durable state from potentially lost unsaved edits. Do not silently reload and call it a save retry. Catching panics does not catch OOM/abort; document platform-specific limits and fuzz bounded imports. |
 | Decoding untrusted bytes in the host's crash boundary | Allocation limits, size caps before import, and fuzzing `open`/`import` in S1 and S6 |
 | Full history growth | Capacity checks stay; history pruning remains deferred to the sync design |
 | Peer-ID reuse | Peer IDs are never persisted (unchanged); fresh per session |
@@ -620,12 +573,9 @@ reset from this proposal or weaken tests to make the smaller interpreter pass.
 - Should undo (deferred) use Loro's `UndoManager` in the core, scoped per
   origin so a CLI edit isn't undone by Cmd-Z in the window? Decide before
   freezing the batch `origin` field.
-- Should accepted confirmation (fast) or durable confirmation (spike 3's
-  recommendation) be the default for `await intent`? Proposed: resolve on
-  accepted, with `flush()` for durability; S2 and S3 decide.
-- How is the patch granularity for text (full string vs. delta) chosen per
-  field? Proposed: delta for fields with an active `bindText`, full string
-  otherwise.
+- Text publications currently set the changed field's full string; draft replies
+  also carry reconciled selection. A future text-delta optimization must preserve
+  the same SDK semantics and be justified by long-field measurements.
 - Does the Durable Object validate schema on append, or is that deferred
   until abuse appears? Proposed: room-level auth only at first; the core can
   validate later without a protocol change.
