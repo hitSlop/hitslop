@@ -27,7 +27,10 @@ const packages = fixtures
 for (const name of (await readdir("tests/compatibility")).sort()) {
   // Preserved template snapshots mirror the release corpus; fixtures keep contract specimens.
   if (fixtures && name.startsWith("template-")) continue;
-  if (await Bun.file(`tests/compatibility/${name}/fixture.json`).exists())
+  if (
+    (await Bun.file(`tests/compatibility/${name}/fixture.json`).exists()) &&
+    (await Bun.file(`tests/compatibility/${name}/fixture.json`).json()).runtimeContract === 4
+  )
     packages.push({
       name: `preserved-${name}`,
       source: resolve("tests/compatibility", name, "document"),
@@ -90,7 +93,7 @@ try {
       assert.equal(await digest(source), before, `Master changed: ${name}`);
       result.passed = true;
       console.log(
-        `PASS ${name}: headless open, authored render, PNG/PDF, reopen (${((performance.now() - started) / 1000).toFixed(1)}s)`,
+        `PASS ${name}: native open, authored render, PNG/PDF, reopen (${((performance.now() - started) / 1000).toFixed(1)}s)`,
       );
     } finally {
       result.seconds.total = (performance.now() - started) / 1000;

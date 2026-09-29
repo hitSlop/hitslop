@@ -2,6 +2,10 @@
 
 A shipped slop pins `assets/runtime.json`. Protect its data and host contract across runtime releases. Template business logic belongs to the authored app; new slops need no bespoke platform test code. The approved [test ledger](test-ledger.md) records the cleanup decisions.
 
+Contract 4 now selects the native Rust owner and ABI 2. Production semantic tests live in `crates/hitslop-core/tests`; `owner.test.ts` exercises the actual WASM binding and renderer SDK. The old TypeScript engine lives only in `packages/document/test-support/contract3`; its tests preserve historical evidence and do not establish support for retired descriptors. Contract-3 fixtures and release artifacts are verified unchanged, then refused by the current reader. New contract-4 fixtures and the plain-JS/Svelte consumers prove the new ABI.
+
+Local validation compiles bindings, runtime resources, the helper and test bundles. App/release packaging is deferred; signing/notarization and installed-build validation run through GitHub Actions later. `bun scripts/v1/bench-native-owner.ts` measures closed 1k commands and concurrent helper ownership without launching the app.
+
 ## Everyday checks (Bun only)
 
 ```sh
@@ -9,7 +13,7 @@ bun run check
 bun run test
 ```
 
-`check` verifies generated schemas, runtime provenance, immutable history, skills and TypeScript/Svelte types. Discovered slops with standard settings share one Svelte typecheck program; custom project configurations keep their own checks. Shared dependencies are loaded once. The check needs source and installed dependencies, not a native helper or generated template packages. `test` runs kernel/schema/CLI tests, builds the candidate runtime in a temporary directory, replays every preserved fixture through SQLite, and compiles and opens every bundled template headlessly. No Swift build or PNG rendering runs in this tier.
+`check` verifies generated schemas, runtime provenance, immutable history, skills and TypeScript/Svelte types. Discovered slops with standard settings share one Svelte typecheck program; custom project configurations keep their own checks. Shared dependencies are loaded once. The check needs source and installed dependencies, not a native helper or generated template packages. `test` runs kernel/schema/CLI tests, builds the candidate runtime in a temporary directory, replays every preserved fixture through SQLite, and compiles and opens every bundled template through the Rust WASM test binding. No Swift build or PNG rendering runs in this tier.
 
 Kernel tests name their failure modes at the top of each file. Domain rules use literal or independently modeled outcomes. Bindings, handles, atomic batches, failed saves, attachments and convergence are platform contracts; application formulas, decorative CSS and private engine bookkeeping are not.
 
@@ -30,7 +34,7 @@ bun run test:storage
 bun scripts/v1/crash-matrix.ts --native
 ```
 
-`build` generates contracts/runtime resources, builds skills, and compiles the helper; it does not build the template corpus. Native owner runners prepare only Quick Checklist, Small Expenses, and the three presentation fixtures, with black-box packages under `generated/v1/native-fixtures`.
+`build` generates contracts/runtime resources, builds skills, and compiles the helper; it does not build the template corpus. Native owner runners prepare only Quick Checklist and the three presentation fixtures, with black-box packages under `generated/v1/native-fixtures`.
 
 Run this tier when Apple code, the bridge, document/runtime code, compatibility fixtures, template inputs or build scripts change. Swift tests cover envelopes, isolation, ownership, WebKit lifecycle, draft/save/export ordering, render recovery and host interaction. Cancellation observes an acquired lease and subsequent release. Storage faults distinguish rejection before writing from loss of the reply after a successful write. They are scoped to one store bridge.
 

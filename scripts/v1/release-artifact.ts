@@ -14,7 +14,7 @@ import { validateTemplate } from "./template-cache";
 const app = resolve(process.argv[2] ?? "generated/v1/app/hitSlop.app");
 const helper = join(app, "Contents/Helpers/hitslop-native");
 const roots = [
-  ...new Bun.Glob("**/runtimes/*/headless.js").scanSync({ cwd: app, onlyFiles: true }),
+  ...new Bun.Glob("**/runtimes/*/identity.json").scanSync({ cwd: app, onlyFiles: true }),
 ].map((p) => dirname(dirname(join(app, p))));
 const catalogs = [...new Set(roots)];
 assert.ok(catalogs.length >= 2, "Host and helper must both bundle runtimes");
@@ -55,7 +55,7 @@ try {
   const starters = join(app, "Contents/Resources/StarterTemplates");
   assert.deepEqual((await readdir(starters)).sort(), selected.map((slug) => slug + ".slop").sort());
   const exhaustive = process.env.HITSLOP_TEMPLATE_EXHAUSTIVE === "1";
-  const fixtures = ["quick-checklist", "small-expenses"];
+  const fixtures = ["quick-checklist"];
   for (const fixture of fixtures)
     assert.ok(selected.includes(fixture), `Missing release fixture: ${fixture}`);
   for (const slug of selected) {

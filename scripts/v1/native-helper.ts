@@ -12,7 +12,7 @@ try {
   const helpers = join(folder, "hitSlop.app/Contents/Helpers");
   await mkdir(helpers, { recursive: true });
   const build = resolve("apps/apple/Packages/HitSlopApple/.build/debug");
-  for (const name of ["hitslop-native", "HitSlopApple_HitSlopWasm.bundle"])
+  for (const name of ["hitslop-native", "HitSlopApple_HitSlopDocument.bundle"])
     await cp(join(build, name), join(helpers, name), { recursive: true });
   const document = join(folder, "List.slop");
   await cp("generated/v1/native-fixtures/quick-checklist.slop", document, { recursive: true });
@@ -44,18 +44,30 @@ try {
       "apply",
       master,
       "--op",
-      JSON.stringify({ type: "text.replace", path: ["title"], value: "Must refuse" }),
+      JSON.stringify({
+        type: "splice",
+        path: ["title"],
+        index: 0,
+        delete: 0,
+        insert: "Must refuse",
+      }),
     ],
     "writable copy",
   );
   assert.ok(!(await readdir(master)).includes("state"), "Bundled master acquired mutable state");
   assert.equal(await digest(master), masterBytes, "Bundled master bytes changed");
-  await run(["get", document]);
+  const initial = JSON.parse(await run(["get", document]));
   await run([
     "apply",
     document,
     "--op",
-    JSON.stringify({ type: "text.replace", path: ["title"], value: "Relocated native edit" }),
+    JSON.stringify({
+      type: "splice",
+      path: ["title"],
+      index: 0,
+      delete: initial.title.length,
+      insert: "Relocated native edit",
+    }),
   ]);
   assert.equal(JSON.parse(await run(["get", document])).title, "Relocated native edit");
   for (const format of ["png", "pdf"]) {
@@ -69,10 +81,10 @@ try {
     );
   }
   // A broken relocated resource must fail even while valid checkout resources exist.
-  const bundle = join(helpers, "HitSlopApple_HitSlopWasm.bundle");
+  const bundle = join(helpers, "HitSlopApple_HitSlopDocument.bundle");
   const runtime = [
-    join(bundle, `runtimes/${identity.runtimeContract}/headless.js`),
-    join(bundle, `Contents/Resources/runtimes/${identity.runtimeContract}/headless.js`),
+    join(bundle, `runtimes/${identity.runtimeContract}/index.js`),
+    join(bundle, `Contents/Resources/runtimes/${identity.runtimeContract}/index.js`),
   ];
   const headless = (
     await Promise.all(
@@ -80,11 +92,13 @@ try {
     )
   ).find(Boolean);
   assert.ok(headless, "Missing embedded runtime");
-  await writeFile(
-    headless,
-    "webkit.messageHandlers.storage.postMessage({method:'failed',error:'Relocated runtime marker'});",
+  await rm(headless);
+  // Closed state edits need no JS resources. Rendering must refuse the broken bundle.
+  await run(["get", document]);
+  await run(
+    ["export", document, "--format", "pdf", "--output", join(folder, "broken.pdf")],
+    "Incomplete runtime",
   );
-  await run(["get", document], "Relocated runtime marker");
   console.log(
     "PASS relocated helper: closed editing, PNG/PDF export, no Bun, no checkout runtime fallback",
   );

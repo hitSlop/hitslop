@@ -2,8 +2,8 @@
 import { test, expect } from "bun:test";
 import { ThemeController } from "../src/theme-runtime";
 import { defineTheme } from "../src/theme";
-import { Document } from "../src/document";
-import { Session } from "../src/session";
+import { Document } from "../test-support/contract3/document";
+import { Session } from "../test-support/contract3/session";
 import { MemoryStore } from "../src/memory";
 import { defineDocument, s } from "../src/schema";
 

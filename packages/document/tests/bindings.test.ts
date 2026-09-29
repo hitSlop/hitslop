@@ -1,10 +1,10 @@
 // Guards gesture commit, autosave, retry, Unicode composition and caret rebasing.
 import { expect, test } from "bun:test";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { defineDocument, s } from "../src/schema";
 import { MemoryStore } from "../src/memory";
-import { bindValue } from "../src/bind-value";
-import { bindText } from "../src/bind-text";
+import { bindValue } from "../test-support/contract3/bind-value";
+import { bindText } from "../test-support/contract3/bind-text";
 
 class Control extends EventTarget {
   value = "";
@@ -28,7 +28,10 @@ test("browser-truncated text display never deletes undisplayed document text on 
   control.type = "text";
   let displayed = "";
   // HTML inputs can cap programmatic values; this models the observable DOM boundary.
-  Object.defineProperty(control, "value", { get: () => displayed, set: (value: string) => displayed = value.slice(0, 3) });
+  Object.defineProperty(control, "value", {
+    get: () => displayed,
+    set: (value: string) => (displayed = value.slice(0, 3)),
+  });
   const binding = bindText(control as any, doc.fields.title);
   expect(control.value).toBe("abc");
   await doc.flush();

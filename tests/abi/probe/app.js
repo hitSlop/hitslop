@@ -18,10 +18,9 @@ export default {
       doc.change((tx) => {
         const rows = doc.current.rows;
         tx.fields.title.replace("Edited 🦊 café");
-        tx.fields.level.set(10);
-        tx.fields.mode.set("b");
+        tx.fields.hits.increment(1);
         tx.fields.rows.move(rows[0].$id, { after: rows.at(-1).$id });
-        tx.fields.rows.item(rows[0].$id).name.replace("changed");
+        tx.fields.rows.item(rows[0].$id).text.replace("changed");
       });
     const heading = document.createElement("h1");
     const render = () => (heading.textContent = doc.current.title);

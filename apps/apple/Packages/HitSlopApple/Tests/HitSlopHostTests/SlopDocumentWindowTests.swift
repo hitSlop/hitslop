@@ -60,7 +60,7 @@ private func documentWindowFixture(resizable: Bool) throws -> URL {
     try Data(#"{"format":1,"root":{"kind":"object","properties":{}}}"#.utf8).write(to: root.appendingPathComponent("state.schema.json"))
     try Data("{}".utf8).write(to: root.appendingPathComponent("initial.json"))
     try FileManager.default.createDirectory(at: root.appendingPathComponent("assets"), withIntermediateDirectories: true)
-    try Data(#"{"runtimeContract":3,"minRuntimeRevision":1,"sdkVersion":"3.0.0"}"#.utf8).write(to: root.appendingPathComponent("assets/runtime.json"))
+    try Data(#"{"runtimeContract":4,"minRuntimeRevision":1,"sdkVersion":"4.0.0"}"#.utf8).write(to: root.appendingPathComponent("assets/runtime.json"))
     let resizableJSON = resizable ? "true" : "false"
     let manifest = #"{"runtime":"hitslop-v1","$schema":"https://api.hitslop.com/schemas/v1/manifest.schema.json","author":{"name":"Fixture Author","url":"https://example.com"},"slug":"miniwindow-fixture","title":"Miniwindow Fixture","description":"Tests document miniaturize chrome.","categories":["utilities"],"presentation":{"width":320,"height":240,"resizable":\#(resizableJSON)}}"#
     try Data(manifest.utf8).write(to: root.appendingPathComponent("manifest.json"))

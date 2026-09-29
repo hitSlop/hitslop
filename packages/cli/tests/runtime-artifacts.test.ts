@@ -28,7 +28,10 @@ test("runtime catalogs compare complete contract sets and bytes per contract", a
         protocolVersion: 1,
       }),
     );
+    await mkdir(join(folder, "core"), { recursive: true });
     for (const file of [
+      "core/hitslop_core_wasm.js",
+      "core/hitslop_core_wasm_bg.wasm",
       "index.js",
       "boot.js",
       "headless.js",

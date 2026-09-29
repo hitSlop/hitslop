@@ -166,3 +166,15 @@ A single 9.5 s edit+flush on a 1,000-row document did not reproduce: repeated
 headless edits took 3–7 ms and visible edits 156–194 ms, consistent with the
 window diagnostic above. Evidence:
 `.hitslop/v1-evidence/large-list-edit-timing/{headless,visible}.json`.
+
+## Approved third reset: native Rust ownership (in progress)
+
+The maintainer approved runtime contract 4 / ABI 2, without contract-3 migration,
+and moving every active slop except Quick Checklist into `archive/slops/`. Source
+provenance is retained there; all sealed contract-3 artifacts and release records
+remain immutable. Archived slops are restored as supported descriptors return.
+
+The promoted Rust core is shared by native UniFFI and browser/test WASM bindings.
+Native ownership uses SQLite format 2, storage reader revision 2. The new owner's
+admission gate refuses old contracts before creating state. The production runtime
+selector now selects contract 4. ABI-2 renderer/SDK and live/closed native CLI routes are active in development. Signing, release packaging and the installed trial remain pending; this is not a release record.

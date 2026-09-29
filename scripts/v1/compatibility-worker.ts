@@ -31,6 +31,8 @@ export function loadRuntime(root: string) {
 }
 
 async function initializeRuntime(root: string) {
+  const identity = await Bun.file(join(root, "identity.json")).json();
+  if (identity.runtimeContract === 4) return (await import("./core-reader")).loadCoreReader(root);
   const loro = await import(pathToFileURL(join(root, "loro/index.js")).href);
   await loro.default({
     module_or_path: await Bun.file(join(root, "loro/loro_wasm_bg.wasm")).bytes(),
@@ -61,11 +63,20 @@ export type PeerCase = {
 export type RuntimeResult = { state: unknown; stateHash: string; issues?: unknown };
 const hash = (value: unknown) => createHash("sha256").update(canonical(value)).digest("hex");
 async function openDocument(runtime: any, root: string) {
+  if (runtime.contract === 4) {
+    const requirements = await Bun.file(join(root, "assets/runtime.json")).json();
+    if (requirements.runtimeContract !== 4 || requirements.minRuntimeRevision > 1)
+      throw new Error("Unsupported runtime contract; no migration");
+  }
   const descriptor = await Bun.file(join(root, "state.schema.json")).json();
   const initial = await Bun.file(join(root, "initial.json")).json();
   const definition = runtime.fromDescriptor(descriptor);
   return () =>
-    SQLiteStore.open(root).then((store) => runtime.Document.open(definition, store, initial));
+    SQLiteStore.open(
+      root,
+      undefined,
+      runtime.contract === 4 ? 2 : runtime.runtimeIdentity.storageRevision,
+    ).then((store) => runtime.Document.open(definition, store, initial));
 }
 
 export async function runPeer(runtime: any, input: PeerCase): Promise<RuntimeResult> {
@@ -74,8 +85,8 @@ export async function runPeer(runtime: any, input: PeerCase): Promise<RuntimeRes
     const open = await openDocument(runtime, root);
     let doc = await open();
     try {
-      for (const path of input.imports) doc.importUpdates(await Bun.file(path).bytes());
-      if (input.operations.length) doc.applyAll(input.operations);
+      for (const path of input.imports) await doc.importUpdates(await Bun.file(path).bytes());
+      if (input.operations.length) await doc.applyAll(input.operations);
       await doc.flush();
       await Bun.write(input.exportTo, doc.exportUpdates());
       const state = doc.current;
@@ -114,9 +125,9 @@ export async function runCase(runtime: any, input: RuntimeCase): Promise<Runtime
         for (const edit of scenario.handles ?? []) {
           let handle = doc.fields;
           for (const field of edit.path) handle = handle[field];
-          handle[edit.method](...edit.args);
+          await handle[edit.method](...edit.args);
         }
-        if (scenario.operations?.length) doc.applyAll(scenario.operations);
+        if (scenario.operations?.length) await doc.applyAll(scenario.operations);
         assert.deepEqual(doc.current, scenario.expected);
       }
       if (phase === "checkpoint") await doc.compact();

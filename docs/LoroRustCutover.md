@@ -11,6 +11,46 @@ The implementation has not landed merely because the plan is agreed. Update
 `AGENTS.md`, engineering/versioning/testing contracts and the test ledger alongside
 each milestone's actual behavior, rather than postponing them to the end.
 
+## Implementation checkpoint
+
+Contract 4 / ABI 2 is selected in development. The native owner is wired into the
+existing WebView host and native CLI; native page boot no longer initializes Loro.
+The public SDK and Svelte adapter use asynchronous acceptance, immutable patches,
+transaction collectors, DOM text drafts, boolean bindings/previews and save barriers.
+Quick Checklist and the starter await acceptance. Browser development uses the same
+Rust core through WASM. JSON replacement/import is explicitly refused in the trial.
+
+The production WebView/public SDK and CLI cutover is implemented. Automated checks
+cover native ownership/reopen, failed-save retention, real WebKit SDK and live/closed
+CLI integration, plain-JS and sealed Svelte ABI-2 consumers, synthetic composition,
+attachments, themes, PNG/PDF, renderer recovery and SQLite crash boundaries.
+Stable derived row identities retain addressability after duplicate-ID merges.
+The universal macOS XCFramework, WASM binding, helper and test bundles build locally.
+No app/release bundle, signing, notarization, publication or commit was made.
+
+Local evidence: `bun run check`; 168 Bun tests; 60 compatibility replay cases and
+one bundled-template open/reopen; 25 Rust core tests plus the FFI panic-containment
+test; 143 Swift tests; eight native CLI tests; ten SQLite crash-matrix cases;
+relocated-helper checks; plain-JS/Svelte/Checklist PNG/PDF smoke; and packed npm
+consumer installation/type/dev checks. Closed 1k helper edits measured **121.98 ms
+p95** across 20 samples in the debug helper, within 150 ms. Ten concurrent helper
+pairs preserved every counter increment. These are local checks, not a claim that
+GitHub Actions or the installed signed app has run.
+
+Remaining gates: production performance measurements (including matched host/
+WebContent memory and isolated complete publication cost), actual Japanese/Chinese
+system IME, GitHub Actions signing/notarization, and the installed limited trial.
+The production window diagnostic exposed repeated row lookup and textarea layout
+work; immutable row indexes, batched sizing and lazy menu portals reduce that work.
+**The performance gate still fails:** one 1k-window diagnostic measured 441 ms
+acceptance p95 and 183 ms drain; 5k rows repeatedly exceeded the startup deadline.
+A WebContent sample during opening was dominated by DOM insertion. This needs
+further production UI/SDK profiling; it is not a native-Rust language comparison.
+See the [local evidence record](evidence/loro-cutover-2026-09-29.json). Do not substitute
+the spike's faster numbers or claim the 1k/5k performance envelope is ready.
+The installed trial and release checks remain deliberately deferred; functional
+implementation and automated integration testing do not require a release.
+
 ## 1. Decision and current evidence
 
 One host-owned `hitslop-core` (Rust on Loro) owns document semantics. Swift owns
@@ -117,6 +157,9 @@ or import the engine. Revision tokens and bridge messages are private.
 | `doc.change<R>(tx => R, options?)` | `Promise<R>`; one atomic batch, resolving with the callback result after acceptance |
 | `doc.flush()` | `Promise<void>`; drains drafts, previews and queued writes and waits for durable saving |
 | `doc.current` | Immutable, reactive snapshot; no same-tick read-your-write guarantee |
+| `doc.at(snapshotRow)` | Typed handle resolved from snapshot identity |
+| `list.item(id)` | Typed by-ID handle, also available on transaction lists |
+| `decrement(n = 1)` | SDK sugar for `increment(-n)`; no separate wire intent |
 
 An accepted write is visible in the SDK snapshot before its promise resolves.
 Svelte DOM rendering may still require `await tick()`. Acceptance does not mean
@@ -217,15 +260,15 @@ leave an unreferenced immutable blob, never a dangling saved reference.
   Expenses; records, scalar lists, trees and rich text follow their first consumer.
 - Counters use exact safe-integer increments/decrements and the tested overflow
   policy. There is no reset API in this milestone: decrementing a stale observed
-  total is not a concurrent reset. Specify anomalous-counter projection in the
-  new ABI; do not silently reuse the old `number | null` promise for raw maps.
+  total is not a concurrent reset. Counter snapshots expose exact safe integers or `null` plus an issue; anomalous
+  stored maps remain preserved internally and are never exposed as numeric values.
 - Preserve stored anomalies. Stable derived identities and the complete issue
   contract are production coverage requirements, not implied by the checklist
   subset. Reads must not repair data or mint stored identities.
-- JSON replacement retains destination-version checks and identity-preserving
-  translation to operations. One atomic batch is the commit boundary, not
-  permission to replace existing collections wholesale. Creation from immutable
-  `initial.json` stays separate from replacement of an existing document.
+- JSON replacement of existing documents is explicitly unsupported in contract 4
+  during the trial; reject before mutation. Creation from immutable `initial.json`
+  remains supported. A later replacement port must preserve destination-version
+  checks, matching identities and atomic translation, with dedicated fixtures.
 - Keep SQLite format 2. Record the new Loro/counter layout's minimum-reader storage
   revision separately from runtime contract 4 and ABI 2; refuse old packages before
   opening storage. A format bump is not implied by moving the engine.
@@ -242,7 +285,7 @@ crates/hitslop-core-wasm/     # wasm-bindgen / browser and test binding
 packages/schema/             # authoritative TypeBox contracts and generation
 packages/document/           # ctx ABI, SDK, Svelte adapter and page runtime
 packages/cli/                # authoring, native forwarding, runtimes/4/ for dev
-HitSlopDocument              # replaces engine role of HitSlopWasm in Apple package
+HitSlopDocument              # native owner; replaces former HitSlopWasm module
 examples/slops/quick-checklist/ # first port and limited trial
 archive/slops/               # other slops, restored as capabilities land
 ```
@@ -278,16 +321,37 @@ and checks discover the intended active set without rewriting sealed history.
 Promote the Rust core and native/WASM adapters into `crates/`; wire generated
 contracts and repeatable XCFramework/WASM builds into repository scripts. Add the
 native binding to app/helper and exercise literal fixtures through both bindings.
-Validate signing, notarization and matching runtime packaging before the trial;
+Validate matching runtime packaging locally; signing and notarization run through
+GitHub Actions before the trial. Do not make a local app/release build yet;
 ordinary build commands remain distinct from release/notarization commands.
+CI installs pinned Rust, the WASM target and matching wasm-bindgen CLI. Ubuntu
+builds WASM before SDK tests through a platform-neutral command; macOS builds both
+bindings. Include crates/toolchain/lockfiles in native path filters and cache keys,
+and prepare Rust in release jobs too. `apple:build` is unsigned; use the release
+GitHub Actions release path for Developer ID/notarization evidence. Local app/release
+packaging is deferred by the maintainer; no public release is implied.
 **Exit:** native/WASM fixtures and byte replay pass, CI runs Rust tests, and the
 app/helper packaging path is verified. Toolchain fallbacks are evidence-driven.
 
-### M2: SDK and owner integration
+### M2a: first real-app slice
 
-Build the async handles, collector, snapshot store, bindings, previews and new ABI
+Create/open Quick Checklist in the existing app, render the native owner snapshot,
+accept one async checkbox edit, save, close and reopen it. Include failed-save
+ownership/retry evidence. Implement the minimal owner on production SQLite/writer
+locking, initial state/publication bridge, `useDocument` and `doc.current`.
+Contract-4 documents use only the native owner, never an old-engine fallback. Old
+paths may remain in source only until their replacements are wired.
+**Exit:** real-app checkbox acceptance updates the snapshot before promise resolution;
+save/reopen retains it and failed saving retains ownership.
+
+### M2b: SDK and owner integration
+
+After M2a, implement lists/collectors, then text drafts/previews, real helper routing,
+barriers/capture/attachments, old-path removal, and finally the complete authored
+Checklist/dev/starter/skill port. Build the async handles, collector, snapshot store, bindings, previews and new ABI
 alongside the Swift owner, socket routing, publication broadcast and save barriers.
-Port onto production lock/storage/socket infrastructure. Implement read-only
+Port onto production lock/storage/socket infrastructure: `state/host.lock` is
+discovery, `state/writer.lock` is ownership; never use the spike’s `host.json`. Implement read-only
 capture and attachment-reference durability. Remove obsolete engine, headless
 WebKit and storage-bridge paths only after replacements are wired and tested.
 **Exit:** SDK contract tests and real app/helper race, failure, kill and lifecycle
@@ -331,7 +395,7 @@ and gap. Retain independent literal expectations alongside snapshot/property tes
 
 | Owner | Required cases |
 |---|---|
-| Rust semantics | Atomic rejection and continued use; insert-then-edit batches; nested/chaos imports; values, stable identities and issues; exact counter replay/overflow; text ancestry; identity-preserving JSON import |
+| Rust semantics | Atomic rejection and continued use; insert-then-edit batches; nested/chaos imports; values, stable identities and issues; exact counter replay/overflow; text ancestry; explicit JSON-replacement refusal |
 | Bun SDK / WASM | Async results and snapshot-before-resolution; ordered writes; callback throw/thenable/nesting/escaped handles; duplicate/stale/gapped publications and delayed resync; structural sharing; centralized errors without observer interference |
 | Bindings and authored view | 0/20/100/500 ms text delays; Unicode/selection/composition; deleted focused row; retained failed drafts/composer input; acceptance-dependent notices; unaffected-row render counts |
 | Swift integration | Writer ownership/discovery; same-session duplicate/conflicting requests; unknown outcomes; live `get` barrier; app/CLI open/close races; process kill; save/capacity failure; panic recovery; renderer teardown; read-only capture; attachment-reference durability |

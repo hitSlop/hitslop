@@ -4,7 +4,7 @@ import Foundation
 import HitSlopCore
 import HitSlopHost
 import HitSlopRuntime
-import HitSlopWasm
+import HitSlopDocument
 
 @main struct NativeCLI: AsyncParsableCommand {
   static let configuration = CommandConfiguration(
@@ -155,7 +155,7 @@ struct StorageProbe: ParsableCommand {
 struct RuntimeInfo: AsyncParsableCommand {
   static let configuration = CommandConfiguration(commandName: "runtime-info")
   @MainActor func run() async throws {
-    print(String(decoding: try WasmSession.runtimeCapabilitiesData(), as: UTF8.self))
+    print(String(decoding: try DocumentSession.runtimeCapabilitiesData(), as: UTF8.self))
   }
 }
 struct Theme: AsyncParsableCommand {

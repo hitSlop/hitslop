@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { LoroDoc, LoroMap, LoroText, type LoroCounter, type LoroMovableList } from "loro-crdt";
 import identity from "../../packages/document/src/runtime-identity.json";
-import { Document } from "../../packages/document/src/document";
+import { Document } from "../../packages/document/test-support/contract3/document";
 import { fromDescriptor } from "../../packages/document/src/schema";
 import { runPeer } from "./compatibility-worker";
 import { SQLiteStore } from "../../packages/document/test-support/sqlite";
@@ -21,11 +21,25 @@ import { buildProject } from "../../packages/cli/src/build";
 import { conformance, initial } from "../../tests/abi/fixture-schema";
 import { digest, repository } from "./runtime-artifacts";
 
+if (identity.runtimeContract !== 3)
+  throw new Error(
+    "This fixture author is retired with contract 3; use contract-4 consumers and Rust fixtures.",
+  );
 const corpus = join(repository, "tests/compatibility");
 const prefix = `${identity.runtimeContract}-${identity.runtimeRevision}`;
 const args = process.argv.slice(2);
 const selected = args[0] === "--only" && args.length === 2 ? args[1] : undefined;
-if (args.length && (!selected || ![prefix, `${prefix}-saved-state`, `${prefix}-issues`, `${prefix}-svelte`, `${prefix}-container-values`].includes(selected)))
+if (
+  args.length &&
+  (!selected ||
+    ![
+      prefix,
+      `${prefix}-saved-state`,
+      `${prefix}-issues`,
+      `${prefix}-svelte`,
+      `${prefix}-container-values`,
+    ].includes(selected))
+)
   throw new Error("Usage: author-fixtures.ts [--only <current-revision-fixture-name>]");
 const json = (value: unknown) => JSON.stringify(value, null, 2) + "\n";
 const exists = (path: string) =>
@@ -373,7 +387,7 @@ await create(
   async (document, fixture) => {
     await plainPackage(document, "container-values", "Container values");
     const created = await open(document);
-    const [alpha, beta] = created.current.rows.map(row => row.$id);
+    const [alpha, beta] = created.current.rows.map((row) => row.$id);
     const root = created.current.outline[0]!;
     // Only minted identities come from the engine; all value expectations are literal inputs/fallbacks.
     const expected = {
@@ -383,9 +397,13 @@ await create(
         { name: "", done: false, $id: alpha },
         { name: "Beta", done: true, $id: beta },
       ],
-      outline: [{ label: "Root", $id: root.$id, children: [
-        { label: "Leaf", $id: root.children[0]!.$id, children: [] },
-      ] }],
+      outline: [
+        {
+          label: "Root",
+          $id: root.$id,
+          children: [{ label: "Leaf", $id: root.children[0]!.$id, children: [] }],
+        },
+      ],
     };
     await created.close();
     const store = await SQLiteStore.open(document);
@@ -417,11 +435,16 @@ await create(
       assert.deepEqual(doc.issues, issues);
       await writeFile(join(fixture, "expected.json"), json(expected));
       await writeFile(join(fixture, "issues.json"), json(issues));
-      await writeFile(join(fixture, "scenario.json"), json({
-        operations: [{ type: "text.replace", path: ["title"], value: "Still editable" }],
-        expected: { ...expected, title: "Still editable" },
-      }));
-    } finally { await doc.close(); }
+      await writeFile(
+        join(fixture, "scenario.json"),
+        json({
+          operations: [{ type: "text.replace", path: ["title"], value: "Still editable" }],
+          expected: { ...expected, title: "Still editable" },
+        }),
+      );
+    } finally {
+      await doc.close();
+    }
     const after = await load(document);
     assert.equal(after.generation, before.generation);
     assert.deepEqual(after.checkpoint, before.checkpoint);

@@ -17,7 +17,7 @@ export async function buildRuntime(destinations = runtimeDestinations) {
   try {
     const runtimeDirectory = join(stage, String(identity.runtimeContract));
     await mkdir(runtimeDirectory);
-    for (const entry of ["boot.js", "headless.js"])
+    for (const entry of ["boot.js"])
       await cp(join(repository, "packages/document/src", entry), join(runtimeDirectory, entry));
     await esbuild({
       entryPoints: [join(repository, "packages/document/src/runtime-entry.ts")],
@@ -27,26 +27,10 @@ export async function buildRuntime(destinations = runtimeDestinations) {
       platform: "browser",
       target: "safari17",
       minify: true,
-      plugins: [
-        {
-          name: "loro-external",
-          setup(b) {
-            b.onResolve({ filter: /^loro-crdt$/ }, () => ({
-              path: "./loro/index.js",
-              external: true,
-            }));
-          },
-        },
-      ],
     });
-    const loro = dirname(Bun.resolveSync("loro-crdt/package.json", repository));
-    await mkdir(join(runtimeDirectory, "loro"));
-    for (const entry of await readdir(join(loro, "web"))) {
-      if (entry.endsWith(".js") || entry.endsWith(".wasm") || entry === "snippets")
-        await cp(join(loro, "web", entry), join(runtimeDirectory, "loro", entry), {
-          recursive: true,
-        });
-    }
+    await cp(join(repository, "generated/v1/core/wasm"), join(runtimeDirectory, "core"), {
+      recursive: true,
+    });
     await writeFile(join(runtimeDirectory, "identity.json"), JSON.stringify(identity));
     await verifyReleasedIdentities(await catalog(stage));
     for (const destination of destinations) {

@@ -3,7 +3,14 @@ import { readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { Check } from "typebox/value";
 import { RuntimeRequirementsSchema } from "../../packages/schema/src/runtime";
-import { catalog, digest, releases, repository, runtimeDestinations, templateAppDigest } from "./runtime-artifacts";
+import {
+  catalog,
+  digest,
+  releases,
+  repository,
+  runtimeDestinations,
+  templateAppDigest,
+} from "./runtime-artifacts";
 
 export async function checkCompatibility(
   runtimeRoot = runtimeDestinations[0]!,
@@ -27,6 +34,7 @@ export async function checkCompatibility(
     )
       throw new Error(`Invalid fixture identity: ${name}`);
     const runtime = installed[String(record.runtimeContract)];
+    if (!runtime && record.runtimeContract === 3 && installed["4"]) continue;
     if (!runtime || runtime.identity.runtimeRevision < record.runtimeRevision)
       throw new Error(`Unsupported fixture: ${name}`);
     covered.add(record.runtimeContract);
@@ -99,7 +107,7 @@ export async function checkTemplateSpecimens(packages: string[], root: string) {
     const record = await fixture.json();
     if (record.kind !== "template") continue;
     const document = join(root, name, "document");
-    if (await digest(document) !== record.sha256)
+    if ((await digest(document)) !== record.sha256)
       throw new Error(`Preserved fixture changed: ${name}`);
     sealed.add(await templateAppDigest(document));
   }

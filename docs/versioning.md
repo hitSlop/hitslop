@@ -8,6 +8,12 @@ frozen artifacts. It is not a promise that arbitrary JavaScript runs forever on 
 future WebKit or macOS release; platform or security exceptions need an explicit
 product decision.
 
+## Contract-4 development baseline
+
+The native-owner cutover uses runtime contract 4, ABI 2, and storage reader revision
+2 within SQLite format 2. Contract 3 is refused by the new owner; its sealed bytes
+and records remain historical inputs. The development app/runtime selector now selects contract 4; release packaging and the installed trial remain pending. See [the cutover plan](LoroRustCutover.md).
+
 ## Launch baseline
 
 The second prelaunch reset retires contracts 1 and 2 and their fixtures; no documents
@@ -84,7 +90,7 @@ release.
 
 | Identity | Meaning | Rules |
 |---|---|---|
-| `$id` | A row or tree node | Random 128-bit application register. Immutable through authored operations; survives moves, reopen and matching JSON import. Never a Loro container ID. Rows with a missing, invalid or duplicate ID read a derived `x-` ID (a frozen hash of internal identity, never written); ownership of a duplicated ID never depends on position. |
+| `$id` | A row or tree node | Random 128-bit application register. Immutable through authored operations; survives moves and reopen (JSON replacement is deferred in contract 4). Never a Loro container ID. Rows with a missing, invalid or duplicate ID read a derived `x-` ID (a frozen hash of internal identity, never written); ownership of a duplicated ID never depends on position. |
 | `doc_id` | A logical document | Minted with the database; renewed by Duplicate; copied by a plain file copy, so it never authorizes synchronization. |
 | Loro peer ID | A writing session | Random per session; never persisted or copied. |
 
@@ -101,18 +107,9 @@ dependencies, unsupported formats or schema keys and resource limits still fail.
 Validation stays strict for local writes. Observer exceptions are reported as
 application errors without interrupting accepted edits, other observers, autosave
 or close; transaction callback failures still reject the staged change.
-Live edits are synchronous; saving bounds
+Contract-4 edits resolve asynchronously after acceptance and local publication; saving bounds
 the durable checkpoint plus update payloads at 32 MiB. Ordinary saves append one
-merged update. Counter-changing saves require full checkpoints because regrouping
-floating-point deltas can change accepted values. Optional compaction failure leaves
-acknowledged data saved and does not block close/export. A capacity failure retains live
-work, reports `save-failed` and `full`, and blocks close/export. Further edits and retry
-remain available. `full` clears after successful saving or explicit discard. Discard
-reloads the latest durable state and clears drafts while retaining the writer lock;
-a failed reload preserves unsaved work. Every accepted local commit is emitted once
-on the outbound update stream, independently of persistence; imported peer updates
-are persisted without re-emission. Projected counter types include `null` for overflow;
-creation inputs and local writes still require finite numbers.
+merged update. Exact integer counter contributions replay without regrouping floating-point deltas. Optional checkpoint maintenance falls back to an append when it fits; explicit compaction may refuse without damaging saved state. A capacity failure retains live work, reports `save-failed` and native recovery options, and blocks close/export. Further edits and retry remain available. The authored `full` boolean is retired. Explicit discard reloads durable state and clears drafts while retaining the writer lock; failed restoration preserves unsaved work. Counter creation values and deltas must be safe integers, and a zero delta is refused. Overflow or invalid merged contributions read as `null` plus an issue. Collaboration transport and an outbound synchronization stream remain deferred; core import/export conformance is tested independently.
 
 ## Revisions and contracts
 

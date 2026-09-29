@@ -3,10 +3,11 @@
 import { describe, test, expect } from "bun:test";
 import { LoroDoc, LoroMap, LoroMovableList, LoroText } from "loro-crdt";
 import { defineDocument, fromDescriptor, s, schemaKey } from "../src/schema";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { MemoryStore } from "../src/memory";
 import { derivedID } from "../src/identity";
-import { HostStore, base64 } from "../src/bridge";
+import { base64 } from "../src/bridge";
+import { HostStore } from "../test-support/contract3/host-store";
 
 const schema = defineDocument({
   title: s.text(),
@@ -68,15 +69,18 @@ describe("opening stored documents", () => {
       { title: "Kept", tasks: [] },
       [{ path: [], kind: "unknown-field", detail: "Unknown stored field: extra" }],
     ],
-    ...["Text", 42, null].map(kind => [
-      `text stored as a plain object with kind ${JSON.stringify(kind)}`,
-      (data: LoroMap) => {
-        data.set("title", { kind });
-        data.setContainer("tasks", new LoroMovableList());
-      },
-      { title: "", tasks: [] },
-      [{ path: ["title"], kind: "invalid", detail: "Expected LoroText" }],
-    ] as const),
+    ...["Text", 42, null].map(
+      (kind) =>
+        [
+          `text stored as a plain object with kind ${JSON.stringify(kind)}`,
+          (data: LoroMap) => {
+            data.set("title", { kind });
+            data.setContainer("tasks", new LoroMovableList());
+          },
+          { title: "", tasks: [] },
+          [{ path: ["title"], kind: "invalid", detail: "Expected LoroText" }],
+        ] as const,
+    ),
     [
       "plain object masquerading as a row",
       (data: LoroMap) => {
@@ -138,7 +142,12 @@ describe("opening stored documents", () => {
     expect(ids[0]).toBe("a");
     for (const id of ids.slice(1)) expect(id).toMatch(/^x-[0-9a-z]{24}$/);
     expect(new Set(ids).size).toBe(4);
-    expect(doc.current.tasks.map((task) => task.text)).toEqual(["a", "undefined", "not an id!", "a"]);
+    expect(doc.current.tasks.map((task) => task.text)).toEqual([
+      "a",
+      "undefined",
+      "not an id!",
+      "a",
+    ]);
     expect<unknown>(doc.issues).toEqual([
       { path: ["tasks", { id: ids[1] }], kind: "identity", detail: "Missing row ID" },
       { path: ["tasks", { id: ids[2] }], kind: "identity", detail: "Invalid row ID" },

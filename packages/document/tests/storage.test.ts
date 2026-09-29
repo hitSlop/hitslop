@@ -5,10 +5,10 @@ import { mkdtemp, rm, mkdir, symlink, rename } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineDocument, s, fromDescriptor, schemaKey } from "../src/schema";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { SQLiteStore } from "../test-support/sqlite";
-import { Session } from "../src/session";
-import { bindText } from "../src/bind-text";
+import { Session } from "../test-support/contract3/session";
+import { bindText } from "../test-support/contract3/bind-text";
 
 // Observer failures must not turn accepted edits into apparent rejections or stop durability.
 test("throwing observers and error reporters cannot interrupt autosave or close", async () => {
@@ -21,21 +21,38 @@ test("throwing observers and error reporters cannot interrupt autosave or close"
       appended.resolve();
       return next;
     }
-    override async close() { this.closes++; }
+    override async close() {
+      this.closes++;
+    }
   }
   const store = new Store();
   const reported: unknown[] = [];
-  const doc = await Document.open(definition, store, { title: "before" }, {
-    onListenerError(error) { reported.push(error); throw new Error("reporter failed"); },
-  });
+  const doc = await Document.open(
+    definition,
+    store,
+    { title: "before" },
+    {
+      onListenerError(error) {
+        reported.push(error);
+        throw new Error("reporter failed");
+      },
+    },
+  );
   const failure = new Error("observer failed");
-  let changes = 0, updates = 0;
-  const stop = doc.subscribe(() => { throw failure; });
-  const stopOutbound = doc.onLocalUpdate(() => { throw failure; });
-  doc.subscribe(event => { if (event.kind === "change") changes++; });
+  let changes = 0,
+    updates = 0;
+  const stop = doc.subscribe(() => {
+    throw failure;
+  });
+  const stopOutbound = doc.onLocalUpdate(() => {
+    throw failure;
+  });
+  doc.subscribe((event) => {
+    if (event.kind === "change") changes++;
+  });
   doc.onLocalUpdate(() => updates++);
   try {
-    expect(() => doc.change(tx => tx.fields.title.set("accepted"))).not.toThrow();
+    expect(() => doc.change((tx) => tx.fields.title.set("accepted"))).not.toThrow();
     expect(doc.current.title).toBe("accepted");
     expect(changes).toBe(1);
     expect(updates).toBe(1);
@@ -54,7 +71,8 @@ test("throwing observers and error reporters cannot interrupt autosave or close"
     expect(reopened.current.title).toBe("accepted again");
     await reopened.close();
   } finally {
-    stop(); stopOutbound();
+    stop();
+    stopOutbound();
     await doc.close();
   }
 });
@@ -62,10 +80,14 @@ test("throwing observers and error reporters cannot interrupt autosave or close"
 test("close-time observer failure cannot skip storage cleanup", async () => {
   let closes = 0;
   const store = new MemoryStore();
-  store.close = async () => { closes++; };
+  store.close = async () => {
+    closes++;
+  };
   const doc = await Document.open(defineDocument({}), store, {}, { onListenerError() {} });
   await doc.prepareClose();
-  doc.subscribe(() => { throw new Error("closing observer"); });
+  doc.subscribe(() => {
+    throw new Error("closing observer");
+  });
   await doc.close();
   await doc.close();
   expect(closes).toBe(1);
@@ -448,7 +470,9 @@ describe("save status", () => {
     const io = new MemoryStore(),
       append = io.append.bind(io),
       doc = await Document.open(schema, io, initial, { onListenerError() {} });
-    doc.subscribe(() => { throw new Error("observer failed during storage failure"); });
+    doc.subscribe(() => {
+      throw new Error("observer failed during storage failure");
+    });
     io.append = async () => {
       throw new Error("Disk unavailable");
     };

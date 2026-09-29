@@ -1,7 +1,7 @@
 import AppKit
 import HitSlopCore
 import HitSlopRuntime
-import HitSlopWasm
+import HitSlopDocument
 import SwiftUI
 import UniformTypeIdentifiers
 import WebKit
@@ -469,7 +469,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     telemetry.send(.failed(.save, context))
   }
 
-  public func runtimeSession(_ session: SlopRuntimeSession, saveStatus: WasmSaveStatus) {
+  public func runtimeSession(_ session: SlopRuntimeSession, saveStatus: DocumentSaveStatus) {
     if saveStatus.status == "save-failed" {
       runtimeSession(session, storageFailure: .init(reason: .storage))
     } else if saveStatus.status == "saved" {
@@ -498,9 +498,10 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
     guard let message = attentionMessage ?? guestIssue?.message else { return }
     let saving = attentionMessage != nil
     let alert = NSAlert()
-    alert.messageText = saving ? "Changes could not be saved" : "This slop encountered an error"
+    let invalidated = saving && message.hasPrefix("Owner invalidated:")
+    alert.messageText = invalidated ? "The document engine needs recovery" : saving ? "Changes could not be saved" : "This slop encountered an error"
     alert.informativeText = message
-    alert.addButton(withTitle: saving ? "Retry Save" : "Reload Interface")
+    alert.addButton(withTitle: invalidated ? "Discard Unsaved Edits and Reload" : saving ? "Retry Save" : "Reload Interface")
     // Unsaved work stays live; offer an explicit way back to the durable state.
     let full = saving && Self.isCapacityFailure(message)
     if full { alert.addButton(withTitle: "Discard Unsaved Edits") }
@@ -520,6 +521,7 @@ public final class SlopDocumentWindowController: NSWindowController, NSWindowDel
           Task {
             do {
               if saving {
+                if invalidated { try await self.session.engine.discardPending() }
                 try await self.session.flush()
                 self.attentionMessage = nil
                 self.showDocumentAttention()

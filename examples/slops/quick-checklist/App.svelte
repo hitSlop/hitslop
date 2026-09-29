@@ -17,6 +17,7 @@
   let draft = $state("");
   let composer = $state<HTMLInputElement>();
   let notice = $state("");
+  let openMenu = $state<string | null>(null);
   const visible = $derived(doc.current.tasks.filter(task => !task.archived));
   const filed = $derived(doc.current.tasks.filter(task => task.archived));
   const finished = $derived(visible.filter(task => task.done).length);
@@ -67,13 +68,31 @@
       notice = "Task moved back to your list.";
     } catch {}
   }
+  const resizeQueue = new Set<HTMLTextAreaElement>();
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+  function scheduleResize(node: HTMLTextAreaElement) {
+    resizeQueue.add(node);
+    if (resizeTimer !== undefined) return;
+    resizeTimer = setTimeout(() => {
+      resizeTimer = undefined;
+      const nodes = [...resizeQueue].filter(node => node.isConnected);
+      resizeQueue.clear();
+      // Batch writes, then reads, then writes: opening a long list must not
+      // force a full layout separately for every textarea.
+      for (const node of nodes) node.style.height = "auto";
+      const heights = nodes.map(node => node.scrollHeight);
+      nodes.forEach((node, index) => { node.style.height = `${heights[index]}px`; });
+    });
+  }
+  onDestroy(() => { clearTimeout(resizeTimer); resizeQueue.clear(); });
   function sizeToText(node: HTMLTextAreaElement, _value: string) {
-    let timer: ReturnType<typeof setTimeout>; let width = -1;
-    const resize = () => { clearTimeout(timer); timer = setTimeout(() => { node.style.height = "auto"; node.style.height = `${node.scrollHeight}px`; }); };
+    let width = -1;
+    const resize = () => scheduleResize(node);
     const observer = new ResizeObserver(entries => { const next = entries[0]?.contentRect.width; if (next !== undefined && next !== width) {width = next; resize();} });
     observer.observe(node); node.addEventListener("input", resize); resize();
-    return {update:resize, destroy() {clearTimeout(timer);observer.disconnect();node.removeEventListener("input",resize);} };
+    return {update:resize, destroy() {resizeQueue.delete(node);observer.disconnect();node.removeEventListener("input",resize);} };
   }
+
 </script>
 
 {#snippet brand()}
@@ -187,13 +206,13 @@
                   }
                 }}
               ></textarea>
-              <DropdownMenu.Root>
+              <DropdownMenu.Root open={openMenu === task.$id} onOpenChange={open => { if (open) openMenu = task.$id; else if (openMenu === task.$id) openMenu = null; }}>
                 <DropdownMenu.Trigger
                   class="checklist-more"
                   aria-label={`Actions for ${task.text || "untitled task"}`}
                   ><Ellipsis size={19} /></DropdownMenu.Trigger
                 >
-                <DropdownMenu.Portal
+                {#if openMenu === task.$id}<DropdownMenu.Portal
                   ><DropdownMenu.Content
                     class="checklist-menu"
                     sideOffset={5}
@@ -214,7 +233,7 @@
                       >Remove task</DropdownMenu.Item
                     >
                   </DropdownMenu.Content></DropdownMenu.Portal
-                >
+                >{/if}
               </DropdownMenu.Root>
             </li>
           {/each}

@@ -130,7 +130,7 @@ scripts/package-macos-release.sh
 bun scripts/v1/release-artifact.ts /path/to/hitSlop.app
 ```
 
-Embedding ships the native executable and its HitSlopWasm resource bundle. The retired HitSlopRuntime placeholder resource bundle is not required. Verification checks matching host/helper runtime catalogs and exercises installed helpers with a system-only PATH, including PNG/PDF. Native editing needs no checkout, Node, or Bun. `HITSLOP_NATIVE_CLI` selects an explicit matching helper for authoring verification.
+Embedding ships the native executable and its HitSlopDocument resource bundle. The retired HitSlopRuntime placeholder resource bundle is not required. Verification checks matching host/helper runtime catalogs and exercises installed helpers with a system-only PATH, including PNG/PDF. Native editing needs no checkout, Node, or Bun. `HITSLOP_NATIVE_CLI` selects an explicit matching helper for authoring verification.
 
 Developer ID, notarization, provisioning, App Store Connect, and Sparkle private keys remain outside Git. The tagged GitHub workflow runs the gate once (`release:check --skip-app`), then archives one Release app. `package-macos-release.sh` runs host-crash acceptance on that signed app before notarizing (it needs the Debug helper from `bun run build`; `HITSLOP_SKIP_ACCEPTANCE=1` skips it). The workflow then verifies DMG/ZIP artifacts and publishes the Mac release. It does not publish npm packages. Release the exact tested commit.
 

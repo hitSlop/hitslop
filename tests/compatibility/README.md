@@ -28,3 +28,5 @@ continue to exercise older readers of candidate-written state at storage revisio
 
 Swift tests always edit disposable copies. Host-behavior probes swap in the unsealed
 `tests/abi/probe/app.js`.
+
+Contract 4 / revision 1 / storage reader revision 2 adds `4-1` (plain-JS ABI 2) and `4-1-svelte` (compiled Svelte ABI 2). Their independent scenarios exercise accepted handles and replay. Swift additionally invokes the consumers' async checks on disposable copies. The current runtime explicitly refuses contract 3 without touching stored bytes; historical readers and fixture seals remain intact. The old author-fixtures script is retired and refuses to create contract-4 fixtures with contract-3 semantics.

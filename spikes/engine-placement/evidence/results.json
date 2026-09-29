@@ -28,7 +28,7 @@
     "seedHash": "030261cccc9534039defdd54dbcbebc4a40d49ed0b79ec498322508c07495d90",
     "method": "Fresh process, release build, identical 40 rendered rows including final row; nonpersistent WebKit stores; two rAFs are a render opportunity proxy, not compositor paint. Host and identified WebContent footprints exclude GPU/network processes. Local relay measurements are separate."
   },
-  "rawDirectory": "/Users/jordan/Documents/startups/longtailLABS/hitslop/.hitslop/v1-evidence/engine-placement/2026-09-28T21-56-29.931Z",
+  "rawDirectory": ".hitslop/v1-evidence/engine-placement/2026-09-28T21-56-29.931Z",
   "groups": [
     {
       "rows": 1000,

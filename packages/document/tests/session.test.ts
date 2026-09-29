@@ -1,10 +1,10 @@
 // Guards command serialization, stale epochs, known rejection versus unknown outcome, and close ordering.
 import { test, expect } from "bun:test";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { defineDocument, s } from "../src/schema";
 import { MemoryStore } from "../src/memory";
-import { Session } from "../src/session";
-import { observe } from "../src/handles";
+import { Session } from "../test-support/contract3/session";
+import { observe } from "../test-support/contract3/handles";
 const definition = defineDocument({
   title: s.text(),
   rows: s.list(s.object({ name: s.string() })),

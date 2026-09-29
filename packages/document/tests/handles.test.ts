@@ -1,8 +1,8 @@
 // Guards stale handles, row identity, immutable snapshots, transaction rollback and binding lifecycle.
 import { describe, expect, test } from "bun:test";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { defineDocument, s, OperationRejectedError } from "../src/schema";
-import { bindText } from "../src/bind-text";
+import { bindText } from "../test-support/contract3/bind-text";
 import { MemoryStore } from "../src/memory";
 import { copyStore } from "./helpers";
 
@@ -248,9 +248,7 @@ describe("schema and transactions", () => {
     expect(() => d.fields.currency.set("GBP" as any)).toThrow();
     expect(() => d.apply({ type: "clear", path: ["label"] })).toThrow();
     expect(() => d.apply({ type: "set", path: ["constructor"], value: "bad" })).toThrow();
-    expect(() =>
-      d.fields.rows.insert({ name: "n", done: false, extra: true } as any),
-    ).toThrow();
+    expect(() => d.fields.rows.insert({ name: "n", done: false, extra: true } as any)).toThrow();
     for (const bad of [
       () => s.optional(s.optional(s.string()) as any),
       () => s.list(s.text() as any),

@@ -96,6 +96,25 @@ export async function replayCompatibility(
       if ((await digest(join(fixture, "document"))) !== record.sha256)
         throw new Error(`Preserved fixture changed: ${name}`);
       const current = installed[String(record.runtimeContract)];
+      if (!current && record.runtimeContract === 3 && installed["4"]) {
+        const before = await digest(join(fixture, "document"));
+        let refused = false;
+        try {
+          await runRuntime(join(runtimeRoot, "4"), join(fixture, "document"));
+        } catch (error) {
+          if (!String(error).includes("Unsupported runtime contract")) throw error;
+          refused = true;
+        }
+        if (!refused || before !== (await digest(join(fixture, "document"))))
+          throw new Error(`Retired fixture mutated or accepted: ${name}`);
+        results.push({
+          fixture: name,
+          runtime: "4-1",
+          phase: "refused-contract",
+          stateHash: before,
+        });
+        continue;
+      }
       if (!current || current.identity.runtimeRevision < record.runtimeRevision)
         throw new Error(`Unsupported fixture: ${name}`);
       const candidate = join(runtimeRoot, String(record.runtimeContract));
@@ -169,7 +188,9 @@ export async function replayCompatibility(
       const fixture = join(corpus, name);
       if (!(await Bun.file(join(fixture, "collaboration.json")).exists())) continue;
       const record = await Bun.file(join(fixture, "fixture.json")).json();
-      const current = installed[String(record.runtimeContract)]!;
+      const current = installed[String(record.runtimeContract)];
+      if (!current && record.runtimeContract === 3 && installed["4"]) continue;
+      if (!current) throw new Error(`Unsupported collaboration fixture: ${name}`);
       const candidate = join(runtimeRoot, String(record.runtimeContract));
       const partners = [
         {

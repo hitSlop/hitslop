@@ -92,7 +92,7 @@ export async function sharedTemplatePaths(repository: string, sources: string[])
     "scripts/v1/template-cache.ts",
     `${native}/Package.swift`,
     `${native}/Package.resolved`,
-    ...["HitSlopCore", "HitSlopWasm", "HitSlopRuntime", "HitSlopHost", "HitSlopNativeCLI"].map(
+    ...["HitSlopCore", "HitSlopDocument", "HitSlopRuntime", "HitSlopHost", "HitSlopNativeCLI"].map(
       (name) => `${native}/Sources/${name}`,
     ),
     ...(await compilerSources(repository, [

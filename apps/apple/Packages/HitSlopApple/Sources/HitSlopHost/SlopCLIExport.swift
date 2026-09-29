@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 import HitSlopCore
 import HitSlopRuntime
-import HitSlopWasm
+import HitSlopDocument
 
 extension SlopRenderer {
     /// Attach at the host boundary; the engine never imports the renderer.

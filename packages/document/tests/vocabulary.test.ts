@@ -1,10 +1,10 @@
 // Guards descriptor interpretation, supported value kinds, identity-preserving edits and persisted reopen.
 import { describe, expect, test } from "bun:test";
 import { LoroDoc } from "loro-crdt";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { defineDocument, s, OperationRejectedError } from "../src/schema";
-import { bindText } from "../src/bind-text";
-import { bindValue } from "../src/bind-value";
+import { bindText } from "../test-support/contract3/bind-text";
+import { bindValue } from "../test-support/contract3/bind-value";
 import { MemoryStore } from "../src/memory";
 import { copyStore } from "./helpers";
 

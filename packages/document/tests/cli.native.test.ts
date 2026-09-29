@@ -6,7 +6,7 @@ import { defineDocument, s } from "../src/schema";
 import identity from "../src/runtime-identity.json";
 const schema = defineDocument({ title: s.text() });
 
-test("JSON CLI creates atomically, replaces across closed sessions and rejects stale versions", async () => {
+test("JSON CLI explicitly refuses contract-4 import without creating or modifying packages", async () => {
   const parent = await mkdtemp(join(tmpdir(), "hsl-import-"));
   const template = join(parent, "Template.slop"),
     destination = join(parent, "New.slop"),
@@ -49,55 +49,20 @@ test("JSON CLI creates atomically, replaces across closed sessions and rejects s
     expect((await readdir(parent)).some((name) => name.startsWith(".hitslop-import-"))).toBe(false);
     await writeFile(file, JSON.stringify({ title: "Imported" }));
     const created = await cli("import", destination, "--from", template, "--file", file);
-    expect(created.error).toBe("");
-    expect(created.code).toBe(0);
-    const snapshot = JSON.parse(created.out);
-    expect(snapshot.data).toEqual({ title: "Imported" });
-    expect(JSON.parse((await cli("get", destination, "--snapshot")).out).version).toBe(
-      snapshot.version,
-    );
-    expect((await cli("import", destination, "--from", template, "--file", file)).code).not.toBe(0);
-    // Larger than the ordinary 1 MiB socket request budget; the same import bound applies closed/live.
-    const text = "bulk ".repeat(230_000);
-    await writeFile(file, JSON.stringify({ title: text }));
+    expect(created.code).not.toBe(0);
+    expect(created.error).toContain("not supported in contract 4");
+    expect(await readdir(parent)).not.toContain("New.slop");
     const replaced = await cli(
       "import",
-      destination,
+      template,
       "--replace",
       "--if-version",
-      snapshot.version,
+      "unused",
       "--file",
       file,
     );
-    expect(replaced.error).toBe("");
-    expect(replaced.code).toBe(0);
-    expect(JSON.parse(replaced.out).data.title === text).toBe(true);
-    const stale = await cli(
-      "import",
-      destination,
-      "--replace",
-      "--if-version",
-      snapshot.version,
-      "--file",
-      file,
-    );
-    expect(stale.code).not.toBe(0);
-    expect(stale.error).toContain("Destination changed");
-    const link = join(parent, "link.json");
-    await symlink(file, link);
-    expect(
-      (
-        await cli(
-          "import",
-          destination,
-          "--replace",
-          "--if-version",
-          JSON.parse(replaced.out).version,
-          "--file",
-          link,
-        )
-      ).code,
-    ).not.toBe(0);
+    expect(replaced.code).not.toBe(0);
+    expect(replaced.error).toContain("not supported in contract 4");
     expect(await readdir(template)).not.toContain("state");
     for (const [path, bytes] of Object.entries(files))
       expect(await readFile(join(template, path), "utf8")).toBe(bytes);
@@ -223,14 +188,14 @@ test("native CLI rejects old runtimes and malformed commands before mutation", a
       join(root, "assets/runtime.json"),
       JSON.stringify({ ...provenance, runtimeContract: 99, minRuntimeRevision: 1 }),
     );
-    expect((await cli("get")).error).toContain("requires runtime contract 99");
+    expect((await cli("get")).error).toContain("Unsupported runtime contract");
     expect(await readFile(join(root, "state/document.sqlite"))).toEqual(before);
     await writeFile(join(root, "assets/runtime.json"), requirements);
     expect((await cli("apply", "--op", "null")).code).not.toBe(0);
     expect((await cli("batch", "--ops", "null")).code).not.toBe(0);
     const changed = defineDocument({ title: s.text(), extra: s.string() });
     await writeFile(join(root, "state.schema.json"), JSON.stringify(changed.descriptor));
-    expect((await cli("get")).error).toContain("Incompatible document schema");
+    expect((await cli("get")).error).toContain("schema differs from saved state");
     expect(await readFile(join(root, "state/document.sqlite"))).toEqual(before);
   } finally {
     await rm(parent, { recursive: true, force: true });

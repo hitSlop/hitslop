@@ -4,7 +4,7 @@ export type { AttachmentInfo, AttachmentRef };
 
 /** Host-owned immutable file storage, referenced from ordinary document fields. */
 export const attachments = {
-  import: (file: File, options: { commit(ref: AttachmentRef): void }) =>
+  import: (file: File, options: { commit(ref: AttachmentRef): void | Promise<void> }) =>
     current().attachments.import(file, options),
   /** Pass the saved `mimeType` so object URLs for images and media resolve with the right type. */
   read: (id: string, options?: { type?: string }) => current().attachments.read(id, options),

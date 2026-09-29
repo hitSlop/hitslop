@@ -8,7 +8,7 @@ Your agent can work with the data, too. It can read changes you make in the app,
 
 [Download for Mac](https://github.com/hitslop/hitslop/releases/latest/download/hitSlop.dmg) · [Explore the website](https://hitslop.com) · [Make your first slop](#make-your-own-with-an-agent) · [Docs](docs/README.md)
 
-macOS 14+ · Apple silicon · No account required
+macOS 15.2+ · Apple silicon · No account required
 
 <p align="center">
   <a href="apps/landing/public/assets/desktop-hero.mp4"><img src="apps/landing/public/assets/desktop-hero-poster.jpg" width="900" alt="A Mac desktop full of open slops: a Winamp-style music player, a desktop pet, a focus timer, flashcards, a doodle board, a koi pond, Wordle, and school planners."></a>
@@ -27,15 +27,7 @@ If all you need is a packing list for next weekend, that's enough.
 
 ## What belongs on your desktop?
 
-Try these examples, or use their source as a starting point:
-
-| A little help | Something to send | Just for fun |
-| --- | --- | --- |
-| [Quick Checklist](examples/slops/quick-checklist): get it out of your head | [Invoice](examples/slops/invoice): get paid | [Pixel Art](examples/slops/pixel-art): one more pixel |
-| [Focus Timer](examples/slops/focus-timer): make room to concentrate | [Recipe](examples/slops/recipe): keep the good ones | [Koi Pond](examples/slops/koi-pond): take a break |
-| [Small Expenses](examples/slops/small-expenses): remember where it went | [Résumé](examples/slops/resume): introduce yourself | [Wordle](examples/slops/wordle): five letters, a little obsession |
-
-[Browse all the examples →](examples/slops)
+The contract-4 development branch currently ships [Quick Checklist](examples/slops/quick-checklist). Other examples are preserved in [the slop archive](archive/slops) while their data types are ported. Contract 3 documents are refused without migration by this development runtime; the linked public release remains separate.
 
 ## Keep the app. Keep the work.
 
@@ -187,7 +179,7 @@ export default defineTheme({
   <main class="wins-card">
     <input aria-label="Counter title" use:bindText={doc.fields.title} />
     <p class="wins-number" aria-live="polite">{doc.current.wins}</p>
-    <button onclick={() => doc.fields.wins.increment()}>A little win +1</button>
+    <button onclick={() => doc.fields.wins.increment().catch(() => {})}>A little win +1</button>
   </main>
 
   {#snippet icon()}
@@ -269,7 +261,7 @@ Your agent can add a win to that same document through the CLI. Substitute the p
 
 ```sh
 bunx @hitslop/cli@1.2.0 get "/path/to/My Wins.slop"
-bunx @hitslop/cli@1.2.0 apply "/path/to/My Wins.slop" --op '{"type":"increment","path":["wins"],"value":1}'
+bunx @hitslop/cli@1.2.0 apply "/path/to/My Wins.slop" --op '{"type":"increment","path":["wins"],"by":1}'
 ```
 
 With the document open, the number changes in the window. Its next export and icon capture use the updated value as well.

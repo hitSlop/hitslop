@@ -74,13 +74,13 @@ test("template specimens tolerate regenerated ancillary files but cover every au
   }
 });
 
-test("historical readers open JSON-imported updates and checkpoints with preserved rich text and references", async () => {
+test("retired contract-3 readers open JSON-imported updates and checkpoints with preserved rich text and references", async () => {
   const root = await mkdtemp(join(tmpdir(), "hitslop-import-readers-"));
   try {
     const runtimes = join(root, "runtimes");
     await buildRuntime([runtimes]);
-    const contract = String(identity.runtimeContract);
-    const runtime = await loadRuntime(join(runtimes, contract));
+    const contract = "3";
+    const runtime = await loadRuntime(join(repository, "generated/v1/runtime-releases/3-1/3"));
     const schema = defineDocument({
       title: s.text(),
       notes: s.richtext({ bold: "after" }),
@@ -94,7 +94,7 @@ test("historical readers open JSON-imported updates and checkpoints with preserv
       await mkdir(document);
       await writeFile(join(document, "state.schema.json"), JSON.stringify(schema.descriptor));
       await writeFile(join(document, "initial.json"), JSON.stringify(initial));
-      const store = await SQLiteStore.open(document);
+      const store = await SQLiteStore.open(document, undefined, 1);
       const doc = await runtime.Document.open(
         runtime.fromDescriptor(schema.descriptor),
         store,
@@ -125,7 +125,7 @@ test("historical readers open JSON-imported updates and checkpoints with preserv
         await mkdir(readerSource);
         await writeFile(join(readerSource, "state.schema.json"), JSON.stringify(schema.descriptor));
         await writeFile(join(readerSource, "initial.json"), JSON.stringify(initial));
-        const readerStore = await SQLiteStore.open(readerSource);
+        const readerStore = await SQLiteStore.open(readerSource, undefined, 1);
         const generation = await readerStore.checkpoint(
           "0",
           baseline.checkpoint!,
@@ -134,9 +134,7 @@ test("historical readers open JSON-imported updates and checkpoints with preserv
         await readerStore.append(generation, [importedUpdates]);
         await readerStore.close();
       }
-      for (const release of (await releases()).filter(
-        (r) => r.runtimeContract === identity.runtimeContract,
-      )) {
+      for (const release of (await releases()).filter((r) => r.runtimeContract === 3)) {
         // Fresh runners restore older readers only. The newly sealed current
         // revision comes from this candidate build and must match its ledger seal.
         const historical =
@@ -174,12 +172,12 @@ test("historical readers open JSON-imported updates and checkpoints with preserv
   }
 }, 60000);
 
-test("compiled replay detects incorrect expectations and a no-op authored text handle", async () => {
+test("historical compiled replay detects incorrect expectations and a no-op authored text handle", async () => {
   const root = await mkdtemp(join(tmpdir(), "hitslop-replay-fault-"));
   try {
     const runtimes = join(root, "runtimes");
     await buildRuntime([runtimes]);
-    const current = join(runtimes, String(identity.runtimeContract));
+    const current = join(repository, "generated/v1/runtime-releases/3-1/3");
     const document = join(root, "Document.slop");
     await cp("tests/compatibility/3-1/document", document, { recursive: true });
     const expected = await Bun.file("tests/compatibility/3-1/expected.json").json();

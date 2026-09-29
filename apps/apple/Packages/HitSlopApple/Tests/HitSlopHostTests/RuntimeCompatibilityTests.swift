@@ -5,7 +5,7 @@ import HitSlopRuntime
 import PDFKit
 import Testing
 @testable import HitSlopHost
-@testable import HitSlopWasm
+@testable import HitSlopDocument
 
 extension LoroClientTests {
   @Test @MainActor func preservedDocumentsSurviveCurrentHostAndRuntime() async throws {
@@ -21,6 +21,12 @@ extension LoroClientTests {
       try FileManager.default.copyItem(at: fixture.appendingPathComponent("document"), to: root)
       let record = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: fixture.appendingPathComponent("fixture.json"))) as? [String: Any])
       let expected = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: fixture.appendingPathComponent("expected.json"))) as? NSDictionary)
+      if record["runtimeContract"] as? Int == 3 {
+        let saved = try Data(contentsOf: root.appendingPathComponent("state/document.sqlite"))
+        await #expect(throws: (any Error).self) { _ = try await DocumentCommand.run(method: "get", url: root) }
+        #expect(try Data(contentsOf: root.appendingPathComponent("state/document.sqlite")) == saved)
+        continue
+      }
       let baseline = try await DocumentCommand.run(method: "get", url: root)
       #expect(try JSONSerialization.jsonObject(with: baseline) as? NSDictionary == expected)
       // Frozen apps check the ABI while mounting; a failed check never becomes ready.
@@ -29,15 +35,15 @@ extension LoroClientTests {
       // Only the conformance schema has a title; template specimens get generic checks.
       let conformance = record["kind"] as? String != "template"
       if conformance {
-        _ = try await DocumentCommand.run(method: "apply", url: root, operation: replace("Live command"))
+        _ = try await DocumentCommand.run(method: "apply", url: root, operation: prefixTitle("Live command"))
         _ = try await DocumentCommand.run(method: "theme.set", url: root, themeValues: Data(##"{"accent":"#654321"}"##.utf8))
         _ = try await DocumentCommand.run(method: "compact", url: root)
       }
       try await controller.session.finish()
       if conformance {
-        _ = try await DocumentCommand.run(method: "apply", url: root, operation: replace("Closed command"))
+        _ = try await DocumentCommand.run(method: "apply", url: root, operation: prefixTitle("Closed command"))
         _ = try await DocumentCommand.run(method: "compact", url: root)
-        _ = try await DocumentCommand.run(method: "apply", url: root, operation: replace("Candidate update"))
+        _ = try await DocumentCommand.run(method: "apply", url: root, operation: prefixTitle("Candidate update"))
       }
       // Renders run the authored app (including its self-checks) against a snapshot:
       // saved state is byte-for-byte what a later read returns.

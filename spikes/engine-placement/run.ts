@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 const here = import.meta.dir;
 const rust = process.argv.includes("--rust");
 const candidates = rust ? ["matched", "native", "rust-core"] : ["baseline", "matched", "native"];
-const env = {...process.env, PATH:`/Users/jordan/.cargo/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH}`};
+const env = {...process.env, PATH:`${process.env.HOME}/.cargo/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:${process.env.PATH}`};
 const mode = process.argv.includes("--matrix") ? "matrix" : "smoke";
 const resumeAt = process.argv.indexOf("--resume");
 const resuming = resumeAt >= 0;

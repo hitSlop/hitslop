@@ -24,8 +24,13 @@ export class SQLiteStore implements ByteStore {
     private phase?: (phase: string) => void,
     private root?: string,
     private inode?: number,
+    private storageRevision = identity.storageRevision,
   ) {}
-  static async open(root: string, phase?: (phase: string) => void) {
+  static async open(
+    root: string,
+    phase?: (phase: string) => void,
+    storageRevision = identity.storageRevision,
+  ) {
     root = await realpath(root);
     const lease = await acquireWriter(root);
     let db: Database | undefined;
@@ -48,9 +53,9 @@ export class SQLiteStore implements ByteStore {
           reader_revision: number;
         }
       ).reader_revision;
-      if (floor < 1 || floor > identity.storageRevision)
+      if (floor < 1 || floor > storageRevision)
         throw new Error("Update hitSlop.app: unsupported storage revision");
-      return new SQLiteStore(db, lease, phase, root, (await stat(root)).ino);
+      return new SQLiteStore(db, lease, phase, root, (await stat(root)).ino, storageRevision);
     } catch (error) {
       db?.close();
       await lease.close();
@@ -114,7 +119,7 @@ export class SQLiteStore implements ByteStore {
           .query(
             "UPDATE document SET generation=generation+1,reader_revision=MAX(reader_revision,?) WHERE id=1",
           )
-          .run(identity.storageRevision);
+          .run(this.storageRevision);
         this.phase?.("append:uncommitted");
       })
       .immediate();
@@ -134,7 +139,7 @@ export class SQLiteStore implements ByteStore {
           .query(
             "UPDATE document SET checkpoint=?,schema_key=?,generation=generation+1,reader_revision=MAX(reader_revision,?) WHERE id=1",
           )
-          .run(bytes, key, identity.storageRevision);
+          .run(bytes, key, this.storageRevision);
         this.db.exec("DELETE FROM updates");
         this.phase?.("checkpoint:uncommitted");
       })

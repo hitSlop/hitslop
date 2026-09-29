@@ -49,6 +49,10 @@ jobs:
           filters: |
             native:
               - 'apps/apple/**'
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
               - 'packages/document/src/**'
               - 'packages/schema/src/**'
               - 'packages/cli/src/**'

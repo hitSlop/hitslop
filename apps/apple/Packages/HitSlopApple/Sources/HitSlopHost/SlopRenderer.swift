@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 import HitSlopCore
 import HitSlopRuntime
-import HitSlopWasm
+import HitSlopDocument
 import WebKit
 
 public enum SlopRenderTarget: String, Sendable {

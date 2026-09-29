@@ -10,7 +10,7 @@ import { protocolVersion } from "../../packages/schema/src/bridge";
 export const repository = resolve(import.meta.dir, "../..");
 export const runtimeDestinations = [
   join(repository, "packages/cli/runtimes"),
-  join(repository, "apps/apple/Packages/HitSlopApple/Sources/HitSlopWasm/Resources/runtimes"),
+  join(repository, "apps/apple/Packages/HitSlopApple/Sources/HitSlopDocument/Resources/runtimes"),
 ];
 export async function digest(root: string, topLevel?: readonly string[]): Promise<string> {
   const hash = createHash("sha256");
@@ -50,13 +50,9 @@ export async function catalog(root: string) {
     const value = JSON.parse(await readFile(join(directory, "identity.json"), "utf8"));
     if (!Check(RuntimeIdentitySchema, value) || String(value.runtimeContract) !== name)
       throw new Error(`Invalid runtime identity: ${directory}`);
-    for (const file of [
-      "index.js",
-      "boot.js",
-      "headless.js",
-      "loro/index.js",
-      "loro/loro_wasm_bg.wasm",
-    ])
+    for (const file of value.runtimeContract >= 4
+      ? ["index.js", "boot.js", "core/hitslop_core_wasm.js", "core/hitslop_core_wasm_bg.wasm"]
+      : ["index.js", "boot.js", "headless.js", "loro/index.js", "loro/loro_wasm_bg.wasm"])
       if (!(await lstat(join(directory, file))).isFile())
         throw new Error(`Missing runtime file: ${file}`);
     result[name] = { identity: value, sha256: await digest(directory) };
@@ -90,8 +86,9 @@ export async function verifyProvenance() {
   if (
     !Check(RuntimeIdentitySchema, identity) ||
     identity.sdkVersion !== sdk.version ||
-    identity.loroVersion !== loro.version ||
-    identity.loroVersion !== sdkLoro.version ||
+    !(await readFile(join(repository, "Cargo.toml"), "utf8")).includes(
+      `loro = "=${identity.loroVersion}"`,
+    ) ||
     identity.protocolVersion !== protocolVersion
   )
     throw new Error("Runtime provenance differs from the resolved SDK/Loro/bridge");
@@ -182,6 +179,8 @@ export async function verifyReleasedIdentities(
   );
   for (const release of published) {
     const installed = values[String(release.runtimeContract)];
+    // Approved contract-4 reset: contract 3 remains sealed history, not installed support.
+    if (!installed && release.runtimeContract === 3 && values["4"]) continue;
     if (!installed) throw new Error(`Released contract ${release.runtimeContract} was removed`);
     if (installed.identity.runtimeRevision < release.runtimeRevision)
       throw new Error(`Runtime revision moved backwards: ${release.runtimeContract}`);

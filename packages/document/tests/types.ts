@@ -1,5 +1,5 @@
 import { defineDocument, s, type Input } from "../src/schema";
-import type { Document } from "../src/document";
+import type { Document } from "../test-support/contract3/document";
 import type { SlopDocument } from "../src/app/store.svelte";
 const counters = defineDocument({ count: s.counter(), optional: s.optional(s.counter()) });
 export function counterTypes(doc: SlopDocument<typeof counters.fields.node>) {
@@ -78,7 +78,10 @@ export function handleTypes(doc: Document<typeof schema.fields.node>) {
   tasks.item(id).done.value;
 }
 
-export function snapshotHandleTypes(doc: Document<typeof schema.fields.node>, ui: SlopDocument<typeof schema.fields.node>) {
+export function snapshotHandleTypes(
+  doc: Document<typeof schema.fields.node>,
+  ui: SlopDocument<typeof schema.fields.node>,
+) {
   const row = doc.current.tasks[0]!;
   doc.at(row).text.replace("Emoji 😁");
   doc.at(row).done.set(true);
@@ -96,12 +99,12 @@ export function snapshotHandleTypes(doc: Document<typeof schema.fields.node>, ui
   doc.at({ text: "new", done: false });
   // @ts-expect-error The Svelte adapter preserves handle types.
   ui.at(ui.current.tasks[0]!).amount.set("10");
-  doc.change(tx => {
+  doc.change((tx) => {
     tx.at(row).note.clear();
     // @ts-expect-error Transaction handles are typed too.
     tx.at(row).done.set(1);
   });
-  ui.change(tx => {
+  ui.change((tx) => {
     // @ts-expect-error Svelte transactions preserve enum variants.
     tx.at(ui.current).currency.set("GBP");
   });

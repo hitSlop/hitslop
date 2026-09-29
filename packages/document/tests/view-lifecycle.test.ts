@@ -1,11 +1,11 @@
 // Guards reload without document replacement, save-before-capture, failed close and render recovery.
 import { test, expect } from "bun:test";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { defineDocument, s } from "../src/schema";
 import { MemoryStore } from "../src/memory";
-import { Session } from "../src/session";
+import { Session } from "../test-support/contract3/session";
 import { mountViewLifecycle } from "../src/view-lifecycle";
-import { bindText } from "../src/bind-text";
+import { bindText } from "../test-support/contract3/bind-text";
 
 const definition = defineDocument({ title: s.text() });
 
@@ -22,16 +22,16 @@ async function setup() {
     target,
     session,
     mount() {
-        log.push("mount");
-        return {
-          async rendered() {
-            log.push("render");
-            await rendering();
-          },
-          unmount() {
-            log.push("unmount");
-          },
-        };
+      log.push("mount");
+      return {
+        async rendered() {
+          log.push("render");
+          await rendering();
+        },
+        unmount() {
+          log.push("unmount");
+        },
+      };
     },
     capture: {
       async begin(token, mode) {
@@ -64,7 +64,11 @@ test("views reload against the same document and retain flushed edits", async ()
   const h = await setup();
   h.doc.fields.title.replace("Edited");
   await h.lifecycle.reloadInterface();
-  expect(h.log.filter((entry) => entry === "mount" || entry === "unmount")).toEqual(["mount", "unmount", "mount"]);
+  expect(h.log.filter((entry) => entry === "mount" || entry === "unmount")).toEqual([
+    "mount",
+    "unmount",
+    "mount",
+  ]);
   expect(h.log).toContain("recovered");
   const reply = await h.lifecycle.request({ id: "get", documentPath: "test", method: "get" });
   expect(reply.state).toEqual({ title: "Edited" });
@@ -164,28 +168,44 @@ test("discard awaits storage, retains a failed view, and remounts editable bindi
   const target = { inert: false } as HTMLElement;
   let input!: HTMLInputElement;
   const lifecycle = await mountViewLifecycle({
-    document: doc, session, target,
+    document: doc,
+    session,
+    target,
     mount() {
-      input = Object.assign(new EventTarget(), { value: "", disabled: false }) as unknown as HTMLInputElement;
+      input = Object.assign(new EventTarget(), {
+        value: "",
+        disabled: false,
+      }) as unknown as HTMLInputElement;
       const binding = bindText(input, doc.fields.title);
       return { rendered() {}, unmount: () => binding.destroy() };
     },
-    capture: { async begin() { throw new Error("unused"); }, async restore() {} },
+    capture: {
+      async begin() {
+        throw new Error("unused");
+      },
+      async restore() {},
+    },
   });
   input.dispatchEvent(new Event("compositionstart"));
   input.value = "Unsaved composition";
   const oldInput = input;
   const load = store.load.bind(store);
-  store.load = async () => { throw new Error("Cannot load"); };
+  store.load = async () => {
+    throw new Error("Cannot load");
+  };
   await expect(lifecycle.discardPending()).rejects.toThrow("Cannot load");
   expect(input).toBe(oldInput);
   expect(input.value).toBe("Unsaved composition");
   expect(target.inert).toBe(false);
   let release!: () => void;
   let entered!: () => void;
-  const started = new Promise<void>(resolve => entered = resolve);
-  const gate = new Promise<void>(resolve => release = resolve);
-  store.load = async () => { entered(); await gate; return load(); };
+  const started = new Promise<void>((resolve) => (entered = resolve));
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  store.load = async () => {
+    entered();
+    await gate;
+    return load();
+  };
   const discarding = lifecycle.discardPending();
   await started;
   expect(input).toBe(oldInput);

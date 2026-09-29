@@ -22,12 +22,28 @@ import WebKit
   func currentRuntimeWindows() async throws {
     _ = NSApplication.shared
     var records: [[String: Any]] = []
+    func writeEvidence(failure: String? = nil) throws {
+      let root = String(#filePath.components(separatedBy: "/apps/apple/")[0])
+      let out = URL(fileURLWithPath: root + "/.hitslop/v1-evidence")
+      try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+      try JSONSerialization.data(
+        withJSONObject: [
+          "runtime": "hitslop-v1", "runtimeContract": 4, "loro": "1.16.2",
+          "method":
+            "Restored frameless window controllers with hover panels, in the Host test harness (not the catalog application). One sequential run per cell, fully rendered rows, host plus identified WebContent physical footprints; excludes GPU/network processes. Creation plus opening, warm machine. Public ABI-2 checkbox acceptance, framework rendering and durable drain. Debug helper/test bundle, not an optimized app. Absolute memory only; no matched-control percentage claim.",
+          "results": records, "failure": failure as Any? ?? NSNull(),
+        ], options: [.prettyPrinted, .sortedKeys]
+      ).write(to: out.appendingPathComponent("native-owner-windows.json"))
+    }
     let folder = FileManager.default.temporaryDirectory.appendingPathComponent(
       "hsl-bench-" + UUID().uuidString)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: folder) }
-    for rows in [100, 1000] {
-      for count in [1, 10, 20] {
+    let environment = ProcessInfo.processInfo.environment
+    let rowCounts = environment["HITSLOP_BENCH_ROWS"]?.split(separator: ",").compactMap { Int($0) } ?? [1000, 5000]
+    let windowCounts = environment["HITSLOP_BENCH_WINDOWS"]?.split(separator: ",").compactMap { Int($0) } ?? [1, 10, 20]
+    for rows in rowCounts {
+      for count in windowCounts {
         var windows: [SlopDocumentWindowController] = []
         let start = Date()
         for index in 0..<count {
@@ -38,36 +54,46 @@ import WebKit
             "title": "Measurement",
             "tasks": (0..<rows).map { ["text": "Task \($0)", "done": false, "archived": false] as [String: Any] },
           ]).write(to: root.appendingPathComponent("initial.json"))
-          windows.append(
-            try SlopDocumentWindowController(packageURL: root))
+          // Capture public ctx for measurement while retaining the actual authored view.
+          let app = root.appendingPathComponent("assets/app.js")
+          try FileManager.default.moveItem(at: app, to: root.appendingPathComponent("assets/benchmark-authored.js"))
+          try Data("""
+            import authored from './benchmark-authored.js';
+            export default { mount(ctx, target) {
+              const view = authored.mount(ctx, target);
+              globalThis.benchmarkDocument = ctx.document;
+              globalThis.benchmarkRendered = () => view?.rendered?.();
+              return view;
+            } };
+            """.utf8).write(to: app)
+          windows.append(try await SlopDocumentWindowController.open(packageURL: root))
         }
         for window in windows {
           window.showWindow(nil)
-          var ready = false
-          for _ in 0..<600 {
-            if (try? await window.session.webView.evaluateJavaScript("Boolean(globalThis.__slop)")) as? Bool
-              == true
-            {
-              ready = true
-              break
-            }
-            try await Task.sleep(for: .milliseconds(50))
+          do { try await window.session.waitUntilReady() } catch {
+            let message = "Benchmark \(rows) rows × \(count) windows: \(error.localizedDescription)"
+            try writeEvidence(failure: message)
+            throw SlopPackageError.invalid(message)
           }
-          guard ready else { throw SlopPackageError.invalid("Benchmark runtime failed to become ready") }
+          await window.waitForPresentation()
         }
         let openMS = Date().timeIntervalSince(start) * 1000
         let first = windows[0]
-        let times =
-          try await first.session.webView.callAsyncJavaScript(
-            """
-            const schema=await fetch('/state.schema.json').then(r=>r.json());
-            const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
-            const base={schemaHash:JSON.stringify(canonical(schema)),documentPath:path};
-            const hello=await globalThis.__slop.request({...base,id:'hello',method:'get'});const timings=[];
-            for(let i=0;i<100;i++){const start=performance.now();const reply=await globalThis.__slop.request({...base,id:'edit-'+i,epoch:hello.epoch,method:'apply',op:{type:'text.replace',path:['title'],value:'Edit '+i}});if(!reply.ok)throw new Error(reply.error);timings.push(performance.now()-start)}
-            for(let i=0;i<1000;i++)await globalThis.__slop.request({...base,id:'read-'+i,method:'get'});
-            return timings.sort((a,b)=>a-b);
-            """, arguments: ["path": first.packageURL.path], in: nil, contentWorld: .page) as! [Double]
+        let timings = try await first.session.webView.callAsyncJavaScript(
+          """
+          const doc = globalThis.benchmarkDocument, id = doc.current.tasks[0].$id;
+          const acceptance = [], rendered = [];
+          for (let i = 0; i < 100; i++) {
+            const start = performance.now();
+            await doc.fields.tasks.item(id).done.set(i % 2 === 0);
+            acceptance.push(performance.now() - start);
+            await globalThis.benchmarkRendered();
+            rendered.push(performance.now() - start);
+          }
+          const start = performance.now(); await doc.flush();
+          return { acceptance: acceptance.sort((a,b) => a-b), rendered: rendered.sort((a,b) => a-b), drainMS: performance.now()-start };
+          """, arguments: [:], in: nil, contentWorld: .page) as! [String: Any]
+        let acceptance = timings["acceptance"] as! [Double], rendered = timings["rendered"] as! [Double]
         let pids = Set(
           windows.compactMap { window -> Int32? in
             let key = "_webProcessIdentifier"
@@ -76,6 +102,8 @@ import WebKit
           })
         let samples = ([getpid()] + Array(pids)).compactMap { footprint($0) }
         let total = samples.reduce(UInt64(0), +)
+        let hostBytes = footprint(getpid()) ?? 0
+        let contentBytes = Array(pids).compactMap { footprint($0) }.reduce(UInt64(0), +)
         let database = first.packageURL.appendingPathComponent("state/document.sqlite")
         let bytes =
           (try FileManager.default.attributesOfItem(atPath: database.path)[.size] as! NSNumber)
@@ -84,23 +112,17 @@ import WebKit
         windows.removeAll()
         try await Task.sleep(for: .milliseconds(500))
         records.append([
-          "rows": rows, "windows": count, "open_ms": openMS, "durable_edit_p95_ms": times[94],
+          "rows": rows, "windows": count, "open_ms": openMS, "acceptance_p95_ms": acceptance[94], "rendered_p95_ms": rendered[94],
+          "drain_ms": timings["drainMS"]!,
+          "host_footprint_mib": Double(hostBytes) / 1_048_576,
+          "webcontent_footprint_mib": Double(contentBytes) / 1_048_576,
           "host_plus_content_footprint_mib": Double(total) / 1_048_576,
           "processes_measured": samples.count, "database_bytes_after_100_edits": bytes,
           "host_footprint_after_close_mib": Double(footprint(getpid()) ?? 0) / 1_048_576,
         ])
+        try writeEvidence()
       }
     }
-    let root = String(#filePath.components(separatedBy: "/apps/apple/")[0])
-    let out = URL(fileURLWithPath: root + "/.hitslop/v1-evidence")
-    try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-    try JSONSerialization.data(
-      withJSONObject: [
-        "runtime": "hitslop-v1", "loro": "1.16.1",
-        "method":
-          "Restored frameless window controllers with hover panels, in the Host test harness (not the catalog application). One sequential run per cell, fully rendered rows, host plus identified WebContent physical footprints; excludes GPU/network processes. Creation plus opening, warm machine. Not comparable to retired Mirror matrix.",
-        "results": records,
-      ], options: [.prettyPrinted, .sortedKeys]
-    ).write(to: out.appendingPathComponent("restored-client-windows.json"))
+    try writeEvidence()
   }
 }

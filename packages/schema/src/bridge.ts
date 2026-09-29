@@ -69,6 +69,8 @@ const attachmentInfo = T.Object({ id: AttachmentIDSchema, byteLength: T.Integer(
 export const BridgeReplies = {
   config: T.Object({
     epoch: T.String(),
+    documentID: T.String(),
+    readOnly: T.Boolean(),
     presentation: T.Object({
       width: T.Number(),
       height: T.Number(),

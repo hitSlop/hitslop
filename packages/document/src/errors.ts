@@ -18,3 +18,21 @@ export class DocumentFullError extends Error {
     this.name = "DocumentFullError";
   }
 }
+
+/** Stable contract-4 request outcome. A rejected command is distinct from a failed save. */
+export class OwnerError extends Error {
+  constructor(
+    readonly code:
+      | "rejected"
+      | "session_changed"
+      | "closing"
+      | "unsupported_operation"
+      | "unknown_outcome"
+      | "save_failed"
+      | "owner_invalidated",
+    message: string,
+  ) {
+    super(message);
+    this.name = "OwnerError";
+  }
+}

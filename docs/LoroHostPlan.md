@@ -17,8 +17,10 @@ render and drain gates (5k checkbox/move 3/3 ms versus 8–10/9–10 ms for the
 Swift-native control). The third iteration added publication hardening, CLI
 race/kill evidence and exact integer counters. This is implementation evidence,
 not a Rust-versus-Swift language comparison or proof that the full production SDK
-is complete. Memory and the complete publication budget remain open, along with
-production semantic/identity/issue coverage, native integration and packaging.
+is complete. The production SDK, native owner and CLI are now wired and tested;
+[the cutover checkpoint](LoroRustCutover.md#implementation-checkpoint) records that
+evidence separately. Production performance, matched memory and complete publication
+budgets remain open, along with the installed trial and packaging.
 
 See the [binding report](../spikes/hitslop-core/REPORT.md) and
 [native-owner report](../spikes/hitslop-core/NATIVE-OWNER.md) for current and
@@ -47,17 +49,17 @@ hitSlop's document semantics). The crate has a coarse API of JSON and bytes:
 
 ### 2.1 The problem we actually have
 
-The CLI has two edit paths:
+Before the cutover, the CLI had two edit boot paths:
 
 - With the document open, edits go over the socket into the WebView's Loro.
-- With it closed, `HitSlopWasm/DocumentCommand.swift` boots an invisible
+- With it closed, `HitSlopWasm/DocumentCommand.swift` booted an invisible
   WebKit session (`WasmSession(headless: true)`, `headless.js`) just to run
   the engine.
 
-Both paths already share the same semantic engine. Their different boot/lifecycle
+Both paths already shared the same semantic engine. Their different boot/lifecycle
 paths exist because **the engine lives inside the view**. Native ownership removes
-the headless WebKit dependency and separates engine lifetime from renderer lifetime;
-it does not eliminate two independent semantic implementations that exist today.
+the headless WebKit dependency and ties engine lifetime to the document owner rather
+than the renderer. The native cutover retains one semantic engine.
 
 ### 2.2 The options we measured
 
@@ -181,7 +183,9 @@ doc.release_draft(draft_id)       // session-scoped cleanup
 - **The document is closed:** `hitslop-native` takes `writer.lock`, links the
   same Rust library, constructs a `DocumentOwner`, applies, saves and exits.
   **No WebKit.**
-- Never bypass a busy lock or unlink `writer.lock` (unchanged).
+- Production discovery reuses `state/host.lock`; `state/writer.lock` alone owns
+  the package. Never use the spike’s `host.json`, bypass a busy lock or unlink
+  `writer.lock`.
 - Export and the Finder icon still render the authored view in a WebView, fed
   the owner's snapshot. Rendering is the only thing WebViews do.
 
@@ -203,6 +207,7 @@ type Intent =
 type Batch = { id: string; intents: Intent[]; message?: string; origin: "view" | "cli" };
 ```
 
+- `decrement(n = 1)` is SDK sugar for `increment(-n)`; no separate wire intent.
 - **A batch is atomic.** Validation observes earlier operations in the batch,
   including inserted and removed rows. Rejection leaves state, version and emitted
   publications unchanged. Loro transactions do not roll back applied operations;
@@ -310,14 +315,14 @@ The authoritative contract and examples are in
   Operation rejection and storage failure remain distinct.
 - Integer counters use the tested contribution-map design with exact safe-integer
   increments/decrements and overflow rules. No reset API: subtracting an observed
-  total is not a concurrent reset. Fix the new anomaly projection/storage contract
-  before exposing the type beyond the spike.
+  total is not a concurrent reset. Anomalous counters project as `null` plus an
+  issue, preserving their original stored contributions internally.
 - Supported vocabulary grows with core/SDK/binding fixtures. The approved archival
   allows unsupported descriptors to remain unavailable until their slops return.
   It does not permit silently accepting unimplemented semantics.
-- JSON import retains destination-version checks and identity-preserving operation
-  translation within an atomic batch. Never replace existing collections wholesale
-  merely because a replacement has one batch envelope.
+- JSON replacement of existing documents is explicitly unsupported in the contract-4
+  trial. Immutable-template creation remains supported. A later replacement port
+  must preserve destination-version checks and identities, with its own fixtures.
 - **Compatibility decision is made:** runtime contract 4 / ABI 2, no contract-3
   migration, archival and incremental restoration. Sealed bytes stay immutable;
   active contracts change with implementation, not this plan alone.
@@ -579,3 +584,7 @@ and their still-promised behavior has an independent test owner.
 - Does the Durable Object validate schema on append, or is that deferred
   until abuse appears? Proposed: room-level auth only at first; the core can
   validate later without a protocol change.
+
+Signing and notarization remain in GitHub Actions. Per the maintainer, do not make
+a local app/release build yet. `bun run apple:build` is unsigned and is not evidence
+of notarization. Follow the cutover’s early real-app checkbox/save/reopen slice.

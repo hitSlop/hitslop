@@ -1,6 +1,6 @@
 import AppKit
 import Foundation
-import HitSlopWasm
+import HitSlopDocument
 import HitSlopCore
 import HitSlopRuntime
 import Testing
@@ -10,12 +10,7 @@ extension LoroClientTests {
   @Test(.enabled(if: ProcessInfo.processInfo.environment["HITSLOP_STARTUP_BENCH"] == "1"))
   @MainActor func documentStartupTimings() async throws {
     _ = NSApplication.shared
-    if ProcessInfo.processInfo.environment["HITSLOP_STARTUP_PREWARM"] == "1" {
-      // Mirrors a catalog launch: WebKit warms while the user picks a document.
-      SlopRuntimeSession.prewarm()
-      try await Task.sleep(for: .seconds(2))
-    }
-    for name in ["quick-checklist", "small-expenses"] {
+    for name in ["quick-checklist"] {
       for sample in 0..<3 {
         let root = try fixture(name)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -39,16 +34,11 @@ extension LoroClientTests {
   @MainActor func savedDocumentStartupTimings() async throws {
     _ = NSApplication.shared
     let environment = ProcessInfo.processInfo.environment
-    let prewarm = environment["HITSLOP_STARTUP_PREWARM"] == "1"
-    if prewarm {
-      SlopRuntimeSession.prewarm()
-      try await Task.sleep(for: .seconds(2))
-    }
     if environment["HITSLOP_STARTUP_FOREGROUND"] == "1" {
       NSApp.activate(ignoringOtherApps: true)
     }
     let samples = max(1, Int(environment["HITSLOP_STARTUP_SAMPLES"] ?? "10") ?? 10)
-    var names = ["quick-checklist", "small-expenses", "large-checklist"]
+    var names = ["quick-checklist", "large-checklist"]
     var skinSource: String?
     if let fixtures = environment["HITSLOP_PRESENTATION_FIXTURES"] {
       skinSource = try JSONDecoder().decode([String: String].self, from: Data(fixtures.utf8))["washer"]
@@ -64,8 +54,8 @@ extension LoroClientTests {
       } else { root = try fixture(name == "large-checklist" ? "quick-checklist" : name) }
       defer { try? FileManager.default.removeItem(at: root) }
       var operations: [[String: Any]] = name == "washer"
-        ? [["type": "set", "path": ["count"], "value": 7]]
-        : [["type": "text.replace", "path": ["title"], "value": "Saved opening benchmark"]]
+        ? [["type": "increment", "path": ["count"], "by": 7]]
+        : [["type": "splice", "path": ["title"], "index": 0, "delete": 0, "insert": "Saved opening benchmark"]]
       if name == "large-checklist" {
         operations += (0..<1000).map { index in
           ["type": "insert", "path": ["tasks"],
@@ -86,7 +76,7 @@ extension LoroClientTests {
         await controller.waitForPresentation()
         let visible = start.duration(to: .now)
         #expect(controller.isContentReady)
-        print("[saved startup benchmark] \(name) sample=\(sample) prewarm=\(prewarm) prepared=\(prepared) ready=\(ready) visible=\(visible) progress=\(progress?.wasShown ?? false)")
+        print("[saved startup benchmark] \(name) sample=\(sample) prepared=\(prepared) ready=\(ready) visible=\(visible) progress=\(progress?.wasShown ?? false)")
         try await controller.session.finish()
         _ = try await controller.perform(.close)
       }
@@ -324,7 +314,7 @@ extension LoroClientTests {
     #expect(failures.count == 1)
     #expect(failures.first?.classification == .authored)
     #expect(failures.first?.reason == .authoredException)
-    #expect(failures.first?.runtime?.contract == 3)
+    #expect(failures.first?.runtime?.contract == 4)
     try await controller.session.finish()
   }
 }

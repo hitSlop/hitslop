@@ -67,8 +67,18 @@ try {
   const documentPackage = join(coreRoot, "node_modules/@hitslop/document");
   assert.ok(!(await readdir(documentPackage)).includes("test-support"));
   const documentSource = await readdir(join(documentPackage, "src"));
-  for (const internal of ["sqlite.ts", "writer-lock.ts", "document.ts", "runtime-entry.ts", "boot.ts", "runtime-identity.json"])
-    assert.ok(!documentSource.includes(internal), `Engine or test implementation shipped in npm SDK: ${internal}`);
+  for (const internal of [
+    "sqlite.ts",
+    "writer-lock.ts",
+    "document.ts",
+    "runtime-entry.ts",
+    "boot.ts",
+    "runtime-identity.json",
+  ])
+    assert.ok(
+      !documentSource.includes(internal),
+      `Engine or test implementation shipped in npm SDK: ${internal}`,
+    );
   await run(
     [
       process.execPath,
@@ -243,7 +253,7 @@ try {
     const previewIdentity = await runtime.json();
     assert.equal(previewIdentity.runtimeContract, identity.runtimeContract);
     assert.ok(previewIdentity.runtimeRevision >= identity.minRuntimeRevision);
-    const wasm = await fetch("http://127.0.0.1:5197/__runtime__/loro/loro_wasm_bg.wasm");
+    const wasm = await fetch("http://127.0.0.1:5197/__runtime__/core/hitslop_core_wasm_bg.wasm");
     assert.equal(wasm.status, 200);
     assert.equal(
       Buffer.from(await wasm.arrayBuffer())

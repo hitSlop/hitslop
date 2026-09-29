@@ -8,9 +8,9 @@ import {
 } from "../src/attachments";
 import { OperationRejectedError } from "../src/errors";
 import { defineDocument, s } from "../src/schema";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { MemoryStore } from "../src/memory";
-import { Session } from "../src/session";
+import { Session } from "../test-support/contract3/session";
 import { base64 } from "../src/bridge";
 
 const schema = defineDocument({ skin: s.optional(s.string()), title: s.text() });

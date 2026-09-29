@@ -274,19 +274,11 @@ export const app = new Crust("slop", {
     defineCommand(
       "import",
       {
-        description: "Import complete JSON data into a new or existing document",
+        description: "JSON import (unsupported during the contract-4 trial)",
         sections: [
           {
-            title: "Complete data",
-            body: "Read the destination schema first and map the input explicitly. --file contains the complete root data object, not a patch or {data,schema,version} envelope. Missing required fields and unknown fields reject atomically. Replacement deletes omitted optional values, record entries, and rows; input order is authoritative.",
-          },
-          {
-            title: "Identity and concurrency",
-            body: 'Use --from TEMPLATE to create a new document with fresh row/tree identities, or --replace --if-version TOKEN using the destination\'s get --snapshot version. During replacement, retain destination $id values to preserve existing rows; omit IDs for fresh rows. Duplicate IDs and reuse across collections reject. Explicit {$ref:"/groups/0"} values in string fields resolve imported row/tree IDs; ordinary strings stay literal. Concurrent edits reject: reread the snapshot and reconsider the mapping.',
-          },
-          {
-            title: "Attachments and results",
-            body: "Import returns {data,schema,version} after persistence. JSON carries attachment references only; transfer blobs separately with attachments export/import. Import preserves existing blobs, theme overrides, schemas, and authored assets. For a new document with attachments, create a writable template copy, transfer blobs, then use version-checked replacement.",
+            title: "Contract 4",
+            body: "JSON import and replacement are explicitly unsupported during the trial. Create a writable template copy and use typed apply/batch commands. The command refuses before creating or modifying a package. Identity-preserving replacement will return only with its complete conformance fixtures.",
           },
           retrySection,
         ],

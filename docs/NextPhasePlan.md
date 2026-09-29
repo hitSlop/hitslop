@@ -15,8 +15,8 @@ needs a CRDT. We still pay for one everywhere:
 
 | Cost today | Where it lives |
 |---|---|
-| Two CLI edit paths. If the window is open, edits go over the socket into the WebView's Loro. If it is closed, an invisible WebKit session boots the engine. | `HitSlopWasm/DocumentCommand.swift`, `WasmSession.swift` (headless), `SchemeHandler.swift` headless page, `packages/document/src/headless.js` |
-| Opaque checkpoint and update storage, capacity accounting, and a minimum reader revision tied to Loro pins | `HitSlopWasm/Storage.swift`, `StorageBridge.swift`, `StorageProbe.swift`, `state/document.sqlite` format 2 |
+| Two CLI edit paths. If the window is open, edits go over the socket into the WebView's Loro. If it is closed, an invisible WebKit session boots the engine. | `HitSlopDocument/DocumentCommand.swift`, `DocumentSession.swift` (headless), `SchemeHandler.swift` headless page, `packages/document/src/headless.js` |
+| Opaque checkpoint and update storage, capacity accounting, and a minimum reader revision tied to Loro pins | `HitSlopDocument/Storage.swift`, `StorageBridge.swift`, `StorageProbe.swift`, `state/document.sqlite` format 2 |
 | Counter checkpoints, plus an unfixed Loro counter replay bug (accepted 1, replayed 0) | `spikes/engine-placement/counter-probe.ts`, REPORT.md |
 | Merged anomalies preserved and flagged (`issues`), peer-ID rules, fork staging for atomicity | `packages/document/src/document.ts`, `operations.ts`, `projection.ts` |
 | A WASM engine booted in every window (~50 MiB per window, and slower opens at small sizes) | `spikes/engine-placement/evidence/table.md` |
@@ -227,10 +227,10 @@ the page and apps reach it only through `ctx`" still holds.
   `document.ts`/`operations.ts`/`projection.ts`/`json-import.ts`, the storage
   bridge in `storage.ts`/`session.ts`, and the Loro-shaped `handles.ts`. These
   are rewritten as op builders.
-- **`HitSlopWasm`:** `Storage.swift`, `StorageBridge.swift`,
+- **`HitSlopDocument`:** `Storage.swift`, `StorageBridge.swift`,
   `StorageProbe.swift`, the headless page in `SchemeHandler.swift`, the Loro
   entries in `RuntimeCatalog.swift`, and the engine half of
-  `WasmSession.swift`. What remains of `WasmSession` becomes a view session.
+  `DocumentSession.swift`. What remains of `DocumentSession` becomes a view session.
   The module is renamed `HitSlopDocument`.
 - **Loro and WASM resources** in the runtime bundle. `loro-swift` is no
   longer referenced.

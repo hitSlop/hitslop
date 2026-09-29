@@ -1,5 +1,7 @@
 import { checkRuntime } from "./compatibility";
+import { buildCoreWasm } from "./core-build";
 const native = process.argv.includes("--native");
+if (!native) await buildCoreWasm();
 if (native) await (await import("./native-fixtures")).prepareNativeFixtures();
 const files = [...new Bun.Glob("packages/{document,cli,schema}/tests/**/*.test.ts").scanSync(".")]
   .filter((file) => file.endsWith(".native.test.ts") === native)

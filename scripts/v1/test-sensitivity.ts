@@ -40,8 +40,9 @@ try {
   for (const fault of cases) {
     const copy = join(root, fault.name);
     await cp("packages/document/src", join(copy, "src"), { recursive: true });
+    await cp("packages/document/test-support", join(copy, "test-support"), { recursive: true });
     await cp("packages/document/tests", join(copy, "tests"), { recursive: true });
-    const file = join(copy, "src", fault.file),
+    const file = join(copy, "test-support/contract3", fault.file),
       original = await readFile(file, "utf8");
     assert(original.includes(fault.before), `Fault insertion point changed: ${fault.name}`);
     await writeFile(file, original.replace(fault.before, fault.after));

@@ -3,7 +3,8 @@ import { strict as assert } from "node:assert";
 import { mkdtemp, mkdir, writeFile, rm, cp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { Document } from "../../packages/document/src/document";
+import { loadCoreReader } from "./core-reader";
+export const { Document } = await loadCoreReader(resolve("packages/cli/runtimes/4"));
 import { SQLiteStore } from "../../packages/document/test-support/sqlite";
 import { MemoryStore } from "../../packages/document/src/memory";
 import { defineDocument, fromDescriptor, s } from "../../packages/document/src/schema";
@@ -27,7 +28,7 @@ export async function runCrashMatrix(adapters: ("bun" | "native")[], hostCheck =
         const root = join(folder, `${adapter}-${phase.replace(":", "-")}`);
         await mkdir(root);
         const seed = await Document.open(crashSchema, await SQLiteStore.open(root), crashInitial);
-        seed.fields.title.replace("Acknowledged");
+        await seed.fields.title.replace("Acknowledged");
         await seed.flush();
         const snapshot = seed.exportSnapshot();
         const key = seed.key;
@@ -36,7 +37,7 @@ export async function runCrashMatrix(adapters: ("bun" | "native")[], hostCheck =
         await memory.checkpoint("0", snapshot, key);
         const staged = await Document.open(crashSchema, memory, crashInitial);
         const from = staged.version();
-        staged.fields.title.replace("Crash edit");
+        await staged.fields.title.replace("Crash edit");
         const bytes = phase.startsWith("append:") ? staged.exportUpdates(from) : snapshot;
         await staged.close();
         const payload = join(root, "payload.bin"),
@@ -75,7 +76,7 @@ export async function runCrashMatrix(adapters: ("bun" | "native")[], hostCheck =
     if (hostCheck) {
       // The real host owns a WebView and socket; acknowledge through CLI, then kill it.
       const root = join(folder, "Host.slop");
-      await cp("tests/compatibility/3-1/document", root, { recursive: true });
+      await cp("tests/compatibility/4-1/document", root, { recursive: true });
       const app =
         process.env.HITSLOP_APP_BINARY ??
         resolve("generated/v1/app/hitSlop.app/Contents/MacOS/hitSlop");
@@ -97,7 +98,13 @@ export async function runCrashMatrix(adapters: ("bun" | "native")[], hostCheck =
             "apply",
             root,
             "--op",
-            JSON.stringify({ type: "text.replace", path: ["title"], value: "Native acknowledged" }),
+            JSON.stringify({
+              type: "splice",
+              path: ["title"],
+              index: 0,
+              delete: 0,
+              insert: "Native acknowledged",
+            }),
           ],
           {
             stdout: "pipe",
@@ -112,7 +119,7 @@ export async function runCrashMatrix(adapters: ("bun" | "native")[], hostCheck =
           child.exited,
         ]);
         assert.equal(code, 0, error);
-        assert.equal(JSON.parse(out).title, "Native acknowledged");
+        assert.ok(JSON.parse(out).title.startsWith("Native acknowledged"));
       } finally {
         host.kill("SIGKILL");
         await host.exited;
@@ -122,7 +129,7 @@ export async function runCrashMatrix(adapters: ("bun" | "native")[], hostCheck =
         await SQLiteStore.open(root),
         await Bun.file(join(root, "initial.json")).json(),
       );
-      assert.equal(reopened.current.title, "Native acknowledged");
+      assert.ok(String(reopened.current.title).startsWith("Native acknowledged"));
       await reopened.close();
       results.push("host:acknowledged-write-survives-death");
     }

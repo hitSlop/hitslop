@@ -2,7 +2,7 @@
 // merges and the outbound local-update stream.
 import { expect, test } from "bun:test";
 import { LoroDoc, type LoroMap, type LoroMovableList } from "loro-crdt";
-import { Document } from "../src/document";
+import { Document } from "../test-support/contract3/document";
 import { defineDocument, s, OperationRejectedError } from "../src/schema";
 import { MemoryStore } from "../src/memory";
 import { copyStore } from "./helpers";
@@ -92,11 +92,18 @@ test("out-of-order imports are rejected until dependencies arrive", async () => 
 test("remote semantic anomalies are accepted, converge, are flagged and are never repaired", async () => {
   for (const [mutate, issue] of [
     [
-      (data: LoroMap) => ((data.get("tasks") as LoroMovableList).get(0) as LoroMap).set("done", "invalid"),
+      (data: LoroMap) =>
+        ((data.get("tasks") as LoroMovableList).get(0) as LoroMap).set("done", "invalid"),
       { kind: "invalid", detail: "Expected boolean" },
     ],
-    [(data: LoroMap) => data.set("unknown", true), { kind: "unknown-field", detail: "Unknown stored field: unknown" }],
-    [(data: LoroMap) => data.set("title", "wrong container"), { kind: "invalid", detail: "Expected LoroText" }],
+    [
+      (data: LoroMap) => data.set("unknown", true),
+      { kind: "unknown-field", detail: "Unknown stored field: unknown" },
+    ],
+    [
+      (data: LoroMap) => data.set("title", "wrong container"),
+      { kind: "invalid", detail: "Expected LoroText" },
+    ],
   ] as const) {
     const { a, b } = await pair();
     const fork = new LoroDoc();
@@ -144,7 +151,9 @@ test("counter increments that merge past the finite range keep both peers open a
   b.importUpdates(aa);
   expect(a.version().encode()).toEqual(b.version().encode());
   expect(a.current.total).toBeNull();
-  expect(a.issues).toEqual([{ path: ["total"], kind: "invalid", detail: "Expected finite number" }]);
+  expect(a.issues).toEqual([
+    { path: ["total"], kind: "invalid", detail: "Expected finite number" },
+  ]);
   expect(() => a.fields.total.increment(1)).toThrow("finite");
   await a.close();
   await b.close();
@@ -157,7 +166,10 @@ test("every accepted local edit is emitted once for synchronization; remote impo
   const stopB = b.onLocalUpdate((bytes) => received.push(bytes));
   a.fields.title.replace("direct");
   a.change((tx) => tx.fields.tasks.item(a.current.tasks[0]!.$id).done.set(true));
-  a.applyAll([{ type: "set", path: ["tasks", { id: a.current.tasks[1]!.$id }, "done"], value: true }], { origin: "cli" });
+  a.applyAll(
+    [{ type: "set", path: ["tasks", { id: a.current.tasks[1]!.$id }, "done"], value: true }],
+    { origin: "cli" },
+  );
   a.importJSON({ ...a.current, title: "imported" });
   expect(sent).toHaveLength(4);
   for (const bytes of sent) b.importUpdates(bytes);
@@ -201,7 +213,10 @@ test("incremental and full projection agree for every anomaly position", async (
     ["row identity", (d) => ((d.get("rows") as LoroMovableList).get(0) as LoroMap).delete("$id")],
     ["wrong container", (d) => d.set("cover", "not an object")],
     ["plain container-shaped object", (d) => d.set("cover", { kind: "Map" })],
-    ["plain container-shaped row", (d) => (d.get("rows") as LoroMovableList).insert(0, { kind: "Map", $id: "x" })],
+    [
+      "plain container-shaped row",
+      (d) => (d.get("rows") as LoroMovableList).insert(0, { kind: "Map", $id: "x" }),
+    ],
     ["unknown field", (d) => d.set("extra", 1)],
   ];
   for (const [name, mutate] of mutations) {
@@ -220,8 +235,10 @@ test("incremental and full projection agree for every anomaly position", async (
       expect(() => doc.fields.cover.caption.set("blocked")).toThrow(OperationRejectedError);
     }
     if (name === "plain container-shaped row") {
-      expect(doc.current.rows.map(row => row.name)).toEqual(["r"]);
-      expect(issues).toEqual([{ path: ["rows", { index: 0 }], kind: "invalid", detail: "Expected LoroMap" }]);
+      expect(doc.current.rows.map((row) => row.name)).toEqual(["r"]);
+      expect(issues).toEqual([
+        { path: ["rows", { index: 0 }], kind: "invalid", detail: "Expected LoroMap" },
+      ]);
     }
     await doc.close();
     const reopened = await Document.open(shaped, store, initial);
